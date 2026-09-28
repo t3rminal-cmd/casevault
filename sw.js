@@ -50,6 +50,7 @@ const APP_FILES = [
   './js/secure/settings-ui.js',
   './js/ai/memory.js',
   './js/privacy.js',
+  './js/selftest.js',
   './js/app.js',
   './icons/icon.svg',
   './icons/icon-192.png',

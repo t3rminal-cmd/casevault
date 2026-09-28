@@ -1342,6 +1342,7 @@
           h('button', { class: 'btn', type: 'button', onclick: async () => {
             try { await Save.track('reindex', () => Vault.rebuildIndex()); renderCaseList(); toast('Case index rebuilt from the case folders.', 'success'); } catch { /* reported */ }
           } }, 'Rebuild case index'),
+          h('button', { class: 'btn', type: 'button', onclick: () => { close(); showSelfTest(); } }, 'Run self-test…'),
           MODE === 'direct' && h('button', { class: 'btn', type: 'button', onclick: async () => { close(); await Save.flushAll(); pickFolder(); } }, 'Open a different vault…'),
           MODE === 'direct' && h('button', { class: 'btn', type: 'button', onclick: async () => {
             close();
@@ -1358,6 +1359,37 @@
           } }, 'Disconnect')),
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done')));
     });
+  }
+
+  // Self-test: made-up documents through every reader, the checker, privacy and the AI engine.
+  async function showSelfTest() {
+    if (!state.connected) return;
+    const env = { Vault, FS, Engine: CVChecks.Engine, mode: MODE };
+    const icons = { waiting: '·', running: '…', pass: '✓', warn: '!', fail: '✗' };
+    let results = [];
+    const list = h('ol', { class: 'selftest-list' });
+    const summary = h('p', { class: 'muted' }, 'Running. This takes up to a minute; the AI test can take longer the first time.');
+    const copy = h('button', { class: 'btn', type: 'button', disabled: true, onclick: async () => {
+      try { await navigator.clipboard.writeText(CVSelfTest.report(results, env)); toast('Report copied (no case data in it).', 'success'); } catch { toast('Could not copy.', 'error'); }
+    } }, 'Copy report');
+    const draw = (r) => {
+      results = r;
+      list.replaceChildren(...r.map((x) => h('li', { class: `selftest-item ${x.status}` },
+        h('span', { class: 'selftest-icon', 'aria-hidden': 'true' }, icons[x.status] || '·'),
+        h('div', {}, h('strong', {}, x.name), h('span', { class: 'sr-only' }, ` ${x.status}`), x.detail ? h('span', { class: 'small block muted' }, x.detail) : null))));
+    };
+    const dialog = openDialog((close) => h('div', { class: 'selftest' },
+      h('h2', {}, 'Self-test'),
+      h('p', { class: 'muted small' }, 'Uses its own made-up documents, never your cases. Writes one small test file to the SSD and deletes it.'),
+      list, summary,
+      h('div', { class: 'dialog-actions' }, copy, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Close'))));
+    const final = await CVSelfTest.run(env, draw);
+    const n = (st) => final.filter((x) => x.status === st).length;
+    summary.className = n('fail') ? 'error-text' : n('warn') ? 'warn-text' : 'ok-text';
+    summary.textContent = n('fail') ? `${n('fail')} check${n('fail') === 1 ? '' : 's'} failed. Copy the report and keep it for support.`
+      : `All ${final.length - n('warn')} checks passed${n('warn') ? `; ${n('warn')} to look at` : ''}.`;
+    copy.disabled = false;
+    await dialog;
   }
 
   // "My details": the affiant profile that fills {{affiant.*}} in templates. Saved in vault.json.
