@@ -1,0 +1,85 @@
+# Publishes CaseVault to GitHub Pages.
+# One-time setup: repo Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
+name: Deploy CaseVault
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Safety checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No case data in the repository
+        run: bash scripts/check-no-case-data.sh
+
+      - name: App makes no external requests (offline rule)
+        run: |
+          # Any http(s) URL in the shipped app files must point at localhost.
+          hits=$(grep -EnoH 'https?://[^"'"'"' )<>]+' index.html sw.js manifest.webmanifest css/*.css js/*.js \
+                 | grep -Ev 'https?://(localhost|127\.0\.0\.1)(:[0-9]+)?' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::External URLs found in app files. CaseVault must work 100% offline:"
+            echo "$hits"
+            exit 1
+          fi
+          echo "OK: app files reference no external hosts."
+
+      - name: JavaScript parses
+        run: for f in js/*.js sw.js; do node --check "$f"; done
+
+      - name: Every file the service worker caches exists
+        run: |
+          missing=0
+          for f in $(grep -Eo "'\./[^']*'" sw.js | tr -d "'" | sed 's#^\./##'); do
+            [ -z "$f" ] && continue
+            [ -f "$f" ] || { echo "::error::sw.js caches missing file: $f"; missing=1; }
+          done
+          exit $missing
+
+  deploy:
+    name: Publish to GitHub Pages
+    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble the site (app files only)
+        run: |
+          mkdir -p _site
+          cp -r index.html manifest.webmanifest sw.js css js icons _site/
+          # Stamp the service worker so each deploy gets a fresh offline cache.
+          sed -i "s/const BUILD = 'dev';/const BUILD = '${GITHUB_SHA::12}';/" _site/sw.js
+          grep -q "const BUILD = '${GITHUB_SHA::12}';" _site/sw.js
+          touch _site/.nojekyll
+          find _site -type f | sort
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
