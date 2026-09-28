@@ -22,12 +22,22 @@
     detected: null,
     busy: null,
 
+    // The profile is remembered per PC (js/ai/hardware.js), because the SSD moves between a PC
+    // with a graphics card and one without. vault.json's old setting only still counts for
+    // "Rules-only", which is a choice about the case work rather than the PC.
     setting() {
-      return (Vault.data && Vault.data.settings.aiProfile) || 'auto';
+      const pc = typeof CVHardware !== 'undefined' ? CVHardware.profile() : null;
+      if (pc) return pc;
+      const s = Vault.data && Vault.data.settings;
+      return s && s.aiProfileChosen && s.aiProfile === 'rules-only' ? 'rules-only' : 'auto';
+    },
+
+    autoOrder() {
+      return typeof CVHardware !== 'undefined' ? CVHardware.autoOrder(CVHardware.state) : undefined;
     },
 
     choice() {
-      return CVAI.choose(this.detected, this.setting());
+      return CVAI.choose(this.detected, this.setting(), this.autoOrder());
     },
 
     // 'connected' | 'offline' | 'rules-only' | 'checking'
@@ -120,7 +130,8 @@
     await openDialog((close) => {
       const d = Engine.detected || { status: 'offline', profiles: {}, chat: [] };
       const current = Engine.setting();
-      const options = [['auto', 'Auto', 'Use the best installed model (Quick, then Light, then Thorough).']];
+      const firstAuto = (CVAI.PROFILES[(Engine.autoOrder() || [])[0]] || CVAI.PROFILES.quick).label;
+      const options = [['auto', 'Auto', `Picks for this PC: ${firstAuto} first here. ${CVHardware.explain(CVHardware.state)}`]];
       // Quick/Thorough/Light describe Ollama models; the in-browser engine has just its one model.
       if (d.engine !== 'webllm') {
         for (const [key, p] of Object.entries(CVAI.PROFILES)) {
@@ -131,11 +142,9 @@
       const radios = options.map(([value, label, hint]) => {
         const input = h('input', { type: 'radio', name: 'ai-profile', value, checked: value === current });
         input.addEventListener('change', async () => {
-          try {
-            await Save.track('settings', () => Vault.updateSettings({ aiProfile: value, aiProfileChosen: true }));
-            renderPill();
-            toast(`AI profile: ${label}`, 'success');
-          } catch { /* reported by Save */ }
+          CVHardware.setProfile(value);
+          renderPill();
+          toast(`AI profile on this PC: ${label}`, 'success');
         });
         return h('label', { class: 'radio-row' }, input, h('span', {}, h('strong', {}, label), h('span', { class: 'muted small block' }, hint)));
       });
@@ -154,7 +163,8 @@
         d.status === 'connected' && d.engine !== 'webllm' && h('p', { class: 'muted small' },
           `Installed models: ${d.models.map((m) => m.name).join(', ') || 'none'}.`,
           d.embed ? ` Passage search uses ${d.embed}.` : ' Tip: install nomic-embed-text for better passage search.'),
-        h('h3', {}, 'Profile'),
+        h('h3', {}, 'Profile on this PC'),
+        h('p', { class: 'muted small' }, 'Remembered by this PC\'s browser, not on the SSD, so the Beelink and the L14 can each use the model that suits them.'),
         h('div', { class: 'radio-list' }, radios),
         webllmSection(),
         h('p', { class: 'muted small' }, 'Privacy: CaseVault only talks to the AI engine on this computer (127.0.0.1:11434), or runs the in-browser model inside this tab. Nothing is sent anywhere else.'),
@@ -732,6 +742,10 @@
     const pill = document.getElementById('engine-status');
     if (pill) pill.addEventListener('click', () => { if (Vault.data) showEngineDialog(); });
     setInterval(() => { if (!document.hidden && Vault.data) Engine.refresh(); }, 60000);
+    if (typeof CVHardware !== 'undefined') {
+      CVHardware.onChange(() => { if (Vault.data) renderPill(); });
+      CVHardware.probeGpu();
+    }
   }
 
   function onVaultOpen() {

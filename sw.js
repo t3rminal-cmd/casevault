@@ -30,6 +30,7 @@ const APP_FILES = [
   './js/checker/extract.js',
   './js/checker/ai.js',
   './js/ai/activity.js',
+  './js/ai/hardware.js',
   './js/ai/ollama-shim.js',
   './js/ai/webllm.js',
   './js/ai/webllm-worker.js',

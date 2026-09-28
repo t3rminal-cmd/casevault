@@ -84,10 +84,13 @@
     return { status: 'offline', base: null, models: [], chat: [], embed: null, profiles: {} };
   }
 
-  /** Resolve the user's setting ('auto', 'quick', 'thorough', 'light', 'rules-only') to a model. */
-  function choose(detected, setting) {
+  /**
+   * Resolve the user's setting ('auto', 'quick', 'thorough', 'light', 'rules-only') to a model.
+   * autoOrder: the order "Auto" tries profiles in on this PC (see js/ai/hardware.js).
+   */
+  function choose(detected, setting, autoOrder = PROFILE_ORDER) {
     if (setting === 'rules-only' || !detected || detected.status !== 'connected') return null;
-    const order = setting && setting !== 'auto' ? [setting, ...PROFILE_ORDER] : PROFILE_ORDER;
+    const order = setting && setting !== 'auto' ? [setting, ...autoOrder] : autoOrder;
     for (const key of order) {
       if (detected.profiles[key]) return { profile: key, model: detected.profiles[key], requested: setting, fallback: setting !== 'auto' && key !== setting };
     }

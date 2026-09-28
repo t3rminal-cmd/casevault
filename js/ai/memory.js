@@ -129,6 +129,16 @@
       const pm = performance.memory;
       const heap = pm ? { used: pm.usedJSHeapSize, limit: pm.jsHeapSizeLimit } : null;
       models = await readModels();
+      // Tell the per-PC AI settings how much of the Quick model sits on the graphics card here.
+      if (models && root.CVHardware && root.CVChecks && root.CVChecks.Engine && root.CVChecks.Engine.detected) {
+        const flipped = root.CVHardware.observe(models, root.CVChecks.Engine.detected.profiles);
+        if (flipped && root.CVChecks.Engine.setting() === 'auto' && root.CaseVaultUI) {
+          const first = root.CVHardware.autoOrder(root.CVHardware.state)[0];
+          root.CaseVaultUI.toast(first === 'light'
+            ? 'This PC runs the AI on its processor, so Auto now uses the Light model here. (Choose a profile by clicking "AI:".)'
+            : 'This PC runs the AI on its graphics card, so Auto now uses the Quick model here.', 'info', 10000);
+        }
+      }
       if (isHelper() && Date.now() - sysAt > 15000) { sys = await HelperFS.sysinfo(); sysAt = Date.now(); }
       const webllm = (typeof CVWebLLM !== 'undefined' && CVWebLLM.loadedId) || null;
       const s = summarize({ heap, models, webllm, sys, deviceMemory: navigator.deviceMemory || null });
