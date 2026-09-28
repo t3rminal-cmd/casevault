@@ -44,6 +44,31 @@ test('PII: known names from the case are found in every form, and win over patte
   assert.deepStrictEqual(found.map((f) => [f.type, f.value]), [['known', 'LOPEZ, Maria'], ['known', 'big mike'], ['known', 'Lopez'], ['casenum', '00123']]);
 });
 
+test('PII: a known word inside an address or email hides the whole address or email (v1.9.1 leak)', () => {
+  // v1.9 kept only the known surname and sent the rest: "1420 [NAME_1] Avenue", "casey.[NAME_1]@…".
+  const known = P.knownTerms({ affiant: { name: 'Detective Casey Example', email: 'casey.example@agency.example' } });
+  const text = 'Vehicle TST-1284 at 1420 Example Avenue. Call me at 555-0142 or casey.example@agency.example.';
+  const r = P.redact(text, P.scan(text, { known }));
+  assert.strictEqual(r.text, 'Vehicle [PLATE_1] at [ADDRESS_1] Call me at [PHONE_1] or [EMAIL_1].');
+  assert.strictEqual(P.rehydrate(r.text, r.map), text);
+  // The agency's city is also a word in the street address.
+  const known2 = P.knownTerms({ affiant: { name: 'Det. Sam Austin' } });
+  const t2 = 'He lives at 1420 Oak Street, Austin, TX 78701. Det. Sam Austin took the call.';
+  const r2 = P.redact(t2, P.scan(t2, { known: known2 }));
+  assert.ok(!/1420|Oak/.test(r2.text), r2.text);
+  assert.ok(r2.text.startsWith('He lives at [ADDRESS_1].'), r2.text);
+});
+
+test('PII: local phone numbers and plates without the word "plate"', () => {
+  const found = P.scan('Call 555-0142 or 555.0199. Plates TST-1284, ABC1234, 7ABC123 and 123-XYZ.');
+  const by = (type) => found.filter((f) => f.type === type).map((f) => f.value);
+  assert.deepStrictEqual(by('phone'), ['555-0142', '555.0199']);
+  assert.deepStrictEqual(by('plate'), ['TST-1284', 'ABC1234', '7ABC123', '123-XYZ']);
+  // Not plates or phones: standards, fiscal years, times, dates, amounts, case numbers, versions.
+  const quiet = P.scan('ISO 9001, FY2026, 21:40, 03/14/2026, $2,540, item 3, version 1.2.3, Room 101, page 12-2026.');
+  assert.deepStrictEqual(quiet.map((f) => f.value), []);
+});
+
 test('PII: redaction is consistent, reversible, and keeps locked types hidden', () => {
   const found = P.scan(SAMPLE);
   const everyName = new Set(found.map((f, i) => (f.type === 'person' ? i : -1)).filter((i) => i >= 0));

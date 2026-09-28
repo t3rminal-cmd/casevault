@@ -57,6 +57,9 @@
     'Google Microsoft Apple Samsung Facebook Instagram Snapchat Whatsapp Telegram Signal Verizon Tmobile Sprint Att Cricket Metro Commonwealth ' +
     TITLES.split('|').join(' ')).split(/\s+/).map((w) => w.toLowerCase()));
 
+  // Letter groups that look like a plate's letters but are something else ("ISO 9001", "FY2026").
+  const PLATE_NOT = new Set(['ISO', 'FY', 'COVID', 'NO', 'REF', 'ID', 'SSN', 'DL', 'DOB', 'CR', 'IR', 'RMS', 'OCA', 'CAD', 'SOP', 'PDF', 'MP', 'LES', 'IP', 'EXT', 'APT', 'STE', 'RM', 'PM', 'AM', 'HR', 'HRS', 'MG', 'KG', 'LB', 'LBS', 'MM', 'CM', 'KM', 'MPH', 'USD', 'SKU', 'TAB', 'ITEM', 'PAGE', 'CASE', 'FORM', 'RULE', 'CODE', 'ROOM']);
+
   const US_STATES = 'AL|AK|AZ|AR|CA|CO|CT|DE|DC|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY';
   const STREET_TYPES = 'Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Court|Ct|Place|Pl|Terrace|Ter|Way|Circle|Cir|Highway|Hwy|Parkway|Pkwy|Trail|Trl|Square|Sq|Loop|Pike|Row|Run|Alley|Aly|Crossing|Xing|Point|Pt|Ridge|Rdg|Plaza|Plz';
 
@@ -87,8 +90,12 @@
     { type: 'email', re: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g },
     { type: 'phone', re: /(?<![\d-])(?:\+?1[-. ]?)?\(?\b[2-9]\d{2}\)?[-. ]?[2-9]\d{2}[-. ]\d{4}\b(?:\s*(?:x|ext\.?)\s*\d{1,5})?/g },
     { type: 'phone', re: /\b(?:phone|tel|cell|mobile|ph|telephone|number)\s*[:#]?\s*(\(?[2-9]\d{2}\)?\s?[2-9]\d{6})\b/gi, group: 1 },
+    // A local number without the area code ("555-0142").
+    { type: 'phone', re: /(?<![\w.-])[2-9]\d{2}[-.]\d{4}(?![\w-]|\.\d)/g },
     { type: 'vin', re: /\b[A-HJ-NPR-Z0-9]{17}\b/g, ok: (v) => /\d/.test(v) && /[A-Z]/.test(v) && (v.match(/\d/g) || []).length >= 5 },
     { type: 'plate', re: /\b(?:plate|tag|license plate|licence plate|LP|LPN|registration|reg\.?)\s*(?:no\.?|number|#)?\s*[:#]?\s*(?:(?:[A-Z]{2}|[A-Z][a-z]+)\s+)?(?:(?:tag|plate)\s+)?([A-Z0-9]{2,4}[- ]?[A-Z0-9]{2,5})\b/g, group: 1, ok: (v) => /\d/.test(v) && /^[A-Z0-9 -]+$/.test(v) },
+    // A plate on its own, without the word "plate" before it: "TST-1284", "ABC1234", "7ABC123".
+    { type: 'plate', re: /(?<![\w-])(?:[A-Z]{2,4}-?\d{3,4}|\d{3}-?[A-Z]{3}|\d[A-Z]{3}\d{3})(?![\w-])/g, ok: (v) => !PLATE_NOT.has(v.replace(/[-\d]/g, '')) },
     { type: 'address', re: new RegExp(`\\b\\d{1,6}(?:-?[A-Z])?\\s+(?:[NSEW]\\.?\\s+)?(?:[A-Z0-9][A-Za-z0-9'.-]*\\s+){0,4}(?:${STREET_TYPES})\\b\\.?(?:,?\\s+(?:Apt|Apartment|Unit|Ste|Suite|#|Lot|Rm|Room)\\.?\\s*#?\\s*[A-Z0-9-]+)?(?:,\\s*[A-Z][A-Za-z .'-]+,?\\s+(?:${US_STATES})\\b(?:\\s+\\d{5}(?:-\\d{4})?)?)?`, 'g') },
     { type: 'address', re: /\b(?:P\.?\s?O\.?\s?Box|Post Office Box)\s+\d+\b/gi },
     { type: 'ip', re: /\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g, ok: (v) => !/^(?:127\.|0\.)/.test(v) },
@@ -158,14 +165,27 @@
       }
     }
 
-    // Resolve overlaps: known terms and more serious types win, then the longer match.
+    // Resolve overlaps by MERGING: overlapping findings become one finding that covers all of them,
+    // so nothing between them can leak. (Keeping only one used to leave the rest of a match in the
+    // open: a known surname inside an address hid the surname and sent the street.) The merged
+    // finding takes the type of the widest one; on a tie known terms, then more serious types, win.
     found.sort((a, b) => (a.type === 'known' ? 0 : 1) - (b.type === 'known' ? 0 : 1)
       || LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level] || b.length - a.length || a.index - b.index);
-    const kept = [];
+    let kept = [];
     for (const f of found) {
       const end = f.index + f.length;
-      if (kept.some((k) => f.index < k.index + k.length && end > k.index)) continue;
-      kept.push(f);
+      const hit = kept.filter((k) => f.index < k.index + k.length && end > k.index);
+      if (!hit.length) { kept.push(f); continue; }
+      const group = [...hit, f];
+      const start = Math.min(...group.map((g) => g.index));
+      const stop = Math.max(...group.map((g) => g.index + g.length));
+      const widest = group.reduce((w, g) => (g.length > w.length ? g : w), group[0]);
+      const t = TYPES[widest.type];
+      const levels = group.map((g) => LEVEL_ORDER[g.level]);
+      const level = Object.keys(LEVEL_ORDER).find((l) => LEVEL_ORDER[l] === Math.min(...levels));
+      const merged = { type: widest.type, label: t.label, level, locked: group.some((g) => g.locked), value: s.slice(start, stop), index: start, length: stop - start };
+      kept = kept.filter((k) => !hit.includes(k));
+      kept.push(merged);
     }
     return kept.sort((a, b) => a.index - b.index);
   }
