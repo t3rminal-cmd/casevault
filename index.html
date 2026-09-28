@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Privacy lock: the page may load only its own files, and may only ever talk to
+       localhost (reserved for the local Ollama engine in v1.5). Nothing else can leave the machine. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; font-src 'self'; connect-src 'self' http://localhost:11434 http://127.0.0.1:11434; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#1f3a5f">
+  <meta name="description" content="Offline case file manager. All data stays on your own SSD.">
+  <title>CaseVault</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <!-- Gate: shown until a vault on the SSD is connected -->
+  <div id="gate" class="gate" hidden>
+    <div class="gate-card" role="dialog" aria-modal="true" aria-labelledby="gate-title">
+      <img src="icons/icon.svg" alt="" class="gate-logo" width="56" height="56">
+      <h1 id="gate-title">CaseVault</h1>
+      <p id="gate-message"></p>
+      <p id="gate-detail" class="muted"></p>
+      <div id="gate-actions" class="gate-actions"></div>
+      <p class="gate-foot muted">Your case data is read from and written to your SSD only. Nothing is stored on this computer or sent anywhere.</p>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <img src="icons/icon.svg" alt="" width="26" height="26">
+      <span>CaseVault</span>
+    </div>
+    <div class="vault-name" id="vault-name" title="Connected vault folder"></div>
+    <div class="spacer"></div>
+    <div id="save-status" class="save-status" role="status" aria-live="polite"></div>
+    <button id="btn-vault" class="btn ghost" type="button">Vault</button>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-tools">
+        <button id="btn-new-case" class="btn primary block" type="button">+ New case</button>
+        <input id="case-search" type="search" placeholder="Search cases" aria-label="Search cases" autocomplete="off">
+        <select id="case-filter" aria-label="Filter by status">
+          <option value="active">Open &amp; pending</option>
+          <option value="all">All cases</option>
+          <option value="Open">Open</option>
+          <option value="Pending">Pending</option>
+          <option value="Closed">Closed</option>
+          <option value="Archived">Archived</option>
+        </select>
+      </div>
+      <ul id="case-list" class="case-list" aria-label="Cases"></ul>
+    </aside>
+
+    <main id="main" class="main" tabindex="-1"></main>
+  </div>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <dialog id="dialog" class="dialog"></dialog>
+
+  <script src="js/fs.js"></script>
+  <script src="js/vault.js"></script>
+  <script src="js/markdown.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
