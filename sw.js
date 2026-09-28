@@ -19,11 +19,26 @@ const APP_FILES = [
   './js/helper-fs.js',
   './js/vault.js',
   './js/markdown.js',
+  './js/checker/nlp.js',
+  './js/checker/rules.js',
+  './js/checker/extract.js',
   './js/app.js',
   './icons/icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
+  // Document reading and OCR (large; downloaded once so the checker works offline)
+  './vendor/pdfjs/pdf.min.mjs',
+  './vendor/pdfjs/pdf.worker.min.mjs',
+  './vendor/pdfjs/wasm/jbig2.wasm',
+  './vendor/pdfjs/wasm/openjpeg.wasm',
+  './vendor/pdfjs/wasm/qcms_bg.wasm',
+  './vendor/tesseract/tesseract.min.js',
+  './vendor/tesseract/worker.min.js',
+  './vendor/tesseract/core/tesseract-core-relaxedsimd-lstm.wasm.js',
+  './vendor/tesseract/core/tesseract-core-simd-lstm.wasm.js',
+  './vendor/tesseract/core/tesseract-core-lstm.wasm.js',
+  './vendor/tesseract/lang/eng.traineddata.gz',
 ];
 
 self.addEventListener('install', (event) => {
@@ -52,6 +67,10 @@ self.addEventListener('fetch', (event) => {
     const cache = await caches.open(CACHE);
     const cached = await cache.match(req, { ignoreSearch: true })
       || (req.mode === 'navigate' ? await cache.match('./index.html') : undefined);
-    return cached || fetch(req);
+    if (cached) return cached;
+    const res = await fetch(req);
+    // Other bundled library files (PDF fonts, character maps) are cached the first time they are used.
+    if (res.ok && res.type === 'basic' && url.pathname.includes('/vendor/')) cache.put(req, res.clone());
+    return res;
   })());
 });
