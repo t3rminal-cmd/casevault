@@ -266,7 +266,10 @@
   /* Comparison                                                          */
   /* ------------------------------------------------------------------ */
 
+  const YEAR_PREFIX = /^(?:19|20)\d{2}-/;
   function sameValue(type, a, b) {
+    // "00123" and "2026-00123" are the same case number (CaseVault names files <year>-<case no.>).
+    if (type === 'number' && YEAR_PREFIX.test(a) !== YEAR_PREFIX.test(b)) return a.replace(YEAR_PREFIX, '') === b.replace(YEAR_PREFIX, '');
     if (type === 'date') {
       // A date without a year matches the same month and day in any year.
       if (a.startsWith('XXXX') || b.startsWith('XXXX')) return a.slice(5) === b.slice(5);
@@ -319,10 +322,14 @@
 
   /**
    * Compare documents. docs[i].role is 'affidavit' or 'report'.
+   * ignore: text whose facts are never reported as "not found in the reports" — the author's own
+   * details and today's date, which a template puts into every draft (signature block, "Prepared …").
    * Returns flags sorted by severity, then by document order.
    */
-  function compare(inputDocs) {
+  function compare(inputDocs, { ignore = [] } = {}) {
     const docs = analyze(inputDocs);
+    const ignored = new Set(ignore.flatMap((t) => T.sentences(String(t || '')).flatMap((s) => extractFacts(s.text)))
+      .map((f) => `${f.type}|${f.value}`));
     const flags = [];
     const keys = new Set();
     const push = (flag, key) => { if (!keys.has(key)) { keys.add(key); flags.push(flag); } };
@@ -380,7 +387,7 @@
               detail: `${docs[plan.from].name} says ${display(f)}; ${docs[best.o.doc].name} says ${display(best.g)} in a matching statement.`,
               statement: sent, statementFact: f, source: best.o, sourceFact: best.g,
             }), `m|${f.type}|${[`${sent.doc}:${sent.start}:${sent.paragraph}:${a}`, `${best.o.doc}:${best.o.start}:${best.o.paragraph}:${b}`].sort().join('|')}`);
-          } else if (plan.affidavit) {
+          } else if (plan.affidavit && !ignored.has(`${f.type}|${f.value}`)) {
             push(makeFlag(docs, {
               severity: 'Low',
               type: f.type,
@@ -433,11 +440,20 @@
     return list.find((o) => docs[o.sent.doc].role === 'affidavit') || list[0];
   }
 
+  // One pair of neighbouring letters swapped: the most common typing slip (Sampel / Sample).
+  function isTransposition(a, b) {
+    if (a.length !== b.length) return false;
+    const diff = [];
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diff.push(i);
+    return diff.length === 2 && diff[1] === diff[0] + 1 && a[diff[0]] === b[diff[1]] && a[diff[1]] === b[diff[0]];
+  }
+
   const COMMON_WORDS = new Set(['were', 'where', 'there', 'their', 'then', 'than', 'that', 'this', 'with', 'from', 'said', 'side', 'time', 'item', 'items']);
   function isNameVariant(a, b) {
     if (a === b || a.length < 4 || b.length < 4) return false;
     if (COMMON_WORDS.has(a) || COMMON_WORDS.has(b)) return false;
     if (a.replace(/s$/, '') === b.replace(/s$/, '')) return false;
+    if (isTransposition(a, b) && a[0] === b[0] && a.length >= 5) return true;
     const dist = T.levenshtein(a, b);
     const maxLen = Math.max(a.length, b.length);
     const sameSound = T.soundex(a).slice(1) === T.soundex(b).slice(1);

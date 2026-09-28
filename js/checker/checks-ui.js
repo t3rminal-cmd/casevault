@@ -359,6 +359,19 @@
    * Running a check
    * ===================================================================== */
 
+  // Facts a template writes into every draft that no report will mention: the author's own details
+  // (signature block) and today's date ("Prepared …"). They never count as "not found".
+  function ownDetails() {
+    const a = (Vault.data && Vault.data.settings.affiant) || {};
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return [
+      ...['name', 'title', 'agency', 'address', 'phone', 'email'].map((k) => a[k]).filter(Boolean),
+      `Prepared ${now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.`,
+      `Dated ${pad(now.getMonth() + 1)}/${pad(now.getDate())}/${now.getFullYear()} and ${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.`,
+    ];
+  }
+
   // draft: { slug, title } to check a draft (from the Drafts tab) instead of an attached file.
   async function runCheck(c, affidavit, reports, useAI, draft = null) {
     const { h, openDialog, Save, toast, go } = ui;
@@ -411,7 +424,7 @@
       const rulesStep = addStep('Rule-based checks');
       activity.textContent = 'Comparing dates, times, names and numbers…';
       await new Promise((r) => setTimeout(r, 20));
-      const ruleFlags = CVRules.compare(docs.map((d) => ({ id: d.docIndex, name: d.name, role: d.role, paragraphs: d.paragraphs })));
+      const ruleFlags = CVRules.compare(docs.map((d) => ({ id: d.docIndex, name: d.name, role: d.role, paragraphs: d.paragraphs })), { ignore: ownDetails() });
       done(rulesStep);
       bar.value = useAI ? 35 : 90;
 
