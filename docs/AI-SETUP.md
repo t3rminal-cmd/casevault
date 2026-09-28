@@ -122,15 +122,44 @@ W:\ollama\ollama.exe list
 
 That's about 16 GB, which fits comfortably on the 150 GB partition. CaseVault sorts models into profiles by size, so newer models of the same size work too.
 
+You don't need all of them. **Quick + Light (+ nomic-embed-text)** covers both PCs: the Beelink uses Quick, the L14 uses Light. Skip Thorough unless you want it for important documents on the Beelink; on the 6 GB RTX 3050 it's split into RAM and is several times slower.
+
+### Adding nomic-embed-text (passage search) later
+
+`nomic-embed-text` doesn't write anything. It turns each report passage into a "meaning fingerprint", so the AI review and *Draft with AI* read the passages that are **about** the statement, even when they use other words ("fled on foot" vs "ran away"). Without it CaseVault finds passages by matching words only. It's small (about 0.3 GB) and runs on either PC.
+
+1. Plug in the SSD and double-click **`W:\Start-CaseVault.bat`**. Leave its window open: the AI engine must be running, and it saves models to `W:\models`.
+2. Press **Windows key + R**, type `cmd` and press **Enter**. A black Command Prompt window opens.
+3. Type (or paste) this and press **Enter**. Use your drive letter if it isn't W:
+   ```bat
+   W:\ollama\ollama.exe pull nomic-embed-text
+   ```
+   It downloads about 270 MB and ends with **success**. (This one step needs internet; nothing about your cases is sent.)
+4. Check it's there:
+   ```bat
+   W:\ollama\ollama.exe list
+   ```
+   You should see `nomic-embed-text:latest` next to `qwen2.5:7b` and your Light model.
+5. In CaseVault, click **AI:** in the header, then **Check again**. The dialog shows **✓ Passage search: nomic-embed-text:latest**. (Without it, the same dialog shows these steps with a **Copy** button for the command.)
+6. Optional: **Vault → Run self-test** shows *Passage search model … is installed*.
+
+Because the model lives on W:, you do this **once**, and both the Beelink and the L14 use it. If `ollama.exe` says it can't connect, the launcher window isn't running: start it and try again.
+
 ### Choosing a profile
 
 The header shows the engine status: **AI: Connected (Quick · qwen2.5:7b)**, **AI: Offline**, or **AI: Rules-only**. Click it to:
 
 - see which models were found;
-- pick **Auto** (Quick if installed, then Light, then Thorough), **Quick**, **Thorough**, **Light**, or **Rules-only**;
+- pick **Auto**, **Quick**, **Thorough**, **Light**, or **Rules-only**;
 - **Check again** after starting the launcher.
 
-The choice is stored in the vault (`vault.json`), so it follows the SSD.
+**The profile is remembered per PC** (by that PC's browser), not on the SSD. The Beelink and the L14 read the same models from W:, but should not run the same one. Only the profile word is stored in the browser, never case data. A *Rules-only* choice made before v1.9.1 still applies.
+
+**Auto** picks for the PC it runs on:
+
+- Once a model has loaded, Ollama reports how much of it sits on the graphics card. If the Quick model runs mostly on the processor (the L14), Auto uses **Light** from then on and tells you so once. On the Beelink it runs 100% on the RTX 3050, so Auto keeps **Quick**.
+- Before that, Auto goes by the graphics chip the browser reports: NVIDIA (or an AMD Radeon RX card) → Quick; Intel or other built-in graphics → Light.
+- The AI dialog explains the decision, for example *"qwen2.5:7b ran 0% on the graphics card here… Auto uses Light first."*
 
 **Drafts** use the same engine. *Draft with AI* uses the model of the chosen profile. **AI suggestions while typing** always use the smallest installed chat model (Light if you have it). Install a Light model (`qwen2.5:3b`) even on the Beelink if you want snappy suggestions.
 

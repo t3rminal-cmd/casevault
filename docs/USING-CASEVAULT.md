@@ -201,6 +201,8 @@ The text read from each document is kept on the SSD (`checks\text-cache`), so re
 - money amounts
 - counts (*three shots* vs *two shots*)
 
+Names spelled with two letters swapped (*Sampel / Sample*) are flagged too. `00123` and `2026-00123` count as the same case number. Your own details from **My details** and today's date (a template's signature block and *Prepared …* line) are never reported as "not found in the reports".
+
 **XFA forms** are read field by field: each filled-in field becomes one line such as `Reporting officer: Officer Alex Sample`, using the form's own captions (or the field name when there's no caption). A repeated section, such as a timeline table, gives one line per row: `Timeline row 2: Date=03/14/2026; Type=Interview; Narrative=...`. A flag from a form points at *page 1* and the field or row, for example `Report.pdf · page 1 · Timeline row 2`. **Open original** lists the form's fields with that one highlighted.
 
 **No usable text.** If a document gave no text at all (an empty scan, or an XFA form whose fields couldn't be read), a warning box at the top of the results says it wasn't compared. A check with no flags against that document means nothing.
@@ -291,6 +293,8 @@ CaseVault is offline by default. If your agency allows it, you can ask Claude re
 
 **What happens to your text:** every message goes through the same review screen. Names, SSNs, dates of birth, IDs, phone numbers, emails, addresses, plates, VINs, case numbers and card/bank numbers are replaced with placeholders like `[NAME_1]` and `[PHONE_1]`. Those can't be un-ticked. Possible names found by pattern can be un-ticked (for example a court's name). **Hide this too** adds anything the scan missed. The box *Exactly what will be sent* shows the final text. The same person keeps the same placeholder for the whole conversation, and answers are shown with the real values put back (untick *Show real names* to see what Claude saw). **Save to case as draft** keeps an answer in the case's Drafts, marked AI-assisted.
 
+Phone numbers are found with or without the area code (`555-0142`), and plates with or without the word "plate" (`TST-1284`). When details overlap, for example your own surname inside a street address or an email, the whole address or email is hidden, not just the name (v1.9.1).
+
 Detection is a safety net, not a guarantee. Always read the text before you send it, and add names CaseVault should always hide to **Vault → Always hide (PII watch list)**: subjects, informants, nicknames, street names.
 
 Only `api.anthropic.com` can ever be reached (the page's security policy blocks every other address), only with text you reviewed, and each review allows one request. Case files are never sent automatically.
@@ -319,6 +323,24 @@ The same steps are shown inside CaseVault: **Research & drafting (online)** → 
 ### Outbound log
 
 **Vault → Outbound log** lists every online AI request and mail hand-off of the last two months: when, where, why, what kinds of details were found, and how many were hidden. Never the text itself. The logs are in `CaseVault-Data\logs\outbound-YYYY-MM.json`.
+
+## Self-test
+
+**Vault → Maintenance → Run self-test…** checks in about a minute that CaseVault works on this PC. Run it after updating CaseVault, or on a new PC. It uses its own made-up documents, never your cases.
+
+| Check | What it proves |
+|---|---|
+| SSD: write, read back, delete | The vault drive can be written (one small test file, deleted again) |
+| Word, PDF, XFA form, spreadsheet readers | Documents of each kind can be read for checks |
+| OCR | Scanned pages and photos can be read |
+| Consistency rules on a mini case | Five planted errors (time, plate, count, amount, a misspelled name) are all flagged, and a matching address is not |
+| Privacy | Every kind of personal detail is hidden before anything could go online |
+| Online state | CaseVault is offline |
+| AI engine and model for this PC | Which model checks use here, and why (see *Profile on this PC* in [AI-SETUP.md](AI-SETUP.md)) |
+| Passage search model | Whether `nomic-embed-text` is installed |
+| AI answers | A one-word test answer, with the time it took and the speed |
+
+✓ is fine, **!** is worth a look (for example the AI engine isn't running), ✗ is a problem. **Copy report** copies the list as plain text, with no case data, for support.
 
 ## Memory indicator
 
@@ -448,6 +470,7 @@ To make a PC forget the vault folder, open **Vault → Disconnect**.
 |---|---|
 | *In this browser, CaseVault runs through the CaseVault helper* | You're in Firefox. Start `W:\Start-CaseVault.bat`, which opens `http://127.0.0.1:8517/`. |
 | *The CaseVault helper is not running* | Start `W:\Start-CaseVault.bat` and click **Reconnect**. |
+| Checks are very slow on the laptop | The laptop runs AI on its processor. Click **AI:** and choose **Light** for this PC (or keep **Auto**: it switches to Light by itself after the first request). The choice is kept per PC. |
 | *AI: Offline* in the header | Start `W:\Start-CaseVault.bat`, then click the pill → **Check again**. Checks still run with rules only. |
 | *Reading PDFs needs the installed app or the helper* | You opened `index.html` straight from the SSD. Use the installed app or the launcher address instead. |
 | Ctrl + Shift + H does nothing | Click in the CaseVault page first (the shortcut only works while CaseVault is the active tab), or use Esc Esc or the **Hide** button. |

@@ -847,3 +847,14 @@ table.files td.fname { min-width: 14rem; }
 .radio-row + .radio-row { margin-top: .35rem; }
 .vault-panel h4 { margin: 1rem 0 .3rem; font-size: .95rem; }
 .pass-row { margin: .35rem 0 0 1.8rem; }
+.nowrap { white-space: nowrap; }
+.list-none { list-style: none; margin-left: -1.2em; }
+
+/* ---------- self-test ---------- */
+.selftest-list { list-style: none; padding: 0; margin: .6rem 0; display: grid; gap: .45rem; }
+.selftest-item { display: grid; grid-template-columns: 1.6rem 1fr; gap: .4rem; align-items: start; }
+.selftest-icon { font-weight: 700; text-align: center; border-radius: 999px; line-height: 1.5rem; height: 1.5rem; background: var(--surface-2); color: var(--muted); }
+.selftest-item.pass .selftest-icon { background: var(--ok-soft); color: var(--ok); }
+.selftest-item.warn .selftest-icon { background: var(--warn-soft); color: var(--warn); }
+.selftest-item.fail .selftest-icon { background: var(--danger-soft); color: var(--danger); }
+.selftest-item .block { overflow-wrap: anywhere; }

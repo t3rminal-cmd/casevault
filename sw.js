@@ -9,7 +9,7 @@
 
 // VERSION is bumped with each release; BUILD is replaced with the commit SHA by the GitHub Pages
 // workflow. Either change gives a new cache, so the installed app picks up the update.
-const VERSION = '1.9.0';
+const VERSION = '1.9.1';
 const BUILD = 'dev';
 const CACHE = `casevault-${VERSION}-${BUILD}`;
 
@@ -30,6 +30,7 @@ const APP_FILES = [
   './js/checker/extract.js',
   './js/checker/ai.js',
   './js/ai/activity.js',
+  './js/ai/hardware.js',
   './js/ai/ollama-shim.js',
   './js/ai/webllm.js',
   './js/ai/webllm-worker.js',
@@ -49,6 +50,7 @@ const APP_FILES = [
   './js/secure/settings-ui.js',
   './js/ai/memory.js',
   './js/privacy.js',
+  './js/selftest.js',
   './js/app.js',
   './icons/icon.svg',
   './icons/icon-192.png',

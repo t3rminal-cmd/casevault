@@ -22,12 +22,22 @@
     detected: null,
     busy: null,
 
+    // The profile is remembered per PC (js/ai/hardware.js), because the SSD moves between a PC
+    // with a graphics card and one without. vault.json's old setting only still counts for
+    // "Rules-only", which is a choice about the case work rather than the PC.
     setting() {
-      return (Vault.data && Vault.data.settings.aiProfile) || 'auto';
+      const pc = typeof CVHardware !== 'undefined' ? CVHardware.profile() : null;
+      if (pc) return pc;
+      const s = Vault.data && Vault.data.settings;
+      return s && s.aiProfileChosen && s.aiProfile === 'rules-only' ? 'rules-only' : 'auto';
+    },
+
+    autoOrder() {
+      return typeof CVHardware !== 'undefined' ? CVHardware.autoOrder(CVHardware.state) : undefined;
     },
 
     choice() {
-      return CVAI.choose(this.detected, this.setting());
+      return CVAI.choose(this.detected, this.setting(), this.autoOrder());
     },
 
     // 'connected' | 'offline' | 'rules-only' | 'checking'
@@ -120,7 +130,8 @@
     await openDialog((close) => {
       const d = Engine.detected || { status: 'offline', profiles: {}, chat: [] };
       const current = Engine.setting();
-      const options = [['auto', 'Auto', 'Use the best installed model (Quick, then Light, then Thorough).']];
+      const firstAuto = (CVAI.PROFILES[(Engine.autoOrder() || [])[0]] || CVAI.PROFILES.quick).label;
+      const options = [['auto', 'Auto', `Picks for this PC: ${firstAuto} first here. ${CVHardware.explain(CVHardware.state)}`]];
       // Quick/Thorough/Light describe Ollama models; the in-browser engine has just its one model.
       if (d.engine !== 'webllm') {
         for (const [key, p] of Object.entries(CVAI.PROFILES)) {
@@ -131,11 +142,9 @@
       const radios = options.map(([value, label, hint]) => {
         const input = h('input', { type: 'radio', name: 'ai-profile', value, checked: value === current });
         input.addEventListener('change', async () => {
-          try {
-            await Save.track('settings', () => Vault.updateSettings({ aiProfile: value, aiProfileChosen: true }));
-            renderPill();
-            toast(`AI profile: ${label}`, 'success');
-          } catch { /* reported by Save */ }
+          CVHardware.setProfile(value);
+          renderPill();
+          toast(`AI profile on this PC: ${label}`, 'success');
         });
         return h('label', { class: 'radio-row' }, input, h('span', {}, h('strong', {}, label), h('span', { class: 'muted small block' }, hint)));
       });
@@ -152,9 +161,10 @@
             h('p', {}, h('span', { class: 'pill status-pending' }, 'Offline'), ' The local AI engine is not running, so checks use the rule-based layer only.'),
             h('p', { class: 'muted small' }, 'To use AI review, double-click Start-CaseVault.bat on the CV-AI drive (for example W:\\) and click "Check again". See docs/AI-SETUP.md.')),
         d.status === 'connected' && d.engine !== 'webllm' && h('p', { class: 'muted small' },
-          `Installed models: ${d.models.map((m) => m.name).join(', ') || 'none'}.`,
-          d.embed ? ` Passage search uses ${d.embed}.` : ' Tip: install nomic-embed-text for better passage search.'),
-        h('h3', {}, 'Profile'),
+          `Installed models: ${d.models.map((m) => m.name).join(', ') || 'none'}.`),
+        d.status === 'connected' && d.engine !== 'webllm' && embedStatus(d),
+        h('h3', {}, 'Profile on this PC'),
+        h('p', { class: 'muted small' }, 'Remembered by this PC\'s browser, not on the SSD, so the Beelink and the L14 can each use the model that suits them.'),
         h('div', { class: 'radio-list' }, radios),
         webllmSection(),
         h('p', { class: 'muted small' }, 'Privacy: CaseVault only talks to the AI engine on this computer (127.0.0.1:11434), or runs the in-browser model inside this tab. Nothing is sent anywhere else.'),
@@ -162,6 +172,25 @@
           h('button', { class: 'btn', type: 'button', onclick: async () => { close(); await Engine.refresh(); showEngineDialog(); } }, 'Check again'),
           h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done')));
     });
+  }
+
+  // Passage search (embedding model): which report passages the AI reads for each statement.
+  function embedStatus(d) {
+    const { h, toast } = ui;
+    if (d.embed) return h('p', { class: 'small ok-text' }, `✓ Passage search: ${d.embed}. The AI review and Draft with AI find the relevant report passages by meaning, not only by keywords.`);
+    const cmd = 'W:\\ollama\\ollama.exe pull nomic-embed-text';
+    return h('div', { class: 'card warn-card' },
+      h('strong', {}, 'Passage search model not installed'),
+      h('p', { class: 'small' }, 'Without it the AI reads the passages found by keywords only, and can miss one written in other words. Install nomic-embed-text (about 0.3 GB) once:'),
+      h('ol', { class: 'small' },
+        h('li', {}, 'Leave the Start-CaseVault.bat window open (the AI engine must be running).'),
+        h('li', {}, 'Press Windows key + R, type cmd and press Enter.'),
+        h('li', {}, 'Paste this and press Enter (use your drive letter if it isn\'t W:), then wait for "success":'),
+        h('li', { class: 'list-none' }, h('code', {}, cmd), ' ',
+          h('button', { class: 'btn small', type: 'button', onclick: async () => {
+            try { await navigator.clipboard.writeText(cmd); toast('Command copied.', 'success'); } catch { toast('Select the command and press Ctrl+C.', 'error'); }
+          } }, 'Copy')),
+        h('li', {}, 'Come back here and click "Check again".')));
   }
 
   // In-browser engine settings, inside the AI engine dialog.
@@ -349,6 +378,19 @@
    * Running a check
    * ===================================================================== */
 
+  // Facts a template writes into every draft that no report will mention: the author's own details
+  // (signature block) and today's date ("Prepared …"). They never count as "not found".
+  function ownDetails() {
+    const a = (Vault.data && Vault.data.settings.affiant) || {};
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return [
+      ...['name', 'title', 'agency', 'address', 'phone', 'email'].map((k) => a[k]).filter(Boolean),
+      `Prepared ${now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.`,
+      `Dated ${pad(now.getMonth() + 1)}/${pad(now.getDate())}/${now.getFullYear()} and ${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.`,
+    ];
+  }
+
   // draft: { slug, title } to check a draft (from the Drafts tab) instead of an attached file.
   async function runCheck(c, affidavit, reports, useAI, draft = null) {
     const { h, openDialog, Save, toast, go } = ui;
@@ -401,7 +443,7 @@
       const rulesStep = addStep('Rule-based checks');
       activity.textContent = 'Comparing dates, times, names and numbers…';
       await new Promise((r) => setTimeout(r, 20));
-      const ruleFlags = CVRules.compare(docs.map((d) => ({ id: d.docIndex, name: d.name, role: d.role, paragraphs: d.paragraphs })));
+      const ruleFlags = CVRules.compare(docs.map((d) => ({ id: d.docIndex, name: d.name, role: d.role, paragraphs: d.paragraphs })), { ignore: ownDetails() });
       done(rulesStep);
       bar.value = useAI ? 35 : 90;
 
@@ -732,6 +774,10 @@
     const pill = document.getElementById('engine-status');
     if (pill) pill.addEventListener('click', () => { if (Vault.data) showEngineDialog(); });
     setInterval(() => { if (!document.hidden && Vault.data) Engine.refresh(); }, 60000);
+    if (typeof CVHardware !== 'undefined') {
+      CVHardware.onChange(() => { if (Vault.data) renderPill(); });
+      CVHardware.probeGpu();
+    }
   }
 
   function onVaultOpen() {

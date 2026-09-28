@@ -93,3 +93,47 @@ test('BM25 index finds the relevant passage', () => {
   const idx = T.createIndex([{ id: 1, text: 'The weather was clear.' }, { id: 2, text: 'Diaz observed the Honda plate.' }, { id: 3, text: 'Shots were fired near the store.' }]);
   assert.strictEqual(idx.search('What did Diaz observe about the Honda?')[0].id, 2);
 });
+
+/* ---------------- v1.9.1 ---------------- */
+
+const doc1 = (name, role, text) => ({ name, role, paragraphs: [{ index: 0, page: 1, text }] });
+
+test('names: one pair of swapped letters is flagged (Sampel / Sample)', () => {
+  const flags = R.compare([
+    doc1('Affidavit.docx', 'affidavit', 'On 03/14/2026 Officer Alex Sampel responded to 1420 Example Ave.'),
+    doc1('Report.pdf', 'report', 'On 03/14/2026 at 2140 hours, Officer Alex Sample responded to 1420 Example Avenue.'),
+  ]);
+  const name = flags.find((f) => f.type === 'name');
+  assert.ok(name, flags.map((f) => f.title).join('\n'));
+  assert.strictEqual(name.title, 'Name spelled differently: "Sampel" vs "Sample"');
+  assert.ok(!R.isNameVariant('form', 'from'), 'short words are left alone');
+  // The affidavit uses both spellings: the source shown is the report's.
+  const both = R.compare([
+    doc1('Affidavit.docx', 'affidavit', 'Officer Alex Sampel responded. Later Officer Sample saw the car.'),
+    doc1('Report.pdf', 'report', 'Officer Alex Sample responded to the call.'),
+  ]).find((f) => f.type === 'name');
+  assert.deepStrictEqual([both.statement.doc, both.source.doc], ['Affidavit.docx', 'Report.pdf']);
+  assert.strictEqual(both.title, 'Name spelled differently: "Sampel" vs "Sample"');
+});
+
+test('case numbers: 00123 and 2026-00123 are the same; different years are not', () => {
+  const same = R.compare([
+    doc1('Draft', 'affidavit', 'This affidavit concerns case no. 00123 and the events described below.'),
+    doc1('Report.pdf', 'report', 'Report for case no. 2026-00123 by the test unit.'),
+  ]);
+  assert.ok(!same.some((f) => f.type === 'number'), same.map((f) => f.title).join('\n'));
+  const other = R.compare([
+    doc1('Draft', 'affidavit', 'This affidavit concerns case no. 2025-00123 and the events described below.'),
+    doc1('Report.pdf', 'report', 'Report for case no. 2026-00123 by the test unit.'),
+  ]);
+  assert.ok(other.some((f) => f.type === 'number'), 'a different year is still a mismatch');
+});
+
+test('template noise: the author\'s own details and today\'s date are not "not found"', () => {
+  const draft = doc1('Draft', 'affidavit', 'Prepared September 28, 2026 by Detective Casey Example, 100 Example Street, phone (512) 555-0100. On 03/14/2026 at 2140 hours officers responded.');
+  const report = doc1('Report.pdf', 'report', 'On 03/14/2026 at 2140 hours officers responded.');
+  const noisy = R.compare([draft, report]).filter((f) => f.severity === 'Low').map((f) => f.type);
+  assert.ok(noisy.includes('date') && noisy.includes('address') && noisy.includes('phone'), noisy.join(','));
+  const quiet = R.compare([draft, report], { ignore: ['100 Example Street', '(512) 555-0100', 'Prepared September 28, 2026.'] });
+  assert.deepStrictEqual(quiet.filter((f) => f.severity === 'Low').map((f) => f.title), []);
+});

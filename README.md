@@ -15,7 +15,7 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.9)
+## Features (v1.9.1)
 
 - Cases with number, client, status, tags, and opened/closed dates; search and filter
 - **Archive** a case (moved to `archive/` on the SSD after every file is copied and verified; opens read-only; restore any time) or **delete** it permanently (type the case number to confirm)
@@ -47,6 +47,8 @@ The app detects the browser and picks the mode by itself. The data format on the
   - export to `.docx` (no library) or plain text
   - one-click consistency check of an affidavit draft
 
+- **AI profile per PC**: Auto uses the Quick model on a PC whose graphics card runs it (Beelink) and Light where the AI runs on the processor (L14)
+- **Self-test** (Vault → Maintenance): readers, OCR, checker, privacy and the AI engine checked in a minute with made-up documents
 - **AI activity indicator** in the header (what the AI is doing, model, time, tokens/s), one shared AI queue, and small-GPU settings (context size per profile, `keep_alive` 10 minutes)
 - **In-browser AI fallback**: when Ollama isn't running, a small WebLLM model runs on the PC's graphics chip (WebGPU), loaded from `W:\webllm` through the helper. The checker and drafting copilot use it unchanged via an Ollama-compatible shim. The browser's copy of the model is deleted right after loading.
 
@@ -96,6 +98,8 @@ CaseVault-Data/
 | `js/ai/memory.js` | Memory indicator (app, Ollama model GPU/RAM, PC RAM and disk) |
 | `js/vault.js` | Vault data model: cases, notes, timeline, files, index, backups, archive (verified folder moves) |
 | `js/ai/activity.js` | AI activity tracker: header indicator, shared AI queue, tokens/s |
+| `js/ai/hardware.js` | AI profile per PC, and what Auto picks from the GPU |
+| `js/selftest.js` | Self-test with built-in made-up documents |
 | `js/markdown.js` | Minimal, escaping Markdown previewer for notes |
 | `js/app.js` | User interface, autosave, connect/reconnect |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Installable offline PWA |
