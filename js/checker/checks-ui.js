@@ -135,7 +135,8 @@
   }
 
   function where(loc) {
-    return [loc.doc, loc.page ? `page ${loc.page}` : null].filter(Boolean).join(' · ');
+    const at = loc.sheet != null ? `${loc.sheet} row ${loc.row}` : loc.page ? `page ${loc.page}` : null;
+    return [loc.doc, at].filter(Boolean).join(' · ');
   }
 
   async function checkableFiles(c) {
@@ -143,7 +144,18 @@
   }
 
   // Text of a document: from the SSD cache when the file hasn't changed, otherwise read it again.
-  async function documentText(c, name, onProgress) {
+  // A draft (info.kind === 'draft') is read from cases/<id>/drafts/ instead of the attached files.
+  async function documentText(c, name, onProgress, info = null) {
+    if (info && info.kind === 'draft') {
+      const draft = await Vault.readDraft(c.id, info.draft);
+      if (!draft) {
+        const err = new Error(`The draft "${name}" no longer exists.`);
+        err.name = 'FileGoneError';
+        throw err;
+      }
+      const paragraphs = CVExtract.paragraphsFromText(CVDraft.stripMarkdown(draft.body), null);
+      return { name, kind: 'draft', pageCount: 1, paragraphs, ocrPages: [], warnings: [], size: draft.body.length, modified: draft.meta.updated || null };
+    }
     const file = await Vault.readFile(c.id, name);
     if (!file) {
       const err = new Error(`"${name}" is no longer attached to this case.`);
@@ -246,7 +258,8 @@
    * Running a check
    * ===================================================================== */
 
-  async function runCheck(c, affidavit, reports, useAI) {
+  // draft: { slug, title } to check a draft (from the Drafts tab) instead of an attached file.
+  async function runCheck(c, affidavit, reports, useAI, draft = null) {
     const { h, openDialog, Save, toast, go } = ui;
     const ctrl = new AbortController();
     const steps = h('ol', { class: 'progress-steps' });
@@ -276,9 +289,10 @@
         const role = name === affidavit ? 'affidavit' : 'report';
         const li = addStep(`Reading ${name}`);
         try {
-          const d = await documentText(c, name, (msg) => { activity.textContent = `${name}: ${msg}`; });
+          const src = draft && role === 'affidavit' ? { kind: 'draft', draft: draft.slug } : null;
+          const d = await documentText(c, name, (msg) => { activity.textContent = `${name}: ${msg}`; }, src);
           docs.push({ name, role, kind: d.kind, paragraphs: d.paragraphs, docIndex: docs.length });
-          docInfo.push({ name, role, kind: d.kind, pageCount: d.pageCount, ocrPages: d.ocrPages || [], warnings: d.warnings || [], size: d.size, modified: d.modified });
+          docInfo.push({ name, role, kind: d.kind, ...(src ? { draft: src.draft } : {}), pageCount: d.pageCount, ocrPages: d.ocrPages || [], warnings: d.warnings || [], size: d.size, modified: d.modified });
           done(li, d.ocrPages && d.ocrPages.length ? 'done warn' : 'done');
         } catch (err) {
           if (FS.isDisconnectError(err)) throw err;
@@ -502,20 +516,21 @@
 
   async function openLocation(c, data, loc) {
     const { h, openDialog, toast } = ui;
+    const info = (data.documents || []).find((d) => d.name === loc.doc);
     let doc;
     try {
-      doc = await documentText(c, loc.doc, () => {});
+      doc = await documentText(c, loc.doc, () => {}, info);
     } catch (err) {
       if (FS.isDisconnectError(err) && err.name !== 'NotFoundError') return ui.onDriveLost();
       return toast(err.message, 'error');
     }
-    const info = (data.documents || []).find((d) => d.name === loc.doc);
     const changed = info && info.size != null && (info.size !== doc.size || info.modified !== doc.modified);
     await openDialog((close) => {
       let lastPage = null;
       const body = h('div', { class: 'doc-view' });
       for (const p of doc.paragraphs) {
-        if (p.page && p.page !== lastPage) { body.append(h('div', { class: 'doc-page' }, `Page ${p.page}`)); lastPage = p.page; }
+        const section = p.sheet != null ? `Sheet: ${p.sheet}` : p.page ? `Page ${p.page}` : null;
+        if (section && section !== lastPage) { body.append(h('div', { class: 'doc-page' }, section)); lastPage = section; }
         const isTarget = p.index === loc.paragraph;
         let content = [p.text];
         if (isTarget && loc.end > loc.start && p.text.slice(loc.start, loc.end) === loc.text) {
@@ -527,9 +542,13 @@
       return h('div', { class: 'preview' },
         h('div', { class: 'preview-head' },
           h('h2', {}, loc.doc),
-          h('span', { class: 'muted small' }, loc.page ? `page ${loc.page}` : ''),
+          h('span', { class: 'muted small' }, loc.sheet != null ? `${loc.sheet} row ${loc.row}` : loc.page ? `page ${loc.page}` : ''),
           h('div', { class: 'spacer' }),
-          h('button', { class: 'btn', type: 'button', onclick: () => { close(); ui.previewFile(c, loc.doc, loc.page); } }, 'Open original'),
+          h('button', { class: 'btn', type: 'button', onclick: () => {
+            close();
+            if (info && info.kind === 'draft') ui.go(c.id, 'drafts', info.draft);
+            else ui.previewFile(c, loc.doc, loc.page, loc.sheet != null ? { sheet: loc.sheet, row: loc.row } : null);
+          } }, info && info.kind === 'draft' ? 'Open draft' : 'Open original'),
           h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Close')),
         changed ? h('p', { class: 'warn-text small' }, 'This file has changed since the check was run. The highlighted text may have moved.') : null,
         body);
@@ -558,5 +577,19 @@
     Engine.refresh();
   }
 
-  root.CVChecks = { init, render, onVaultOpen, renderPill, Engine };
+  /** Run a consistency check on a draft against every checkable attached document,
+   *  except the draft's own exported copies (draft.exclude). */
+  async function checkDraft(c, draft) {
+    const skip = new Set(draft.exclude || []);
+    const reports = (await checkableFiles(c)).map((f) => f.name).filter((n) => !skip.has(n));
+    if (!reports.length) {
+      ui.toast('Attach the reports on the Files tab first, then run the check again.', 'error', 8000);
+      return;
+    }
+    await Engine.refresh();
+    const useAI = Engine.status() === 'connected' && !!Engine.choice();
+    return runCheck(c, `Draft: ${draft.title}`, reports, useAI, draft);
+  }
+
+  root.CVChecks = { init, render, onVaultOpen, renderPill, Engine, documentText, checkDraft, profileLabel };
 })(this);

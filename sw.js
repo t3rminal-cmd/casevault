@@ -6,9 +6,11 @@
  */
 'use strict';
 
-// Replaced with the commit SHA by the GitHub Pages workflow so each deploy refreshes the cache.
+// VERSION is bumped with each release; BUILD is replaced with the commit SHA by the GitHub Pages
+// workflow. Either change gives a new cache, so the installed app picks up the update.
+const VERSION = '1.6.0';
 const BUILD = 'dev';
-const CACHE = `casevault-${BUILD}`;
+const CACHE = `casevault-${VERSION}-${BUILD}`;
 
 const APP_FILES = [
   './',
@@ -21,9 +23,16 @@ const APP_FILES = [
   './js/markdown.js',
   './js/checker/nlp.js',
   './js/checker/rules.js',
+  './js/checker/sheets.js',
   './js/checker/extract.js',
   './js/checker/ai.js',
   './js/checker/checks-ui.js',
+  './js/drafts/draft-core.js',
+  './js/drafts/docx.js',
+  './js/drafts/ghost.js',
+  './js/drafts/copilot.js',
+  './js/drafts/drafts-ui.js',
+  './js/privacy.js',
   './js/app.js',
   './icons/icon.svg',
   './icons/icon-192.png',
@@ -41,6 +50,8 @@ const APP_FILES = [
   './vendor/tesseract/core/tesseract-core-simd-lstm.wasm.js',
   './vendor/tesseract/core/tesseract-core-lstm.wasm.js',
   './vendor/tesseract/lang/eng.traineddata.gz',
+  // Spreadsheets (.xlsx/.xls/.csv), loaded only when one is opened
+  './vendor/sheetjs/xlsx.full.min.js',
 ];
 
 self.addEventListener('install', (event) => {

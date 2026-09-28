@@ -22,7 +22,7 @@ const HelperFS = (() => {
   async function call(method, op, path, { body, query = '' } = {}) {
     let res;
     try {
-      res = await fetch(`/api/${op}?p=${encodeURIComponent(path)}${query}`, {
+      res = await fetch(new URL(`/api/${op}?p=${encodeURIComponent(path)}${query}`, location.href), {
         method,
         body,
         headers: { 'X-CaseVault': '1' },
@@ -138,7 +138,7 @@ const HelperFS = (() => {
   async function info() {
     let res;
     try {
-      res = await fetch('/api/info', { headers: { 'X-CaseVault': '1' }, cache: 'no-store' });
+      res = await fetch(new URL('/api/info', location.href), { headers: { 'X-CaseVault': '1' }, cache: 'no-store' });
     } catch {
       throw domError('NotReadableError', 'The CaseVault helper is not running.');
     }

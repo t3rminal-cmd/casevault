@@ -15,11 +15,11 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.5.0';
+  const APP_VERSION = '1.6.0';
   const SCHEMA = 1;
   const DATA_DIR = 'CaseVault-Data';
   const STATUSES = ['Open', 'Pending', 'Closed', 'Archived'];
-  const DEFAULT_SETTINGS = { backupsToKeep: 30, aiProfile: 'auto' };
+  const DEFAULT_SETTINGS = { backupsToKeep: 30, aiProfile: 'auto', privacyPin: null, privacyIdleMinutes: 0 };
 
   let root = null;   // handle to CaseVault-Data
   let vault = null;  // parsed vault.json
@@ -436,6 +436,99 @@ const Vault = (() => {
     await FS.writeJSON(dir, cacheKey(fileName, size, modified), data);
   }
 
+  /* ---------- drafts (cases/<id>/drafts/<slug>.md) ---------- */
+  // Created on first use, so vaults from older versions open unchanged.
+
+  async function draftsDir(id) {
+    return FS.getDir(await caseDir(id), 'drafts', true);
+  }
+
+  // Newest first: [{ slug, title, type, ai, created, updated, size }]
+  async function listDrafts(id) {
+    const dir = await draftsDir(id);
+    const out = [];
+    for (const e of await FS.list(dir)) {
+      if (e.kind !== 'file' || !/\.md$/i.test(e.name)) continue;
+      const slug = e.name.replace(/\.md$/i, '');
+      const f = await e.handle.getFile();
+      const { meta } = CVDraft.parseDraft(await f.text());
+      out.push({ slug, title: meta.title || slug, type: meta.type || 'other', ai: !!meta.ai, created: meta.created || '', updated: meta.updated || new Date(f.lastModified).toISOString(), size: f.size });
+    }
+    return out.sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
+  }
+
+  async function readDraft(id, slug) {
+    const text = await FS.readText(await draftsDir(id), `${slug}.md`);
+    if (text == null) return null;
+    const { meta, body } = CVDraft.parseDraft(text);
+    return { slug, meta: { title: slug, type: 'other', ...meta }, body };
+  }
+
+  async function newDraftSlug(id, title) {
+    const dir = await draftsDir(id);
+    const base = CVDraft.slugify(title);
+    for (let n = 1; ; n++) {
+      const slug = n === 1 ? base : `${base}-${n}`;
+      if (!(await FS.exists(dir, `${slug}.md`))) return slug;
+    }
+  }
+
+  function saveDraft(id, slug, meta, body) {
+    return serial(`draft:${id}:${slug}`, async () => {
+      const m = { ...meta, updated: nowISO() };
+      if (!m.created) m.created = m.updated;
+      await FS.writeText(await draftsDir(id), `${slug}.md`, CVDraft.serializeDraft(m, body));
+      await touchIndex(id);
+      return m;
+    });
+  }
+
+  async function deleteDraft(id, slug) {
+    await FS.remove(await draftsDir(id), `${slug}.md`);
+    await touchIndex(id);
+  }
+
+  /* ---------- templates (CaseVault-Data/templates/*.md) ---------- */
+
+  async function templatesDir() {
+    return FS.getDir(root, 'templates', true);
+  }
+
+  async function listTemplates() {
+    const dir = await templatesDir();
+    const out = [];
+    for (const e of await FS.list(dir)) {
+      if (e.kind !== 'file' || !/\.md$/i.test(e.name)) continue;
+      const text = await (await e.handle.getFile()).text();
+      out.push({ file: e.name, title: CVDraft.templateTitle(text, e.name) });
+    }
+    return out.sort((a, b) => a.title.localeCompare(b.title));
+  }
+
+  async function readTemplate(file) {
+    return FS.readText(await templatesDir(), file);
+  }
+
+  function saveTemplate(file, text) {
+    return serial(`template:${file}`, async () => FS.writeText(await templatesDir(), FS.safeName(file), text));
+  }
+
+  async function deleteTemplate(file) {
+    await FS.remove(await templatesDir(), file);
+  }
+
+  // Copies the generic starter templates in; never overwrites a file the user already has.
+  async function addStarterTemplates() {
+    const dir = await templatesDir();
+    const added = [];
+    for (const [file, text] of Object.entries(CVDraft.STARTER_TEMPLATES)) {
+      if (await FS.exists(dir, file)) continue;
+      await FS.writeText(dir, file, text);
+      added.push(file);
+    }
+    return added;
+  }
+
   /* ---------- settings ---------- */
 
   function updateSettings(patch) {
@@ -455,5 +548,7 @@ const Vault = (() => {
     getTimeline, saveTimeline, sortEvents,
     listFiles, addFile, readFile, deleteFile,
     listChecks, newCheckName, readCheck, saveCheck, deleteCheck, readTextCache, writeTextCache,
+    listDrafts, readDraft, newDraftSlug, saveDraft, deleteDraft,
+    listTemplates, readTemplate, saveTemplate, deleteTemplate, addStarterTemplates,
   };
 })();

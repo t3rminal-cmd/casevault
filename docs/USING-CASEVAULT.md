@@ -104,9 +104,19 @@ Add dated **Events** (things that happened) and **Deadlines** (things that are d
 
 On the **Files** tab, drag files onto the box or click **choose files**. They are **copied** into the case's `files` folder on the SSD, and your originals aren't changed. If a file with the same name already exists, the copy is named `name (2).pdf` rather than replacing it.
 
-- **Open** previews PDFs, images, text, audio, and video right inside CaseVault.
-- Other types (Word, Excel, and so on) can't be previewed. CaseVault shows you where the file is on the SSD, for example `CaseVault-Data\cases\20260928-ab12cd\files\statement.docx`, so you can open it from File Explorer.
+- **Open** previews PDFs, images, text, audio, and video right inside CaseVault. Excel and CSV files open as tables (see below).
+- Other types (Word, and so on) can't be previewed. CaseVault shows you where the file is on the SSD, for example `CaseVault-Data\cases\20260928-ab12cd\files\statement.docx`, so you can open it from File Explorer.
 - **Delete** permanently removes the file from the SSD after you confirm.
+
+### Excel and CSV files
+
+Attach `.xlsx`, `.xls`, `.ods` and `.csv` files like any other file.
+
+- **Open** shows each sheet as a scrollable table with the sheet names as tabs, Excel-style column letters, and the real row numbers. Very large sheets show the first 2,000 rows; open the file in Excel to see everything.
+- CSV files keep their values exactly as written. A badge number `0012` stays `0012`, and dates aren't reformatted.
+- Only cell values are read. Formulas are never run, and macros in `.xlsm` files are ignored.
+- The spreadsheet reader (SheetJS) is part of CaseVault and loads only when you open a spreadsheet. Nothing is downloaded.
+- **Consistency checks** read spreadsheets row by row, as in `Evidence row 5: Item=17; Plate=ABC-1284`. A flag points at the sheet and row. **Open original** opens the table with that row highlighted.
 
 ## Saving
 
@@ -128,7 +138,7 @@ The **Checks** tab compares an affidavit draft (or any document) against the rep
 
 ### Running a check
 
-1. Attach the affidavit and the reports on the **Files** tab. PDF (including scanned PDFs), DOCX, TXT, and photos (PNG/JPG) can be checked. Old `.doc` files must be saved as `.docx` or PDF first.
+1. Attach the affidavit and the reports on the **Files** tab. PDF (including scanned PDFs), Word (`.docx`), Excel (`.xlsx`, `.xls`), CSV, TXT, and photos (PNG/JPG) can be checked. Old `.doc` files must be saved as `.docx` or PDF first. To check a draft you're writing in CaseVault, use **Run consistency check** in the Drafts tab instead.
 2. Open **Checks**. Under **Document to check**, pick the affidavit. (Choose *none* to only compare the reports with each other.)
 3. Tick the reports to compare against. All of them are ticked by default.
 4. **Include AI review** is available when the header shows **AI: Connected**. Without it, the rule-based checks still run.
@@ -180,6 +190,107 @@ Each run is saved as `CaseVault-Data\cases\<case>\checks\<date>-check.json`. A s
 
 The AI engine setup (profiles, models, the launcher) is in [AI-SETUP.md](AI-SETUP.md). Click the **AI:** status in the header to choose a profile.
 
+## Privacy screen
+
+To hide CaseVault instantly, for example when someone walks up to your desk, do any of these:
+
+- press **Ctrl + Shift + H**;
+- press **Esc twice** quickly (within half a second);
+- click **Hide** at the top right.
+
+A plain grey screen covers the whole app, with no case names or data on it. The browser tab's title changes to **New Tab** and its icon goes blank. Audio and video pause, any open file preview closes, and any unsaved edits are written to the SSD first.
+
+**To come back:** click anywhere. If you set a PIN, type it and press Enter (it also unlocks by itself once you've typed 6 digits). After 5 wrong PINs you have to wait 30 seconds.
+
+**Settings** (in **Vault → Privacy screen**):
+
+- **Set PIN / Change PIN / Remove PIN.** 4 to 6 digits. It's stored in `vault.json` on the SSD as a salted SHA-256 hash, never the PIN itself, so it goes with the SSD to every PC.
+- **Hide automatically after** 1 to 30 minutes without mouse or keyboard activity. Off by default.
+
+> The privacy screen only hides what's on the screen. It isn't encryption, and anyone at the PC could close the browser tab. **For real security when you leave, press Windows key + L to lock the PC.**
+
+In Firefox, Ctrl + Shift + H normally opens the History window. While CaseVault is the active tab, CaseVault uses it instead. If it ever doesn't respond, use Esc Esc or the Hide button.
+
+## Drafts
+
+The **Drafts** tab is where you write documents for the case: affidavits, subpoenas, memos, case summaries. Drafts are saved as Markdown files in `CaseVault-Data\cases\<case>\drafts\` on the SSD. They autosave like notes, with the same **Saved to SSD** indicator.
+
+### Starting a draft
+
+Give it a title and a type (Case summary, Affidavit, Subpoena, Memo, Other), then choose how to start:
+
+- **Blank.**
+- **From a template.** Your agency's formats, stored in `CaseVault-Data\templates\` (see *Templates* below). Case details such as the case number are filled in for you.
+- **Draft with AI.** Writes a first draft from this case's material (needs **AI: Connected** in the header).
+
+The editor understands simple Markdown (`#` headings, `**bold**`, `1.` numbered paragraphs, `-` bullets). **Preview** shows it formatted.
+
+### [CONFIRM: ...] placeholders
+
+Anything that still needs checking is written as `[CONFIRM: what is needed]`, for example `[CONFIRM: affiant badge number]`. Templates add them for missing case details, and the AI adds them for any fact it doesn't find in the material.
+
+The **To confirm** panel beside the editor lists every placeholder with its line. Click one to jump to it and select it, then type the checked fact over it. A draft is ready when the panel says *Nothing left to confirm*.
+
+### AI suggestions while you type
+
+With **AI suggestions** ticked in the toolbar, pausing for a moment at the end of a line shows a short grey suggestion for how the sentence might continue.
+
+- **Tab** accepts it.
+- **Esc** (or typing something else) dismisses it. If you type the first letters of the suggestion, the rest stays.
+- It uses the smallest AI model you have installed, so it's quick, and it only ever talks to the AI engine on this computer.
+- It switches itself off when the header shows **AI: Offline** or **AI: Rules-only**. Untick it any time; CaseVault remembers the choice.
+
+### Draft with AI
+
+Click **Draft with AI…** in the editor (or pick it when creating a draft) and choose:
+
+- **Document type** and optionally a **template** to follow.
+- **What to use:** the case details (always), the timeline, the notes, and any attached documents. For long documents, CaseVault picks the passages most relevant to the draft.
+- Optional **instructions**, such as "focus on the events of March 14".
+- **Replace** the current text, or **add** below it.
+
+The draft appears in the editor as it's written. **Stop** keeps what has been written so far.
+
+The AI is told to use **only** the case material you selected, to keep facts and numbers exactly as written in the reports, and to write `[CONFIRM: ...]` for anything missing (names, dates, badge numbers, the court) rather than invent it.
+
+AI-written drafts always show this banner:
+
+> ⚠ AI-generated draft. Verify every fact against the source before signing or filing.
+
+Read an AI draft as a starting point. It can still misstate things, so check every sentence against the reports.
+
+### Checking a draft
+
+On an **Affidavit** draft, **Run consistency check** checks the draft against every document attached to the case, using the same checker as the Checks tab (rules, plus AI review when connected). Click a flag to see the sentence in the draft, and **Open draft** to go back and fix it. The draft's own exported copies are left out, so the draft is never compared with itself.
+
+### Export
+
+**Export ▾** in the editor offers:
+
+- **Save .docx to case files (SSD).** A Word file is added to the case's Files tab. Recommended: it stays on the encrypted SSD.
+- **Save .docx to this computer…** Chrome/Edge ask where to save it. Firefox uses its normal download. Choose a folder on the SSD if you don't want a copy on the PC.
+- **Copy as plain text.** Copies the text without Markdown symbols, to paste into another program.
+
+The Word file keeps headings, paragraphs, bold and italic, bullet and numbered lists. Any `[CONFIRM: ...]` left in the text is highlighted yellow in Word so it can't be missed.
+
+### Templates
+
+Manage templates in **Vault → Templates**:
+
+- **Add generic starter templates** adds an affidavit, a subpoena and a case summary. They're **generic examples, not legal forms**. Replace them with your agency's approved formats.
+- **New template** or **Import .md…** to add your own, and **Edit / Delete** to change them. Each template is a Markdown file in `CaseVault-Data\templates\` on the SSD.
+
+Placeholders you can use in a template:
+
+| Placeholder | Becomes |
+|---|---|
+| `{{case.title}}`, `{{case.number}}`, `{{case.client}}`, `{{case.status}}`, `{{case.tags}}` | The case's details |
+| `{{case.opened}}`, `{{case.closed}}` | The case's dates |
+| `{{today}}` / `{{today.iso}}` | Today, as *September 28, 2026* / *2026-09-28* |
+| `{{confirm: badge number}}` | `[CONFIRM: badge number]` |
+
+A placeholder with no value (for example a case without a client) becomes `[CONFIRM: case.client]`, so nothing missing slips through.
+
 ## Backups
 
 - The first time you connect each day, CaseVault copies `vault.json` (the case list and settings) to `CaseVault-Data\backups\vault-YYYY-MM-DD.json`. It keeps the newest 30. You can change that under **Vault** at the top right, and **Back up now** makes an extra copy.
@@ -190,7 +301,7 @@ The AI engine setup (profiles, models, the launcher) is in [AI-SETUP.md](AI-SETU
 
 | Where | What |
 |---|---|
-| **SSD, `V:\CaseVault-Data\`** | All case data: details, notes, timelines, files, consistency checks and the text read from documents, backups. |
+| **SSD, `V:\CaseVault-Data\`** | All case data: details, notes, timelines, files, drafts, consistency checks and the text read from documents, templates, settings (including the privacy-screen PIN hash), backups. |
 | **SSD, `W:\`** | The launcher, the helper, the AI engine and its models. No case data. |
 | **The browser on this PC** | The CaseVault app files (so it opens offline), and in Chrome/Edge a *pointer* to the vault folder so it can offer **Reconnect**. No case data. |
 | **GitHub** | Only the app's code. Case data can never be committed; the repository blocks it. |
@@ -211,6 +322,10 @@ To make a PC forget the vault folder, open **Vault → Disconnect**.
 | *The CaseVault helper is not running* | Start `W:\Start-CaseVault.bat` and click **Reconnect**. |
 | *AI: Offline* in the header | Start `W:\Start-CaseVault.bat`, then click the pill → **Check again**. Checks still run with rules only. |
 | *Reading PDFs needs the installed app or the helper* | You opened `index.html` straight from the SSD. Use the installed app or the launcher address instead. |
+| Ctrl + Shift + H does nothing | Click in the CaseVault page first (the shortcut only works while CaseVault is the active tab), or use Esc Esc or the **Hide** button. |
+| I forgot the privacy-screen PIN | Reload the page (F5). The screen is gone, and you'll be asked to reconnect in Chrome/Edge. Then set a new PIN under Vault → Privacy screen. |
+| No grey AI suggestions appear | The header must show **AI: Connected**, and **AI suggestions** must be ticked. Suggestions only appear when the cursor is at the end of a line. |
+| *Draft with AI* is greyed out | Start `W:\Start-CaseVault.bat` so the AI engine runs, then click the AI pill → **Check again**. |
 | A check says a file was *Skipped* | It couldn't be read (damaged, password-protected, or an unsupported type). Save it as PDF or DOCX and attach it again. |
 | *Drive not connected* | Plug in the SSD, unlock V: with the BitLocker password, then click **Reconnect**. |
 | Reconnect keeps failing | The drive letter probably changed. Click **Choose folder…** and pick `CaseVault-Data` (or the drive's root). |
@@ -218,3 +333,7 @@ To make a PC forget the vault folder, open **Vault → Disconnect**.
 | *This vault was saved by a newer version* | Update the app (reload the installed app while online, or refresh the SSD copy). |
 | A case disappeared from the list | Click **Vault → Rebuild case index**. If its folder is still in `cases\`, it comes back. |
 | *Not saved — reconnect SSD* | See **Saving** above. Keep the window open, reconnect, and wait for green. |
+
+## Not built yet
+
+The **in-browser AI fallback (WebLLM)** is still deferred. When the Ollama engine isn't running, the consistency checker uses its rule-based layer only, and Draft with AI and suggestions are unavailable until the engine is started.

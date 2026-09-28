@@ -1,10 +1,10 @@
 /* CaseVault checker — reading text out of attached documents.
  *
- * PDF (pdf.js; scanned pages go through OCR), DOCX (built-in unzip, no library), plain text,
- * and images (Tesseract OCR). Every library is loaded from vendor/ on this site; nothing is
+ * PDF (pdf.js; scanned pages go through OCR), DOCX (built-in unzip, no library), spreadsheets
+ * (.xlsx/.xls/.ods/.csv via SheetJS, one paragraph per row), plain text, and images (Tesseract OCR). Every library is loaded from vendor/ on this site; nothing is
  * fetched from the internet (the Content-Security-Policy would block it anyway).
  *
- * Result: { name, kind, pageCount, paragraphs: [{ index, page, text }], ocrPages: [n], warnings: [] }
+ * Result: { name, kind, pageCount, paragraphs: [{ index, page, text, sheet?, row? }], ocrPages: [n], warnings: [] }
  */
 'use strict';
 
@@ -15,7 +15,8 @@
   const KINDS = {
     pdf: 'pdf',
     docx: 'docx',
-    txt: 'text', md: 'text', text: 'text', csv: 'text', log: 'text', rtf: null,
+    txt: 'text', md: 'text', text: 'text', log: 'text', rtf: null,
+    xlsx: 'sheet', xlsm: 'sheet', xls: 'sheet', ods: 'sheet', csv: 'sheet', tsv: 'sheet',
     png: 'image', jpg: 'image', jpeg: 'image', bmp: 'image', webp: 'image', gif: 'image', tif: null, tiff: null,
   };
 
@@ -28,7 +29,8 @@
     const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
     if (ext === 'doc') return 'Old .doc files can\'t be read. Open it in Word and save it as .docx or PDF.';
     if (ext === 'tif' || ext === 'tiff') return 'TIFF images can\'t be read. Save it as PDF, PNG or JPG.';
-    return 'This file type can\'t be checked. PDF, DOCX, TXT and images (PNG/JPG) are supported.';
+    if (ext === 'numbers') return 'Apple Numbers files can\'t be read. Export it as .xlsx or .csv.';
+    return 'This file type can\'t be checked. Supported: PDF, Word (.docx), Excel (.xlsx, .xls), CSV, text (.txt) and images (PNG/JPG).';
   }
 
   /* ---------------- paragraphs ---------------- */
@@ -269,6 +271,15 @@
     };
   }
 
+  /* ---------------- spreadsheets ---------------- */
+
+  async function extractSheet(file, name, progress) {
+    progress?.('reading the spreadsheet');
+    const sheets = await root.CVSheets.read(file, name);
+    const warnings = sheets.filter((s) => s.truncated).map((s) => `Sheet "${s.name}" has more than ${root.CVSheets.MAX_ROWS} rows; only the first ${root.CVSheets.MAX_ROWS} were checked.`);
+    return { pageCount: sheets.length, sheets: sheets.map((s) => s.name), paragraphs: root.CVSheets.paragraphs(sheets), ocrPages: [], warnings };
+  }
+
   /* ---------------- entry point ---------------- */
 
   async function extract(file, name, progress) {
@@ -278,6 +289,7 @@
     if (kind === 'pdf') result = await extractPdf(file, progress);
     else if (kind === 'docx') result = await extractDocx(file);
     else if (kind === 'image') result = await extractImage(file, progress);
+    else if (kind === 'sheet') result = await extractSheet(file, name, progress);
     else result = { pageCount: 1, paragraphs: paragraphsFromText(await file.text(), null), ocrPages: [], warnings: [] };
     if (!result.paragraphs.length) result.warnings.push('No readable text was found in this document.');
     return { name, kind, ...result };

@@ -41,6 +41,16 @@ function answer(prompt) {
     : { verdict: 'supported', passage: best.p.n, quote: best.s.text, explanation: 'Same facts.' };
 }
 
+// A canned first draft that only uses facts present in the prompt and marks the rest [CONFIRM: ...].
+function draftFor(prompt) {
+  const number = (/Case number: (.+)/.exec(prompt) || [])[1] || '[CONFIRM: case number]';
+  const dias = /Officer Maria Dias/.test(prompt) ? 'Officer Maria Dias' : '[CONFIRM: responding officer]';
+  return `# AFFIDAVIT IN SUPPORT OF SEARCH WARRANT\n\nCase No. ${number}\n\nI, [CONFIRM: affiant name and rank], being duly sworn, state:\n\n` +
+    `1. On 03/14/2026 at 2140 hours, ${dias} responded to 1420 Oak St. regarding shots fired.\n` +
+    '2. Witness Robert Lee stated he heard two shots.\n\n' +
+    '______________________________\n[CONFIRM: affiant signature and badge number]\n';
+}
+
 function start(port = 11434) {
   const server = http.createServer((req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -55,6 +65,24 @@ function start(port = 11434) {
       if (req.url === '/api/tags') return json({ models: MODELS });
       const data = body ? JSON.parse(body) : {};
       if (req.url === '/api/embed') return json({ embeddings: [].concat(data.input).map(vec) });
+      server.requests = server.requests || [];
+      server.requests.push({ url: req.url, body: data });
+      if (req.url === '/api/generate') {
+        // Inline suggestion: continue the text.
+        return json({ response: ' responded to 1420 Oak Street at 21:40 hours.', done: true });
+      }
+      if (req.url === '/api/chat' && data.stream) {
+        // "Draft with AI": stream a short draft as NDJSON, like Ollama does.
+        const draft = draftFor(data.messages.find((m) => m.role === 'user').content);
+        res.writeHead(200, { 'Content-Type': 'application/x-ndjson' });
+        const pieces = draft.match(/[\s\S]{1,24}/g);
+        let i = 0;
+        const next = () => {
+          if (i < pieces.length) { res.write(JSON.stringify({ message: { role: 'assistant', content: pieces[i++] }, done: false }) + '\n'); setTimeout(next, 5); }
+          else { res.end(JSON.stringify({ message: { role: 'assistant', content: '' }, done: true }) + '\n'); }
+        };
+        return next();
+      }
       if (req.url === '/api/chat') {
         const prompt = data.messages.find((m) => m.role === 'user').content;
         return json({ message: { role: 'assistant', content: JSON.stringify(answer(prompt)) }, done: true });

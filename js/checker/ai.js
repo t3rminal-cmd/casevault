@@ -92,6 +92,9 @@
 
   const BOILERPLATE = /\b(sworn|subscribed|notary|my commission|under penalty of perjury|affiant further sayeth|signature|signed this)\b/i;
 
+  // Spreadsheet rows carry their sheet and row number as the location.
+  const cellOf = (p) => (p.sheet != null ? { sheet: p.sheet, row: p.row } : {});
+
   function statementsOf(doc, limit = 250) {
     const out = [];
     for (const para of doc.paragraphs) {
@@ -100,7 +103,7 @@
         if (words < 6 || T.terms(s.text).length < 3) continue;
         if (s.text === s.text.toUpperCase() && words < 15) continue; // headings
         if (BOILERPLATE.test(s.text)) continue;
-        out.push({ doc: doc.docIndex, paragraph: para.index, page: para.page ?? null, text: s.text, start: s.start, end: s.end });
+        out.push({ doc: doc.docIndex, paragraph: para.index, page: para.page ?? null, ...cellOf(para), text: s.text, start: s.start, end: s.end });
         if (out.length >= limit) return out;
       }
     }
@@ -118,7 +121,7 @@
         if (!group.length) return;
         const start = group[0].start;
         const end = group[group.length - 1].end;
-        out.push({ doc: doc.docIndex, docName: doc.name, paragraph: para.index, page: para.page ?? null, start, end, text: para.text.slice(start, end), paraText: para.text });
+        out.push({ doc: doc.docIndex, docName: doc.name, paragraph: para.index, page: para.page ?? null, ...cellOf(para), start, end, text: para.text.slice(start, end), paraText: para.text });
         group = [];
       };
       for (const s of sents) {
@@ -162,7 +165,7 @@
   };
 
   function userPrompt(statement, passages) {
-    const list = passages.map((p, i) => `[${i + 1}] (${p.docName}${p.page ? `, page ${p.page}` : ''})\n${p.text}`).join('\n\n');
+    const list = passages.map((p, i) => `[${i + 1}] (${p.docName}${p.sheet != null ? `, ${p.sheet} row ${p.row}` : p.page ? `, page ${p.page}` : ''})\n${p.text}`).join('\n\n');
     return `STATEMENT FROM THE AFFIDAVIT:\n${statement.text}\n\nPASSAGES FROM THE REPORTS:\n${list}`;
   }
 
@@ -218,8 +221,8 @@
     }
 
     let seq = 0;
-    const loc = (doc, paragraph, page, text, start, end, highlight) => ({
-      doc: doc.name, docIndex: doc.docIndex, page, paragraph, text, start, end, ...(highlight ? { highlight } : {}),
+    const loc = (doc, at, text, start, end, highlight) => ({
+      doc: doc.name, docIndex: doc.docIndex, page: at.page, ...cellOf(at), paragraph: at.paragraph, text, start, end, ...(highlight ? { highlight } : {}),
     });
     const docByIndex = new Map(docs.map((d) => [d.docIndex, d]));
 
@@ -242,7 +245,7 @@
       }
 
       const stDoc = docByIndex.get(st.doc);
-      const statementLoc = loc(stDoc, st.paragraph, st.page, st.text, st.start, st.end);
+      const statementLoc = loc(stDoc, st, st.text, st.start, st.end);
       const mk = (severity, title, detail, source) => ({
         id: `a${Date.now().toString(36)}${(seq++).toString(36)}`,
         layer: 'ai', severity, type: 'statement', title, detail, statement: statementLoc, source, status: 'open', note: '',
@@ -309,7 +312,7 @@
       const sent = T.sentences(p.paraText).find((s) => s.start <= s0 && s.end >= s1) || { text: p.paraText.slice(s0, s1), start: s0, end: s1 };
       const srcDoc = docByIndex.get(p.doc);
       flags.push(mk('Medium', `Contradicted by ${srcDoc.name}`, answer.explanation || 'The report says something different.',
-        loc(srcDoc, p.paragraph, p.page, sent.text, sent.start, sent.end, [s0 - sent.start, s1 - sent.start])));
+        loc(srcDoc, p, sent.text, sent.start, sent.end, [s0 - sent.start, s1 - sent.start])));
     }
     onProgress({ phase: 'review', done: statements.length, total: statements.length });
     return { flags, stats, complete: true };

@@ -130,7 +130,7 @@
 
   const NUMBER_LABELS = 'case|report|incident|file|docket|citation|cad|event|complaint|warrant|arrest|booking|item|evidence|property|offense|offence|tracking|receipt|serial|badge|vin';
   function extractNumbers(s, c) {
-    const re = new RegExp(`\\b(${NUMBER_LABELS})(?:\\s+(?:number|no\\.?|num\\.?|nr\\.?)|\\s*#)?\\s*[:#]?\\s*(?:#\\s*)?([A-Z0-9][A-Z0-9-]*\\d[A-Z0-9-]*)`, 'gi');
+    const re = new RegExp(`\\b(${NUMBER_LABELS})(?:\\s+(?:number|no\\.?|num\\.?|nr\\.?)|\\s*#)?\\s*[:#=]?\\s*(?:#\\s*)?([A-Z0-9][A-Z0-9-]*\\d[A-Z0-9-]*)`, 'gi');
     each(re, s, (m) => {
       const value = m[2].toUpperCase().replace(/-+$/, '');
       if (value.replace(/-/g, '').length < 4) return;
@@ -164,7 +164,7 @@
     // Keyword is case-insensitive; the plate itself must be written in capitals (avoids ordinary words).
     each(/\b(?:licen[cs]e\s+plate|plate|tag|registration|reg\.|LP|lic\.)(?:\s+(?:number|no\.?|#))?/gi, s, (m) => {
       const from = m.index + m[0].length;
-      const r = /^\s*(?:[:#]\s*|reading\s+|of\s+|bearing\s+)?["']?([A-Z0-9]{1,4}(?:[ -]?[A-Z0-9]{1,5}){0,2})\b/.exec(s.slice(from));
+      const r = /^\s*(?:[:#=]\s*|reading\s+|of\s+|bearing\s+)?["']?([A-Z0-9]{1,4}(?:[ -]?[A-Z0-9]{1,5}){0,2})\b/.exec(s.slice(from));
       if (!r) return;
       let raw = r[1];
       let value = raw.replace(/[\s-]/g, '');
@@ -247,12 +247,15 @@
   }
 
   /** Split documents into sentences, each with its facts and its location. */
+  // Spreadsheet rows carry their sheet and row number as the location.
+  const cellOf = (p) => (p.sheet != null ? { sheet: p.sheet, row: p.row } : {});
+
   function analyze(docs) {
     return docs.map((doc, d) => {
       const sents = [];
       for (const para of doc.paragraphs) {
         for (const s of T.sentences(para.text)) {
-          sents.push({ doc: d, paragraph: para.index, page: para.page ?? null, text: s.text, start: s.start, end: s.end, facts: extractFacts(s.text) });
+          sents.push({ doc: d, paragraph: para.index, page: para.page ?? null, ...cellOf(para), text: s.text, start: s.start, end: s.end, facts: extractFacts(s.text) });
         }
       }
       return { ...doc, sentences: sents };
@@ -281,6 +284,7 @@
       doc: docs[sent.doc].name,
       docIndex: sent.doc,
       page: sent.page,
+      ...cellOf(sent),
       paragraph: sent.paragraph,
       text: sent.text,
       start: sent.start,
