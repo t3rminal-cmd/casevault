@@ -25,6 +25,9 @@
         h('code', {}, CVOutbound.ALLOWED_HOSTS.join(', ')), '.'),
       h('label', { class: 'check-row' }, allowed, h('span', {}, 'Allow going online')),
       h('div', { class: 'row' }, h('label', { class: 'inline' }, 'Go offline again after ', idle, ' without use')),
+      h('h4', {}, 'Anthropic API key (optional)'),
+      h('p', { class: 'muted small' }, 'Only needed to get answers inside CaseVault. With your Claude subscription (claude.ai, copy & paste) no key is needed.'),
+      CVApiKey.card({ compact: false }),
       h('p', { class: 'hint' }, 'Check your agency\'s policy on cloud AI before turning this on.'));
   }
 

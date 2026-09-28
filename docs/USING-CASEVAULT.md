@@ -287,13 +287,34 @@ CaseVault is offline by default. If your agency allows it, you can ask Claude re
 **Services:**
 
 - **claude.ai (my Claude subscription)**: a Claude Pro/Max subscription can't be connected to other apps, so CaseVault does it the safe manual way. It hides the details, copies the result, and opens claude.ai in a new tab. Paste it there, then paste Claude's answer back into CaseVault, which puts the real names back on this computer.
-- **Anthropic API**: answers appear inside CaseVault. Needs an API key from console.anthropic.com, **billed separately** from a subscription. The key stays in memory, or on the SSD in `CaseVault-Data\secrets` if you tick *Remember on the SSD*. Never in the browser.
+- **Anthropic API** (optional): answers appear inside CaseVault. Needs an API key, **billed separately** from a subscription. See *Setting up the API key* below.
 
 **What happens to your text:** every message goes through the same review screen. Names, SSNs, dates of birth, IDs, phone numbers, emails, addresses, plates, VINs, case numbers and card/bank numbers are replaced with placeholders like `[NAME_1]` and `[PHONE_1]`. Those can't be un-ticked. Possible names found by pattern can be un-ticked (for example a court's name). **Hide this too** adds anything the scan missed. The box *Exactly what will be sent* shows the final text. The same person keeps the same placeholder for the whole conversation, and answers are shown with the real values put back (untick *Show real names* to see what Claude saw). **Save to case as draft** keeps an answer in the case's Drafts, marked AI-assisted.
 
 Detection is a safety net, not a guarantee. Always read the text before you send it, and add names CaseVault should always hide to **Vault → Always hide (PII watch list)**: subjects, informants, nicknames, street names.
 
 Only `api.anthropic.com` can ever be reached (the page's security policy blocks every other address), only with text you reviewed, and each review allows one request. Case files are never sent automatically.
+
+### Setting up the API key (optional)
+
+The same steps are shown inside CaseVault: **Research & drafting (online)** → Service **Anthropic API** → **Add API key…** (or **Vault → Online features → Anthropic API key**). The links there open the right Console pages in a new tab.
+
+1. **Open the Claude Console** at [platform.claude.com](https://platform.claude.com/). It is Anthropic's site for developers, separate from claude.ai. The old address, console.anthropic.com, goes to the same place.
+2. **Sign in or create an account** with your email, Google or single sign-on. Your Claude Pro login works, but a Pro subscription does **not** include API credit. If your agency has an organisation account, ask its administrator to invite you instead.
+3. **Add credit.** Go to **Settings → Billing**, add a payment method and buy credit (the minimum is small, about $5). Until there is credit, every request is refused.
+4. **Set a spending limit** (recommended). In **Settings → Limits**, set a monthly limit and an email alert. Leave auto-reload off unless you need it.
+5. **Create the key.** Go to **Settings → API keys → Create Key**. Name it after the PC, for example `CaseVault - Beelink` or `CaseVault - L14`, so you can switch one off without touching the other. Keep the Default workspace.
+6. **Copy it now.** It starts with `sk-ant-api03-` and is about 100 characters long. The Console shows it **only once**. Don't paste it into email, chat, notes or a document.
+7. **Add it to CaseVault.** Click **Add API key…**, paste it (Ctrl+V) and choose where to keep it:
+   - **This session only**: the safest choice. The key is gone when you close CaseVault, and you paste it again next time.
+   - **Save on the SSD, locked with a passphrase**: encrypted (AES-256) in `CaseVault-Data\secrets\anthropic.json`. CaseVault asks for the passphrase once per session (**Unlock…**). If you forget the passphrase, remove the key and add it again.
+   - **Save on the SSD without a passphrase**: protected only by BitLocker on the CASEVAULT drive.
+
+   Tick that you understand the billing, then click **Save key**. CaseVault checks the format and catches the usual mistakes: an incomplete copy, an Admin key (`sk-ant-admin…`), or a subscription token (`sk-ant-oat…`).
+8. **Test it.** Click **Go online**, then **Test key**. CaseVault asks Anthropic for its list of models, which contains no case data. *Key works* means you're ready. *Refused* means it was mistyped or revoked.
+9. **To stop using it**, click **Remove API key…**. This removes it from CaseVault and deletes it from the SSD. Then **revoke** it in the Console: **Settings → API keys**, open the key's menu, choose Delete. Revoking takes effect immediately everywhere. Do it straight away if the SSD or a PC is lost.
+
+**Replace…** swaps in a new key (for example after revoking the old one). The key is only ever sent to `api.anthropic.com`, in the request header. It is never written to vault.json, the browser's storage or the outbound log. CaseVault forgets it from memory when the SSD is unplugged or another vault is opened.
 
 ### Outbound log
 

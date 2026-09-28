@@ -29,11 +29,12 @@ jobs:
         run: |
           # Any http(s) URL in the shipped app files must point at localhost, except the two online
           # AI addresses used only after the user goes online (v1.9): api.anthropic.com (reviewed,
-          # redacted requests through js/secure/outbound.js) and claude.ai (opened in a new tab).
+          # redacted requests through js/secure/outbound.js), and claude.ai and platform.claude.com
+          # (only opened in a new tab: the subscription copy & paste, and the API key guide).
           # XML namespace names used when reading/writing Word files are identifiers, never fetched:
           # schemas.openxmlformats.org, purl.org/dc, www.w3.org/2001/XMLSchema-instance.
           hits=$(grep -EnoH 'https?://[^"'"'"' )<>]+' index.html sw.js manifest.webmanifest css/*.css js/*.js js/checker/*.js js/drafts/*.js js/ai/*.js js/secure/*.js \
-                 | grep -Ev 'https?://(localhost|127\.0\.0\.1)(:[0-9]+)?|https://api\.anthropic\.com([/;]|$)|https://claude\.ai/|http://schemas\.openxmlformats\.org/|http://purl\.org/dc/|http://www\.w3\.org/2001/XMLSchema-instance' || true)
+                 | grep -Ev 'https?://(localhost|127\.0\.0\.1)(:[0-9]+)?|https://api\.anthropic\.com([/;]|$)|https://claude\.ai/|https://platform\.claude\.com/|http://schemas\.openxmlformats\.org/|http://purl\.org/dc/|http://www\.w3\.org/2001/XMLSchema-instance' || true)
           if [ -n "$hits" ]; then
             echo "::error::External URLs found in app files. CaseVault must work 100% offline:"
             echo "$hits"

@@ -819,3 +819,31 @@ input.narrow-wide { width: 12rem; }
 .notes-preview.answer-md { min-height: 0; }
 table.files td.fname .linkish { word-break: normal; overflow-wrap: anywhere; }
 table.files td.fname { min-width: 14rem; }
+
+/* ---------- v1.9: API key ---------- */
+
+.key-card { border: 1px solid var(--border); border-radius: var(--radius); padding: .7rem .9rem; background: var(--surface); margin: .4rem 0 .8rem; }
+.key-status { display: flex; gap: .6rem; align-items: flex-start; }
+.key-dot { width: .7rem; height: .7rem; border-radius: 50%; margin-top: .4rem; flex: none; background: var(--muted); }
+.key-card.ok .key-dot { background: var(--ok); }
+.key-card.locked .key-dot { background: var(--warn); }
+.key-actions { flex-wrap: wrap; gap: .4rem; margin-top: .6rem; }
+.btn.danger-ghost { color: var(--danger); border-color: var(--danger); background: transparent; }
+.btn.danger-ghost:hover { background: var(--danger-soft); }
+.key-guide { margin-top: .6rem; }
+.key-guide summary { cursor: pointer; font-weight: 600; }
+.key-steps { margin: .5rem 0; padding-left: 1.4rem; display: grid; gap: .45rem; font-size: .92rem; }
+.key-steps li::marker { font-weight: 700; color: var(--accent); }
+.key-steps .linkish { word-break: normal; }
+.dialog:has(.key-form) { width: min(1040px, 96vw); }
+.key-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.4rem; align-items: start; }
+.key-guide-col { max-height: 62vh; overflow: auto; padding-right: .4rem; }
+.key-paste-col .row { gap: .4rem; }
+.key-input { flex: 1; min-width: 0; font-family: var(--mono); }
+.plain-fieldset { border: 1px solid var(--border); border-radius: 6px; padding: .4rem .7rem .6rem; margin: .6rem 0; }
+.plain-fieldset legend { font-weight: 600; font-size: .9rem; padding: 0 .3rem; }
+.plain-fieldset .row input { flex: 1; min-width: 0; }
+@media (max-width: 860px) { .key-layout { grid-template-columns: 1fr; } .key-guide-col { max-height: none; } }
+.radio-row + .radio-row { margin-top: .35rem; }
+.vault-panel h4 { margin: 1rem 0 .3rem; font-size: .95rem; }
+.pass-row { margin: .35rem 0 0 1.8rem; }

@@ -9,8 +9,8 @@
  *     in a new tab; the user pastes it there, then pastes the answer back here. (A Claude Pro/Max
  *     subscription can't be connected to other apps; this is how to use it safely.)
  *   - "Anthropic API": answers inside CaseVault with an API key (billed separately from a
- *     subscription). The key is kept in memory, or on the SSD in CaseVault-Data/secrets if the user
- *     ticks "Remember on SSD". Never in the browser.
+ *     subscription). The key is managed by js/secure/apikey-ui.js: in memory, or on the SSD in
+ *     CaseVault-Data/secrets, optionally locked with a passphrase. Never in the browser's storage.
  *
  * The conversation and the placeholder map live in memory only. Answers can be saved to a case as
  * a draft, with the real values put back in on this computer.
@@ -19,7 +19,6 @@
 
 (function (root) {
   const API_URL = 'https://api.anthropic.com/v1/messages';
-  const MODELS_URL = 'https://api.anthropic.com/v1/models';
   const CLAUDE_WEB = 'https://claude.ai/new';
   const DEFAULT_MODEL = 'claude-sonnet-5';
   const SYSTEM = [
@@ -35,17 +34,10 @@
 
   // In memory only: cleared on reload, "Clear conversation", or when another vault is opened.
   const session = {
-    service: 'claude-web', purpose: 'Research', caseId: '', draft: '', model: '', apiKey: '', map: {}, turns: [], showReal: true,
+    service: 'claude-web', purpose: 'Research', caseId: '', draft: '', model: '', map: {}, turns: [], showReal: true,
   };
 
   const onlineSettings = () => CVOutbound.onlineSettings();
-
-  async function loadKey() {
-    if (session.apiKey) return session.apiKey;
-    const s = await V().readSecret('anthropic').catch(() => null);
-    if (s && s.key) session.apiKey = s.key;
-    return session.apiKey;
-  }
 
   function reset() {
     session.map = {};
@@ -59,7 +51,7 @@
     const st = onlineSettings();
     if (!session.model) session.model = st.model || DEFAULT_MODEL;
     const cases = (V().data.cases || []).filter((c) => c.location !== 'archive');
-    await loadKey();
+    await CVApiKey.refresh().catch(() => {});
 
     const page = h('section', { class: 'online-page' });
     main.replaceChildren(page);
@@ -107,43 +99,23 @@
 
       let apiBox = null;
       if (session.service === 'online-ai') {
-        const key = h('input', { type: 'password', autocomplete: 'off', placeholder: 'sk-ant-…', value: session.apiKey ? '••••••••••••' : '', class: 'grow' });
-        const remember = h('input', { type: 'checkbox' });
         const model = h('input', { type: 'text', value: session.model, class: 'narrow-wide', 'aria-label': 'Model', list: 'cv-models' });
         const models = h('datalist', { id: 'cv-models' });
         model.addEventListener('change', () => {
           session.model = model.value.trim() || DEFAULT_MODEL;
           Save.track('settings', () => V().updateSettings({ online: { ...onlineSettings(), model: session.model } })).catch(() => {});
         });
+        const listBtn = h('button', { class: 'btn small', type: 'button', onclick: async () => {
+          try {
+            const r = await CVApiKey.test();
+            models.replaceChildren(...r.models.map((m) => h('option', { value: m })));
+            toast(`${r.models.length} models available. Pick one in the Model box.`, 'success');
+          } catch (err) { toast(err.message, 'error', 9000); }
+        } }, 'List models');
         apiBox = h('div', { class: 'online-api' },
-          h('div', { class: 'row' },
-            h('label', { class: 'field grow' }, h('span', {}, 'Anthropic API key'), key),
-            h('label', { class: 'field' }, h('span', {}, 'Model'), model), models),
-          h('div', { class: 'row' },
-            h('label', { class: 'check-row' }, remember, h('span', {}, 'Remember on the SSD (CaseVault-Data\\secrets, encrypted by BitLocker)')),
-            h('div', { class: 'spacer' }),
-            h('button', { class: 'btn', type: 'button', onclick: async () => {
-              const v = key.value.trim();
-              if (!v || v.startsWith('•')) return toast('Paste the API key first.', 'error');
-              session.apiKey = v;
-              key.value = '••••••••••••';
-              if (remember.checked) await Save.track('secret', () => V().writeSecret('anthropic', { key: v, saved: new Date().toISOString() })).catch(() => {});
-              toast(remember.checked ? 'API key saved on the SSD.' : 'API key kept for this session only.', 'success');
-            } }, 'Use key'),
-            h('button', { class: 'btn', type: 'button', onclick: async () => {
-              session.apiKey = '';
-              key.value = '';
-              await Save.track('secret', () => V().writeSecret('anthropic', null)).catch(() => {});
-              toast('API key forgotten (and removed from the SSD).');
-            } }, 'Forget key'),
-            h('button', { class: 'btn', type: 'button', onclick: async () => {
-              try {
-                const list = await listModels();
-                models.replaceChildren(...list.map((m) => h('option', { value: m })));
-                toast(`${list.length} models available. Pick one in the Model box.`, 'success');
-              } catch (err) { toast(err.message, 'error', 8000); }
-            } }, 'List models')),
-          h('p', { class: 'muted small' }, 'API use is billed by Anthropic separately from a Claude Pro or Max subscription. Create a key at console.anthropic.com.'));
+          h('h2', {}, 'Anthropic API key'),
+          CVApiKey.card(),
+          h('div', { class: 'row' }, h('label', { class: 'field' }, h('span', {}, 'Model'), model), models, listBtn));
       }
 
       // --- conversation ---
@@ -276,7 +248,7 @@
     }
 
     async function viaApi(text, caseObj) {
-      if (!session.apiKey) throw new Error('Add an Anthropic API key first (or switch to claude.ai).');
+      if (!CVApiKey.get()) throw new Error(CVApiKey.status().set ? 'Unlock the API key first (the Unlock button above).' : 'Add an Anthropic API key first (the Add API key button above), or switch to claude.ai.');
       const r = await CVOutbound.review({
         channel: 'online-ai', destination: `api.anthropic.com · ${session.model}`, purpose: session.purpose, caseObj,
         parts: [{ label: 'Your message', text }], mode: 'redact', map: session.map, confirmText: 'Send',
@@ -295,7 +267,7 @@
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          'x-api-key': session.apiKey,
+          'x-api-key': CVApiKey.get(),
           'anthropic-version': '2023-06-01',
           'anthropic-dangerous-direct-browser-access': 'true',
         },
@@ -317,13 +289,6 @@
     draw();
   }
 
-  async function listModels() {
-    if (!session.apiKey) throw new Error('Add the API key first.');
-    const res = await CVOutbound.sendMeta(MODELS_URL, { headers: { 'x-api-key': session.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' } });
-    const data = await res.json().catch(() => null);
-    if (!res.ok) throw new Error((data && data.error && data.error.message) || `${res.status} ${res.statusText}`);
-    return (data.data || []).map((m) => m.id);
-  }
 
   let redraw = () => {};
 
