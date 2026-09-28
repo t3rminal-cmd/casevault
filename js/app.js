@@ -412,6 +412,7 @@
     else { state.caseId = null; state.caseObj = null; }
     renderCaseList();
     route();
+    CVChecks.onVaultOpen();
   }
 
   function onDriveLost() {
@@ -487,14 +488,14 @@
    * Routing: #/  or  #/case/<id>/<tab>
    * ===================================================================== */
 
-  function go(caseId, tab) {
-    location.hash = caseId ? `#/case/${encodeURIComponent(caseId)}/${tab || 'details'}` : '#/';
+  function go(caseId, tab, sub) {
+    location.hash = caseId ? `#/case/${encodeURIComponent(caseId)}/${tab || 'details'}${sub ? `/${encodeURIComponent(sub)}` : ''}` : '#/';
   }
 
   function route() {
     if (!state.connected) return;
-    const m = location.hash.match(/^#\/case\/([^/]+)(?:\/(\w+))?/);
-    if (m) showCase(decodeURIComponent(m[1]), m[2] || 'details');
+    const m = location.hash.match(/^#\/case\/([^/]+)(?:\/(\w+))?(?:\/([^/]+))?/);
+    if (m) showCase(decodeURIComponent(m[1]), m[2] || 'details', m[3] || null);
     else showDashboard();
   }
 
@@ -582,9 +583,9 @@
    * Case view
    * ===================================================================== */
 
-  const TABS = [['details', 'Details'], ['notes', 'Notes'], ['timeline', 'Timeline'], ['files', 'Files']];
+  const TABS = [['details', 'Details'], ['notes', 'Notes'], ['timeline', 'Timeline'], ['files', 'Files'], ['checks', 'Checks']];
 
-  async function showCase(id, tab) {
+  async function showCase(id, tab, sub = null) {
     const token = ++state.renderToken;
     if (!TABS.some(([t]) => t === tab)) tab = 'details';
     try {
@@ -615,9 +616,9 @@
         h('a', { href: `#/case/${encodeURIComponent(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab) }, label))),
       panel));
 
-    const renderers = { details: renderDetails, notes: renderNotes, timeline: renderTimeline, files: renderFiles };
+    const renderers = { details: renderDetails, notes: renderNotes, timeline: renderTimeline, files: renderFiles, checks: (...a) => CVChecks.render(...a) };
     try {
-      await renderers[tab](panel, c, token);
+      await renderers[tab](panel, c, token, sub);
     } catch (err) {
       if (FS.isDisconnectError(err)) return onDriveLost();
       console.error(err);
@@ -892,7 +893,7 @@
       table);
   }
 
-  async function previewFile(c, name) {
+  async function previewFile(c, name, page = null) {
     let file;
     try {
       file = await Vault.readFile(c.id, name);
@@ -909,7 +910,7 @@
 
     await openDialog((close) => {
       let body;
-      if (kind === 'pdf') body = h('iframe', { class: 'preview-frame', src: blobUrl(typed), title: name });
+      if (kind === 'pdf') body = h('iframe', { class: 'preview-frame', src: blobUrl(typed) + (page ? `#page=${page}` : ''), title: name });
       else if (kind === 'image') body = h('img', { class: 'preview-img', src: blobUrl(typed), alt: name });
       else if (kind === 'image-svg') body = h('img', { class: 'preview-img', src: blobUrl(new Blob([file], { type: 'image/svg+xml' })), alt: name });
       else if (kind === 'audio') body = h('audio', { controls: true, src: blobUrl(typed) });
@@ -1025,6 +1026,10 @@
       hadController = true;
     });
   }
+
+  // Small toolkit shared with the consistency checker screen (js/checker/checks-ui.js).
+  window.CaseVaultUI = { h, $, toast, openDialog, confirmDialog, field, fmtDate, fmtDateTime, fmtSize, Save, state, go, previewFile, onDriveLost };
+  CVChecks.init(window.CaseVaultUI);
 
   Save.render();
   launch();

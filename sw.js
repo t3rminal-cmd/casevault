@@ -22,6 +22,8 @@ const APP_FILES = [
   './js/checker/nlp.js',
   './js/checker/rules.js',
   './js/checker/extract.js',
+  './js/checker/ai.js',
+  './js/checker/checks-ui.js',
   './js/app.js',
   './icons/icon.svg',
   './icons/icon-192.png',
