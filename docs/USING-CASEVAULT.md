@@ -75,6 +75,8 @@ If the helper window was closed while Firefox was open, CaseVault shows **"The C
 - **Status** values: *Open*, *Pending*, *Closed*, *Archived*. Archive a case instead of deleting it when you might need it again.
 - **Delete case** (at the bottom of Details) permanently removes the case folder and every attached file from the SSD. You must type `DELETE` to confirm.
 
+**Hide the case list** with the button at the top of the list (or `Ctrl + \`) to give the page more room. The list shrinks to a thin strip with **Show the case list** and **+** (new case); the same **Show** button also appears at the left of the header. On a phone-sized window the list hides completely. CaseVault remembers the choice in `vault.json`.
+
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
 ## Notes

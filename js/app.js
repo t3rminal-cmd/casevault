@@ -407,6 +407,7 @@
     state.vaultId = data.vaultId;
     $('#vault-name').textContent = MODE === 'helper' ? `${state.drive.replace(/[\\/]+$/, '')} ${dir.name}`.trim() : dir.name;
     hideGate();
+    setSidebar(!!(Vault.data.settings && Vault.data.settings.sidebarCollapsed), { save: false });
     Save.render();
     if (sameVault) await Save.retryFailed();
     else { state.caseId = null; state.caseObj = null; }
@@ -1153,7 +1154,37 @@
       e.preventDefault();
       Save.flushAll();
     }
+    // Ctrl+\ shows or hides the case list (Ctrl+B is left to the browser and text fields).
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === '\\' || e.code === 'Backslash')) {
+      if (!state.connected || document.querySelector('#dialog[open]')) return;
+      e.preventDefault();
+      setSidebar(!document.body.classList.contains('sidebar-collapsed'), { focus: true });
+    }
   });
+
+  /* ---------- collapsible sidebar ---------- */
+
+  // collapsed: true hides the case list to a thin rail (or entirely at phone width).
+  // Remembered in vault.json so it follows the SSD. focus moves to the other toggle, which is
+  // where keyboard users expect to be after the one they pressed disappears.
+  function setSidebar(collapsed, { save = true, focus = false } = {}) {
+    document.body.classList.toggle('sidebar-collapsed', collapsed);
+    const expandBtn = $('#btn-sidebar-expand');
+    const collapseBtn = $('#btn-sidebar-collapse');
+    expandBtn.hidden = !collapsed;
+    expandBtn.setAttribute('aria-expanded', String(!collapsed));
+    collapseBtn.setAttribute('aria-expanded', String(!collapsed));
+    const label = collapsed ? 'Show the case list' : 'Hide the case list';
+    collapseBtn.title = `${label} (Ctrl+\\)`;
+    collapseBtn.querySelector('.sr-only').textContent = label;
+    if (focus) (collapsed ? expandBtn : collapseBtn).focus();
+    if (save && state.connected && !!Vault.data.settings.sidebarCollapsed !== collapsed) {
+      Save.track('settings', () => Vault.updateSettings({ sidebarCollapsed: collapsed })).catch(() => {});
+    }
+  }
+  $('#btn-sidebar-collapse').addEventListener('click', () => setSidebar(!document.body.classList.contains('sidebar-collapsed'), { focus: true }));
+  $('#btn-sidebar-expand').addEventListener('click', () => setSidebar(false, { focus: true }));
+  $('#btn-rail-new').addEventListener('click', () => $('#btn-new-case').click());
 
   // Write any pending edits the moment the window is hidden or closed.
   document.addEventListener('visibilitychange', () => { if (document.hidden) Save.flushAll(); });
