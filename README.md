@@ -15,16 +15,18 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.7)
+## Features (v1.8)
 
 - Cases with number, client, status, tags, and opened/closed dates; search and filter
+- **Archive** a case (moved to `archive/` on the SSD after every file is copied and verified; opens read-only; restore any time) or **delete** it permanently (type the case number to confirm)
+- Collapsible case list (Ctrl+\)
 - Free-form notes (Markdown, with preview)
 - Timeline of dated events and deadlines, with overdue/upcoming highlighting across all cases
 - File attachments copied onto the SSD, with in-app preview for PDFs, images, text, and media
 - Autosave on every change with a **Saved to SSD** indicator; survives unplugging (changes wait and are written on reconnect)
 - Daily backups of the vault index, and a self-healing case index
 - **Offline Consistency Checker**: compares an affidavit against the case's reports, and the reports against each other
-  - reads PDF (with OCR for scanned pages), DOCX, TXT, and photos
+  - reads PDF (with OCR for scanned pages), **XFA (Adobe LiveCycle) PDF forms** field by field, DOCX, TXT, and photos
   - **Rules layer:** dates, times (12h/24h), names (spelling variants), case/report numbers, addresses, plates, phone numbers, amounts, and counts
   - **AI layer:** local Ollama; Supported / Contradicted / Not found, with every quote verified word-for-word against the report (answers that fail are discarded)
   - side-by-side results with click-to-source, High/Medium/Low severity, and Fix / Not an issue / Explained, saved to `checks/<date>-check.json`
@@ -32,13 +34,14 @@ The app detects the browser and picks the mode by itself. The data format on the
 - **Excel and CSV**: `.xlsx/.xls/.ods/.csv` open as tables with sheet tabs, and the checker reads them row by row with sheet + row locations (bundled SheetJS, loaded only when needed)
 - **Privacy screen**: Ctrl+Shift+H, Esc twice, or **Hide** instantly covers the app (the tab title becomes "New Tab", media pauses, edits are saved). Optional 4–6 digit PIN, stored as a salted SHA-256 hash, and optional auto-hide after inactivity
 - **Drafts with a local-AI copilot**: Markdown drafts per case, saved to `drafts/` on the SSD
-  - inline grey suggestions (Tab accepts)
+  - an **AI suggestion** box under the cursor line (Tab accepts, Esc dismisses)
   - **Draft with AI** from the case details, timeline, notes and attached documents, never inventing facts and marking gaps as `[CONFIRM: ...]`
   - a checklist of placeholders
-  - agency templates with `{{placeholders}}`
+  - agency templates with `{{placeholders}}`, including your own details (`{{affiant.name}}` …) from **My details**
   - export to `.docx` (no library) or plain text
   - one-click consistency check of an affidavit draft
 
+- **AI activity indicator** in the header (what the AI is doing, model, time, tokens/s), one shared AI queue, and small-GPU settings (context size per profile, `keep_alive` 10 minutes)
 - **In-browser AI fallback**: when Ollama isn't running, a small WebLLM model runs on the PC's graphics chip (WebGPU), loaded from `W:\webllm` through the helper. The checker and drafting copilot use it unchanged via an Ollama-compatible shim. The browser's copy of the model is deleted right after loading.
 
 **Not yet built:** the in-browser AI in the hosted/installed app when it's opened *without* the launcher (direct mode). It currently needs the helper to serve the model files.
@@ -62,6 +65,7 @@ CaseVault-Data/
     drafts/                  drafts: <slug>.md (Markdown, details in the first line)
     checks/                  consistency checks: <date>-check.json
       text-cache/            text read from documents (so OCR runs once)
+  archive/<case-id>/         archived cases, same layout (read-only in the app)
   templates/                 your document templates (*.md)
   backups/                   dated snapshots of vault.json
 ```
@@ -73,7 +77,8 @@ CaseVault-Data/
 | `index.html` | App shell and Content-Security-Policy |
 | `css/app.css` | Styles (system fonts, light/dark) |
 | `js/fs.js` | Folder-handle storage (IndexedDB, handle only) and SSD file helpers |
-| `js/vault.js` | Vault data model: cases, notes, timeline, files, index, backups |
+| `js/vault.js` | Vault data model: cases, notes, timeline, files, index, backups, archive (verified folder moves) |
+| `js/ai/activity.js` | AI activity tracker: header indicator, shared AI queue, tokens/s |
 | `js/markdown.js` | Minimal, escaping Markdown previewer for notes |
 | `js/app.js` | User interface, autosave, connect/reconnect |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Installable offline PWA |
