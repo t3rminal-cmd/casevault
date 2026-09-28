@@ -333,6 +333,10 @@ const Vault = (() => {
     const out = [];
     for (const e of await FS.list(dir)) {
       if (e.kind !== 'file') continue;
+      if (e.handle.meta) { // helper mode: size and date come with the listing
+        out.push({ name: e.name, size: e.handle.meta.size, type: '', modified: e.handle.meta.mtime });
+        continue;
+      }
       const f = await e.handle.getFile();
       out.push({ name: e.name, size: f.size, type: f.type, modified: f.lastModified });
     }

@@ -1,6 +1,7 @@
 /* CaseVault service worker.
  * Caches the app's own files so CaseVault opens with no internet connection.
- * It never sees case data: that is read from the SSD by the page, not fetched over the network.
+ * It never stores case data: in direct mode that is read from the SSD by the page, and in helper
+ * mode the helper's /api/ requests are passed through untouched and never cached.
  * Requests to any other origin (for example the local Ollama engine in v1.5) are not touched.
  */
 'use strict';
@@ -15,6 +16,7 @@ const APP_FILES = [
   './manifest.webmanifest',
   './css/app.css',
   './js/fs.js',
+  './js/helper-fs.js',
   './js/vault.js',
   './js/markdown.js',
   './js/app.js',
@@ -42,15 +44,14 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+  // Helper mode: /api/ carries case data. Never cache it; let it go straight to the helper.
+  if (url.pathname.includes('/api/')) return;
 
-  // Cache first: the app works the same online or offline. New versions arrive via a new BUILD.
+  // Cache first for the app's own files only. Anything else goes to the network uncached.
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const cached = await cache.match(req, { ignoreSearch: true })
       || (req.mode === 'navigate' ? await cache.match('./index.html') : undefined);
-    if (cached) return cached;
-    const res = await fetch(req);
-    if (res.ok && res.type === 'basic') cache.put(req, res.clone());
-    return res;
+    return cached || fetch(req);
   })());
 });
