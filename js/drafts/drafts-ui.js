@@ -104,11 +104,11 @@
     const archived = Vault.isArchived(c.id);
     panel.replaceChildren(
       // An archived case is read-only: its drafts can be read and exported, not added to.
-      archived ? null : h('div', { class: 'card' },
+      ...(archived ? [] : [h('div', { class: 'card' },
         h('h2', {}, 'New draft'),
         h('div', { class: 'form-grid' }, ui.field('Title', title), ui.field('Type', type)),
         h('div', { class: 'field' }, h('span', {}, 'Start from'), startBox),
-        h('div', { class: 'form-actions' }, create)),
+        h('div', { class: 'form-actions' }, create))]),
       h('h2', { class: 'section-title' }, 'Drafts'),
       list,
       h('p', { class: 'muted small' }, `Saved on the SSD in ${archived ? 'archive' : 'cases'}\\${c.id}\\drafts as Markdown files. Templates live in CaseVault-Data\\templates (Vault → Templates).`));

@@ -188,10 +188,10 @@
           toast(`In-browser model: ${select.value}`, 'success');
         } catch { /* reported */ }
       });
-      box.replaceChildren(
+      box.replaceChildren(...[
         h('label', { class: 'inline' }, 'Model: ', select),
         CVWebLLM.loadedId ? h('button', { class: 'btn small', type: 'button', onclick: async () => { await CVWebLLM.unload(); toast('In-browser model unloaded from the graphics chip.'); } }, 'Unload') : null,
-        CVWebLLM.lastError ? h('p', { class: 'error-text small' }, CVWebLLM.lastError.message) : null);
+        CVWebLLM.lastError ? h('p', { class: 'error-text small' }, CVWebLLM.lastError.message) : null].filter(Boolean));
     });
     return h('section', {},
       h('h3', {}, 'In-browser AI (fallback)'),
@@ -589,7 +589,7 @@
     panel.replaceChildren(
       back,
       banner(),
-      emptyCard,
+      ...(emptyCard ? [emptyCard] : []), // replaceChildren would print "null"
       h('div', { class: 'card result-head' },
         h('h2', {}, data.affidavit ? `Check of ${data.affidavit}` : 'Reports cross-check'),
         h('p', { class: 'muted' }, `${data.created ? fmtDateTime(Date.parse(data.created)) : ''} · `,
