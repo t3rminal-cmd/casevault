@@ -15,11 +15,11 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.6.0';
+  const APP_VERSION = '1.7.0';
   const SCHEMA = 1;
   const DATA_DIR = 'CaseVault-Data';
   const STATUSES = ['Open', 'Pending', 'Closed', 'Archived'];
-  const DEFAULT_SETTINGS = { backupsToKeep: 30, aiProfile: 'auto', privacyPin: null, privacyIdleMinutes: 0 };
+  const DEFAULT_SETTINGS = { backupsToKeep: 30, aiProfile: 'auto', privacyPin: null, privacyIdleMinutes: 0, webllm: true, webllmModel: '' };
 
   let root = null;   // handle to CaseVault-Data
   let vault = null;  // parsed vault.json

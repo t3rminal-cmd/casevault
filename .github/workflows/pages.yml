@@ -30,7 +30,7 @@ jobs:
           # Any http(s) URL in the shipped app files must point at localhost.
           # XML namespace names used when reading/writing Word files are identifiers, never fetched:
           # schemas.openxmlformats.org, purl.org/dc, www.w3.org/2001/XMLSchema-instance.
-          hits=$(grep -EnoH 'https?://[^"'"'"' )<>]+' index.html sw.js manifest.webmanifest css/*.css js/*.js js/checker/*.js js/drafts/*.js \
+          hits=$(grep -EnoH 'https?://[^"'"'"' )<>]+' index.html sw.js manifest.webmanifest css/*.css js/*.js js/checker/*.js js/drafts/*.js js/ai/*.js \
                  | grep -Ev 'https?://(localhost|127\.0\.0\.1)(:[0-9]+)?|http://schemas\.openxmlformats\.org/|http://purl\.org/dc/|http://www\.w3\.org/2001/XMLSchema-instance' || true)
           if [ -n "$hits" ]; then
             echo "::error::External URLs found in app files. CaseVault must work 100% offline:"
@@ -40,7 +40,9 @@ jobs:
           echo "OK: app files reference no external hosts."
 
       - name: JavaScript parses
-        run: for f in js/*.js js/checker/*.js js/drafts/*.js sw.js; do node --check "$f"; done
+        run: |
+          for f in js/*.js js/checker/*.js js/drafts/*.js js/ai/ollama-shim.js js/ai/webllm.js sw.js; do node --check "$f"; done
+          node --input-type=module --check < js/ai/webllm-worker.js
 
       - name: Unit tests
         run: node --test tests/*.test.js
