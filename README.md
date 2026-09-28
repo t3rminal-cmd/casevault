@@ -4,7 +4,7 @@ An offline, browser-based case file manager that stores everything on your own e
 
 - **Your data stays on your SSD.** CaseVault reads and writes the vault folder directly through the browser's File System Access API. The browser remembers only *which folder* to reconnect to, never its contents.
 - **Works offline.** Install it as an app from GitHub Pages, or run the copy on the SSD. There's no build step and nothing to download at runtime; every library is bundled in `vendor/`.
-- **Private by design.** No CDNs, web fonts, analytics, or network calls. A Content-Security-Policy restricts the page to its own files and to the local AI engine on `127.0.0.1:11434`.
+- **Private by design.** No CDNs, web fonts, analytics, or network calls. A Content-Security-Policy restricts the page to its own files, the local AI engine on `127.0.0.1:11434` and, only when you choose to go online for research and drafting, `api.anthropic.com`, and only with text you reviewed and that had personal details replaced by placeholders.
 
 **Open it:** https://t3rminal-cmd.github.io/casevault/ (Chrome or Edge on desktop), or `W:\Start-CaseVault.bat` (Firefox, or any browser).
 
@@ -15,12 +15,18 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.8)
+## Features (v1.9)
 
 - Cases with number, client, status, tags, and opened/closed dates; search and filter
 - **Archive** a case (moved to `archive/` on the SSD after every file is copied and verified; opens read-only; restore any time) or **delete** it permanently (type the case number to confirm)
 - Collapsible case list (Ctrl+\)
 - Free-form notes (Markdown, with preview)
+- **Document folders in every case**: Affidavits, Arrest Report, Supplementary Report, Case Report, Deconfliction, Drug Exhibits, Email, Ops Plan, Subpoena Response, Subject Information, Recordings, Vehicle Information, Maps, Other
+- **Naming convention**: case folders `2026-<CaseNo>`, files `2026-<CaseNo> <Document type>.ext` (e.g. `2026-00123 Arrest Report.pdf`), with a type guess from the file name, verified moves and renames, and a one-click rename for older case folders
+- **Department mail** (Mail tab): recipients locked to your department's domains, attachment size and case-number checks, a PII scan with a warning (typed confirmation for SSNs, DOBs, IDs, card and bank numbers), then an Outlook draft (`.eml`) with the attachments, saved in the case's Email folder and logged
+- **Online research & drafting (optional, off by default)**: Claude via your subscription (copy & paste into claude.ai) or the Anthropic API; names and numbers replaced with placeholders before anything leaves, a review of the exact text, real values put back only on this PC, one reviewed request per send, auto-offline after 15 minutes, and an **outbound log** on the SSD
+- **PII scanner**: SSNs, DOBs, IDs, passports, card/bank numbers, phones, emails, addresses, plates, VINs, case numbers, names after titles or in `LAST, First` form, plus each case's client and number and your own watch list
+- **Memory indicator** in the header: app memory, the local AI model's GPU/RAM use, PC RAM and SSD free space (helper mode), and **Free AI memory**
 - Timeline of dated events and deadlines, with overdue/upcoming highlighting across all cases
 - File attachments copied onto the SSD, with in-app preview for PDFs, images, text, and media
 - Autosave on every change with a **Saved to SSD** indicator; survives unplugging (changes wait and are written on reconnect)
@@ -61,13 +67,16 @@ CaseVault-Data/
     case.json                title, number, client, status, tags, dates
     notes.md                 free-form notes
     timeline.json            dated events and deadlines
-    files/                   attached documents, copied in
+    files/<Document type>/   attached documents, copied in and named 2026-<CaseNo> <Type>.ext
+    mail-log.json            department mail prepared from this case
     drafts/                  drafts: <slug>.md (Markdown, details in the first line)
     checks/                  consistency checks: <date>-check.json
       text-cache/            text read from documents (so OCR runs once)
   archive/<case-id>/         archived cases, same layout (read-only in the app)
   templates/                 your document templates (*.md)
   backups/                   dated snapshots of vault.json
+  logs/                      outbound-YYYY-MM.json: what left this PC, when and where (never the text)
+  secrets/                   the online AI key, only if you chose "Remember on SSD"
 ```
 
 ## Code layout
@@ -77,6 +86,13 @@ CaseVault-Data/
 | `index.html` | App shell and Content-Security-Policy |
 | `css/app.css` | Styles (system fonts, light/dark) |
 | `js/fs.js` | Folder-handle storage (IndexedDB, handle only) and SSD file helpers |
+| `js/casefiles.js` | Document folders and the `2026-<CaseNo> <Type>` naming convention |
+| `js/secure/pii.js` | PII scanner, redaction to placeholders, and putting the real values back |
+| `js/secure/outbound.js` | The outbound gate: review screen, one-time tickets, host allow-list, leak check, outbound log |
+| `js/secure/online-ui.js` | Online research & drafting page (claude.ai copy & paste, or Anthropic API) |
+| `js/secure/mail.js`, `js/secure/mail-ui.js` | Department mail: domain rules, `.eml` Outlook draft builder, the Mail tab |
+| `js/secure/settings-ui.js` | Vault panel: online features, PII watch list, department mail, outbound log |
+| `js/ai/memory.js` | Memory indicator (app, Ollama model GPU/RAM, PC RAM and disk) |
 | `js/vault.js` | Vault data model: cases, notes, timeline, files, index, backups, archive (verified folder moves) |
 | `js/ai/activity.js` | AI activity tracker: header indicator, shared AI queue, tokens/s |
 | `js/markdown.js` | Minimal, escaping Markdown previewer for notes |
@@ -100,7 +116,7 @@ CaseVault-Data/
 | `js/ai/ollama-shim.js` | Answers Ollama-style API calls from the in-browser engine |
 | `vendor/` | Bundled pdf.js, Tesseract.js, SheetJS and WebLLM (see `vendor/README.md` for versions, licenses and provenance) |
 | `tools/Start-CaseVault.bat` | Launcher for the CV-AI partition: starts the helper and Ollama |
-| `tools/casevault-helper/` | The Firefox helper (Windows PowerShell 5.1, 127.0.0.1 only); also serves in-browser models from `W:\webllm`, and holds `Get-WebLLM-Model.ps1` |
+| `tools/casevault-helper/` | The Firefox helper (Windows PowerShell 5.1, 127.0.0.1 only); also serves in-browser models from `W:\webllm`, holds `Get-WebLLM-Model.ps1`, opens `.eml` mail drafts from a case's Email folder in Outlook, and reports RAM and disk space for the memory indicator |
 | `tools/Get-WebLLM-Model.bat` | One-time download of an in-browser model onto the CV-AI drive |
 | `tests/` | Unit tests (`node --test tests/*.test.js`) and a mock Ollama server |
 | `scripts/check-no-case-data.sh` | CI guard: fails if anything resembling case data is committed |

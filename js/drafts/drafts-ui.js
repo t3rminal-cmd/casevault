@@ -362,11 +362,14 @@
       const type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
       if (where === 'case') {
         try {
-          const name = await Save.track(`file:${c.id}:${docxName()}`, () => Vault.addFile(c.id, new File([bytes], docxName(), { type })));
+          // Filed by the case's naming convention: an affidavit draft becomes Affidavits\2026-00123 Affidavit - <title>.docx
+          const folder = { affidavit: 'Affidavits', summary: 'Case Report' }[meta.type] || 'Other';
+          const description = folder === 'Other' || !/^(affidavit|case report)$/i.test((meta.title || '').trim()) ? (meta.title || '') : '';
+          const name = await Save.track(`file:${c.id}:${docxName()}`, () => Vault.addFile(c.id, new File([bytes], docxName(), { type }), { folder, description }));
           // Remember exports so the draft's consistency check never compares the draft with its own copy.
           meta.exports = [...new Set([...(meta.exports || []), name])];
           save(0);
-          toast(`Saved to this case's Files as ${name}.`, 'success');
+          toast(`Saved to this case's Files as ${name.replace('/', '\\')}.`, 'success');
         } catch { /* reported by Save */ }
         return;
       }

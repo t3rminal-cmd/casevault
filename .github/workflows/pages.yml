@@ -27,11 +27,13 @@ jobs:
 
       - name: App makes no external requests (offline rule)
         run: |
-          # Any http(s) URL in the shipped app files must point at localhost.
+          # Any http(s) URL in the shipped app files must point at localhost, except the two online
+          # AI addresses used only after the user goes online (v1.9): api.anthropic.com (reviewed,
+          # redacted requests through js/secure/outbound.js) and claude.ai (opened in a new tab).
           # XML namespace names used when reading/writing Word files are identifiers, never fetched:
           # schemas.openxmlformats.org, purl.org/dc, www.w3.org/2001/XMLSchema-instance.
-          hits=$(grep -EnoH 'https?://[^"'"'"' )<>]+' index.html sw.js manifest.webmanifest css/*.css js/*.js js/checker/*.js js/drafts/*.js js/ai/*.js \
-                 | grep -Ev 'https?://(localhost|127\.0\.0\.1)(:[0-9]+)?|http://schemas\.openxmlformats\.org/|http://purl\.org/dc/|http://www\.w3\.org/2001/XMLSchema-instance' || true)
+          hits=$(grep -EnoH 'https?://[^"'"'"' )<>]+' index.html sw.js manifest.webmanifest css/*.css js/*.js js/checker/*.js js/drafts/*.js js/ai/*.js js/secure/*.js \
+                 | grep -Ev 'https?://(localhost|127\.0\.0\.1)(:[0-9]+)?|https://api\.anthropic\.com([/;]|$)|https://claude\.ai/|http://schemas\.openxmlformats\.org/|http://purl\.org/dc/|http://www\.w3\.org/2001/XMLSchema-instance' || true)
           if [ -n "$hits" ]; then
             echo "::error::External URLs found in app files. CaseVault must work 100% offline:"
             echo "$hits"
@@ -41,8 +43,15 @@ jobs:
 
       - name: JavaScript parses
         run: |
-          for f in js/*.js js/checker/*.js js/drafts/*.js js/ai/activity.js js/ai/ollama-shim.js js/ai/webllm.js sw.js; do node --check "$f"; done
+          for f in js/*.js js/checker/*.js js/drafts/*.js js/secure/*.js js/ai/activity.js js/ai/ollama-shim.js js/ai/webllm.js js/ai/memory.js sw.js; do node --check "$f"; done
           node --input-type=module --check < js/ai/webllm-worker.js
+
+      - name: Content-Security-Policy allows no other hosts
+        run: |
+          csp=$(grep -o 'connect-src[^;]*' index.html)
+          echo "$csp"
+          extra=$(echo "$csp" | tr ' ' '\n' | grep -E '^https?://' | grep -Ev '^http://(localhost|127\.0\.0\.1):11434$|^https://api\.anthropic\.com$' || true)
+          if [ -n "$extra" ]; then echo "::error::Unexpected host in connect-src: $extra"; exit 1; fi
 
       - name: Unit tests
         run: node --test tests/*.test.js
