@@ -410,7 +410,7 @@
     setSidebar(!!(Vault.data.settings && Vault.data.settings.sidebarCollapsed), { save: false });
     Save.render();
     if (sameVault) await Save.retryFailed();
-    else { state.caseId = null; state.caseObj = null; CVOutbound.goOffline('vault changed'); CVOnlineUI.reset(); }
+    else { state.caseId = null; state.caseObj = null; CVOutbound.goOffline('vault changed'); CVOnlineUI.reset(); CVApiKey.forget(); }
     renderNetStatus();
     renderCaseList();
     route();
@@ -421,6 +421,7 @@
     if (!state.connected) return;
     state.connected = false;
     CVOutbound.goOffline('drive disconnected');
+    CVApiKey.forget();
     renderNetStatus();
     Save.render();
     gateLost();
@@ -1500,6 +1501,7 @@
   CVChecks.init(window.CaseVaultUI);
   CVOutbound.init(window.CaseVaultUI);
   CVOutbound.onChange(renderNetStatus);
+  CVApiKey.init(window.CaseVaultUI);
   CVOnlineUI.init(window.CaseVaultUI);
   CVMailUI.init(window.CaseVaultUI);
   CVSecureSettings.init(window.CaseVaultUI);

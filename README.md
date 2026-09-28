@@ -24,7 +24,7 @@ The app detects the browser and picks the mode by itself. The data format on the
 - **Document folders in every case**: Affidavits, Arrest Report, Supplementary Report, Case Report, Deconfliction, Drug Exhibits, Email, Ops Plan, Subpoena Response, Subject Information, Recordings, Vehicle Information, Maps, Other
 - **Naming convention**: case folders `2026-<CaseNo>`, files `2026-<CaseNo> <Document type>.ext` (e.g. `2026-00123 Arrest Report.pdf`), with a type guess from the file name, verified moves and renames, and a one-click rename for older case folders
 - **Department mail** (Mail tab): recipients locked to your department's domains, attachment size and case-number checks, a PII scan with a warning (typed confirmation for SSNs, DOBs, IDs, card and bank numbers), then an Outlook draft (`.eml`) with the attachments, saved in the case's Email folder and logged
-- **Online research & drafting (optional, off by default)**: Claude via your subscription (copy & paste into claude.ai) or the Anthropic API; names and numbers replaced with placeholders before anything leaves, a review of the exact text, real values put back only on this PC, one reviewed request per send, auto-offline after 15 minutes, and an **outbound log** on the SSD
+- **Online research & drafting (optional, off by default)**: Claude via your subscription (copy & paste into claude.ai) or the Anthropic API (optional key with Add/Replace/Test/Remove, kept for the session or saved on the SSD locked with a passphrase, and an in-app step-by-step guide); names and numbers replaced with placeholders before anything leaves, a review of the exact text, real values put back only on this PC, one reviewed request per send, auto-offline after 15 minutes, and an **outbound log** on the SSD
 - **PII scanner**: SSNs, DOBs, IDs, passports, card/bank numbers, phones, emails, addresses, plates, VINs, case numbers, names after titles or in `LAST, First` form, plus each case's client and number and your own watch list
 - **Memory indicator** in the header: app memory, the local AI model's GPU/RAM use, PC RAM and SSD free space (helper mode), and **Free AI memory**
 - Timeline of dated events and deadlines, with overdue/upcoming highlighting across all cases
@@ -89,6 +89,7 @@ CaseVault-Data/
 | `js/casefiles.js` | Document folders and the `2026-<CaseNo> <Type>` naming convention |
 | `js/secure/pii.js` | PII scanner, redaction to placeholders, and putting the real values back |
 | `js/secure/outbound.js` | The outbound gate: review screen, one-time tickets, host allow-list, leak check, outbound log |
+| `js/secure/apikey.js`, `js/secure/apikey-ui.js` | Anthropic API key: format check, masking, passphrase lock (AES-GCM), and the Add / Unlock / Test / Remove card with the step-by-step guide |
 | `js/secure/online-ui.js` | Online research & drafting page (claude.ai copy & paste, or Anthropic API) |
 | `js/secure/mail.js`, `js/secure/mail-ui.js` | Department mail: domain rules, `.eml` Outlook draft builder, the Mail tab |
 | `js/secure/settings-ui.js` | Vault panel: online features, PII watch list, department mail, outbound log |

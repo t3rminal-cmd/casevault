@@ -42,6 +42,8 @@ const APP_FILES = [
   './js/secure/pii.js',
   './js/secure/outbound.js',
   './js/secure/mail.js',
+  './js/secure/apikey.js',
+  './js/secure/apikey-ui.js',
   './js/secure/online-ui.js',
   './js/secure/mail-ui.js',
   './js/secure/settings-ui.js',

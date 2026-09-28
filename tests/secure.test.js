@@ -179,3 +179,39 @@ test('outbound: nothing goes out offline, without a review, or to another host',
     globalThis.fetch = realFetch;
   }
 });
+
+/* ---------- API key ---------- */
+
+test('API key: accepts a real-looking key, explains the usual mistakes', () => {
+  const K = require('../js/secure/apikey.js');
+  const good = `sk-ant-api03-${'aB3_-x'.repeat(15)}AAAA`;
+  assert.deepStrictEqual(K.check(`  "${good}"\n`), { ok: true, key: good, problem: '' }, 'spaces and quotes are trimmed');
+  assert.match(K.check('').problem, /Paste/);
+  assert.match(K.check('sk-ant-admin01-abcdefghijklmnopqrstuvwxyz').problem, /Admin key/);
+  assert.match(K.check('sk-ant-oat01-abcdefghijklmnopqrstuvwxyz').problem, /subscription/);
+  assert.match(K.check('sk-proj-abcdefghijklmnop').problem, /starts with "sk-ant-api"/);
+  assert.match(K.check('sk-ant-api03-short').problem, /complete/);
+  assert.strictEqual(K.mask(good), 'sk-ant-api03-…AAAA');
+  assert.ok(!K.mask(good).includes('aB3_'), 'the mask never shows the middle');
+});
+
+test('API key: locked with a passphrase on the SSD, never stored readable', async () => {
+  const K = require('../js/secure/apikey.js');
+  const key = `sk-ant-api03-${'Zq9'.repeat(30)}wXyZ`;
+  const rec = await K.lock(key, 'correct horse battery');
+  const text = JSON.stringify(rec);
+  assert.ok(!text.includes(key) && !text.includes('Zq9Zq9'), 'no readable key in the record');
+  assert.strictEqual(rec.kind, 'locked');
+  assert.strictEqual(rec.masked, 'sk-ant-api03-…wXyZ');
+  assert.strictEqual(rec.kdf.iterations, K.ITERATIONS);
+  assert.strictEqual(await K.unlock(rec, 'correct horse battery'), key);
+  await assert.rejects(K.unlock(rec, 'wrong horse battery'), /Wrong passphrase/);
+  await assert.rejects(K.lock(key, 'short'), /at least 8/);
+  const again = await K.lock(key, 'correct horse battery');
+  assert.notStrictEqual(again.data, rec.data, 'fresh salt and IV each time');
+
+  assert.deepStrictEqual(K.describe(rec), { kind: 'locked', masked: 'sk-ant-api03-…wXyZ', saved: rec.saved });
+  assert.strictEqual(K.describe(K.plainRecord(key)).kind, 'plain');
+  assert.strictEqual(K.describe({ key }).kind, 'plain', 'a v1.9 record still reads');
+  assert.strictEqual(K.describe(null).kind, null);
+});

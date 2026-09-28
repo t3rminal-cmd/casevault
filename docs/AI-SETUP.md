@@ -12,6 +12,23 @@ The **CV-AI (W:)** partition holds everything CaseVault runs *next to* your data
 | `webllm\` | Models for the in-browser AI fallback (optional, see section 8) | AI when Ollama isn't running |
 | `Get-WebLLM-Model.bat` | Downloads an in-browser model into `webllm\` (one time) | Section 8 |
 
+When everything is in place, W: looks like this:
+
+```
+W:\
+  Start-CaseVault.bat        <- double-click this to start CaseVault
+  Get-WebLLM-Model.bat       <- optional: downloads an in-browser model (section 8)
+  casevault-helper\
+    casevault-helper.ps1
+    Get-WebLLM-Model.ps1     <- Get-WebLLM-Model.bat runs this, so keep the folder next to it
+  ollama\                    portable Ollama
+  models\                    Ollama's models (created by "ollama pull")
+  logs\                      created automatically
+  webllm\                    created by Get-WebLLM-Model.bat
+```
+
+Both `.bat` files go in the **root of W:**, next to the `casevault-helper` folder, not inside it. They find everything else relative to where they are, so the drive letter doesn't matter.
+
 Everything runs on your own computer and **listens on 127.0.0.1 only**, so nothing on the network can connect to it. Nothing needs installing, and nothing needs admin rights.
 
 Finish [SSD-SETUP.md](SSD-SETUP.md) first so that W: exists.
