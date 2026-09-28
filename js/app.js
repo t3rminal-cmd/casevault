@@ -1210,6 +1210,7 @@
   // Small toolkit shared with the consistency checker screen (js/checker/checks-ui.js).
   window.CaseVaultUI = { h, $, toast, openDialog, confirmDialog, field, fmtDate, fmtDateTime, fmtSize, Save, state, go, refresh: () => route(), previewFile, onDriveLost };
   CVChecks.init(window.CaseVaultUI);
+  CVActivityLib.mount(CVActivity, $('#ai-activity'));
   CVDraftsUI.init(window.CaseVaultUI);
 
   // Privacy screen: Ctrl+Shift+H, Esc twice, or the "Hide" button. See js/privacy.js.

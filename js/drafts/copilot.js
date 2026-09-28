@@ -10,7 +10,7 @@
   const T = typeof module !== 'undefined' && module.exports ? require('../checker/nlp.js') : root.CVText;
   const AI = typeof module !== 'undefined' && module.exports ? require('../checker/ai.js') : root.CVAI;
   const D = typeof module !== 'undefined' && module.exports ? require('./draft-core.js') : root.CVDraft;
-  const KEEP_ALIVE = '30m'; // keep the model loaded between suggestions
+  const KEEP_ALIVE = AI.KEEP_ALIVE; // keep the model loaded between requests (10 minutes)
 
   /** Smallest installed chat model (fast enough for suggestions while typing). */
   function fastModel(detected) {
@@ -18,6 +18,22 @@
     if (detected.profiles && detected.profiles.light) return detected.profiles.light;
     const sized = detected.chat.filter((m) => m.size != null && m.size >= 0.5).sort((a, b) => a.size - b.size);
     return (sized[0] || detected.chat[0] || {}).name || null;
+  }
+
+  /**
+   * Context size for a model: that of the profile it belongs to. Every request to one model uses
+   * the same num_ctx, because Ollama reloads the model whenever it changes.
+   */
+  function numCtxForModel(detected, model) {
+    const profiles = (detected && detected.profiles) || {};
+    const key = Object.keys(profiles).find((k) => profiles[k] === model);
+    return AI.numCtxFor(key);
+  }
+
+  /** "Small" models (under 5B parameters) are fine for suggestions but weak for whole drafts. */
+  function isSmallModel(detected, model) {
+    const m = ((detected && detected.chat) || []).find((x) => x.name === model);
+    return !!(m && m.size != null && m.size < 5);
   }
 
   /* ---------------- inline suggestions ---------------- */
@@ -34,7 +50,7 @@
     return `${ctx ? `CASE CONTEXT\n${ctx}\n\n` : ''}TEXT SO FAR (continue it)\n${String(before).slice(-1500)}`;
   }
 
-  async function suggest({ base, model, before, caseInfo, signal, fetchImpl }) {
+  async function suggest({ base, model, before, caseInfo, signal, fetchImpl, numCtx = AI.DEFAULT_CTX }) {
     fetchImpl = fetchImpl || ((...a) => globalThis.fetch(...a));
     const res = await fetchImpl(`${base}/api/generate`, {
       method: 'POST',
@@ -46,7 +62,7 @@
         prompt: suggestPrompt(before, caseInfo),
         stream: false,
         keep_alive: KEEP_ALIVE,
-        options: { num_predict: 40, temperature: 0.2, top_p: 0.9, stop: ['\n\n'] },
+        options: { num_predict: 40, temperature: 0.2, top_p: 0.9, stop: ['\n\n'], num_ctx: numCtx },
       }),
     });
     if (!res.ok) throw new Error(`AI engine: ${res.status}`);
@@ -69,11 +85,13 @@
     return s.length > n ? `${s.slice(0, n)} …[shortened]` : s;
   }
 
+  const notesChars = (numCtx) => (numCtx >= 8192 ? 4000 : 2000);
+
   /**
    * Build the chat messages for a first draft. All inputs are plain data (easy to test):
    * { type, template, instructions, caseObj, timeline, notes, passages: [{ docName, page, sheet, row, text }] }
    */
-  function draftMessages({ type = 'other', template = '', instructions = '', caseObj = {}, timeline = { events: [] }, notes = '', passages = [] }) {
+  function draftMessages({ type = 'other', template = '', instructions = '', caseObj = {}, timeline = { events: [] }, notes = '', passages = [], numCtx = 8192 }) {
     const t = D.DOC_TYPES[type] || D.DOC_TYPES.other;
     const c = caseObj || {};
     const d = c.dates || {};
@@ -82,7 +100,12 @@
       `Status: ${c.status || '(none)'}`, `Opened: ${d.opened || '(none)'}`, c.tags && c.tags.length ? `Tags: ${c.tags.join(', ')}` : null,
     ].filter(Boolean).join('\n');
     const events = (timeline.events || []).map((e) => `- ${e.date}${e.time ? ` ${e.time}` : ''} [${e.kind === 'deadline' ? 'deadline' : 'event'}${e.done ? ', done' : ''}] ${e.title}${e.note ? ` (${e.note.replace(/\s+/g, ' ')})` : ''}`).join('\n');
-    let budget = 9000;
+    // Room for the case material: the context window, less the answer (~1/3 of it), the rules,
+    // the template and the other material. Passages (best first) are dropped when they don't fit.
+    const reserve = Math.round(numCtx / 3);
+    const fixed = AI.tokensOf(DRAFT_RULES) + AI.tokensOf(template) + AI.tokensOf(instructions) + AI.tokensOf(facts) + AI.tokensOf(events)
+      + AI.tokensOf(clip(notes, notesChars(numCtx))) + 200;
+    let budget = Math.max(1200, Math.floor((numCtx - reserve - fixed) * 3.5));
     const docs = [];
     for (const p of passages) {
       const where = p.sheet != null ? `${p.sheet} row ${p.row}` : p.page ? `page ${p.page}` : '';
@@ -94,7 +117,7 @@
     const material = [
       `## Case details\n${facts}`,
       `## Timeline\n${events || '(no timeline entries)'}`,
-      `## Notes\n${clip(notes, 4000) || '(no notes)'}`,
+      `## Notes\n${clip(notes, notesChars(numCtx)) || '(no notes)'}`,
       `## Passages from attached documents\n${docs.join('\n\n') || '(no documents)'}`,
     ].join('\n\n');
     const task = [
@@ -117,7 +140,7 @@
     if (engine && engine.embed && engine.base) {
       try {
         const post = async (input) => {
-          const res = await (fetchImpl || globalThis.fetch)(`${engine.base}/api/embed`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: engine.embed, input }) });
+          const res = await (fetchImpl || globalThis.fetch)(`${engine.base}/api/embed`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: engine.embed, input, keep_alive: KEEP_ALIVE }) });
           if (!res.ok) throw new Error(String(res.status));
           return (await res.json()).embeddings;
         };
@@ -134,13 +157,13 @@
   }
 
   /** Stream a chat completion; onText(chunk) receives the text as it arrives. Returns the full text. */
-  async function streamChat({ base, model, messages, onText, signal, fetchImpl }) {
+  async function streamChat({ base, model, messages, onText, signal, fetchImpl, numCtx = AI.DEFAULT_CTX }) {
     fetchImpl = fetchImpl || ((...a) => globalThis.fetch(...a));
     const res = await fetchImpl(`${base}/api/chat`, {
       method: 'POST',
       signal,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages, stream: true, keep_alive: KEEP_ALIVE, options: { temperature: 0.2, num_ctx: 8192 } }),
+      body: JSON.stringify({ model, messages, stream: true, keep_alive: KEEP_ALIVE, options: { temperature: 0.2, num_ctx: numCtx } }),
     });
     if (!res.ok || !res.body) {
       let msg = `${res.status}`;
@@ -169,7 +192,7 @@
     return full;
   }
 
-  const api = { KEEP_ALIVE, fastModel, suggest, suggestPrompt, draftMessages, relevantPassages, streamChat, DRAFT_RULES };
+  const api = { KEEP_ALIVE, fastModel, numCtxForModel, isSmallModel, suggest, suggestPrompt, draftMessages, relevantPassages, streamChat, DRAFT_RULES };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVCopilot = api;
 })(this);

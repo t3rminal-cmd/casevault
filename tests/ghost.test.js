@@ -1,4 +1,5 @@
-// Tests for inline AI suggestions (ghost text): accept, dismiss, type-through, cancellation.
+// Tests for inline AI suggestions: accept, dismiss, type-through, cancellation, and the
+// suggestion box's context text and placement.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
@@ -92,6 +93,27 @@ test('cleanSuggestion: one sentence, no quotes, no echo, correct spacing, ~40 to
   assert.strictEqual(G.cleanSuggestion('   \n\n', 'x'), '');
   const long = G.cleanSuggestion('word '.repeat(100), 'x ');
   assert.ok(long.length <= G.MAX_CHARS && !long.endsWith(' '));
+});
+
+test('suggestion box context: the current sentence up to the cursor, long ones shortened at the start', () => {
+  assert.strictEqual(G.sentencePrefix('First sentence. On March 14, Officer Sample', 44), 'On March 14, Officer Sample');
+  assert.strictEqual(G.sentencePrefix('Line one.\nOfficer Sample arrived', 'Line one.\nOfficer Sample arrived'.length), 'Officer Sample arrived');
+  assert.strictEqual(G.sentencePrefix('Done. ', 6), '', 'a new sentence has no context yet');
+  assert.strictEqual(G.sentencePrefix('He said "stop." Then Officer Sample', 35), 'Then Officer Sample');
+  const long = `${'word '.repeat(40)}end of it`;
+  const p = G.sentencePrefix(long, long.length, 40);
+  assert.ok(p.startsWith('…') && p.endsWith('end of it') && p.length <= 41, p);
+  assert.ok(!/^…\S*word\S/.test(p), 'cut at a word boundary');
+  assert.strictEqual(G.sentencePrefix('Only up to the cursor here', 10), 'Only up to');
+});
+
+test('suggestion box sits below the cursor line, above it when there is no room below', () => {
+  // Plenty of room: just below the line.
+  assert.deepStrictEqual(G.boxPlacement({ caretTop: 100, caretBottom: 124, boxHeight: 80, limitTop: 0, limitBottom: 800 }), { top: 130, above: false });
+  // Near the bottom of the visible editor: above the line.
+  assert.deepStrictEqual(G.boxPlacement({ caretTop: 700, caretBottom: 724, boxHeight: 80, limitTop: 0, limitBottom: 760 }), { top: 614, above: true });
+  // No room either way (tiny window): stays below.
+  assert.deepStrictEqual(G.boxPlacement({ caretTop: 20, caretBottom: 44, boxHeight: 80, limitTop: 0, limitBottom: 90 }), { top: 50, above: false });
 });
 
 test('fastModel picks the smallest installed chat model', () => {

@@ -154,7 +154,7 @@ The **Checks** tab compares an affidavit draft (or any document) against the rep
 2. Open **Checks**. Under **Document to check**, pick the affidavit. (Choose *none* to only compare the reports with each other.)
 3. Tick the reports to compare against. All of them are ticked by default.
 4. **Include AI review** is available when the header shows **AI: Connected**. Without it, the rule-based checks still run.
-5. Click **Run check**. A window shows each step: reading each document (scanned pages go through OCR), the rule checks, then the AI review statement by statement. **Cancel** stops the check. If the AI review was already under way, what it found so far is saved.
+5. Click **Run check**. A window shows each step: reading each document (scanned pages go through OCR), the rule checks, then the AI review statement by statement, with the time spent on the current statement and an estimate of the time left. **Cancel** stops the check. If the AI review was already under way, what it found so far is saved.
 
 The text read from each document is kept on the SSD (`checks\text-cache`), so re-running a check is quick. OCR only runs again if the file changes, or when a newer CaseVault reads that kind of file better (v1.8 re-reads PDFs once, for XFA forms).
 
@@ -249,11 +249,13 @@ The **To confirm** panel beside the editor lists every placeholder with its line
 
 ### AI suggestions while you type
 
-With **AI suggestions** ticked in the toolbar, pausing for a moment at the end of a line shows a short grey suggestion for how the sentence might continue.
+With **AI suggestions** ticked in the toolbar, pausing for a moment at the end of a line shows an **AI suggestion** box just below the line you're typing on (or above it, near the bottom of the window). It shows the end of your sentence in grey, then the suggested continuation highlighted.
 
-- **Tab** accepts it.
+- **Tab** accepts it. So does clicking the highlighted suggestion.
 - **Esc** (or typing something else) dismisses it. If you type the first letters of the suggestion, the rest stays.
+- The cursor stays in your text the whole time; the box never takes the focus. Screen readers announce the suggestion.
 - It uses the smallest AI model you have installed, so it's quick, and it only ever talks to the AI engine on this computer.
+- It pauses while a consistency check or *Draft with AI* is running, so they don't compete for the graphics card.
 - It switches itself off when the header shows **AI: Offline** or **AI: Rules-only**. Untick it any time; CaseVault remembers the choice.
 
 ### Draft with AI
@@ -265,7 +267,9 @@ Click **Draft with AI…** in the editor (or pick it when creating a draft) and 
 - Optional **instructions**, such as "focus on the events of March 14".
 - **Replace** the current text, or **add** below it.
 
-The draft appears in the editor as it's written. **Stop** keeps what has been written so far.
+The draft appears in the editor as it's written. **Stop** keeps what has been written so far. If a consistency check is running, the draft waits for it to finish first.
+
+If every model you have is small (under 5B parameters), the dialog says so: small models are fine for suggestions but weak at whole drafts. Install `qwen2.5:7b` for better drafts (see [AI-SETUP.md](AI-SETUP.md)).
 
 The AI is told to use **only** the case material you selected, to keep facts and numbers exactly as written in the reports, and to write `[CONFIRM: ...]` for anything missing (names, dates, badge numbers, the court) rather than invent it.
 

@@ -67,9 +67,11 @@ function start(port = 11434) {
       if (req.url === '/api/embed') return json({ embeddings: [].concat(data.input).map(vec) });
       server.requests = server.requests || [];
       server.requests.push({ url: req.url, body: data });
+      // Ollama's speed figures (the header shows tokens/s from these).
+      const stats = { eval_count: 40, eval_duration: 2e9, load_duration: 1e6 };
       if (req.url === '/api/generate') {
         // Inline suggestion: continue the text.
-        return json({ response: ' responded to 1420 Oak Street at 21:40 hours.', done: true });
+        return json({ response: ' responded to 1420 Oak Street at 21:40 hours.', done: true, ...stats });
       }
       if (req.url === '/api/chat' && data.stream) {
         // "Draft with AI": stream a short draft as NDJSON, like Ollama does.
@@ -79,13 +81,17 @@ function start(port = 11434) {
         let i = 0;
         const next = () => {
           if (i < pieces.length) { res.write(JSON.stringify({ message: { role: 'assistant', content: pieces[i++] }, done: false }) + '\n'); setTimeout(next, 5); }
-          else { res.end(JSON.stringify({ message: { role: 'assistant', content: '' }, done: true }) + '\n'); }
+          else { res.end(JSON.stringify({ message: { role: 'assistant', content: '' }, done: true, ...stats }) + '\n'); }
         };
         return next();
       }
       if (req.url === '/api/chat') {
         const prompt = data.messages.find((m) => m.role === 'user').content;
-        return json({ message: { role: 'assistant', content: JSON.stringify(answer(prompt)) }, done: true });
+        // Optional delays for browser tests: MOCK_FIRST_MS once (a model loading), MOCK_SLOW_MS each time.
+        const wait = Number(process.env.MOCK_SLOW_MS || 0) + (server.loaded ? 0 : Number(process.env.MOCK_FIRST_MS || 0));
+        server.loaded = true;
+        const reply = () => json({ message: { role: 'assistant', content: JSON.stringify(answer(prompt)) }, done: true, ...stats });
+        return wait ? setTimeout(reply, wait) : reply();
       }
       res.writeHead(404); res.end('{}');
     });

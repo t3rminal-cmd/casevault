@@ -559,8 +559,7 @@ input.pin { width: 6.5em; letter-spacing: .2em; }
 .draft-grid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 1rem; align-items: start; }
 .draft-main { min-width: 0; }
 .editor-wrap { position: relative; }
-/* The textarea and its ghost mirror must share exactly the same text metrics. */
-.draft-editor, .ghost-mirror {
+.draft-editor {
   font: 15px/1.6 var(--font);
   letter-spacing: normal;
   padding: 1rem;
@@ -568,18 +567,30 @@ input.pin { width: 6.5em; letter-spacing: .2em; }
   overflow-wrap: break-word;
   word-break: normal;
   tab-size: 4;
+  min-height: 65vh;
+  display: block;
 }
-.draft-editor { min-height: 65vh; display: block; }
-.ghost-mirror {
+/* The AI suggestion box: floats just below (or above) the cursor line; never takes focus. */
+.sugg-box {
   position: absolute;
-  top: 1px;
-  left: 1px;
-  overflow: hidden;
-  pointer-events: none;
-  color: transparent;
-  border: 0;
+  z-index: 5;
+  max-width: min(34rem, 100%);
+  padding: .4rem .65rem .35rem;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / .14);
+  font-size: .88rem;
+  line-height: 1.45;
 }
-.ghost-text { color: var(--muted); opacity: .75; }
+.sugg-box[hidden] { display: none; }
+.sugg-label { font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); }
+.sugg-body { margin: .15rem 0 .25rem; overflow-wrap: anywhere; }
+.sugg-context { color: var(--muted); }
+.sugg-text { background: var(--accent-soft); color: var(--text); border-radius: 3px; padding: 0 .1em; cursor: pointer; }
+.sugg-text:hover { outline: 1px solid var(--accent); }
+.sugg-foot { font-size: .72rem; color: var(--muted); }
+.sugg-foot kbd { font-size: .68rem; }
 .draft-preview { min-height: 65vh; }
 .confirm-panel { position: sticky; top: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .8rem 1rem; max-height: 75vh; overflow-y: auto; }
 .confirm-panel h3 { display: flex; align-items: center; gap: .5rem; margin-bottom: .3rem; }
@@ -659,3 +670,28 @@ input.pin { width: 6.5em; letter-spacing: .2em; }
 .affiant-grid label code { font-weight: 400; }
 .affiant-grid .field:has(textarea) { grid-column: 1 / -1; }
 .affiant-grid textarea { resize: vertical; }
+
+/* ---------- AI activity (header) ---------- */
+.ai-activity { position: relative; display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; color: var(--accent); padding: .2em .5em; border-radius: 999px; white-space: nowrap; cursor: default; }
+.ai-activity[hidden] { display: none; }
+.ai-activity:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ai-activity.loading { color: var(--warn); }
+.ai-wave { display: inline-flex; align-items: center; gap: 2px; height: 14px; }
+.ai-wave i { display: block; width: 3px; height: 100%; border-radius: 2px; background: currentColor; transform-origin: center; animation: ai-wave 1s ease-in-out infinite; }
+.ai-wave i:nth-child(1) { animation-delay: -0.9s; }
+.ai-wave i:nth-child(2) { animation-delay: -0.7s; }
+.ai-wave i:nth-child(3) { animation-delay: -0.5s; }
+.ai-wave i:nth-child(4) { animation-delay: -0.3s; }
+.ai-wave i:nth-child(5) { animation-delay: -0.1s; }
+.ai-activity.loading .ai-wave i { animation-duration: 1.8s; }
+@keyframes ai-wave { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+/* Reduced motion: still bars of different heights, and the text says what's happening. */
+@media (prefers-reduced-motion: reduce) {
+  .ai-wave i { animation: none; }
+  .ai-wave i:nth-child(odd) { transform: scaleY(.55); }
+  .ai-wave i:nth-child(3) { transform: scaleY(1); }
+}
+.ai-activity-pop { display: none; position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; min-width: 14rem; max-width: 20rem; padding: .5rem .7rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); box-shadow: 0 4px 14px rgb(0 0 0 / .15); white-space: pre-line; font-size: .8rem; line-height: 1.45; }
+.ai-activity:hover .ai-activity-pop, .ai-activity:focus .ai-activity-pop, .ai-activity:focus-within .ai-activity-pop { display: block; }
+.progress-panel .timing { color: var(--muted); margin-top: .15rem; }
+.small-model-note { margin-top: 0; }

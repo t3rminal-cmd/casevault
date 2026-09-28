@@ -15,12 +15,20 @@
   const BASES = ['http://127.0.0.1:11434']; // Start-CaseVault.bat binds Ollama to 127.0.0.1 only
 
   // Profiles by model size (billions of parameters). The app shows only profiles with a model installed.
+  // numCtx is the context window asked of Ollama: a larger one costs GPU memory, and on a 6 GB card
+  // the Quick model only stays fully on the GPU at 4096.
   const PROFILES = {
-    quick: { label: 'Quick', hint: '~7–8B, fits in 6 GB of GPU memory', min: 5.5, max: 9.5, prefer: ['qwen2.5:7b', 'llama3.1:8b', 'qwen3:8b', 'mistral:7b'] },
-    thorough: { label: 'Thorough', hint: '~12–14B, split between GPU and RAM', min: 9.5, max: 16, prefer: ['qwen2.5:14b', 'gemma3:12b', 'qwen3:14b', 'phi4:14b'] },
-    light: { label: 'Light', hint: '~3–4B, runs on the CPU', min: 1, max: 5.5, prefer: ['qwen2.5:3b', 'llama3.2:3b', 'phi4-mini', 'gemma3:4b'] },
+    quick: { label: 'Quick', hint: '~7–8B, fits in 6 GB of GPU memory', numCtx: 4096, min: 5.5, max: 9.5, prefer: ['qwen2.5:7b', 'llama3.1:8b', 'qwen3:8b', 'mistral:7b'] },
+    thorough: { label: 'Thorough', hint: '~12–14B, split between GPU and RAM', numCtx: 8192, min: 9.5, max: 16, prefer: ['qwen2.5:14b', 'gemma3:12b', 'qwen3:14b', 'phi4:14b'] },
+    light: { label: 'Light', hint: '~3–4B, runs on the CPU', numCtx: 4096, min: 1, max: 5.5, prefer: ['qwen2.5:3b', 'llama3.2:3b', 'phi4-mini', 'gemma3:4b'] },
   };
   const PROFILE_ORDER = ['quick', 'light', 'thorough']; // what "Auto" picks first
+  const KEEP_ALIVE = '10m'; // keep the model loaded between requests, then free the GPU
+  const DEFAULT_CTX = 4096;
+  const numCtxFor = (profile) => (PROFILES[profile] && PROFILES[profile].numCtx) || DEFAULT_CTX;
+
+  // Rough token count for English text (Ollama doesn't expose a tokenizer): ~3.5 characters a token.
+  const tokensOf = (s) => Math.ceil(String(s || '').length / 3.5);
 
   function sizeB(m) {
     const ps = m.details && m.details.parameter_size;
@@ -165,8 +173,29 @@
   };
 
   function userPrompt(statement, passages) {
-    const list = passages.map((p, i) => `[${i + 1}] (${p.docName}${p.sheet != null ? `, ${p.sheet} row ${p.row}` : p.page ? `, page ${p.page}` : ''})\n${p.text}`).join('\n\n');
+    const list = passages.map((p, i) => `[${i + 1}] (${p.docName}${p.sheet != null ? `, ${p.sheet} row ${p.row}` : p.field != null ? `, ${p.field}` : p.page ? `, page ${p.page}` : ''})\n${p.promptText || p.text}`).join('\n\n');
     return `STATEMENT FROM THE AFFIDAVIT:\n${statement.text}\n\nPASSAGES FROM THE REPORTS:\n${list}`;
+  }
+
+  /**
+   * Keep the retrieved passages (best first) that fit the model's context window, leaving room for
+   * the instructions and the answer. The last one that only partly fits is shortened for the prompt
+   * (promptText); its full text is still used to verify the quote.
+   */
+  function fitPassages(statement, passages, numCtx = DEFAULT_CTX) {
+    const answer = 300;
+    let budget = numCtx - answer - tokensOf(SYSTEM) - tokensOf(JSON.stringify(SCHEMA)) - tokensOf(statement.text) - 40;
+    const out = [];
+    for (const p of passages) {
+      const cost = tokensOf(p.text) + 12;
+      if (cost <= budget) { out.push(p); budget -= cost; continue; }
+      if (!out.length || budget > 120) {
+        const chars = Math.max(200, Math.floor((budget - 12) * 3.5));
+        out.push({ ...p, promptText: `${p.text.slice(0, chars)} …` });
+      }
+      break;
+    }
+    return out;
   }
 
   function parseAnswer(content) {
@@ -206,7 +235,7 @@
     const embedAll = async (inputs) => {
       const vecs = [];
       for (let i = 0; i < inputs.length; i += 32) {
-        const data = await fetchJson(fetchImpl, `${engine.base}/api/embed`, { method: 'POST', body: JSON.stringify({ model: engine.embed, input: inputs.slice(i, i + 32) }), signal });
+        const data = await fetchJson(fetchImpl, `${engine.base}/api/embed`, { method: 'POST', body: JSON.stringify({ model: engine.embed, input: inputs.slice(i, i + 32), keep_alive: KEEP_ALIVE }), signal });
         vecs.push(...data.embeddings);
       }
       return vecs;
@@ -245,6 +274,7 @@
         }
       }
 
+      picked = fitPassages(st, picked, engine.numCtx || DEFAULT_CTX);
       const stDoc = docByIndex.get(st.doc);
       const statementLoc = loc(stDoc, st, st.text, st.start, st.end);
       const mk = (severity, title, detail, source) => ({
@@ -267,7 +297,8 @@
             model: engine.model,
             stream: false,
             format: SCHEMA,
-            options: { temperature: 0, seed: 7, num_ctx: 8192 },
+            keep_alive: KEEP_ALIVE,
+            options: { temperature: 0, seed: 7, num_ctx: engine.numCtx || DEFAULT_CTX },
             messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: userPrompt(st, picked) }],
           }),
         });
@@ -319,7 +350,7 @@
     return { flags, stats, complete: true };
   }
 
-  const api = { PROFILES, detect, choose, review, statementsOf, passagesOf, parseAnswer, sizeB };
+  const api = { PROFILES, KEEP_ALIVE, DEFAULT_CTX, numCtxFor, tokensOf, fitPassages, userPrompt, detect, choose, review, statementsOf, passagesOf, parseAnswer, sizeB };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVAI = api;
 })(this);

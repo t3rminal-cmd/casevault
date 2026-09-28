@@ -58,9 +58,14 @@
       return !(Vault.data && Vault.data.settings.webllm === false);
     },
 
-    /** fetch for AI calls: Ollama over HTTP, or the in-browser engine (no network). */
+    /**
+     * fetch for AI calls: Ollama over HTTP, or the in-browser engine (no network). Wrapped so the
+     * header's activity indicator sees every request.
+     */
     fetchImpl() {
-      return (this.detected && this.detected.fetchImpl) || undefined;
+      const raw = (this.detected && this.detected.fetchImpl) || null;
+      if (!this.wrapped || this.wrapped.raw !== raw) this.wrapped = { raw, fetch: CVActivity.wrap(raw || undefined) };
+      return this.wrapped.fetch;
     },
 
     inBrowser() {
@@ -408,24 +413,63 @@
           done(aiStep, 'failed');
           aiStep.append(h('span', { class: 'small block' }, 'AI engine not available. Rules only.'));
         } else {
-          engineInfo = { mode: 'ai', profile: choice.profile, model: choice.model, embed: det.embed || null };
+          const numCtx = CVAI.numCtxFor(choice.profile);
+          engineInfo = { mode: 'ai', profile: choice.profile, model: choice.model, embed: det.embed || null, numCtx };
+          // Time per statement, for "this one 0:07 · about 1:10 left".
+          const timing = { index: -1, startedAt: 0, firstAt: 0, total: 0, phase: '' };
+          const drawTiming = () => {
+            if (timing.phase !== 'review' || timing.index < 0) return;
+            const t = Date.now();
+            const shown = Math.min(timing.index + 1, timing.total);
+            const doneCount = timing.index;
+            const perItem = doneCount > 0 ? (timing.startedAt - timing.firstAt) / doneCount : 0;
+            const left = perItem ? Math.max(0, perItem * (timing.total - doneCount) - (t - timing.startedAt)) : 0;
+            activity.replaceChildren(
+              `Reviewing statement ${shown} of ${timing.total} with ${choice.model}…`,
+              h('span', { class: 'block timing' }, `This statement: ${CVActivityLib.fmtElapsed(t - timing.startedAt)}`,
+                perItem ? ` · about ${CVActivityLib.fmtElapsed(left)} left` : ' · estimating the time left…'));
+          };
+          const tick = setInterval(drawTiming, 1000);
+          if (CVActivity.heavyBusy()) activity.textContent = 'Waiting for "Draft with AI" to finish…';
           try {
-            ai = await CVAI.review({
-              fetchImpl: Engine.fetchImpl(),
-              docs,
-              engine: { base: det.base, model: choice.model, embed: det.embed },
-              signal: ctrl.signal,
-              onProgress: (p) => {
-                if (p.phase === 'embed') activity.textContent = 'Indexing report passages…';
-                else activity.textContent = `Reviewing statement ${Math.min(p.done + 1, p.total)} of ${p.total} with ${choice.model}…`;
-                if (p.total) bar.value = 35 + Math.round((p.done / p.total) * 60);
-              },
-            });
+            ai = await CVActivity.exclusive('check', async (task) => {
+              if (ctrl.signal.aborted) throw new DOMException('Cancelled', 'AbortError'); // cancelled while waiting
+              return CVAI.review({
+                fetchImpl: Engine.fetchImpl(),
+                docs,
+                engine: { base: det.base, model: choice.model, embed: det.embed, numCtx },
+                signal: ctrl.signal,
+                onProgress: (p) => {
+                  timing.phase = p.phase;
+                  if (p.phase === 'embed') {
+                    activity.textContent = 'Indexing report passages…';
+                    task.set('Indexing…');
+                  } else {
+                    if (p.done !== timing.index) {
+                      const t = Date.now();
+                      if (timing.index < 0) timing.firstAt = t;
+                      timing.index = p.done;
+                      timing.startedAt = t;
+                      timing.total = p.total;
+                    }
+                    task.set(`Checking ${Math.min(p.done + 1, p.total)} of ${p.total}`);
+                    drawTiming();
+                  }
+                  if (p.total) bar.value = 35 + Math.round((p.done / p.total) * 60);
+                },
+              });
+            }, { label: 'Checking…', model: choice.model });
             done(aiStep, ai.complete ? 'done' : 'done warn');
           } catch (err) {
             done(aiStep, 'failed');
-            aiStep.append(h('span', { class: 'small block' }, `AI review stopped: ${err.message}`));
-            ai = { flags: [], stats: null, complete: false, error: err.message };
+            if (err.name === 'AbortError' && ctrl.signal.aborted) {
+              ai = null; // cancelled before the review started: nothing to keep
+            } else {
+              aiStep.append(h('span', { class: 'small block' }, `AI review stopped: ${err.message}`));
+              ai = { flags: [], stats: null, complete: false, error: err.message };
+            }
+          } finally {
+            clearInterval(tick);
           }
         }
       }
