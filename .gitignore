@@ -1,0 +1,83 @@
+# ---------------------------------------------------------------------------
+# CaseVault: case data must NEVER be committed.
+# The app code lives in this repo; case data lives only on the SSD.
+# scripts/check-no-case-data.sh enforces this in CI as well, in case
+# something is ever force-added past these rules.
+# ---------------------------------------------------------------------------
+
+# The data and AI folders from the SSD, wherever they end up
+CaseVault-Data/
+CaseVault-AI/
+CV-AI/
+cases/
+backups/
+checks/
+
+# Vault files by name, anywhere in the tree
+vault.json
+case.json
+timeline.json
+notes.md
+*-check.json
+
+# Case documents and evidence (the app itself only ships the icons below)
+*.[pP][dD][fF]
+*.[dD][oO][cC]
+*.[dD][oO][cC][xX]
+*.[rR][tT][fF]
+*.[oO][dD][tT]
+*.[xX][lL][sS]
+*.[xX][lL][sS][xX]
+*.[cC][sS][vV]
+*.[pP][pP][tT]
+*.[pP][pP][tT][xX]
+*.[mM][sS][gG]
+*.[eE][mM][lL]
+*.[pP][sS][tT]
+*.[tT][xX][tT]
+*.[jJ][pP][gG]
+*.[jJ][pP][eE][gG]
+*.[pP][nN][gG]
+*.[gG][iI][fF]
+*.[bB][mM][pP]
+*.[tT][iI][fF]
+*.[tT][iI][fF][fF]
+*.[hH][eE][iI][cC]
+*.[wW][eE][bB][pP]
+*.[mM][pP]3
+*.[mM]4[aA]
+*.[wW][aA][vV]
+*.[mM][pP]4
+*.[mM][oO][vV]
+*.[aA][vV][iI]
+*.[zZ][iI][pP]
+*.7[zZ]
+*.[rR][aA][rR]
+!icons/*.png
+# Third-party library license files bundled in v1.5
+!vendor/**/*.[tT][xX][tT]
+
+# AI models and the portable Ollama build (these live on the CV-AI partition)
+models/
+ollama/
+*.[gG][gG][uU][fF]
+*.[sS][aA][fF][eE][tT][eE][nN][sS][oO][rR][sS]
+*.[bB][iI][nN]
+
+# Secrets and local settings
+.env
+.env.*
+*.[kK][eE][yY]
+*.[pP][eE][mM]
+*.[bB][eE][kK]
+
+# OS and editor clutter
+Thumbs.db
+desktop.ini
+.DS_Store
+$RECYCLE.BIN/
+System Volume Information/
+.vscode/
+.idea/
+*.[sS][wW][pP]
+node_modules/
