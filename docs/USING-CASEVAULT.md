@@ -71,9 +71,24 @@ If the helper window was closed while Firefox was open, CaseVault shows **"The C
 
 - **+ New case** asks for a title (required), case/file number, client, status, opened date, and tags.
 - The **left list** shows open and pending cases, most recently changed first. Use the search box (title, number, client, or tag) and the filter to find others.
-- **Details** tab: edit any field. Setting the status to *Closed* or *Archived* fills in the closed date for you.
-- **Status** values: *Open*, *Pending*, *Closed*, *Archived*. Archive a case instead of deleting it when you might need it again.
-- **Delete case** (at the bottom of Details) permanently removes the case folder and every attached file from the SSD. You must type `DELETE` to confirm.
+- **Details** tab: edit any field. Setting the status to *Closed* fills in the closed date for you.
+- **Status** values: *Open*, *Pending*, *Closed*, *Archived*. Choosing *Archived* asks **"Move this case to the archive?"** (see below).
+- **Case actions** (at the bottom of Details) has **Archive case…** and **Delete case…** side by side.
+
+### Archive a case
+
+**Archive case…** moves the whole case folder from `CaseVault-Data\cases\<case>\` to `CaseVault-Data\archive\<case>\`: notes, timeline, files, drafts and checks. CaseVault copies every file, reads each copy back and compares it with the original byte for byte, and only then removes the original. If anything goes wrong on the way (the SSD is unplugged, a copy doesn't match), the case stays where it was, unchanged, and CaseVault says so. The status becomes *Archived*, and the closed date is filled in if it was empty.
+
+- Archived cases leave the case list. They appear under **Archived (N)** at the bottom of the list; click it to fold it open. The search box searches them too.
+- An archived case opens **read-only**, with an *Archived case* banner. You can read the notes and timeline, open files, read drafts and past checks, and export a copy of a draft to this computer. Nothing can be changed or added.
+- **Restore to active cases** (in the banner or under Case actions) moves it back to `cases\` with the status it had before, and it can be changed again.
+- If a move was interrupted halfway, CaseVault sorts it out the next time it opens the vault (or on **Vault → Rebuild case index**). A copy that was fully checked is kept. An unfinished copy is ignored, and the original stays in place.
+
+### Delete a case
+
+**Delete case…** permanently deletes the case from the SSD: notes, timeline, files, drafts and checks. There is no trash. To confirm, type the case number (or the title, if the case has no number). The same window offers **Archive instead**. Archived cases can be deleted too.
+
+**Hide the case list** with the button at the top of the list (or `Ctrl + \`) to give the page more room. The list shrinks to a thin strip with **Show the case list** and **+** (new case); the same **Show** button also appears at the left of the header. On a phone-sized window the list hides completely. CaseVault remembers the choice in `vault.json`.
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
@@ -118,6 +133,16 @@ Attach `.xlsx`, `.xls`, `.ods` and `.csv` files like any other file.
 - The spreadsheet reader (SheetJS) is part of CaseVault and loads only when you open a spreadsheet. Nothing is downloaded.
 - **Consistency checks** read spreadsheets row by row, as in `Evidence row 5: Item=17; Plate=ABC-1284`. A flag points at the sheet and row. **Open original** opens the table with that row highlighted.
 
+### XFA PDF forms (Adobe LiveCycle)
+
+Some agency forms are *XFA* PDFs, made with Adobe LiveCycle Designer. In Chrome, Edge or Firefox's own PDF viewer they only say *"Please wait... upgrade to the latest version of Adobe Reader"*, because the real content is stored as form data inside the file. CaseVault reads that form data itself.
+
+- **Open** recognises an XFA form and draws it inside CaseVault, read-only. The bar above it says *XFA form (Adobe LiveCycle)*. **Show filled-in fields** switches to a plain list of every filled-in field, in form order.
+- If the form can't be drawn (some complex forms), CaseVault shows the list of filled-in fields instead.
+- Empty fields, and image fields such as signatures and photos, are left out of the list.
+- An XFA form is never run through OCR: its "Please wait" page has nothing to read.
+- A password-protected (encrypted) XFA form is read through the PDF reader instead. If nothing can be read from it, the check says so.
+
 ## Saving
 
 There's no Save button. **Every change is written to the SSD automatically**, within about a second. The indicator at the top right shows:
@@ -138,13 +163,13 @@ The **Checks** tab compares an affidavit draft (or any document) against the rep
 
 ### Running a check
 
-1. Attach the affidavit and the reports on the **Files** tab. PDF (including scanned PDFs), Word (`.docx`), Excel (`.xlsx`, `.xls`), CSV, TXT, and photos (PNG/JPG) can be checked. Old `.doc` files must be saved as `.docx` or PDF first. To check a draft you're writing in CaseVault, use **Run consistency check** in the Drafts tab instead.
+1. Attach the affidavit and the reports on the **Files** tab. PDF (including scanned PDFs and XFA forms), Word (`.docx`), Excel (`.xlsx`, `.xls`), CSV, TXT, and photos (PNG/JPG) can be checked. Old `.doc` files must be saved as `.docx` or PDF first. To check a draft you're writing in CaseVault, use **Run consistency check** in the Drafts tab instead.
 2. Open **Checks**. Under **Document to check**, pick the affidavit. (Choose *none* to only compare the reports with each other.)
 3. Tick the reports to compare against. All of them are ticked by default.
 4. **Include AI review** is available when the header shows **AI: Connected**. Without it, the rule-based checks still run.
-5. Click **Run check**. A window shows each step: reading each document (scanned pages go through OCR), the rule checks, then the AI review statement by statement. **Cancel** stops the check. If the AI review was already under way, what it found so far is saved.
+5. Click **Run check**. A window shows each step: reading each document (scanned pages go through OCR), the rule checks, then the AI review statement by statement, with the time spent on the current statement and an estimate of the time left. **Cancel** stops the check. If the AI review was already under way, what it found so far is saved.
 
-The text read from each document is kept on the SSD (`checks\text-cache`), so re-running a check is quick. OCR only runs again if the file changes.
+The text read from each document is kept on the SSD (`checks\text-cache`), so re-running a check is quick. OCR only runs again if the file changes, or when a newer CaseVault reads that kind of file better (v1.8 re-reads PDFs once, for XFA forms).
 
 ### What gets checked
 
@@ -159,6 +184,10 @@ The text read from each document is kept on the SSD (`checks\text-cache`), so re
 - phone numbers
 - money amounts
 - counts (*three shots* vs *two shots*)
+
+**XFA forms** are read field by field: each filled-in field becomes one line such as `Reporting officer: Officer Alex Sample`, using the form's own captions (or the field name when there's no caption). A repeated section, such as a timeline table, gives one line per row: `Timeline row 2: Date=03/14/2026; Type=Interview; Narrative=...`. A flag from a form points at *page 1* and the field or row, for example `Report.pdf · page 1 · Timeline row 2`. **Open original** lists the form's fields with that one highlighted.
+
+**No usable text.** If a document gave no text at all (an empty scan, or an XFA form whose fields couldn't be read), a warning box at the top of the results says it wasn't compared. A check with no flags against that document means nothing.
 
 **AI review (optional).** For each statement in the affidavit, CaseVault finds the most relevant report passages. The local AI decides whether the statement is **Supported**, **Contradicted**, or **Not found in reports**, and it must quote the exact report sentence it relied on. **If that quote can't be found word-for-word in the report, the answer is thrown away**, and the results tell you how many were. This stops the AI from inventing sources.
 
@@ -186,7 +215,7 @@ Click the same button again to set a flag back to open. Use the filters to show 
 
 ### Where checks are saved
 
-Each run is saved as `CaseVault-Data\cases\<case>\checks\<date>-check.json`. A second run on the same day is saved as `<date>-2-check.json`, and so on. Past checks are listed on the Checks tab, newest first, with their counts and how many flags are still open.
+Each run is saved as `CaseVault-Data\cases\<case>\checks\<date>-check.json`. A second run on the same day is saved as `<date>-2-check.json`, and so on. Past checks are listed on the Checks tab, newest first, with their counts and how many flags are still open. To remove one, open it and click **Delete this check** (you're asked first; the documents themselves aren't touched).
 
 The AI engine setup (profiles, models, the launcher) is in [AI-SETUP.md](AI-SETUP.md). Click the **AI:** status in the header to choose a profile.
 
@@ -233,11 +262,13 @@ The **To confirm** panel beside the editor lists every placeholder with its line
 
 ### AI suggestions while you type
 
-With **AI suggestions** ticked in the toolbar, pausing for a moment at the end of a line shows a short grey suggestion for how the sentence might continue.
+With **AI suggestions** ticked in the toolbar, pausing for a moment at the end of a line shows an **AI suggestion** box just below the line you're typing on (or above it, near the bottom of the window). It shows the end of your sentence in grey, then the suggested continuation highlighted.
 
-- **Tab** accepts it.
+- **Tab** accepts it. So does clicking the highlighted suggestion.
 - **Esc** (or typing something else) dismisses it. If you type the first letters of the suggestion, the rest stays.
+- The cursor stays in your text the whole time; the box never takes the focus. Screen readers announce the suggestion.
 - It uses the smallest AI model you have installed, so it's quick, and it only ever talks to the AI engine on this computer.
+- It pauses while a consistency check or *Draft with AI* is running, so they don't compete for the graphics card.
 - It switches itself off when the header shows **AI: Offline** or **AI: Rules-only**. Untick it any time; CaseVault remembers the choice.
 
 ### Draft with AI
@@ -249,7 +280,9 @@ Click **Draft with AI…** in the editor (or pick it when creating a draft) and 
 - Optional **instructions**, such as "focus on the events of March 14".
 - **Replace** the current text, or **add** below it.
 
-The draft appears in the editor as it's written. **Stop** keeps what has been written so far.
+The draft appears in the editor as it's written. **Stop** keeps what has been written so far. If a consistency check is running, the draft waits for it to finish first.
+
+If every model you have is small (under 5B parameters), the dialog says so: small models are fine for suggestions but weak at whole drafts. Install `qwen2.5:7b` for better drafts (see [AI-SETUP.md](AI-SETUP.md)).
 
 The AI is told to use **only** the case material you selected, to keep facts and numbers exactly as written in the reports, and to write `[CONFIRM: ...]` for anything missing (names, dates, badge numbers, the court) rather than invent it.
 
@@ -286,10 +319,15 @@ Placeholders you can use in a template:
 |---|---|
 | `{{case.title}}`, `{{case.number}}`, `{{case.client}}`, `{{case.status}}`, `{{case.tags}}` | The case's details |
 | `{{case.opened}}`, `{{case.closed}}` | The case's dates |
+| `{{affiant.name}}`, `{{affiant.title}}`, `{{affiant.agency}}` | Your details from **Vault → My details (for templates)** |
+| `{{affiant.address}}` | Your address, on as many lines as you typed |
+| `{{affiant.phone}}`, `{{affiant.email}}` | Your phone number and email |
 | `{{today}}` / `{{today.iso}}` | Today, as *September 28, 2026* / *2026-09-28* |
 | `{{confirm: badge number}}` | `[CONFIRM: badge number]` |
 
 A placeholder with no value (for example a case without a client) becomes `[CONFIRM: case.client]`, so nothing missing slips through.
+
+**My details.** Fill in your name, title, agency, address, phone and email once in **Vault → My details (for templates)**. Changes save to `vault.json` on the SSD as soon as you leave a box. They're used for new drafts from then on. Drafts you already made keep their text. Leave a box empty and templates show `[CONFIRM: affiant.phone]` (and so on) instead. The starter affidavit uses these placeholders; starter templates added before v1.8 don't, so add them to your own copy if you like.
 
 ## Backups
 
@@ -301,7 +339,7 @@ A placeholder with no value (for example a case without a client) becomes `[CONF
 
 | Where | What |
 |---|---|
-| **SSD, `V:\CaseVault-Data\`** | All case data: details, notes, timelines, files, drafts, consistency checks and the text read from documents, templates, settings (including the privacy-screen PIN hash), backups. |
+| **SSD, `V:\CaseVault-Data\`** | All case data: details, notes, timelines, files, drafts, consistency checks and the text read from documents, templates, settings (including the privacy-screen PIN hash and **My details**), backups. Active cases are in `cases\<case>\`, archived cases in `archive\<case>\` (same contents). |
 | **SSD, `W:\`** | The launcher, the helper, the AI engine and its models. No case data. |
 | **The browser on this PC** | The CaseVault app files (so it opens offline), and in Chrome/Edge a *pointer* to the vault folder so it can offer **Reconnect**. No case data. |
 | **GitHub** | Only the app's code. Case data can never be committed; the repository blocks it. |

@@ -113,7 +113,26 @@ The header shows the engine status: **AI: Connected (Quick · qwen2.5:7b)**, **A
 
 The choice is stored in the vault (`vault.json`), so it follows the SSD.
 
-**Drafts** use the same engine. *Draft with AI* uses the model of the chosen profile. The grey **suggestions while typing** always use the smallest installed chat model (Light if you have it), and keep it loaded for 30 minutes so suggestions stay quick. Install a Light model (`qwen2.5:3b`) even on the Beelink if you want snappy suggestions.
+**Drafts** use the same engine. *Draft with AI* uses the model of the chosen profile. **AI suggestions while typing** always use the smallest installed chat model (Light if you have it). Install a Light model (`qwen2.5:3b`) even on the Beelink if you want snappy suggestions.
+
+### Speed on a small GPU (6 GB)
+
+CaseVault sets these for you, so a 6 GB card like the RTX 3050 isn't overloaded:
+
+| Profile | Context size (`num_ctx`) | Why |
+|---|---|---|
+| Light | 4,096 tokens | Small and quick |
+| Quick | 4,096 tokens | A 7–8B model at 4,096 stays fully on the 6 GB GPU. A larger context pushes part of it into RAM, which is several times slower. |
+| Thorough | 8,192 tokens | Already split between GPU and RAM, so it gets the larger context |
+
+- Report passages are trimmed to fit that context, best matches first, so nothing is cut off silently. With Quick, a check sees a few fewer passages per statement than with Thorough.
+- Every request asks Ollama to keep the model loaded for **10 minutes** (`keep_alive: "10m"`). After that the GPU memory is freed. The first request after a pause loads the model again, and the header then shows **Loading model…** (usually 10–30 seconds).
+- **One thing at a time.** A consistency check and *Draft with AI* never run together: the second one waits (the header says **Waiting…**). Suggestions while typing pause while either is running.
+- All requests to one model use the same context size, because Ollama reloads a model whenever it changes.
+
+### The activity indicator
+
+While the AI is working, a small moving waveform appears next to **AI:** in the header, with what it's doing: **Checking 11 of 16**, **Drafting…**, **Suggesting…**, **Indexing…**, **Waiting…** or **Loading model…**. Point at it (or Tab to it) for the model name, the time so far, and the speed in tokens per second (from Ollama's own figures). It disappears when the AI is idle. With *reduce motion* switched on in Windows, the bars stand still and the text alone shows the activity.
 
 - **Beelink GTi12** (i9-12900HK, 32 GB, RTX 3050 6 GB): Quick for everyday checks, Thorough for important documents. Ollama uses the NVIDIA GPU automatically. Keep the NVIDIA driver up to date.
 - **Lenovo L14 vPro** (no NVIDIA GPU): Light, or Rules-only. Quick also runs on the CPU, but expect it to be several times slower.

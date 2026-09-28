@@ -7,6 +7,9 @@
  *     notes.md            free-form notes
  *     timeline.json       dated events and deadlines
  *     files/              attached documents, copied in
+ *     drafts/, checks/    drafts and consistency checks
+ *   archive/<case-id>/    archived cases (same layout, read-only in the app)
+ *   templates/            document templates
  *   backups/              dated snapshots of vault.json
  *
  * case.json and timeline.json are the source of truth. The index inside vault.json is
@@ -15,11 +18,11 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.7.0';
+  const APP_VERSION = '1.8.0';
   const SCHEMA = 1;
   const DATA_DIR = 'CaseVault-Data';
   const STATUSES = ['Open', 'Pending', 'Closed', 'Archived'];
-  const DEFAULT_SETTINGS = { backupsToKeep: 30, aiProfile: 'auto', privacyPin: null, privacyIdleMinutes: 0, webllm: true, webllmModel: '' };
+  const DEFAULT_SETTINGS = { backupsToKeep: 30, aiProfile: 'auto', privacyPin: null, privacyIdleMinutes: 0, webllm: true, webllmModel: '', affiant: null, sidebarCollapsed: false };
 
   let root = null;   // handle to CaseVault-Data
   let vault = null;  // parsed vault.json
@@ -175,9 +178,10 @@ const Vault = (() => {
     return open.length ? { date: open[0].date, time: open[0].time || '', title: open[0].title || '' } : null;
   }
 
-  function indexEntry(c, timeline, prev) {
+  function indexEntry(c, timeline, prev, location = 'active') {
     return {
       id: c.id,
+      location,
       title: c.title || '',
       number: c.number || '',
       client: c.client || '',
@@ -189,18 +193,36 @@ const Vault = (() => {
     };
   }
 
-  // Rebuild the index from the case folders so vault.json can never drift out of sync.
+  // Rebuild the index from the case folders (cases/ and archive/) so vault.json can never drift
+  // out of sync. Also settles a move that was interrupted (see moveCaseFolder).
   async function rebuildIndex() {
     const casesDir = await FS.getDir(root, 'cases', true);
+    const archiveDir = await FS.getDir(root, 'archive'); // created on first archive
     const prevById = new Map(vault.cases.map((c) => [c.id, c]));
-    const entries = (await FS.list(casesDir)).filter((e) => e.kind === 'directory');
-    const rebuilt = (await Promise.all(entries.map(async ({ name, handle }) => {
+    const dirsIn = async (parent) => (parent ? (await FS.list(parent)).filter((e) => e.kind === 'directory') : []);
+    const active = await dirsIn(casesDir);
+    const archived = await dirsIn(archiveDir);
+    const archivedNames = new Set(archived.map((e) => e.name));
+    const found = [];
+    for (const e of active) found.push({ ...e, location: 'active' });
+    for (const e of archived) found.push({ ...e, location: 'archive' });
+
+    // The same case in both folders means a move was interrupted. Keep the right copy.
+    const settled = new Set();
+    for (const e of active) {
+      if (!archivedNames.has(e.name)) continue;
+      const keep = await settleInterruptedMove(e.name, prevById.get(e.name));
+      settled.add(`${e.name}:${keep === 'active' ? 'archive' : 'active'}`); // the copy to leave out
+    }
+
+    const rebuilt = (await Promise.all(found.map(async ({ name, handle, location }) => {
+      if (settled.has(`${name}:${location}`)) return null;
       try {
         const c = await FS.readJSON(handle, 'case.json');
         if (!c) return null;
         c.id = name; // the folder name is the id
         const tl = await FS.readJSON(handle, 'timeline.json').catch(() => null);
-        return indexEntry(c, tl, prevById.get(name));
+        return indexEntry(c, tl, prevById.get(name), location);
       } catch (err) {
         if (FS.isDisconnectError(err)) throw err;
         console.warn('Skipping unreadable case folder', name, err);
@@ -227,15 +249,33 @@ const Vault = (() => {
 
   /* ---------- cases ---------- */
 
+  // Active cases live in cases/, archived ones in archive/. The index entry's `location` says which.
+  const FOLDERS = { active: 'cases', archive: 'archive' };
+  const locationOf = (id) => ((vault.cases.find((c) => c.id === id) || {}).location === 'archive' ? 'archive' : 'active');
+  const isArchived = (id) => !!vault && locationOf(id) === 'archive';
+
   async function caseDir(id, create = false) {
-    const casesDir = await FS.getDir(root, 'cases', true);
-    const dir = await FS.getDir(casesDir, id, create);
+    const where = locationOf(id);
+    let dir = await FS.getDir(await FS.getDir(root, FOLDERS[where], true), id, create);
+    if (!dir && !create) {
+      // The index may be out of date (e.g. a restored vault.json backup): look in the other folder.
+      const other = await FS.getDir(root, FOLDERS[where === 'archive' ? 'active' : 'archive']);
+      dir = other ? await FS.getDir(other, id) : null;
+    }
     if (!dir) {
       const err = new Error('This case folder no longer exists on the SSD.');
       err.name = 'CaseMissingError';
       throw err;
     }
     return dir;
+  }
+
+  // Archived cases are read-only: every write to one is refused here, whatever the screen allows.
+  function assertWritable(id) {
+    if (!isArchived(id)) return;
+    const err = new Error('This case is archived, so it is read-only. Restore it to active cases to change it.');
+    err.name = 'ReadOnlyError';
+    throw err;
   }
 
   async function createCase(fields) {
@@ -276,21 +316,191 @@ const Vault = (() => {
 
   function saveCase(c) {
     return serial(`case:${c.id}`, async () => {
+      assertWritable(c.id);
       const dir = await caseDir(c.id);
       c.dates.updated = nowISO();
       await FS.writeJSON(dir, 'case.json', c);
       const prev = vault.cases.find((e) => e.id === c.id);
-      upsertIndex({ ...indexEntry(c, null), nextDeadline: prev ? prev.nextDeadline : null });
+      upsertIndex({ ...indexEntry(c, null, prev, locationOf(c.id)), nextDeadline: prev ? prev.nextDeadline : null });
       await saveVault();
     });
   }
 
+  // Permanent: removes the case folder (active or archived) with everything in it. No trash.
   async function deleteCase(id) {
-    const casesDir = await FS.getDir(root, 'cases', true);
-    await FS.remove(casesDir, id, true);
-    vault.cases = vault.cases.filter((c) => c.id !== id);
-    await saveVault();
+    return serial(`case:${id}`, async () => {
+      const parent = await FS.getDir(root, FOLDERS[locationOf(id)], true);
+      if (await FS.exists(parent, id, 'directory')) await FS.remove(parent, id, true);
+      vault.cases = vault.cases.filter((c) => c.id !== id);
+      await saveVault();
+    });
   }
+
+  /* ---------- archive: move a case folder between cases/ and archive/ ---------- */
+
+  // Written into the copy once every file has been copied and checked. If the original can't be
+  // removed afterwards (the SSD unplugged at that moment), the next rebuild sees the marker and
+  // finishes the move; without it, the copy is incomplete and the original is kept.
+  const MOVE_MARKER = '.casevault-move.json';
+  const CHUNK = 4 * 1024 * 1024;
+
+  async function sameBytes(a, b) {
+    if (!a || !b || a.size !== b.size) return false;
+    for (let at = 0; at < a.size; at += CHUNK) {
+      const [x, y] = await Promise.all([a.slice(at, at + CHUNK).arrayBuffer(), b.slice(at, at + CHUNK).arrayBuffer()]);
+      const u = new Uint8Array(x);
+      const v = new Uint8Array(y);
+      if (u.length !== v.length) return false;
+      for (let i = 0; i < u.length; i++) if (u[i] !== v[i]) return false;
+    }
+    return true;
+  }
+
+  // Copy every file and folder of src into dst, then read both back and compare byte for byte.
+  // Returns the number of files. Throws (leaving src untouched) if anything differs.
+  async function copyTree(src, dst, onFile) {
+    let n = 0;
+    for (const e of await FS.list(src)) {
+      if (e.name === MOVE_MARKER) continue;
+      if (e.kind === 'directory') {
+        n += await copyTree(e.handle, await FS.getDir(dst, e.name, true), onFile);
+      } else {
+        const file = await e.handle.getFile();
+        await FS.writeData(dst, e.name, file);
+        const copy = await FS.getFile(dst, e.name);
+        if (!(await sameBytes(file, copy))) {
+          const err = new Error(`The copy of ${e.name} does not match the original, so the case was not moved.`);
+          err.name = 'MoveVerifyError';
+          throw err;
+        }
+        n++;
+        if (onFile) onFile(n, e.name);
+      }
+    }
+    return n;
+  }
+
+  /** Move cases/<id> <-> archive/<id>: copy, verify every file, then remove the original. */
+  async function moveCaseFolder(id, from, to, onFile) {
+    const fromParent = await FS.getDir(root, FOLDERS[from], true);
+    const toParent = await FS.getDir(root, FOLDERS[to], true);
+    const src = await FS.getDir(fromParent, id);
+    if (!src) {
+      const err = new Error('This case folder no longer exists on the SSD.');
+      err.name = 'CaseMissingError';
+      throw err;
+    }
+    const stale = await FS.getDir(toParent, id);
+    if (stale) {
+      // A copy left by an earlier move. Complete (marker): that move only needs finishing.
+      if (await FS.exists(stale, MOVE_MARKER)) {
+        await FS.remove(fromParent, id, true);
+        await FS.remove(stale, MOVE_MARKER);
+        return;
+      }
+      await FS.remove(toParent, id, true); // incomplete: the original is intact, start again
+    }
+    const dst = await FS.getDir(toParent, id, true);
+    try {
+      await copyTree(src, dst, onFile);
+    } catch (err) {
+      // Leave only the untouched original behind.
+      try { await FS.remove(toParent, id, true); } catch { /* the next move or rebuild tidies up */ }
+      throw err;
+    }
+    await FS.writeJSON(dst, MOVE_MARKER, { from: FOLDERS[from], to: FOLDERS[to], at: nowISO() });
+    await FS.remove(fromParent, id, true);
+    await FS.remove(dst, MOVE_MARKER);
+  }
+
+  // Both cases/<id> and archive/<id> exist: a move was interrupted. Returns which copy to keep.
+  async function settleInterruptedMove(id, prevEntry) {
+    const casesDir = await FS.getDir(root, 'cases', true);
+    const archiveDir = await FS.getDir(root, 'archive', true);
+    const inActive = await FS.getDir(casesDir, id);
+    const inArchive = await FS.getDir(archiveDir, id);
+    try {
+      if (await FS.exists(inArchive, MOVE_MARKER)) { // archiving had copied everything
+        await FS.remove(casesDir, id, true);
+        await FS.remove(inArchive, MOVE_MARKER);
+        return 'archive';
+      }
+      if (await FS.exists(inActive, MOVE_MARKER)) { // restoring had copied everything
+        await FS.remove(archiveDir, id, true);
+        await FS.remove(inActive, MOVE_MARKER);
+        return 'active';
+      }
+    } catch (err) {
+      if (FS.isDisconnectError(err)) throw err;
+      console.warn('Could not finish an interrupted move', id, err);
+    }
+    // No marker: the copy is incomplete. The original is where the index last put the case.
+    return prevEntry && prevEntry.location === 'archive' ? 'archive' : 'active';
+  }
+
+  /**
+   * Archive a case: status Archived, closed date filled in if empty, folder moved to archive/.
+   * Returns the updated case.
+   */
+  function archiveCase(id, onFile) {
+    return serial(`case:${id}`, async () => {
+      if (isArchived(id)) return getCase(id);
+      const c = await getCase(id);
+      const before = structuredClone(c);
+      if (c.status !== 'Archived') c.statusBeforeArchive = c.status;
+      c.status = 'Archived';
+      if (!c.dates.closed) c.dates.closed = localDay();
+      c.dates.archived = localDay();
+      c.dates.updated = nowISO();
+      // case.json is updated first so the copy carries it. If the move fails, the case stays
+      // active exactly as it was.
+      const dir = await caseDir(id);
+      await FS.writeJSON(dir, 'case.json', c);
+      try {
+        await moveCaseFolder(id, 'active', 'archive', onFile);
+      } catch (err) {
+        if (await FS.exists(await FS.getDir(root, 'cases', true), id, 'directory').catch(() => false)) {
+          await FS.writeJSON(dir, 'case.json', before).catch(() => {});
+        }
+        throw err;
+      }
+      const prev = vault.cases.find((e) => e.id === id);
+      const tl = await FS.readJSON(await FS.getDir(await FS.getDir(root, 'archive'), id), 'timeline.json').catch(() => null);
+      upsertIndex(indexEntry(c, tl, prev, 'archive'));
+      await saveVault();
+      return c;
+    });
+  }
+
+  /** Restore an archived case to cases/, with the status it had before (Closed if unknown). */
+  function restoreCase(id, onFile) {
+    return serial(`case:${id}`, async () => {
+      if (!isArchived(id)) return getCase(id);
+      await moveCaseFolder(id, 'archive', 'active', onFile);
+      const prev = vault.cases.find((e) => e.id === id);
+      if (prev) prev.location = 'active';
+      const dir = await caseDir(id);
+      const c = await getCase(id);
+      c.status = c.statusBeforeArchive && c.statusBeforeArchive !== 'Archived' ? c.statusBeforeArchive : (c.dates.closed ? 'Closed' : 'Open');
+      delete c.statusBeforeArchive;
+      delete c.dates.archived;
+      c.dates.updated = nowISO();
+      await FS.writeJSON(dir, 'case.json', c);
+      const tl = await FS.readJSON(dir, 'timeline.json').catch(() => null);
+      upsertIndex(indexEntry(c, tl, prev, 'active'));
+      await saveVault();
+      return c;
+    });
+  }
+
+  /** What must be typed to delete a case: its number, or its title when it has no number. */
+  function deleteConfirmText(c) {
+    return String((c && (String(c.number || '').trim() || c.title)) || '').trim();
+  }
+  const deleteConfirmMatches = (c, typed) => {
+    const want = deleteConfirmText(c);
+    return !!want && String(typed || '').trim() === want;
+  };
 
   /* ---------- notes ---------- */
 
@@ -300,6 +510,7 @@ const Vault = (() => {
 
   function saveNotes(id, text) {
     return serial(`notes:${id}`, async () => {
+      assertWritable(id);
       await FS.writeText(await caseDir(id), 'notes.md', text);
       await touchIndex(id);
     });
@@ -318,6 +529,7 @@ const Vault = (() => {
 
   function saveTimeline(id, tl) {
     return serial(`timeline:${id}`, async () => {
+      assertWritable(id);
       sortEvents(tl.events);
       await FS.writeJSON(await caseDir(id), 'timeline.json', tl);
       await touchIndex(id, { nextDeadline: nextDeadline(tl) });
@@ -327,8 +539,16 @@ const Vault = (() => {
   /* ---------- files ---------- */
 
   async function filesDir(id) {
-    return FS.getDir(await caseDir(id), 'files', true);
+    return (await FS.getDir(await caseDir(id), 'files', !isArchived(id))) || emptyDir;
   }
+
+  // Stands in for a sub-folder an archived case never had (it can't be created: read-only).
+  const emptyDir = {
+    kind: 'directory', name: '',
+    async *entries() { /* nothing */ },
+    async getFileHandle() { throw Object.assign(new Error('Not found'), { name: 'NotFoundError' }); },
+    async getDirectoryHandle() { throw Object.assign(new Error('Not found'), { name: 'NotFoundError' }); },
+  };
 
   async function listFiles(id) {
     const dir = await filesDir(id);
@@ -346,6 +566,7 @@ const Vault = (() => {
   }
 
   async function addFile(id, file) {
+    assertWritable(id);
     const dir = await filesDir(id);
     const name = await FS.uniqueName(dir, file.name);
     await FS.writeData(dir, name, file);
@@ -358,6 +579,7 @@ const Vault = (() => {
   }
 
   async function deleteFile(id, name) {
+    assertWritable(id);
     await FS.remove(await filesDir(id), name);
     await touchIndex(id);
   }
@@ -365,7 +587,7 @@ const Vault = (() => {
   /* ---------- consistency checks (cases/<id>/checks/) ---------- */
 
   async function checksDir(id) {
-    return FS.getDir(await caseDir(id), 'checks', true);
+    return (await FS.getDir(await caseDir(id), 'checks', !isArchived(id))) || emptyDir;
   }
 
   // Newest first: [{ name, created, affidavit, reports, counts, open }]
@@ -404,6 +626,7 @@ const Vault = (() => {
 
   function saveCheck(id, name, data) {
     return serial(`check:${id}:${name}`, async () => {
+      assertWritable(id);
       data.updated = nowISO();
       await FS.writeJSON(await checksDir(id), name, data);
       await touchIndex(id);
@@ -411,6 +634,7 @@ const Vault = (() => {
   }
 
   async function deleteCheck(id, name) {
+    assertWritable(id);
     await FS.remove(await checksDir(id), name);
   }
 
@@ -420,7 +644,8 @@ const Vault = (() => {
   }
 
   async function readTextCache(id, fileName, size, modified) {
-    const dir = await FS.getDir(await checksDir(id), 'text-cache', true);
+    const dir = await FS.getDir(await checksDir(id), 'text-cache', !isArchived(id));
+    if (!dir) return null;
     try { return await FS.readJSON(dir, cacheKey(fileName, size, modified)); } catch (err) {
       if (FS.isDisconnectError(err)) throw err;
       return null; // damaged cache entry: just read the document again
@@ -428,6 +653,7 @@ const Vault = (() => {
   }
 
   async function writeTextCache(id, fileName, size, modified, data) {
+    if (isArchived(id)) return; // read-only: the text is simply read again next time
     const dir = await FS.getDir(await checksDir(id), 'text-cache', true);
     // Drop older cache entries for the same file.
     for (const e of await FS.list(dir)) {
@@ -440,7 +666,7 @@ const Vault = (() => {
   // Created on first use, so vaults from older versions open unchanged.
 
   async function draftsDir(id) {
-    return FS.getDir(await caseDir(id), 'drafts', true);
+    return (await FS.getDir(await caseDir(id), 'drafts', !isArchived(id))) || emptyDir;
   }
 
   // Newest first: [{ slug, title, type, ai, created, updated, size }]
@@ -475,6 +701,7 @@ const Vault = (() => {
 
   function saveDraft(id, slug, meta, body) {
     return serial(`draft:${id}:${slug}`, async () => {
+      assertWritable(id);
       const m = { ...meta, updated: nowISO() };
       if (!m.created) m.created = m.updated;
       await FS.writeText(await draftsDir(id), `${slug}.md`, CVDraft.serializeDraft(m, body));
@@ -484,6 +711,7 @@ const Vault = (() => {
   }
 
   async function deleteDraft(id, slug) {
+    assertWritable(id);
     await FS.remove(await draftsDir(id), `${slug}.md`);
     await touchIndex(id);
   }
@@ -544,6 +772,7 @@ const Vault = (() => {
     resolve, create, load, close, ping,
     backupNow, listBackups, rebuildIndex, updateSettings,
     createCase, getCase, saveCase, deleteCase,
+    archiveCase, restoreCase, isArchived, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
     getNotes, saveNotes,
     getTimeline, saveTimeline, sortEvents,
     listFiles, addFile, readFile, deleteFile,

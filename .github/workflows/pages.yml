@@ -41,7 +41,7 @@ jobs:
 
       - name: JavaScript parses
         run: |
-          for f in js/*.js js/checker/*.js js/drafts/*.js js/ai/ollama-shim.js js/ai/webllm.js sw.js; do node --check "$f"; done
+          for f in js/*.js js/checker/*.js js/drafts/*.js js/ai/activity.js js/ai/ollama-shim.js js/ai/webllm.js sw.js; do node --check "$f"; done
           node --input-type=module --check < js/ai/webllm-worker.js
 
       - name: Unit tests

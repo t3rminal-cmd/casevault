@@ -77,7 +77,7 @@
         if (start === 'template') {
           if (!templates.length) return toast('Add a template first.', 'error');
           const tpl = await Vault.readTemplate(tplSelect.value);
-          body = CVDraft.fillTemplate(tpl, CVDraft.templateContext(state.caseObj || c));
+          body = CVDraft.fillTemplate(tpl, CVDraft.templateContext(state.caseObj || c, new Date(), Vault.data.settings.affiant));
         }
         if (start === 'ai') body = '';
         const slug = await Vault.newDraftSlug(c.id, name);
@@ -101,15 +101,17 @@
           } }, 'Delete'))))))
       : h('p', { class: 'muted' }, 'No drafts yet.');
 
+    const archived = Vault.isArchived(c.id);
     panel.replaceChildren(
-      h('div', { class: 'card' },
+      // An archived case is read-only: its drafts can be read and exported, not added to.
+      archived ? null : h('div', { class: 'card' },
         h('h2', {}, 'New draft'),
         h('div', { class: 'form-grid' }, ui.field('Title', title), ui.field('Type', type)),
         h('div', { class: 'field' }, h('span', {}, 'Start from'), startBox),
         h('div', { class: 'form-actions' }, create)),
       h('h2', { class: 'section-title' }, 'Drafts'),
       list,
-      h('p', { class: 'muted small' }, `Saved on the SSD in cases\\${c.id}\\drafts as Markdown files. Templates live in CaseVault-Data\\templates (Vault → Templates).`));
+      h('p', { class: 'muted small' }, `Saved on the SSD in ${archived ? 'archive' : 'cases'}\\${c.id}\\drafts as Markdown files. Templates live in CaseVault-Data\\templates (Vault → Templates).`));
   }
 
   /* =====================================================================
@@ -137,11 +139,18 @@
     const typeSelect = h('select', { 'aria-label': 'Document type' }, Object.entries(CVDraft.DOC_TYPES).map(([k, t]) => h('option', { value: k, selected: k === meta.type }, t.label)));
     typeSelect.addEventListener('change', () => { meta.type = typeSelect.value; checkBtn.hidden = meta.type !== 'affidavit'; save(0); });
 
-    // ---- editor with ghost text
+    // ---- editor with the AI suggestion box
     const ta = h('textarea', { class: 'draft-editor', spellcheck: 'true', 'aria-label': 'Draft text', placeholder: 'Write here. Markdown works: # Heading, **bold**, 1. numbered paragraphs. Use [CONFIRM: ...] for facts to check.' });
     ta.value = draft.body;
-    const mirror = h('div', { class: 'ghost-mirror', 'aria-hidden': 'true' });
-    const wrap = h('div', { class: 'editor-wrap' }, ta, mirror);
+    // The suggestion box floats just below the cursor line. It never takes focus: the cursor stays
+    // in the text, Tab accepts and Esc dismisses. Screen readers hear the suggestion (aria-live).
+    const suggContext = h('span', { class: 'sugg-context' });
+    const suggText = h('mark', { class: 'sugg-text', title: 'Click to accept' });
+    const suggBox = h('div', { class: 'sugg-box', hidden: true },
+      h('div', { class: 'sugg-label', 'aria-hidden': 'true' }, 'AI suggestion'),
+      h('div', { class: 'sugg-body', 'aria-live': 'polite' }, h('span', { class: 'sr-only' }, 'AI suggestion: '), suggContext, suggText),
+      h('div', { class: 'sugg-foot', 'aria-hidden': 'true' }, h('kbd', {}, 'Tab'), ' to accept · ', h('kbd', {}, 'Esc'), ' to dismiss'));
+    const wrap = h('div', { class: 'editor-wrap' }, ta, suggBox);
     const preview = h('div', { class: 'notes-preview draft-preview', hidden: true });
 
     const suggestToggle = h('input', { type: 'checkbox', checked: Vault.data.settings.draftSuggestions !== false });
@@ -160,27 +169,107 @@
 
     const ghost = CVGhost.createGhost({
       delay: 700,
-      fetchSuggestion: (before, signal) => CVCopilot.suggest({
-        fetchImpl: Engine().fetchImpl(),
-        base: Engine().detected.base, model: CVCopilot.fastModel(Engine().detected), before, signal,
-        caseInfo: { title: c.title, number: c.number, client: c.client },
-      }),
+      // One shared queue: no suggestions while a check or "Draft with AI" is using the model.
+      fetchSuggestion: async (before, signal) => {
+        if (CVActivity.heavyBusy()) return '';
+        const det = Engine().detected;
+        const model = CVCopilot.fastModel(det);
+        const task = CVActivity.begin('suggest', { label: 'Suggesting…', model });
+        try {
+          return await CVCopilot.suggest({
+            fetchImpl: Engine().fetchImpl(), base: det.base, model, before, signal,
+            numCtx: CVCopilot.numCtxForModel(det, model),
+            caseInfo: { title: c.title, number: c.number, client: c.client },
+          });
+        } finally { task.end(); }
+      },
       onChange: drawGhost,
     });
 
+    // Where the cursor is, in pixels from the textarea's top-left corner (scrolling included):
+    // a hidden copy of the textarea's text layout, without its scroll, measures the spot.
+    const MEASURE_PROPS = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'fontVariant', 'fontStretch', 'fontKerning',
+      'fontFeatureSettings', 'letterSpacing', 'wordSpacing', 'lineHeight', 'textTransform', 'textIndent', 'textRendering', 'tabSize',
+      'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+      'borderTopStyle', 'borderRightStyle', 'borderBottomStyle', 'borderLeftStyle', 'direction', 'wordBreak'];
+    function caretCoords(pos) {
+      const cs = getComputedStyle(ta);
+      const m = document.createElement('div');
+      for (const p of MEASURE_PROPS) m.style[p] = cs[p];
+      Object.assign(m.style, {
+        position: 'absolute', visibility: 'hidden', top: '0', left: '-9999px', overflow: 'hidden', height: 'auto',
+        whiteSpace: 'pre-wrap', overflowWrap: 'break-word', boxSizing: 'content-box', borderColor: 'transparent',
+        // Same text width as the textarea (clientWidth leaves out its scrollbar).
+        width: `${ta.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)}px`,
+      });
+      m.textContent = ta.value.slice(0, pos);
+      const marker = document.createElement('span');
+      marker.textContent = '​';
+      m.append(marker);
+      document.body.append(m);
+      const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.4;
+      const out = {
+        top: marker.offsetTop + parseFloat(cs.borderTopWidth) - ta.scrollTop,
+        left: marker.offsetLeft + parseFloat(cs.borderLeftWidth) - ta.scrollLeft,
+        height: lh,
+      };
+      m.remove();
+      return out;
+    }
+
     function drawGhost() {
       const g = ghost.ghost;
-      if (!g || ghost.anchor < 0 || !ta.isConnected) { mirror.replaceChildren(); return; }
-      mirror.style.width = `${ta.clientWidth}px`;
-      mirror.style.height = `${ta.clientHeight}px`;
-      mirror.replaceChildren(document.createTextNode(ta.value.slice(0, ghost.anchor)), h('span', { class: 'ghost-text' }, g));
-      mirror.scrollTop = ta.scrollTop;
+      if (!g || ghost.anchor < 0 || !ta.isConnected || wrap.hidden) { suggBox.hidden = true; return; }
+      suggContext.textContent = CVGhost.sentencePrefix(ta.value, ghost.anchor);
+      suggText.textContent = g;
+      placeSuggestion();
     }
+
+    function placeSuggestion() {
+      if (!ghost.ghost || !ta.isConnected) { suggBox.hidden = true; return; }
+      const caret = caretCoords(ghost.anchor);
+      // The cursor line is scrolled out of the editor's view: hide the box until it's back.
+      if (caret.top + caret.height < 0 || caret.top > ta.clientHeight) { suggBox.hidden = true; return; }
+      suggBox.hidden = false;
+      const taRect = ta.getBoundingClientRect();
+      const wrapRect = wrap.getBoundingClientRect();
+      const boxW = Math.min(suggBox.offsetWidth, wrapRect.width);
+      // Vertical: window coordinates, limited to what is visible of both the editor and the window.
+      const place = CVGhost.boxPlacement({
+        caretTop: taRect.top + caret.top,
+        caretBottom: taRect.top + caret.top + caret.height,
+        boxHeight: suggBox.offsetHeight,
+        limitTop: Math.max(0, taRect.top),
+        limitBottom: Math.min(window.innerHeight, taRect.bottom),
+      });
+      const left = Math.max(0, Math.min(taRect.left - wrapRect.left + caret.left - 12, wrapRect.width - boxW));
+      suggBox.style.top = `${Math.round(place.top - wrapRect.top)}px`;
+      suggBox.style.left = `${Math.round(left)}px`;
+      suggBox.classList.toggle('above', place.above);
+    }
+
+    function acceptSuggestion(r = ghost.key('Tab')) {
+      if (!r || !r.accept) return;
+      const pos = ta.selectionStart;
+      ta.setRangeText(r.accept, pos, pos, 'end');
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    // Clicking the suggestion accepts it; mousedown is cancelled so the cursor stays in the text.
+    suggBox.addEventListener('mousedown', (e) => e.preventDefault());
+    suggText.addEventListener('click', () => { acceptSuggestion(); ta.focus(); });
+    // Window resizes and page scrolling move the cursor line too (capture catches any scroller).
+    const onResize = () => {
+      if (!ta.isConnected) { window.removeEventListener('resize', onResize); window.removeEventListener('scroll', onResize, true); return; }
+      if (ghost.ghost) placeSuggestion();
+    };
+    window.addEventListener('resize', onResize);
+    window.addEventListener('scroll', onResize, true);
+
     const tellGhost = () => ghost.update({ text: ta.value, cursor: ta.selectionStart, enabled: suggestionsOn() && ta.selectionStart === ta.selectionEnd && !ta.readOnly, focused: document.activeElement === ta });
     ta.addEventListener('input', () => { tellGhost(); save(); schedulePlaceholders(); });
     ta.addEventListener('click', tellGhost);
     ta.addEventListener('keyup', (e) => { if (/^(Arrow|Home|End|Page)/.test(e.key)) tellGhost(); });
-    ta.addEventListener('scroll', () => { mirror.scrollTop = ta.scrollTop; });
+    ta.addEventListener('scroll', () => { if (ghost.ghost) placeSuggestion(); });
     ta.addEventListener('blur', () => ghost.stop());
     ta.addEventListener('keydown', (e) => {
       if (e.key !== 'Tab' && e.key !== 'Escape') return;
@@ -188,11 +277,7 @@
       const r = ghost.key(e.key);
       if (!r) return;
       e.preventDefault();
-      if (r.accept) {
-        const pos = ta.selectionStart;
-        ta.setRangeText(r.accept, pos, pos, 'end');
-        ta.dispatchEvent(new Event('input', { bubbles: true }));
-      }
+      acceptSuggestion(r);
     });
 
     // ---- [CONFIRM: ...] checklist
@@ -203,7 +288,7 @@
       confirmCount.textContent = String(ph.length);
       confirmCount.className = `pill ${ph.length ? 'status-pending' : 'status-closed'}`;
       confirmList.replaceChildren(...(ph.length ? ph.map((p) => h('li', {}, h('button', {
-        type: 'button', class: 'linkish', title: `Line ${p.line}`,
+        'data-ro-ok': 'true', type: 'button', class: 'linkish', title: `Line ${p.line}`,
         onclick: () => {
           if (!preview.hidden) btnEdit.click();
           ta.focus();
@@ -218,8 +303,8 @@
     drawPlaceholders();
 
     // ---- toolbar
-    const btnEdit = h('button', { class: 'btn small active', type: 'button' }, 'Edit');
-    const btnPreview = h('button', { class: 'btn small', type: 'button' }, 'Preview');
+    const btnEdit = h('button', { 'data-ro-ok': 'true', class: 'btn small active', type: 'button' }, 'Edit');
+    const btnPreview = h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button' }, 'Preview');
     btnEdit.addEventListener('click', () => { preview.hidden = true; wrap.hidden = false; btnEdit.classList.add('active'); btnPreview.classList.remove('active'); ta.focus(); });
     btnPreview.addEventListener('click', () => {
       ghost.stop();
@@ -235,8 +320,8 @@
       h('summary', { class: 'btn small' }, 'Export ▾'),
       h('div', { class: 'menu-items' },
         h('button', { type: 'button', onclick: () => exportDocx('case') }, 'Save .docx to case files (SSD)'),
-        h('button', { type: 'button', onclick: () => exportDocx('download') }, 'Save .docx to this computer…'),
-        h('button', { type: 'button', onclick: copyPlain }, 'Copy as plain text')));
+        h('button', { 'data-ro-ok': 'true', type: 'button', onclick: () => exportDocx('download') }, 'Save .docx to this computer…'),
+        h('button', { 'data-ro-ok': 'true', type: 'button', onclick: copyPlain }, 'Copy as plain text')));
     const delBtn = h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
       if (!(await confirmDialog({ title: `Delete "${meta.title}"?`, message: 'The draft is permanently deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
       const t = Save.timers.get(saveKey);
@@ -320,6 +405,13 @@
     const stopOnLeave = () => { if (genCtrl) genCtrl.abort(); window.removeEventListener('hashchange', stopOnLeave); };
     window.addEventListener('hashchange', stopOnLeave);
 
+    // Every installed chat model is under 5B parameters (and it isn't the in-browser engine's own choice).
+    function onlySmallModels() {
+      const det = Engine().detected;
+      const chat = (det && det.chat) || [];
+      return !Engine().inBrowser() && chat.length > 0 && chat.every((m) => m.size != null && m.size < 5);
+    }
+
     async function openGenerate() {
       await Engine().refresh();
       if (!aiReady()) return toast('The local AI engine is not connected. Start Start-CaseVault.bat on the CV-AI drive, then try again.', 'error', 8000);
@@ -341,6 +433,7 @@
         } },
         h('h2', {}, 'Draft with AI'),
         h('p', { class: 'muted small' }, `Uses ${CVChecks.profileLabel(Engine().choice())} on this computer. The AI is told to use only this case's material and to write [CONFIRM: ...] for anything missing.`),
+        onlySmallModels() ? h('p', { class: 'warn-text small small-model-note' }, 'Small model: fine for suggestions, weak for full drafts. Install qwen2.5:7b for better drafts.') : null,
         h('div', { class: 'form-grid' }, ui.field('Document type', type), ui.field('Template', tpl)),
         h('div', { class: 'field' }, h('span', {}, 'Use'),
           h('div', { class: 'check-reports' },
@@ -394,28 +487,34 @@
             toast(`Skipped ${name}: ${err.message}`, 'error', 6000);
           }
         }
-        msg.textContent = 'Finding the relevant passages…';
-        const typeLabel = (CVDraft.DOC_TYPES[opts.type] || CVDraft.DOC_TYPES.other).label;
-        const query = [typeLabel, caseObj.title, opts.instructions, String(notes).slice(0, 600), ...(timeline.events || []).map((e) => e.title)].join(' ');
-        const hits = await CVCopilot.relevantPassages({ docs, query, engine: { base: det.base, embed: det.embed }, fetchImpl: Engine().fetchImpl() });
-        const passages = hits.map((p) => ({ ...p, docName: docs[p.doc].name }));
-        const template = opts.template ? CVDraft.fillTemplate(await Vault.readTemplate(opts.template), CVDraft.templateContext(caseObj)) : '';
-        const messages = CVCopilot.draftMessages({ type: opts.type, template, instructions: opts.instructions, caseObj, timeline, notes, passages });
+        if (ctrl.signal.aborted) throw new DOMException('Stopped', 'AbortError');
+        if (CVActivity.heavyBusy()) msg.textContent = 'Waiting for the consistency check to finish…';
+        await CVActivity.exclusive('draft', async () => {
+          if (ctrl.signal.aborted) throw new DOMException('Stopped', 'AbortError');
+          const numCtx = CVAI.numCtxFor(choice.profile);
+          msg.textContent = 'Finding the relevant passages…';
+          const typeLabel = (CVDraft.DOC_TYPES[opts.type] || CVDraft.DOC_TYPES.other).label;
+          const query = [typeLabel, caseObj.title, opts.instructions, String(notes).slice(0, 600), ...(timeline.events || []).map((e) => e.title)].join(' ');
+          const hits = await CVCopilot.relevantPassages({ docs, query, engine: { base: det.base, embed: det.embed }, fetchImpl: Engine().fetchImpl() });
+          const passages = hits.map((p) => ({ ...p, docName: docs[p.doc].name }));
+          const template = opts.template ? CVDraft.fillTemplate(await Vault.readTemplate(opts.template), CVDraft.templateContext(caseObj, new Date(), Vault.data.settings.affiant)) : '';
+          const messages = CVCopilot.draftMessages({ type: opts.type, template, instructions: opts.instructions, caseObj, timeline, notes, passages, numCtx });
 
-        Object.assign(meta, {
-          ai: true, type: opts.type, ...(opts.template ? { template: opts.template } : {}),
-          generated: { model: choice.model, at: new Date().toISOString(), sources: ['case details', opts.timeline && 'timeline', opts.notes && 'notes', ...opts.docs].filter(Boolean) },
-        });
-        banner.hidden = false;
-        typeSelect.value = meta.type;
-        checkBtn.hidden = meta.type !== 'affidavit';
-        msg.textContent = `Writing with ${choice.model}…`;
-        show();
-        await CVCopilot.streamChat({
-          fetchImpl: Engine().fetchImpl(),
-          base: det.base, model: choice.model, messages, signal: ctrl.signal,
-          onText: (piece) => { text += piece; show(); saveNow(1500); schedulePlaceholders(); },
-        });
+          Object.assign(meta, {
+            ai: true, type: opts.type, ...(opts.template ? { template: opts.template } : {}),
+            generated: { model: choice.model, at: new Date().toISOString(), sources: ['case details', opts.timeline && 'timeline', opts.notes && 'notes', ...opts.docs].filter(Boolean) },
+          });
+          banner.hidden = false;
+          typeSelect.value = meta.type;
+          checkBtn.hidden = meta.type !== 'affidavit';
+          msg.textContent = `Writing with ${choice.model}…`;
+          show();
+          await CVCopilot.streamChat({
+            fetchImpl: Engine().fetchImpl(),
+            base: det.base, model: choice.model, messages, signal: ctrl.signal, numCtx,
+            onText: (piece) => { text += piece; show(); saveNow(1500); schedulePlaceholders(); },
+          });
+        }, { label: 'Drafting…', model: choice.model });
         saveNow(0);
         toast('Draft written. Check every [CONFIRM: ...] and verify each fact against the source.', 'success', 8000);
       } catch (err) {

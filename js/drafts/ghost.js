@@ -1,7 +1,7 @@
-/* CaseVault drafts — inline AI suggestions ("ghost text"), the logic only.
+/* CaseVault drafts — inline AI suggestions, the logic only.
  *
  * After a pause in typing, ask for a short continuation of the text before the cursor and show it
- * as grey text at the cursor. Tab accepts it, Esc dismisses it, and typing dismisses it too, unless
+ * in a small "AI suggestion" box next to the cursor line. Tab accepts it, Esc dismisses it, and typing dismisses it too, unless
  * the typed characters are the start of the suggestion (then the rest stays). Every new keystroke
  * cancels the pending request (AbortController), so only the latest one can ever show.
  *
@@ -138,7 +138,39 @@
     };
   }
 
-  const api = { createGhost, cleanSuggestion, eligible, MAX_CHARS };
+  /* ---------------- the suggestion box (pure helpers; drafts-ui.js does the DOM) ---------------- */
+
+  /**
+   * The current sentence up to the cursor, for context in the suggestion box. A long sentence
+   * keeps its end, with "…" in front: "…arrived at 100 Example Street at".
+   */
+  function sentencePrefix(text, cursor, max = 90) {
+    const before = String(text || '').slice(0, cursor);
+    const line = before.slice(before.lastIndexOf('\n') + 1);
+    let start = 0;
+    const re = /[.!?]["'”’)]*\s+/g;
+    let m;
+    while ((m = re.exec(line))) start = m.index + m[0].length;
+    let s = line.slice(start).replace(/^\s+/, '');
+    if (s.length > max) s = `…${s.slice(s.length - max).replace(/^\S*\s/, '')}`;
+    return s;
+  }
+
+  /**
+   * Where to put the box: below the cursor line, or above it when there's no room below.
+   * All values are pixels in the same coordinates (e.g. the window). Returns { top, above }.
+   * caretTop/caretBottom: the cursor line; boxHeight: the box; limitTop/limitBottom: the visible area.
+   */
+  function boxPlacement({ caretTop, caretBottom, boxHeight, limitTop, limitBottom, gap = 6 }) {
+    const below = caretBottom + gap;
+    if (below + boxHeight <= limitBottom) return { top: below, above: false };
+    const above = caretTop - gap - boxHeight;
+    if (above >= limitTop) return { top: above, above: true };
+    // No room either way (a very small window): keep it below, where the eye is going.
+    return { top: below, above: false };
+  }
+
+  const api = { createGhost, cleanSuggestion, eligible, sentencePrefix, boxPlacement, MAX_CHARS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVGhost = api;
 })(this);

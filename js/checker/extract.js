@@ -98,19 +98,136 @@
     return paras;
   }
 
-  async function extractPdf(file, progress) {
-    const lib = await loadPdfjs();
-    const data = new Uint8Array(await file.arrayBuffer());
-    const task = lib.getDocument({
-      data,
+  // pdf.js takes ownership of the bytes it is given, so every call gets its own copy.
+  function openPdf(lib, data, enableXfa = false) {
+    return lib.getDocument({
+      data: data.slice(),
       wasmUrl: url('vendor/pdfjs/wasm/'),
       cMapUrl: url('vendor/pdfjs/cmaps/'),
       cMapPacked: true,
       standardFontDataUrl: url('vendor/pdfjs/standard_fonts/'),
       iccUrl: url('vendor/pdfjs/iccs/'),
       isEvalSupported: false,
-      enableXfa: false,
+      enableXfa,
     });
+  }
+
+  /* ---------------- XFA forms (Adobe LiveCycle) ---------------- */
+
+  // { xfa: false } for ordinary PDFs; otherwise { xfa: true, paragraphs, encrypted }
+  async function readXfaFields(data) {
+    try {
+      const packets = await root.CVXfa.readPackets(data);
+      if (!packets) return { xfa: false, paragraphs: [] };
+      return { xfa: true, paragraphs: root.CVXfa.toParagraphs(packets), encrypted: false };
+    } catch (err) {
+      if (err.name === 'XfaEncryptedError') return { xfa: true, paragraphs: [], encrypted: true };
+      console.warn('XFA form could not be read', err);
+      return { xfa: true, paragraphs: [], encrypted: false };
+    }
+  }
+
+  // The form's real content is its XML data, not the page's text ("Please wait..."), so OCR never runs.
+  async function extractXfa(lib, data, fields, progress) {
+    progress?.('reading the XFA form fields');
+    let paragraphs = fields.paragraphs;
+    let pageCount = 1;
+    if (!paragraphs.length) {
+      // Encrypted or unusual file: let pdf.js lay out the form and read the text of that.
+      const task = openPdf(lib, data, true);
+      try {
+        const pdf = await task.promise;
+        pageCount = pdf.numPages;
+        for (let p = 1; p <= pdf.numPages; p++) {
+          const tc = await (await pdf.getPage(p)).getTextContent();
+          const text = tc.items.map((i) => i.str).filter(Boolean).join('\n');
+          if (!root.CVXfa.isPlaceholderText(text)) paragraphs.push(...paragraphsFromText(text, p, paragraphs.length));
+        }
+      } catch (err) {
+        console.warn('pdf.js could not lay out the XFA form', err);
+      } finally {
+        await task.destroy();
+      }
+    }
+    const warnings = paragraphs.length ? [] : [
+      'This PDF is an XFA form (Adobe LiveCycle), but no filled-in fields could be read from it, so it was not checked. Open it in Adobe Reader to confirm it has content.',
+    ];
+    return { pageCount, paragraphs, ocrPages: [], warnings, xfa: true };
+  }
+
+  /**
+   * Show an XFA form inside CaseVault (the browser's own PDF viewer only shows "Please wait").
+   * Renders the form with pdf.js; if that fails, shows the filled-in fields as a read-only table.
+   * `target` (a field label from a check result) is highlighted in the fields table.
+   * Returns 'form' or 'fields'.
+   */
+  async function renderXfa(container, data, fields, target = null, { fieldsOnly = false } = {}) {
+    let task = null;
+    try {
+      if (fieldsOnly) throw Object.assign(new Error('fields requested'), { quiet: true });
+      const lib = await loadPdfjs();
+      task = openPdf(lib, data, true);
+      const pdf = await task.promise;
+      if (!pdf.isPureXfa) throw new Error('not a pure XFA form');
+      const pages = document.createElement('div');
+      pages.className = 'xfa-pages';
+      const linkService = { addLinkAttributes() {}, getDestinationHash: () => '#', getAnchorUrl: () => '#', eventBus: { dispatch() {} } };
+      for (let p = 1; p <= pdf.numPages; p++) {
+        const page = await pdf.getPage(p);
+        const xfaHtml = await page.getXfa();
+        if (!xfaHtml) continue;
+        const div = document.createElement('div');
+        div.className = 'xfa-page xfaLayer';
+        const vp = page.getViewport({ scale: 1 });
+        div.style.width = `${vp.width}px`;
+        div.style.minHeight = `${vp.height}px`;
+        lib.XfaLayer.render({ xfaHtml, div, annotationStorage: pdf.annotationStorage, linkService, intent: 'display' });
+        div.classList.add('xfa-page'); // render() replaces the class list
+        div.querySelectorAll('input, textarea, select, button').forEach((el) => { el.disabled = true; });
+        pages.append(div);
+      }
+      await task.destroy(); // the drawn form is plain, read-only HTML from here on
+      task = null;
+      if (!pages.children.length) throw new Error('empty form');
+      container.replaceChildren(pages);
+      return 'form';
+    } catch (err) {
+      if (!err.quiet) console.warn('XFA rendering failed; showing the fields instead', err);
+      if (task) task.destroy().catch(() => {});
+      const f = fields || await readXfaFields(data);
+      const table = document.createElement('table');
+      table.className = 'files xfa-fields';
+      const body = document.createElement('tbody');
+      for (const p of f.paragraphs) {
+        const tr = document.createElement('tr');
+        if (target && p.field === target) tr.className = 'target';
+        const th = document.createElement('th');
+        const td = document.createElement('td');
+        const colon = p.text.indexOf(': ');
+        th.textContent = colon > 0 ? p.text.slice(0, colon) : p.field || '';
+        td.textContent = colon > 0 ? p.text.slice(colon + 2) : p.text;
+        tr.append(th, td);
+        body.append(tr);
+      }
+      table.append(body);
+      const note = document.createElement('p');
+      note.className = 'muted small';
+      note.textContent = fieldsOnly ? 'The form\'s filled-in fields, in form order (read-only).' : f.paragraphs.length
+        ? 'This XFA form could not be drawn here, so its filled-in fields are listed instead (read-only).'
+        : 'This XFA form could not be drawn here and no filled-in fields could be read. Open it in Adobe Reader.';
+      container.replaceChildren(note, ...(f.paragraphs.length ? [table] : []));
+      const row = table.querySelector('tr.target');
+      if (row) requestAnimationFrame(() => row.scrollIntoView({ block: 'center' }));
+      return 'fields';
+    }
+  }
+
+  async function extractPdf(file, progress) {
+    const lib = await loadPdfjs();
+    const data = new Uint8Array(await file.arrayBuffer());
+    const fields = await readXfaFields(data);
+    if (fields.xfa) return extractXfa(lib, data, fields, progress);
+    const task = openPdf(lib, data, false);
     const pdf = await task.promise;
     const out = { pageCount: pdf.numPages, paragraphs: [], ocrPages: [], warnings: [] };
     try {
@@ -120,6 +237,12 @@
         const tc = await page.getTextContent();
         let paras = pageParagraphs(tc.items, p, out.paragraphs.length);
         const chars = paras.reduce((n, x) => n + x.text.length, 0);
+        // A page that only carries Adobe's "Please wait..." placeholder has no content to read (or OCR).
+        if (paras.length && root.CVXfa.isPlaceholderText(paras.map((x) => x.text).join(' '))) {
+          out.warnings.push(`Page ${p} only says "Please wait..." (an Adobe form placeholder); it has no readable content.`);
+          page.cleanup();
+          continue;
+        }
         if (chars < OCR_MIN_CHARS) {
           progress?.(`page ${p} of ${pdf.numPages} (scanned, reading with OCR)`);
           const viewport = page.getViewport({ scale: 2.2 });
@@ -291,13 +414,17 @@
     else if (kind === 'image') result = await extractImage(file, progress);
     else if (kind === 'sheet') result = await extractSheet(file, name, progress);
     else result = { pageCount: 1, paragraphs: paragraphsFromText(await file.text(), null), ocrPages: [], warnings: [] };
-    if (!result.paragraphs.length) result.warnings.push('No readable text was found in this document.');
-    return { name, kind, ...result };
+    if (!result.paragraphs.length && !result.warnings.length) result.warnings.push('No readable text was found in this document, so it was not checked.');
+    return { name, kind, extractor: VERSION, ...result };
   }
 
   async function shutdown() {
     if (ocrWorker) { try { (await ocrWorker).terminate(); } catch { /* ignore */ } ocrWorker = null; }
   }
 
-  root.CVExtract = { extract, kindOf, supportMessage, paragraphsFromText, shutdown };
+  // Bumped when extraction improves, so text cached on the SSD by an older version is read again
+  // (e.g. XFA forms that v1.7 read as "Please wait...").
+  const VERSION = 2;
+
+  root.CVExtract = { VERSION, extract, kindOf, supportMessage, paragraphsFromText, shutdown, readXfaFields, renderXfa };
 })(this);

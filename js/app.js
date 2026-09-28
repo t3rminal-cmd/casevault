@@ -407,6 +407,7 @@
     state.vaultId = data.vaultId;
     $('#vault-name').textContent = MODE === 'helper' ? `${state.drive.replace(/[\\/]+$/, '')} ${dir.name}`.trim() : dir.name;
     hideGate();
+    setSidebar(!!(Vault.data.settings && Vault.data.settings.sidebarCollapsed), { save: false });
     Save.render();
     if (sameVault) await Save.retryFailed();
     else { state.caseId = null; state.caseObj = null; }
@@ -449,36 +450,51 @@
    * Sidebar: case list
    * ===================================================================== */
 
+  const isArchivedEntry = (c) => c.location === 'archive';
+  const matchesSearch = (c, q) => !q || [c.title, c.number, c.client, ...(c.tags || [])].join(' ').toLowerCase().includes(q);
+
+  // Cases in cases/ (the archive has its own section below the list).
   function filteredCases() {
     const q = $('#case-search').value.trim().toLowerCase();
     const f = $('#case-filter').value;
     return (Vault.data?.cases || [])
+      .filter((c) => !isArchivedEntry(c))
       .filter((c) => f === 'all' || (f === 'active' ? c.status === 'Open' || c.status === 'Pending' : c.status === f))
-      .filter((c) => !q || [c.title, c.number, c.client, ...(c.tags || [])].join(' ').toLowerCase().includes(q))
+      .filter((c) => matchesSearch(c, q))
       .sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
+  }
+
+  function caseItem(c) {
+    const due = c.nextDeadline && !isArchivedEntry(c) ? dueLabel(c.nextDeadline.date) : null;
+    return h('li', {},
+      h('a', {
+        href: `#/case/${encodeURIComponent(c.id)}`,
+        class: `case-item ${c.id === state.caseId ? 'active' : ''}`,
+        'aria-current': c.id === state.caseId ? 'page' : null,
+      },
+      h('div', { class: 'case-item-top' }, h('span', { class: 'case-item-title' }, c.title || 'Untitled case'), statusPill(c.status)),
+      h('div', { class: 'case-item-meta muted' }, [c.number, c.client].filter(Boolean).join(' · ') || '\u00a0'),
+      due && h('div', { class: `case-item-due ${due.cls}` }, `⏰ ${c.nextDeadline.title || 'Deadline'}: ${due.text}`)));
   }
 
   function renderCaseList() {
     const list = $('#case-list');
-    if (!Vault.data) { list.replaceChildren(); return; }
+    const section = $('#archived-cases');
+    if (!Vault.data) { list.replaceChildren(); section.hidden = true; return; }
     const cases = filteredCases();
-    if (!cases.length) {
-      list.replaceChildren(h('li', { class: 'empty muted' },
-        Vault.data.cases.length ? 'No cases match.' : 'No cases yet. Click "+ New case".'));
-      return;
-    }
-    list.replaceChildren(...cases.map((c) => {
-      const due = c.nextDeadline ? dueLabel(c.nextDeadline.date) : null;
-      return h('li', {},
-        h('a', {
-          href: `#/case/${encodeURIComponent(c.id)}`,
-          class: `case-item ${c.id === state.caseId ? 'active' : ''}`,
-          'aria-current': c.id === state.caseId ? 'page' : null,
-        },
-        h('div', { class: 'case-item-top' }, h('span', { class: 'case-item-title' }, c.title || 'Untitled case'), statusPill(c.status)),
-        h('div', { class: 'case-item-meta muted' }, [c.number, c.client].filter(Boolean).join(' · ') || '\u00a0'),
-        due && h('div', { class: `case-item-due ${due.cls}` }, `⏰ ${c.nextDeadline.title || 'Deadline'}: ${due.text}`)));
-    }));
+    const activeCount = Vault.data.cases.filter((c) => !isArchivedEntry(c)).length;
+    list.replaceChildren(...(cases.length ? cases.map(caseItem) : [h('li', { class: 'empty muted' },
+      activeCount ? 'No cases match.' : Vault.data.cases.length ? 'No active cases.' : 'No cases yet. Click "+ New case".')]));
+
+    // Archived cases: a collapsible section, searched with the same box.
+    const q = $('#case-search').value.trim().toLowerCase();
+    const archived = Vault.data.cases.filter(isArchivedEntry).sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
+    const shown = archived.filter((c) => matchesSearch(c, q));
+    section.hidden = !archived.length;
+    $('#archived-count').textContent = q ? `${shown.length} of ${archived.length}` : String(archived.length);
+    $('#archived-list').replaceChildren(...(shown.length ? shown.map(caseItem) : [h('li', { class: 'empty muted' }, 'No archived cases match.')]));
+    // Open the section when the case on screen is archived, or a search finds archived cases.
+    if ((state.caseId && archived.some((c) => c.id === state.caseId)) || (q && shown.length)) section.open = true;
   }
 
   $('#case-search').addEventListener('input', debounce(renderCaseList, 120));
@@ -607,14 +623,23 @@
     renderCaseList();
 
     const c = state.caseObj;
+    const archived = Vault.isArchived(id);
     const panel = h('div', { class: 'tab-panel', role: 'tabpanel' });
-    $('#main').replaceChildren(h('section', { class: 'case' },
+    $('#main').replaceChildren(h('section', { class: `case ${archived ? 'archived' : ''}` },
+      archived ? h('div', { class: 'archived-banner', role: 'note' },
+        h('div', {}, h('strong', {}, 'Archived case'),
+          h('span', { class: 'small block' }, 'Read-only. Notes, files, drafts and checks can be opened and searched, but not changed.')),
+        h('div', { class: 'spacer' }),
+        h('button', { class: 'btn', type: 'button', onclick: () => restoreCase(c) }, 'Restore to active cases')) : null,
       h('div', { class: 'case-head' },
         h('h1', { id: 'case-title' }, c.title || 'Untitled case'),
         h('div', { class: 'case-sub muted', id: 'case-sub' }, caseSubtitle(c))),
       h('nav', { class: 'tabs', role: 'tablist' }, TABS.map(([t, label]) =>
         h('a', { href: `#/case/${encodeURIComponent(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab) }, label))),
       panel));
+    // Read-only: everything in the tab that could change the case is switched off, now and as
+    // the tab redraws. (vault.js refuses the writes too.)
+    if (archived) new MutationObserver(() => applyReadOnly(panel)).observe(panel, { childList: true, subtree: true });
 
     const renderers = { details: renderDetails, notes: renderNotes, timeline: renderTimeline, files: renderFiles, drafts: (...a) => CVDraftsUI.render(...a), checks: (...a) => CVChecks.render(...a) };
     try {
@@ -624,6 +649,18 @@
       console.error(err);
       panel.replaceChildren(h('p', { class: 'error-text' }, `Could not load this tab: ${err.message}`));
     }
+    if (archived) applyReadOnly(panel);
+  }
+
+  // Text boxes become read-only (still scrollable and selectable); other controls are disabled,
+  // except those marked data-ro-ok (open, preview, export a copy, filters) and the case actions.
+  function applyReadOnly(root) {
+    for (const el of root.querySelectorAll('input, select, textarea, button')) {
+      if (el.closest('[data-ro-ok]')) continue;
+      const textual = el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && /^(text|search|date|time|number|email|tel|url)$/.test(el.type));
+      if (textual) { if (!el.readOnly) el.readOnly = true; } else if (!el.disabled) el.disabled = true;
+    }
+    for (const el of root.querySelectorAll('.dropzone:not([aria-disabled])')) { el.setAttribute('aria-disabled', 'true'); el.hidden = true; }
   }
 
   function caseSubtitle(c) {
@@ -651,13 +688,20 @@
     const closedInput = h('input', { type: 'date', value: c.dates.closed || '' });
     const statusSelect = h('select', {}, Vault.STATUSES.map((s) => h('option', { selected: s === c.status }, s)));
     statusSelect.addEventListener('change', () => {
+      // "Archived" means moving the case to the archive: ask first.
+      if (statusSelect.value === 'Archived' && !Vault.isArchived(c.id)) {
+        statusSelect.value = c.status;
+        archiveCase(c);
+        return;
+      }
       c.status = statusSelect.value;
-      if ((c.status === 'Closed' || c.status === 'Archived') && !c.dates.closed) {
+      if (c.status === 'Closed' && !c.dates.closed) {
         c.dates.closed = today();
         closedInput.value = c.dates.closed;
       }
       save();
     });
+    const archived = Vault.isArchived(c.id);
 
     panel.replaceChildren(
       h('form', { class: 'form-grid', onsubmit: (e) => e.preventDefault() },
@@ -669,28 +713,107 @@
         field('Opened', bind(h('input', { type: 'date', value: c.dates.opened || '' }), (v) => { c.dates.opened = v; })),
         field('Closed', bind(closedInput, (v) => { c.dates.closed = v; })),
         h('p', { class: 'muted span-2 small' },
-          `Created ${c.dates.created ? fmtDateTime(Date.parse(c.dates.created)) : '—'} · Folder: cases\\${c.id}`)),
-      h('div', { class: 'danger-zone' },
-        h('h3', {}, 'Delete case'),
-        h('p', { class: 'muted' }, 'Permanently removes this case folder from the SSD, including notes, timeline, and every attached file. To keep it, set the status to Archived instead.'),
-        h('button', { class: 'btn danger', type: 'button', onclick: () => deleteCase(c) }, 'Delete case…')));
+          `Created ${c.dates.created ? fmtDateTime(Date.parse(c.dates.created)) : '—'} · Folder: ${archived ? 'archive' : 'cases'}\\${c.id}`
+          + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),
+      // Archive and delete side by side, so the gentler choice is always in view.
+      h('section', { class: 'case-actions', 'data-ro-ok': 'true', 'aria-labelledby': 'case-actions-title' },
+        h('h3', { id: 'case-actions-title' }, 'Case actions'),
+        h('div', { class: 'case-actions-grid' },
+          archived
+            ? h('div', { class: 'case-action' },
+              h('button', { class: 'btn', type: 'button', onclick: () => restoreCase(c) }, 'Restore to active cases'),
+              h('p', { class: 'muted small' }, 'Moves the case back to the active list, with the status it had before, so it can be changed again.'))
+            : h('div', { class: 'case-action' },
+              h('button', { class: 'btn', type: 'button', onclick: () => archiveCase(c) }, 'Archive case…'),
+              h('p', { class: 'muted small' }, 'Keeps everything, read-only, in CaseVault-Data\\archive. It leaves the case list but can still be opened, searched and restored.')),
+          h('div', { class: 'case-action' },
+            h('button', { class: 'btn danger', type: 'button', onclick: () => deleteCase(c) }, 'Delete case…'),
+            h('p', { class: 'muted small' }, 'Permanently deletes the case from the SSD. There is no trash to get it back from.')))));
   }
 
-  async function deleteCase(c) {
+  // Pending edits to a case that is being deleted are dropped rather than written.
+  function dropPendingSaves(id) {
+    for (const key of [...Save.timers.keys()]) {
+      if (key === `case:${id}` || key.startsWith(`notes:${id}`) || key.startsWith(`timeline:${id}`) || key.startsWith(`draft:${id}:`)) {
+        clearTimeout(Save.timers.get(key).timer);
+        Save.timers.delete(key);
+      }
+    }
+    Save.render();
+  }
+
+  async function archiveCase(c) {
     const ok = await confirmDialog({
-      title: `Delete "${c.title}"?`,
-      message: 'This permanently deletes the case folder and all its files from the SSD. It cannot be undone.',
-      confirmText: 'Delete permanently',
-      danger: true,
-      requireText: 'DELETE',
+      title: 'Move this case to the archive?',
+      message: h('div', {},
+        h('p', {}, `"${c.title || 'Untitled case'}" moves to CaseVault-Data\\archive on the SSD, with its notes, timeline, files, drafts and checks. Every file is copied and checked before the original is removed.`),
+        h('p', { class: 'muted small' }, 'It leaves the case list and opens read-only from "Archived" at the bottom of the list. You can restore it at any time.')),
+      confirmText: 'Archive case',
     });
     if (!ok) return;
-    const t = Save.timers.get(`case:${c.id}`);
-    if (t) { clearTimeout(t.timer); Save.timers.delete(`case:${c.id}`); }
+    await Save.flushAll();
+    if (Save.failed.size) return toast('Some changes are not saved yet. Reconnect the SSD, then archive.', 'error', 8000);
+    const progress = toast('Archiving: copying and checking files…', 'info', 600000);
+    try {
+      await Save.track(`archive:${c.id}`, () => Vault.archiveCase(c.id, (n, name) => { progress.textContent = `Archiving: ${n} file${n === 1 ? '' : 's'} copied and checked (${name})…`; }));
+      progress.remove();
+      state.caseObj = null;
+      toast('Case archived. It opens read-only from "Archived" in the case list.', 'success', 7000);
+      renderCaseList();
+      route();
+    } catch (err) {
+      progress.remove();
+      if (FS.isDisconnectError(err)) return onDriveLost();
+      toast(`The case was not archived: ${err.message} It is still in the active list, unchanged.`, 'error', 12000);
+      state.caseObj = null;
+      route();
+    }
+  }
+
+  async function restoreCase(c) {
+    const progress = toast('Restoring: copying and checking files…', 'info', 600000);
+    try {
+      await Save.track(`restore:${c.id}`, () => Vault.restoreCase(c.id, (n) => { progress.textContent = `Restoring: ${n} file${n === 1 ? '' : 's'} copied and checked…`; }));
+      progress.remove();
+      state.caseObj = null;
+      toast('Case restored to the active list.', 'success');
+      renderCaseList();
+      route();
+    } catch (err) {
+      progress.remove();
+      if (FS.isDisconnectError(err)) return onDriveLost();
+      toast(`The case was not restored: ${err.message} It is still in the archive, unchanged.`, 'error', 12000);
+    }
+  }
+
+  // Delete needs the case number typed (the title when there's no number), and offers the archive instead.
+  async function deleteCase(c) {
+    const want = Vault.deleteConfirmText(c);
+    const archived = Vault.isArchived(c.id);
+    const choice = await openDialog((close) => {
+      const typed = h('input', { type: 'text', autocomplete: 'off', spellcheck: 'false', 'aria-describedby': 'delete-help' });
+      const del = h('button', { class: 'btn danger', type: 'submit', disabled: true }, 'Delete permanently');
+      typed.addEventListener('input', () => { del.disabled = !Vault.deleteConfirmMatches(c, typed.value); });
+      return h('form', { class: 'delete-form', onsubmit: (e) => { e.preventDefault(); if (Vault.deleteConfirmMatches(c, typed.value)) close('delete'); } },
+        h('h2', {}, `Delete "${c.title || 'Untitled case'}"?`),
+        h('p', { class: 'error-text' }, 'Permanently deletes this case from the SSD: notes, timeline, files, drafts and checks. This can\'t be undone.'),
+        archived ? null : h('p', { class: 'muted small' }, 'To keep it out of the way but safe, archive it instead.'),
+        h('label', { class: 'field' },
+          h('span', { id: 'delete-help' }, c.number ? 'Type the case number to confirm: ' : 'Type the case title to confirm: ', h('code', {}, want)),
+          typed),
+        h('div', { class: 'dialog-actions' },
+          h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
+          archived ? null : h('button', { class: 'btn', type: 'button', onclick: () => close('archive') }, 'Archive instead'),
+          del));
+    });
+    if (choice === 'archive') return archiveCase(c);
+    if (choice !== 'delete') return;
+    dropPendingSaves(c.id);
     try {
       await Save.track(`delete:${c.id}`, () => Vault.deleteCase(c.id));
       state.caseObj = null;
       toast('Case deleted.');
+      renderCaseList();
       go(null);
     } catch { /* reported by Save */ }
   }
@@ -716,8 +839,8 @@
       Save.schedule(`notes:${c.id}`, () => Vault.saveNotes(c.id, value), 700);
     });
 
-    const btnEdit = h('button', { class: 'btn small active', type: 'button' }, 'Edit');
-    const btnPreview = h('button', { class: 'btn small', type: 'button' }, 'Preview');
+    const btnEdit = h('button', { 'data-ro-ok': 'true', class: 'btn small active', type: 'button' }, 'Edit');
+    const btnPreview = h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button' }, 'Preview');
     btnEdit.addEventListener('click', () => {
       preview.hidden = true; ta.hidden = false; ta.focus();
       btnEdit.classList.add('active'); btnPreview.classList.remove('active');
@@ -875,11 +998,11 @@
       ? h('table', { class: 'files' },
         h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', { class: 'num' }, 'Size'), h('th', {}, 'Added'), h('th', {}, ''))),
         h('tbody', {}, files.map((f) => h('tr', {},
-          h('td', {}, h('button', { class: 'linkish', type: 'button', onclick: () => previewFile(c, f.name) }, f.name)),
+          h('td', {}, h('button', { 'data-ro-ok': 'true', class: 'linkish', type: 'button', onclick: () => previewFile(c, f.name) }, f.name)),
           h('td', { class: 'num muted' }, fmtSize(f.size)),
           h('td', { class: 'muted' }, fmtDateTime(f.modified)),
           h('td', { class: 'actions' },
-            h('button', { class: 'btn small ghost', type: 'button', onclick: () => previewFile(c, f.name) }, 'Open'),
+            h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', onclick: () => previewFile(c, f.name) }, 'Open'),
             h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
               if (!(await confirmDialog({ title: 'Delete this file?', message: `"${f.name}" will be permanently deleted from the SSD.`, confirmText: 'Delete', danger: true }))) return;
               try {
@@ -890,7 +1013,7 @@
       : h('p', { class: 'muted' }, 'No files attached yet.');
 
     panel.replaceChildren(drop, input,
-      h('p', { class: 'muted small' }, `${files.length} file${files.length === 1 ? '' : 's'} · cases\\${c.id}\\files`),
+      h('p', { class: 'muted small' }, `${files.length} file${files.length === 1 ? '' : 's'} · ${Vault.isArchived(c.id) ? 'archive' : 'cases'}\\${c.id}\\files`),
       table);
   }
 
@@ -945,8 +1068,35 @@
 
     await openDialog((close) => {
       let body;
-      if (kind === 'pdf') body = h('iframe', { class: 'preview-frame', src: blobUrl(typed) + (page ? `#page=${page}` : ''), title: name });
-      else if (kind === 'image') body = h('img', { class: 'preview-img', src: blobUrl(typed), alt: name });
+      if (kind === 'pdf') {
+        // XFA forms (Adobe LiveCycle) only say "Please wait..." in the browser's PDF viewer, so
+        // CaseVault draws them itself; ordinary PDFs use the browser's viewer.
+        body = h('div', { class: 'xfa-preview' }, h('p', { class: 'muted' }, 'Opening…'));
+        const pdfFrame = () => h('iframe', { class: 'preview-frame', src: blobUrl(typed) + (page ? `#page=${page}` : ''), title: name });
+        file.arrayBuffer().then(async (buf) => {
+          const data = new Uint8Array(buf);
+          const fields = await CVExtract.readXfaFields(data);
+          if (!fields.xfa) return body.replaceWith(pdfFrame());
+          const view = h('div', { class: 'xfa-view' });
+          const note = h('p', { class: 'muted small' }, 'XFA form (Adobe LiveCycle), shown read-only.');
+          const showFields = () => CVExtract.renderXfa(view, data, fields, at && at.field, { fieldsOnly: true });
+          const showForm = () => CVExtract.renderXfa(view, data, fields, at && at.field);
+          const toggle = h('button', { class: 'btn small ghost', type: 'button', onclick: () => {
+            const toFields = toggle.dataset.mode !== 'fields';
+            toggle.dataset.mode = toFields ? 'fields' : 'form';
+            toggle.textContent = toFields ? 'Show the form' : 'Show filled-in fields';
+            view.replaceChildren(h('p', { class: 'muted' }, 'Opening…'));
+            (toFields ? showFields : showForm)();
+          } });
+          // Coming from a check result: start on the fields list with that field highlighted.
+          const startFields = !!(at && at.field);
+          toggle.dataset.mode = startFields ? 'fields' : 'form';
+          toggle.textContent = startFields ? 'Show the form' : 'Show filled-in fields';
+          body.replaceChildren(h('div', { class: 'xfa-bar' }, note, fields.paragraphs.length ? toggle : null), view);
+          const mode = await (startFields ? showFields() : showForm());
+          if (mode === 'fields' && !startFields) toggle.remove();
+        }).catch((err) => body.replaceChildren(h('p', { class: 'error-text' }, `Could not open this PDF: ${err.message}`)));
+      } else if (kind === 'image') body = h('img', { class: 'preview-img', src: blobUrl(typed), alt: name });
       else if (kind === 'image-svg') body = h('img', { class: 'preview-img', src: blobUrl(new Blob([file], { type: 'image/svg+xml' })), alt: name });
       else if (kind === 'audio') body = h('audio', { controls: true, src: blobUrl(typed) });
       else if (kind === 'video') body = h('video', { class: 'preview-img', controls: true, src: blobUrl(typed) });
@@ -962,7 +1112,7 @@
         body = h('div', { class: 'preview-none' },
           h('p', {}, 'This file type can\'t be shown inside CaseVault.'),
           h('p', {}, 'Open it straight from the SSD in its normal program:'),
-          h('code', { class: 'path' }, `${Vault.root.name}\\cases\\${c.id}\\files\\${name}`),
+          h('code', { class: 'path' }, `${Vault.root.name}\\${Vault.isArchived(c.id) ? 'archive' : 'cases'}\\${c.id}\\files\\${name}`),
           h('p', { class: 'muted small' }, 'Tip: in File Explorer, paste the folder part of that path after your CaseVault drive letter.'));
       }
       return h('div', { class: 'preview' },
@@ -1011,6 +1161,7 @@
             try { const name = await Save.track('backup', () => Vault.backupNow()); toast(`Backup saved: ${name}`, 'success'); close(); } catch { /* reported */ }
           } }, 'Back up now')),
         privacySettings(v),
+        affiantSettings(v),
         CVDraftsUI.templateSettings(),
         h('h3', {}, 'Maintenance'),
         h('div', { class: 'row' },
@@ -1033,6 +1184,32 @@
           } }, 'Disconnect')),
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done')));
     });
+  }
+
+  // "My details": the affiant profile that fills {{affiant.*}} in templates. Saved in vault.json.
+  function affiantSettings(v) {
+    const a = v.settings.affiant || {};
+    const LABELS = { name: 'Name', title: 'Title or rank', agency: 'Agency', address: 'Address', phone: 'Phone', email: 'Email' };
+    const TYPES = { phone: 'tel', email: 'email' };
+    const inputs = {};
+    const save = () => {
+      const next = {};
+      for (const k of CVDraft.AFFIANT_FIELDS) next[k] = inputs[k].value.trim();
+      Save.track('settings', () => Vault.updateSettings({ affiant: next })).catch(() => {});
+    };
+    const rows = CVDraft.AFFIANT_FIELDS.map((k) => {
+      const id = `affiant-${k}`;
+      inputs[k] = k === 'address'
+        ? h('textarea', { id, rows: 3, autocomplete: 'off' })
+        : h('input', { id, type: TYPES[k] || 'text', autocomplete: 'off' });
+      inputs[k].value = a[k] || '';
+      inputs[k].addEventListener('change', save);
+      return h('div', { class: 'field' }, h('label', { for: id }, LABELS[k], ' ', h('code', { class: 'small muted' }, `{{affiant.${k}}}`)), inputs[k]);
+    });
+    return h('section', {},
+      h('h3', {}, 'My details (for templates)'),
+      h('p', { class: 'muted small' }, 'Filled into templates wherever they say ', h('code', {}, '{{affiant.name}}'), ' and so on. Anything left empty becomes a [CONFIRM: ...] placeholder. Stored in vault.json on the SSD.'),
+      h('div', { class: 'affiant-grid' }, rows));
   }
 
   // Privacy screen settings, shown inside the Vault panel. The PIN form is inline because the app
@@ -1099,7 +1276,37 @@
       e.preventDefault();
       Save.flushAll();
     }
+    // Ctrl+\ shows or hides the case list (Ctrl+B is left to the browser and text fields).
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === '\\' || e.code === 'Backslash')) {
+      if (!state.connected || document.querySelector('#dialog[open]')) return;
+      e.preventDefault();
+      setSidebar(!document.body.classList.contains('sidebar-collapsed'), { focus: true });
+    }
   });
+
+  /* ---------- collapsible sidebar ---------- */
+
+  // collapsed: true hides the case list to a thin rail (or entirely at phone width).
+  // Remembered in vault.json so it follows the SSD. focus moves to the other toggle, which is
+  // where keyboard users expect to be after the one they pressed disappears.
+  function setSidebar(collapsed, { save = true, focus = false } = {}) {
+    document.body.classList.toggle('sidebar-collapsed', collapsed);
+    const expandBtn = $('#btn-sidebar-expand');
+    const collapseBtn = $('#btn-sidebar-collapse');
+    expandBtn.hidden = !collapsed;
+    expandBtn.setAttribute('aria-expanded', String(!collapsed));
+    collapseBtn.setAttribute('aria-expanded', String(!collapsed));
+    const label = collapsed ? 'Show the case list' : 'Hide the case list';
+    collapseBtn.title = `${label} (Ctrl+\\)`;
+    collapseBtn.querySelector('.sr-only').textContent = label;
+    if (focus) (collapsed ? expandBtn : collapseBtn).focus();
+    if (save && state.connected && !!Vault.data.settings.sidebarCollapsed !== collapsed) {
+      Save.track('settings', () => Vault.updateSettings({ sidebarCollapsed: collapsed })).catch(() => {});
+    }
+  }
+  $('#btn-sidebar-collapse').addEventListener('click', () => setSidebar(!document.body.classList.contains('sidebar-collapsed'), { focus: true }));
+  $('#btn-sidebar-expand').addEventListener('click', () => setSidebar(false, { focus: true }));
+  $('#btn-rail-new').addEventListener('click', () => $('#btn-new-case').click());
 
   // Write any pending edits the moment the window is hidden or closed.
   document.addEventListener('visibilitychange', () => { if (document.hidden) Save.flushAll(); });
@@ -1125,6 +1332,7 @@
   // Small toolkit shared with the consistency checker screen (js/checker/checks-ui.js).
   window.CaseVaultUI = { h, $, toast, openDialog, confirmDialog, field, fmtDate, fmtDateTime, fmtSize, Save, state, go, refresh: () => route(), previewFile, onDriveLost };
   CVChecks.init(window.CaseVaultUI);
+  CVActivityLib.mount(CVActivity, $('#ai-activity'));
   CVDraftsUI.init(window.CaseVaultUI);
 
   // Privacy screen: Ctrl+Shift+H, Esc twice, or the "Hide" button. See js/privacy.js.
