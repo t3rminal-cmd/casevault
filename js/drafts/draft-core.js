@@ -80,15 +80,26 @@
   }
   const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-  /** Values available to {{placeholders}} for one case. */
-  function templateContext(caseObj, now = new Date()) {
+  const AFFIANT_FIELDS = ['name', 'title', 'agency', 'address', 'phone', 'email'];
+
+  /**
+   * Values available to {{placeholders}} for one case. `affiant` is the "My details" profile from
+   * the vault settings ({ name, title, agency, address, phone, email }); empty values still become
+   * [CONFIRM: affiant.name] and so on.
+   */
+  function templateContext(caseObj, now = new Date(), affiant = null) {
     const c = caseObj || {};
     const d = c.dates || {};
-    return {
+    const a = affiant || {};
+    const ctx = {
       'case.title': c.title, 'case.number': c.number, 'case.client': c.client, 'case.status': c.status,
       'case.tags': (c.tags || []).join(', '), 'case.opened': d.opened, 'case.closed': d.closed,
       today: longDate(now), 'today.iso': isoDate(now),
     };
+    for (const k of AFFIANT_FIELDS) {
+      ctx[`affiant.${k}`] = k === 'address' ? String(a[k] || '').replace(/\r\n?/g, '\n').trim() : String(a[k] || '').trim();
+    }
+    return ctx;
   }
 
   /**
@@ -125,9 +136,9 @@ Case No. {{case.number}}
 
 ## AFFIDAVIT IN SUPPORT OF {{confirm: type of application, e.g. SEARCH WARRANT}}
 
-I, {{confirm: affiant full name and rank}}, being first duly sworn, depose and state as follows:
+I, {{affiant.name}}, {{affiant.title}}, being first duly sworn, depose and state as follows:
 
-1. I am employed by {{confirm: agency}} and have been so employed for {{confirm: years}} years. My duties include {{confirm: duties}}.
+1. I am employed by {{affiant.agency}} and have been so employed for {{confirm: years}} years. My duties include {{confirm: duties}}.
 2. On {{confirm: date}}, at approximately {{confirm: time}}, ...
 3. ...
 
@@ -138,7 +149,10 @@ I, {{confirm: affiant full name and rank}}, being first duly sworn, depose and s
 Based on the facts above, I respectfully request that the Court {{confirm: relief requested}}.
 
 ______________________________
-{{confirm: affiant name}}, {{confirm: badge number}}
+{{affiant.name}}, {{affiant.title}}, {{confirm: badge number}}
+{{affiant.agency}}
+{{affiant.address}}
+{{affiant.phone}} · {{affiant.email}}
 
 Sworn to and subscribed before me on {{confirm: date}}.
 
@@ -222,7 +236,7 @@ ${GENERIC_NOTE}
 
   const api = {
     DOC_TYPES, STARTER_TEMPLATES, parseDraft, serializeDraft, slugify, extractPlaceholders,
-    templateContext, fillTemplate, templateTitle, stripMarkdown,
+    AFFIANT_FIELDS, templateContext, fillTemplate, templateTitle, stripMarkdown,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVDraft = api;

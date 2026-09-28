@@ -19,7 +19,7 @@ const Vault = (() => {
   const SCHEMA = 1;
   const DATA_DIR = 'CaseVault-Data';
   const STATUSES = ['Open', 'Pending', 'Closed', 'Archived'];
-  const DEFAULT_SETTINGS = { backupsToKeep: 30, aiProfile: 'auto', privacyPin: null, privacyIdleMinutes: 0, webllm: true, webllmModel: '' };
+  const DEFAULT_SETTINGS = { backupsToKeep: 30, aiProfile: 'auto', privacyPin: null, privacyIdleMinutes: 0, webllm: true, webllmModel: '', affiant: null, sidebarCollapsed: false };
 
   let root = null;   // handle to CaseVault-Data
   let vault = null;  // parsed vault.json

@@ -139,6 +139,18 @@ test('templates: {{placeholders}} filled from the case; missing ones become [CON
   }
 });
 
+test('templates: {{affiant.*}} comes from "My details"; empty values become [CONFIRM: ...]', () => {
+  const affiant = { name: 'Officer Alex Sample', title: 'Detective', agency: 'Example County Test Unit', address: '100 Example Street\r\nSuite 0\n', phone: '', email: 'alex.sample@example.invalid' };
+  const ctx = D.templateContext({ number: 'TEST-0001' }, new Date(2026, 8, 28), affiant);
+  const out = D.fillTemplate('{{affiant.name}}, {{affiant.title}} of {{affiant.agency}}\n{{affiant.address}}\nTel {{affiant.phone}} · {{affiant.email}}', ctx);
+  assert.strictEqual(out, 'Officer Alex Sample, Detective of Example County Test Unit\n100 Example Street\nSuite 0\nTel [CONFIRM: affiant.phone] · alex.sample@example.invalid');
+  // No profile at all: every field asks to be confirmed.
+  const none = D.fillTemplate('{{affiant.name}} {{affiant.email}}', D.templateContext({}, new Date()));
+  assert.strictEqual(none, '[CONFIRM: affiant.name] [CONFIRM: affiant.email]');
+  assert.deepStrictEqual(D.AFFIANT_FIELDS, ['name', 'title', 'agency', 'address', 'phone', 'email']);
+  assert.match(D.STARTER_TEMPLATES['generic-affidavit.md'], /\{\{affiant\.name\}\}/);
+});
+
 test('stripMarkdown gives clean plain text', () => {
   const md = D.serializeDraft({ title: 'x' }, '# Title\n\nSome **bold** and *italic* and `code`.\n\n- item one\n1. first\n> quote');
   assert.strictEqual(D.stripMarkdown(md), 'Title\n\nSome bold and italic and code.\n\n• item one\n1. first\nquote');

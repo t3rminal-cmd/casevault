@@ -1038,6 +1038,7 @@
             try { const name = await Save.track('backup', () => Vault.backupNow()); toast(`Backup saved: ${name}`, 'success'); close(); } catch { /* reported */ }
           } }, 'Back up now')),
         privacySettings(v),
+        affiantSettings(v),
         CVDraftsUI.templateSettings(),
         h('h3', {}, 'Maintenance'),
         h('div', { class: 'row' },
@@ -1060,6 +1061,32 @@
           } }, 'Disconnect')),
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done')));
     });
+  }
+
+  // "My details": the affiant profile that fills {{affiant.*}} in templates. Saved in vault.json.
+  function affiantSettings(v) {
+    const a = v.settings.affiant || {};
+    const LABELS = { name: 'Name', title: 'Title or rank', agency: 'Agency', address: 'Address', phone: 'Phone', email: 'Email' };
+    const TYPES = { phone: 'tel', email: 'email' };
+    const inputs = {};
+    const save = () => {
+      const next = {};
+      for (const k of CVDraft.AFFIANT_FIELDS) next[k] = inputs[k].value.trim();
+      Save.track('settings', () => Vault.updateSettings({ affiant: next })).catch(() => {});
+    };
+    const rows = CVDraft.AFFIANT_FIELDS.map((k) => {
+      const id = `affiant-${k}`;
+      inputs[k] = k === 'address'
+        ? h('textarea', { id, rows: 3, autocomplete: 'off' })
+        : h('input', { id, type: TYPES[k] || 'text', autocomplete: 'off' });
+      inputs[k].value = a[k] || '';
+      inputs[k].addEventListener('change', save);
+      return h('div', { class: 'field' }, h('label', { for: id }, LABELS[k], ' ', h('code', { class: 'small muted' }, `{{affiant.${k}}}`)), inputs[k]);
+    });
+    return h('section', {},
+      h('h3', {}, 'My details (for templates)'),
+      h('p', { class: 'muted small' }, 'Filled into templates wherever they say ', h('code', {}, '{{affiant.name}}'), ' and so on. Anything left empty becomes a [CONFIRM: ...] placeholder. Stored in vault.json on the SSD.'),
+      h('div', { class: 'affiant-grid' }, rows));
   }
 
   // Privacy screen settings, shown inside the Vault panel. The PIN form is inline because the app

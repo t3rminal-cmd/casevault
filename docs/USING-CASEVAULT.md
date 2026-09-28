@@ -300,10 +300,15 @@ Placeholders you can use in a template:
 |---|---|
 | `{{case.title}}`, `{{case.number}}`, `{{case.client}}`, `{{case.status}}`, `{{case.tags}}` | The case's details |
 | `{{case.opened}}`, `{{case.closed}}` | The case's dates |
+| `{{affiant.name}}`, `{{affiant.title}}`, `{{affiant.agency}}` | Your details from **Vault → My details (for templates)** |
+| `{{affiant.address}}` | Your address, on as many lines as you typed |
+| `{{affiant.phone}}`, `{{affiant.email}}` | Your phone number and email |
 | `{{today}}` / `{{today.iso}}` | Today, as *September 28, 2026* / *2026-09-28* |
 | `{{confirm: badge number}}` | `[CONFIRM: badge number]` |
 
 A placeholder with no value (for example a case without a client) becomes `[CONFIRM: case.client]`, so nothing missing slips through.
+
+**My details.** Fill in your name, title, agency, address, phone and email once in **Vault → My details (for templates)**. Changes save to `vault.json` on the SSD as soon as you leave a box. They're used for new drafts from then on. Drafts you already made keep their text. Leave a box empty and templates show `[CONFIRM: affiant.phone]` (and so on) instead. The starter affidavit uses these placeholders; starter templates added before v1.8 don't, so add them to your own copy if you like.
 
 ## Backups
 

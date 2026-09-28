@@ -630,3 +630,10 @@ input.pin { width: 6.5em; letter-spacing: .2em; }
 .xfaTable .xfaRow { display: flex; flex-direction: row; align-items: stretch; }
 .xfaTable .xfaRlRow { display: flex; flex-direction: row-reverse; align-items: stretch; flex: 1; }
 .xfaTable .xfaRow > div, .xfaTable .xfaRlRow > div { flex: 1 1 auto; }
+
+/* ---------- My details (affiant profile) ---------- */
+.affiant-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .6rem .9rem; }
+.affiant-grid label { font-size: .82rem; font-weight: 600; color: var(--muted); }
+.affiant-grid label code { font-weight: 400; }
+.affiant-grid .field:has(textarea) { grid-column: 1 / -1; }
+.affiant-grid textarea { resize: vertical; }
