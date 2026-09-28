@@ -28,8 +28,9 @@ jobs:
       - name: App makes no external requests (offline rule)
         run: |
           # Any http(s) URL in the shipped app files must point at localhost.
-          hits=$(grep -EnoH 'https?://[^"'"'"' )<>]+' index.html sw.js manifest.webmanifest css/*.css js/*.js \
-                 | grep -Ev 'https?://(localhost|127\.0\.0\.1)(:[0-9]+)?' || true)
+          # (schemas.openxmlformats.org is the Word XML namespace name; it is an identifier, never fetched.)
+          hits=$(grep -EnoH 'https?://[^"'"'"' )<>]+' index.html sw.js manifest.webmanifest css/*.css js/*.js js/checker/*.js \
+                 | grep -Ev 'https?://(localhost|127\.0\.0\.1)(:[0-9]+)?|http://schemas\.openxmlformats\.org/' || true)
           if [ -n "$hits" ]; then
             echo "::error::External URLs found in app files. CaseVault must work 100% offline:"
             echo "$hits"
@@ -38,7 +39,10 @@ jobs:
           echo "OK: app files reference no external hosts."
 
       - name: JavaScript parses
-        run: for f in js/*.js sw.js; do node --check "$f"; done
+        run: for f in js/*.js js/checker/*.js sw.js; do node --check "$f"; done
+
+      - name: Unit tests (rule-based checker)
+        run: node --test tests/*.test.js
 
       - name: Every file the service worker caches exists
         run: |
@@ -67,7 +71,7 @@ jobs:
       - name: Assemble the site (app files only)
         run: |
           mkdir -p _site
-          cp -r index.html manifest.webmanifest sw.js css js icons _site/
+          cp -r index.html manifest.webmanifest sw.js css js icons vendor _site/
           # Stamp the service worker so each deploy gets a fresh offline cache.
           sed -i "s/const BUILD = 'dev';/const BUILD = '${GITHUB_SHA::12}';/" _site/sw.js
           grep -q "const BUILD = '${GITHUB_SHA::12}';" _site/sw.js

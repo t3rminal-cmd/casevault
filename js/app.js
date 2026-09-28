@@ -225,6 +225,7 @@
     tab: 'details',
     caseObj: null,
     renderToken: 0,
+    drive: '',
   };
 
   /* =====================================================================
@@ -253,7 +254,14 @@
     ? `${Save.failed.size} unsaved change${Save.failed.size === 1 ? ' is' : 's are'} waiting in this window and will be saved when you reconnect. Don't close this tab.`
     : '';
 
-  const actPick = { label: 'Choose folder…', onClick: () => pickFolder() };
+  // Direct mode: Chrome/Edge open the SSD folder themselves (File System Access API).
+  // Helper mode: other browsers (Firefox) go through the CaseVault helper on 127.0.0.1.
+  const MODE = ('showDirectoryPicker' in window && window.isSecureContext) ? 'direct' : 'helper';
+  document.body.dataset.mode = MODE;
+
+  const actPick = MODE === 'direct' ? { label: 'Choose folder…', onClick: () => pickFolder() } : null;
+  const actReconnect = { label: 'Reconnect', primary: true, onClick: () => reconnect() };
+  const acts = (...list) => list.filter(Boolean);
 
   function gateWelcome() {
     showGate(
@@ -266,33 +274,57 @@
     showGate(
       `Welcome back. Click Reconnect to open "${name}" on your SSD.`,
       'Your browser asks for permission once per session. This keeps other websites from ever reading your drive.',
-      [{ label: 'Reconnect', primary: true, onClick: () => reconnect() }, actPick]);
+      acts(actReconnect, actPick));
   }
 
   function gateMissing(extra = '') {
+    const hint = MODE === 'direct'
+      ? 'If Windows gave the drive a different letter, click "Choose folder…" and pick the CaseVault-Data folder again.'
+      : 'Unlock the CASEVAULT drive with your BitLocker password if Windows asks. The helper finds it on any drive letter.';
     showGate(
       'Drive not connected. Plug in your SSD and click Reconnect.',
-      [extra, unsavedNote(), 'If Windows gave the drive a different letter, click "Choose folder…" and pick the CaseVault-Data folder again.'].filter(Boolean).join(' '),
-      [{ label: 'Reconnect', primary: true, onClick: () => reconnect() }, actPick]);
+      [extra, unsavedNote(), hint].filter(Boolean).join(' '),
+      acts(actReconnect, actPick));
+  }
+
+  function gateHelperDown() {
+    showGate(
+      'The CaseVault helper is not running.',
+      [unsavedNote(), 'Double-click Start-CaseVault.bat on the CV-AI drive (for example W:\\), keep its window open, then click Reconnect.'].filter(Boolean).join(' '),
+      [actReconnect]);
   }
 
   function gateUnsupported() {
-    showGate(
-      'This browser can\'t open folders on your SSD.',
-      'CaseVault needs the File System Access API, which is available in Google Chrome and Microsoft Edge on a desktop computer. Open this page in Chrome or Edge to continue.',
-      []);
+    if (MODE === 'helper') {
+      return showGate(
+        'In this browser, CaseVault runs through the CaseVault helper.',
+        'Plug in and unlock the SSD, then double-click Start-CaseVault.bat on the CV-AI drive (for example W:\\). It opens CaseVault at http://127.0.0.1:8517/. Or use Chrome or Edge, which can open the SSD directly.',
+        [{ label: 'Open http://127.0.0.1:8517/', primary: true, onClick: () => { location.href = HelperFS.DEFAULT_URL; } }]);
+    }
+    showGate('This browser can\'t open folders on your SSD.', 'Use Chrome, Edge, or Firefox on a desktop computer.', []);
   }
 
   function gateError(err) {
-    showGate('Could not open the vault.', err.message || String(err), [
-      { label: 'Try again', primary: true, onClick: () => reconnect() }, actPick]);
+    showGate('Could not open the vault.', err.message || String(err), acts(
+      { label: 'Try again', primary: true, onClick: () => reconnect() }, actPick));
+  }
+
+  function gateCreate(parent) {
+    const where = parent.name === Vault.DATA_DIR ? `"${parent.name}"` : `"${parent.name}\\${Vault.DATA_DIR}"`;
+    showGate(
+      `No vault found in "${parent.name}".`,
+      `Create a new, empty vault at ${where}? Nothing else in that folder is touched.`,
+      acts({
+        label: 'Create vault here', primary: true, onClick: async () => {
+          try { await openVault(await Vault.create(parent)); } catch (err) { handleOpenError(err); }
+        },
+      }, actPick && { label: 'Choose a different folder…', onClick: () => pickFolder() }));
   }
 
   async function pickFolder() {
     let picked;
     try {
-      const opts = { id: 'casevault', mode: 'readwrite' };
-      picked = await window.showDirectoryPicker(opts);
+      picked = await window.showDirectoryPicker({ id: 'casevault', mode: 'readwrite' });
     } catch (err) {
       if (err.name === 'AbortError') return;
       return gateError(err);
@@ -300,21 +332,28 @@
     try {
       const r = await Vault.resolve(picked);
       if (r.found) return openVault(r.dir);
-      const target = r.parent.name === Vault.DATA_DIR ? `"${r.parent.name}"` : `"${r.parent.name}\\${Vault.DATA_DIR}"`;
-      showGate(
-        `No vault found in "${r.parent.name}".`,
-        `Create a new, empty vault at ${target}? Nothing else in that folder is touched.`,
-        [{
-          label: 'Create vault here', primary: true, onClick: async () => {
-            try { await openVault(await Vault.create(r.parent)); } catch (err) { handleOpenError(err); }
-          },
-        }, { label: 'Choose a different folder…', onClick: () => pickFolder() }]);
+      gateCreate(r.parent);
+    } catch (err) {
+      handleOpenError(err);
+    }
+  }
+
+  async function connectHelper() {
+    let info;
+    try { info = await HelperFS.info(); } catch { return gateHelperDown(); }
+    if (!info.ready) return gateMissing();
+    state.drive = info.drive || '';
+    try {
+      const r = await Vault.resolve(HelperFS.root(info.root));
+      if (r.found) return openVault(r.dir);
+      gateCreate(r.parent);
     } catch (err) {
       handleOpenError(err);
     }
   }
 
   async function reconnect() {
+    if (MODE === 'helper') return connectHelper();
     const handle = await HandleStore.load();
     if (!handle) return gateWelcome();
     try {
@@ -322,7 +361,7 @@
       if (perm !== 'granted') {
         return showGate('CaseVault needs permission to read and write the vault folder.',
           'Click Reconnect and choose "Allow" (or "Allow on every visit") when the browser asks.',
-          [{ label: 'Reconnect', primary: true, onClick: () => reconnect() }, actPick]);
+          acts(actReconnect, actPick));
       }
       const r = await Vault.resolve(handle);
       if (!r.found) return gateMissing('The saved folder is there, but it has no vault.json.');
@@ -332,8 +371,19 @@
     }
   }
 
+  // Work out whether the drive or (in helper mode) the helper went away, and show the right screen.
+  async function gateLost() {
+    if (MODE === 'helper') {
+      try {
+        const info = await HelperFS.info();
+        if (info.ready && state.connected) return;
+      } catch { return gateHelperDown(); }
+    }
+    gateMissing();
+  }
+
   function handleOpenError(err) {
-    if (err && (err.name === 'NotFoundError' || err.name === 'NotReadableError' || err.name === 'InvalidStateError')) return gateMissing();
+    if (err && (err.name === 'NotFoundError' || err.name === 'NotReadableError' || err.name === 'InvalidStateError')) return gateLost();
     console.error(err);
     gateError(err);
   }
@@ -351,34 +401,35 @@
       if (!drop) { Vault.close(); return gateMissing(); }
       Save.discardAll();
     }
-    await HandleStore.save(dir);
+    if (MODE === 'direct') await HandleStore.save(dir);
     const sameVault = previousId === data.vaultId;
     state.connected = true;
     state.vaultId = data.vaultId;
-    $('#vault-name').textContent = dir.name;
+    $('#vault-name').textContent = MODE === 'helper' ? `${state.drive.replace(/[\\/]+$/, '')} ${dir.name}`.trim() : dir.name;
     hideGate();
     Save.render();
     if (sameVault) await Save.retryFailed();
     else { state.caseId = null; state.caseObj = null; }
     renderCaseList();
     route();
+    CVChecks.onVaultOpen();
   }
 
   function onDriveLost() {
     if (!state.connected) return;
     state.connected = false;
-    gateMissing();
     Save.render();
+    gateLost();
   }
 
-  // Heartbeat: notice an unplugged drive within a few seconds, even when nothing is being saved.
+  // Heartbeat: notice an unplugged drive (or a stopped helper) within a few seconds.
   setInterval(async () => {
     if (!state.connected || document.hidden) return;
     try { await Vault.ping(); } catch (err) { if (FS.isDisconnectError(err)) onDriveLost(); }
   }, 4000);
 
   async function launch() {
-    if (!('showDirectoryPicker' in window) || !window.isSecureContext) return gateUnsupported();
+    if (MODE === 'helper') return HelperFS.servedByHelper ? connectHelper() : gateUnsupported();
     const handle = await HandleStore.load();
     if (!handle) return gateWelcome();
     let perm = 'prompt';
@@ -392,6 +443,7 @@
       handleOpenError(err);
     }
   }
+
 
   /* =====================================================================
    * Sidebar: case list
@@ -436,14 +488,14 @@
    * Routing: #/  or  #/case/<id>/<tab>
    * ===================================================================== */
 
-  function go(caseId, tab) {
-    location.hash = caseId ? `#/case/${encodeURIComponent(caseId)}/${tab || 'details'}` : '#/';
+  function go(caseId, tab, sub) {
+    location.hash = caseId ? `#/case/${encodeURIComponent(caseId)}/${tab || 'details'}${sub ? `/${encodeURIComponent(sub)}` : ''}` : '#/';
   }
 
   function route() {
     if (!state.connected) return;
-    const m = location.hash.match(/^#\/case\/([^/]+)(?:\/(\w+))?/);
-    if (m) showCase(decodeURIComponent(m[1]), m[2] || 'details');
+    const m = location.hash.match(/^#\/case\/([^/]+)(?:\/(\w+))?(?:\/([^/]+))?/);
+    if (m) showCase(decodeURIComponent(m[1]), m[2] || 'details', m[3] || null);
     else showDashboard();
   }
 
@@ -531,9 +583,9 @@
    * Case view
    * ===================================================================== */
 
-  const TABS = [['details', 'Details'], ['notes', 'Notes'], ['timeline', 'Timeline'], ['files', 'Files']];
+  const TABS = [['details', 'Details'], ['notes', 'Notes'], ['timeline', 'Timeline'], ['files', 'Files'], ['checks', 'Checks']];
 
-  async function showCase(id, tab) {
+  async function showCase(id, tab, sub = null) {
     const token = ++state.renderToken;
     if (!TABS.some(([t]) => t === tab)) tab = 'details';
     try {
@@ -564,9 +616,9 @@
         h('a', { href: `#/case/${encodeURIComponent(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab) }, label))),
       panel));
 
-    const renderers = { details: renderDetails, notes: renderNotes, timeline: renderTimeline, files: renderFiles };
+    const renderers = { details: renderDetails, notes: renderNotes, timeline: renderTimeline, files: renderFiles, checks: (...a) => CVChecks.render(...a) };
     try {
-      await renderers[tab](panel, c, token);
+      await renderers[tab](panel, c, token, sub);
     } catch (err) {
       if (FS.isDisconnectError(err)) return onDriveLost();
       console.error(err);
@@ -841,7 +893,7 @@
       table);
   }
 
-  async function previewFile(c, name) {
+  async function previewFile(c, name, page = null) {
     let file;
     try {
       file = await Vault.readFile(c.id, name);
@@ -858,7 +910,7 @@
 
     await openDialog((close) => {
       let body;
-      if (kind === 'pdf') body = h('iframe', { class: 'preview-frame', src: blobUrl(typed), title: name });
+      if (kind === 'pdf') body = h('iframe', { class: 'preview-frame', src: blobUrl(typed) + (page ? `#page=${page}` : ''), title: name });
       else if (kind === 'image') body = h('img', { class: 'preview-img', src: blobUrl(typed), alt: name });
       else if (kind === 'image-svg') body = h('img', { class: 'preview-img', src: blobUrl(new Blob([file], { type: 'image/svg+xml' })), alt: name });
       else if (kind === 'audio') body = h('audio', { controls: true, src: blobUrl(typed) });
@@ -907,7 +959,8 @@
           h('dt', {}, 'Cases'), h('dd', {}, String(v.cases.length)),
           h('dt', {}, 'Created'), h('dd', {}, v.created ? fmtDateTime(Date.parse(v.created)) : '—'),
           h('dt', {}, 'Vault ID'), h('dd', { class: 'mono small' }, v.vaultId || '—'),
-          h('dt', {}, 'App version'), h('dd', {}, Vault.APP_VERSION)),
+          h('dt', {}, 'App version'), h('dd', {}, Vault.APP_VERSION),
+          h('dt', {}, 'Mode'), h('dd', {}, MODE === 'direct' ? 'Direct (browser opens the SSD)' : 'Helper (CaseVault helper on 127.0.0.1)')),
         h('h3', {}, 'Backups'),
         h('p', { class: 'muted' }, `A copy of vault.json is saved to the backups folder once a day. ${backups.length} backup${backups.length === 1 ? '' : 's'} on the SSD${backups[0] ? `, newest: ${backups[0]}` : ''}.`),
         h('p', { class: 'muted small' }, 'This covers the case index and settings. To back up whole cases (notes, timelines, files), copy the entire CaseVault-Data folder to a second encrypted drive.'),
@@ -922,8 +975,8 @@
           h('button', { class: 'btn', type: 'button', onclick: async () => {
             try { await Save.track('reindex', () => Vault.rebuildIndex()); renderCaseList(); toast('Case index rebuilt from the case folders.', 'success'); } catch { /* reported */ }
           } }, 'Rebuild case index'),
-          h('button', { class: 'btn', type: 'button', onclick: async () => { close(); await Save.flushAll(); pickFolder(); } }, 'Open a different vault…'),
-          h('button', { class: 'btn', type: 'button', onclick: async () => {
+          MODE === 'direct' && h('button', { class: 'btn', type: 'button', onclick: async () => { close(); await Save.flushAll(); pickFolder(); } }, 'Open a different vault…'),
+          MODE === 'direct' && h('button', { class: 'btn', type: 'button', onclick: async () => {
             close();
             await Save.flushAll();
             if (Save.failed.size) return toast('Some changes are not saved yet. Reconnect the SSD first.', 'error');
@@ -973,6 +1026,10 @@
       hadController = true;
     });
   }
+
+  // Small toolkit shared with the consistency checker screen (js/checker/checks-ui.js).
+  window.CaseVaultUI = { h, $, toast, openDialog, confirmDialog, field, fmtDate, fmtDateTime, fmtSize, Save, state, go, previewFile, onDriveLost };
+  CVChecks.init(window.CaseVaultUI);
 
   Save.render();
   launch();

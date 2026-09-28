@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Privacy lock: the page may load only its own files, and may only ever talk to
-       localhost (reserved for the local Ollama engine in v1.5). Nothing else can leave the machine. -->
+       localhost (the local Ollama AI engine). Nothing else can leave the machine. -->
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; font-src 'self'; connect-src 'self' http://localhost:11434 http://127.0.0.1:11434; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
@@ -37,6 +37,7 @@
     </a>
     <div class="vault-name" id="vault-name" title="Connected vault folder"></div>
     <div class="spacer"></div>
+    <button id="engine-status" class="engine-status" type="button" hidden></button>
     <div id="save-status" class="save-status" role="status" aria-live="polite"></div>
     <button id="btn-vault" class="btn ghost" type="button">Vault</button>
   </header>
@@ -66,8 +67,14 @@
   <dialog id="dialog" class="dialog"></dialog>
 
   <script src="js/fs.js"></script>
+  <script src="js/helper-fs.js"></script>
   <script src="js/vault.js"></script>
   <script src="js/markdown.js"></script>
+  <script src="js/checker/nlp.js"></script>
+  <script src="js/checker/rules.js"></script>
+  <script src="js/checker/extract.js"></script>
+  <script src="js/checker/ai.js"></script>
+  <script src="js/checker/checks-ui.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

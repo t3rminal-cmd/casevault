@@ -15,11 +15,11 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.0.0';
+  const APP_VERSION = '1.5.0';
   const SCHEMA = 1;
   const DATA_DIR = 'CaseVault-Data';
   const STATUSES = ['Open', 'Pending', 'Closed', 'Archived'];
-  const DEFAULT_SETTINGS = { backupsToKeep: 30, aiProfile: 'rules-only' };
+  const DEFAULT_SETTINGS = { backupsToKeep: 30, aiProfile: 'auto' };
 
   let root = null;   // handle to CaseVault-Data
   let vault = null;  // parsed vault.json
@@ -91,6 +91,8 @@ const Vault = (() => {
     root = dir;
     vault = data;
     vault.settings = { ...DEFAULT_SETTINGS, ...(vault.settings || {}) };
+    // v1 stored 'rules-only' without asking; from v1.5 the user picks, and "Auto" is the default.
+    if (!vault.settings.aiProfileChosen) vault.settings.aiProfile = 'auto';
     vault.cases = Array.isArray(vault.cases) ? vault.cases : [];
     lastBackupDay = null;
     await FS.getDir(root, 'cases', true);
@@ -333,6 +335,10 @@ const Vault = (() => {
     const out = [];
     for (const e of await FS.list(dir)) {
       if (e.kind !== 'file') continue;
+      if (e.handle.meta) { // helper mode: size and date come with the listing
+        out.push({ name: e.name, size: e.handle.meta.size, type: '', modified: e.handle.meta.mtime });
+        continue;
+      }
       const f = await e.handle.getFile();
       out.push({ name: e.name, size: f.size, type: f.type, modified: f.lastModified });
     }
@@ -356,6 +362,80 @@ const Vault = (() => {
     await touchIndex(id);
   }
 
+  /* ---------- consistency checks (cases/<id>/checks/) ---------- */
+
+  async function checksDir(id) {
+    return FS.getDir(await caseDir(id), 'checks', true);
+  }
+
+  // Newest first: [{ name, created, affidavit, reports, counts, open }]
+  async function listChecks(id) {
+    const dir = await checksDir(id);
+    const out = [];
+    for (const e of await FS.list(dir)) {
+      if (e.kind !== 'file' || !/-check\.json$/.test(e.name)) continue;
+      try {
+        const c = await FS.readJSON(dir, e.name);
+        const counts = { High: 0, Medium: 0, Low: 0 };
+        let open = 0;
+        for (const f of c.flags || []) { counts[f.severity] = (counts[f.severity] || 0) + 1; if (f.status === 'open') open++; }
+        out.push({ name: e.name, created: c.created, affidavit: c.affidavit, reports: c.reports || [], engine: c.engine, counts, open, complete: c.complete !== false });
+      } catch (err) {
+        if (FS.isDisconnectError(err)) throw err;
+        out.push({ name: e.name, damaged: true });
+      }
+    }
+    return out.sort((a, b) => (b.created || b.name).localeCompare(a.created || a.name));
+  }
+
+  // cases/<id>/checks/<YYYY-MM-DD>-check.json, then -2-check.json, -3-check.json on the same day.
+  async function newCheckName(id) {
+    const dir = await checksDir(id);
+    const day = localDay();
+    for (let n = 1; ; n++) {
+      const name = n === 1 ? `${day}-check.json` : `${day}-${n}-check.json`;
+      if (!(await FS.exists(dir, name))) return name;
+    }
+  }
+
+  async function readCheck(id, name) {
+    return FS.readJSON(await checksDir(id), name);
+  }
+
+  function saveCheck(id, name, data) {
+    return serial(`check:${id}:${name}`, async () => {
+      data.updated = nowISO();
+      await FS.writeJSON(await checksDir(id), name, data);
+      await touchIndex(id);
+    });
+  }
+
+  async function deleteCheck(id, name) {
+    await FS.remove(await checksDir(id), name);
+  }
+
+  // Text read out of a document (OCR is slow) is kept on the SSD, keyed by file name, size and date.
+  function cacheKey(fileName, size, modified) {
+    return FS.safeName(`${fileName}--${size}-${modified}`).slice(0, 150) + '.json';
+  }
+
+  async function readTextCache(id, fileName, size, modified) {
+    const dir = await FS.getDir(await checksDir(id), 'text-cache', true);
+    try { return await FS.readJSON(dir, cacheKey(fileName, size, modified)); } catch (err) {
+      if (FS.isDisconnectError(err)) throw err;
+      return null; // damaged cache entry: just read the document again
+    }
+  }
+
+  async function writeTextCache(id, fileName, size, modified, data) {
+    const dir = await FS.getDir(await checksDir(id), 'text-cache', true);
+    // Drop older cache entries for the same file.
+    for (const e of await FS.list(dir)) {
+      if (e.kind === 'file' && e.name.startsWith(FS.safeName(`${fileName}--`)) && e.name !== cacheKey(fileName, size, modified)) await FS.remove(dir, e.name);
+    }
+    await FS.writeJSON(dir, cacheKey(fileName, size, modified), data);
+  }
+
   /* ---------- settings ---------- */
 
   function updateSettings(patch) {
@@ -374,5 +454,6 @@ const Vault = (() => {
     getNotes, saveNotes,
     getTimeline, saveTimeline, sortEvents,
     listFiles, addFile, readFile, deleteFile,
+    listChecks, newCheckName, readCheck, saveCheck, deleteCheck, readTextCache, writeTextCache,
   };
 })();
