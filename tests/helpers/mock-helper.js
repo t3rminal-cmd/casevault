@@ -25,6 +25,7 @@ function start(dataRoot, port = 0) {
     if (req.headers['x-casevault'] !== '1') return err(403, 'SecurityError', 'Only the CaseVault page may use this.');
     const op = u.pathname.slice(5);
     if (op === 'info') return json(200, { app: 'CaseVault helper', version: 'mock', ready: true, root: path.basename(dataRoot), drive: '' });
+    if (op === 'sysinfo') return json(200, { ramTotal: 32 * 1024 ** 3, ramFree: 18 * 1024 ** 3, diskTotal: 850 * 1024 ** 3, diskFree: 700 * 1024 ** 3 });
     const rel = u.searchParams.get('p') || '';
     const full = safe(rel);
     if (!full) return err(400, 'SecurityError', 'Invalid path.');
@@ -51,6 +52,13 @@ function start(dataRoot, port = 0) {
         fs.writeFileSync(tmp, Buffer.concat(chunks));
         fs.renameSync(tmp, full);
         return json(200, entry(full));
+      }
+      if (op === 'open') {
+        // Same rule as the real helper: only an .eml draft in a case's Email folder.
+        if (!/^(cases|archive)\/[^/]+\/files\/Email\/[^/]+\.eml$/.test(rel)) return err(403, 'SecurityError', 'Only mail drafts (.eml) in a case\'s Email folder can be opened.');
+        if (!exists) return err(404, 'NotFoundError', 'File not found.');
+        (server.opened = server.opened || []).push(rel);
+        return json(200, { ok: true });
       }
       if (op === 'mkdir') { fs.mkdirSync(full, { recursive: false }); return json(200, entry(full)); }
       if (op === 'remove') {

@@ -1,0 +1,336 @@
+/* CaseVault — online research & drafting (#/online).
+ *
+ * For research and drafting only. Case documents are never sent automatically: the user types or
+ * inserts the text, and every message goes through the outbound gate (js/secure/outbound.js), which
+ * replaces names and numbers with placeholders and shows exactly what will be sent.
+ *
+ * Two services:
+ *   - "claude.ai with my Claude subscription": CaseVault copies the redacted text and opens claude.ai
+ *     in a new tab; the user pastes it there, then pastes the answer back here. (A Claude Pro/Max
+ *     subscription can't be connected to other apps; this is how to use it safely.)
+ *   - "Anthropic API": answers inside CaseVault with an API key (billed separately from a
+ *     subscription). The key is kept in memory, or on the SSD in CaseVault-Data/secrets if the user
+ *     ticks "Remember on SSD". Never in the browser.
+ *
+ * The conversation and the placeholder map live in memory only. Answers can be saved to a case as
+ * a draft, with the real values put back in on this computer.
+ */
+'use strict';
+
+(function (root) {
+  const API_URL = 'https://api.anthropic.com/v1/messages';
+  const MODELS_URL = 'https://api.anthropic.com/v1/models';
+  const CLAUDE_WEB = 'https://claude.ai/new';
+  const DEFAULT_MODEL = 'claude-sonnet-5';
+  const SYSTEM = [
+    'You are helping a law-enforcement investigator with research and drafting.',
+    'Personal and case details in the text were replaced with placeholders such as [NAME_1], [PHONE_2], [ADDRESS_1], [CASENO_1].',
+    'Keep every placeholder exactly as written, including the brackets. Never guess or invent the real values behind them.',
+    'Do not invent facts about the case. Where a fact must be supplied or checked by the investigator, write [CONFIRM: what is needed].',
+    'For research questions, say when an answer depends on jurisdiction or may be out of date, and suggest what to verify.',
+  ].join(' ');
+
+  const V = () => (typeof Vault !== 'undefined' ? Vault : null);
+  let ui = null;
+
+  // In memory only: cleared on reload, "Clear conversation", or when another vault is opened.
+  const session = {
+    service: 'claude-web', purpose: 'Research', caseId: '', draft: '', model: '', apiKey: '', map: {}, turns: [], showReal: true,
+  };
+
+  const onlineSettings = () => CVOutbound.onlineSettings();
+
+  async function loadKey() {
+    if (session.apiKey) return session.apiKey;
+    const s = await V().readSecret('anthropic').catch(() => null);
+    if (s && s.key) session.apiKey = s.key;
+    return session.apiKey;
+  }
+
+  function reset() {
+    session.map = {};
+    session.turns = [];
+  }
+
+  /* ---------- the page ---------- */
+
+  async function render(main) {
+    const { h, toast, openDialog, Save } = ui;
+    const st = onlineSettings();
+    if (!session.model) session.model = st.model || DEFAULT_MODEL;
+    const cases = (V().data.cases || []).filter((c) => c.location !== 'archive');
+    await loadKey();
+
+    const page = h('section', { class: 'online-page' });
+    main.replaceChildren(page);
+
+    const draw = () => {
+      const online = CVOutbound.isOnline();
+      const allowed = onlineSettings().allowed;
+      const caseObj = cases.find((c) => c.id === session.caseId) || null;
+
+      // --- status bar ---
+      const status = h('div', { class: `online-status ${online ? 'on' : 'off'}` },
+        h('div', {}, h('strong', {}, online ? `Online · switches off after ${onlineSettings().idleMinutes} min without use (${CVOutbound.minutesLeft()} min left)` : 'Offline'),
+          h('div', { class: 'small' }, online
+            ? `CaseVault may now reach ${CVOutbound.ALLOWED_HOSTS.join(', ')}, and only with text you have reviewed.`
+            : 'Nothing can leave this computer. Case data stays on the SSD.')),
+        h('div', { class: 'spacer' }),
+        !allowed
+          ? h('button', { class: 'btn', type: 'button', onclick: () => ui.showVaultPanel('online') }, 'Turn on online features…')
+          : online
+            ? h('button', { class: 'btn', type: 'button', onclick: () => { CVOutbound.goOffline('user'); draw(); } }, 'Go offline')
+            : h('button', { class: 'btn primary', type: 'button', onclick: async () => {
+              const ok = await ui.confirmDialog({
+                title: 'Go online?',
+                message: h('div', {},
+                  h('p', {}, 'Online AI is for research and drafting only. Every message is checked for personal details, which are replaced with placeholders, and you see exactly what will be sent before it goes.'),
+                  h('p', { class: 'muted small' }, `CaseVault will only connect to ${CVOutbound.ALLOWED_HOSTS.join(', ')}. It goes offline again after ${onlineSettings().idleMinutes} minutes without use, and every time it starts.`),
+                  h('p', { class: 'muted small' }, 'Follow your agency\'s policy on using cloud AI services.')),
+                confirmText: 'Go online',
+              });
+              if (!ok) return;
+              try { CVOutbound.goOnline(); } catch (err) { toast(err.message, 'error'); }
+              draw();
+            } }, 'Go online'));
+
+      // --- settings row ---
+      const service = h('select', { 'aria-label': 'Service' },
+        h('option', { value: 'claude-web', selected: session.service === 'claude-web' }, 'claude.ai: my Claude subscription (copy & paste)'),
+        h('option', { value: 'online-ai', selected: session.service === 'online-ai' }, 'Anthropic API: answers here (API key)'));
+      service.addEventListener('change', () => { session.service = service.value; draw(); });
+      const purpose = h('select', { 'aria-label': 'Purpose' }, ['Research', 'Drafting'].map((p) => h('option', { selected: session.purpose === p }, p)));
+      purpose.addEventListener('change', () => { session.purpose = purpose.value; });
+      const caseSel = h('select', { 'aria-label': 'Case' }, h('option', { value: '' }, '(no case: general research)'),
+        cases.map((c) => h('option', { value: c.id, selected: c.id === session.caseId }, `${c.title || 'Untitled'}${c.number ? ` · ${c.number}` : ''}`)));
+      caseSel.addEventListener('change', () => { session.caseId = caseSel.value; draw(); });
+
+      let apiBox = null;
+      if (session.service === 'online-ai') {
+        const key = h('input', { type: 'password', autocomplete: 'off', placeholder: 'sk-ant-…', value: session.apiKey ? '••••••••••••' : '', class: 'grow' });
+        const remember = h('input', { type: 'checkbox' });
+        const model = h('input', { type: 'text', value: session.model, class: 'narrow-wide', 'aria-label': 'Model', list: 'cv-models' });
+        const models = h('datalist', { id: 'cv-models' });
+        model.addEventListener('change', () => {
+          session.model = model.value.trim() || DEFAULT_MODEL;
+          Save.track('settings', () => V().updateSettings({ online: { ...onlineSettings(), model: session.model } })).catch(() => {});
+        });
+        apiBox = h('div', { class: 'online-api' },
+          h('div', { class: 'row' },
+            h('label', { class: 'field grow' }, h('span', {}, 'Anthropic API key'), key),
+            h('label', { class: 'field' }, h('span', {}, 'Model'), model), models),
+          h('div', { class: 'row' },
+            h('label', { class: 'check-row' }, remember, h('span', {}, 'Remember on the SSD (CaseVault-Data\\secrets, encrypted by BitLocker)')),
+            h('div', { class: 'spacer' }),
+            h('button', { class: 'btn', type: 'button', onclick: async () => {
+              const v = key.value.trim();
+              if (!v || v.startsWith('•')) return toast('Paste the API key first.', 'error');
+              session.apiKey = v;
+              key.value = '••••••••••••';
+              if (remember.checked) await Save.track('secret', () => V().writeSecret('anthropic', { key: v, saved: new Date().toISOString() })).catch(() => {});
+              toast(remember.checked ? 'API key saved on the SSD.' : 'API key kept for this session only.', 'success');
+            } }, 'Use key'),
+            h('button', { class: 'btn', type: 'button', onclick: async () => {
+              session.apiKey = '';
+              key.value = '';
+              await Save.track('secret', () => V().writeSecret('anthropic', null)).catch(() => {});
+              toast('API key forgotten (and removed from the SSD).');
+            } }, 'Forget key'),
+            h('button', { class: 'btn', type: 'button', onclick: async () => {
+              try {
+                const list = await listModels();
+                models.replaceChildren(...list.map((m) => h('option', { value: m })));
+                toast(`${list.length} models available. Pick one in the Model box.`, 'success');
+              } catch (err) { toast(err.message, 'error', 8000); }
+            } }, 'List models')),
+          h('p', { class: 'muted small' }, 'API use is billed by Anthropic separately from a Claude Pro or Max subscription. Create a key at console.anthropic.com.'));
+      }
+
+      // --- conversation ---
+      const convo = h('div', { class: 'online-convo', 'aria-live': 'polite' },
+        session.turns.length ? session.turns.map((t) => turnView(t)) : h('p', { class: 'muted' }, session.service === 'claude-web'
+          ? 'Write your question or the text to work on below. CaseVault hides the personal details, copies the result and opens claude.ai; paste it there, then paste Claude\'s answer back here.'
+          : 'Write your question or the text to work on below. CaseVault hides the personal details, shows you the result, then sends it.'));
+
+      const ta = h('textarea', { rows: 7, class: 'online-input', placeholder: session.purpose === 'Research'
+        ? 'e.g. What does the case law in Virginia say about the staleness of information in a search warrant affidavit?'
+        : 'e.g. Tighten the wording of this paragraph for a probable cause affidavit: …' });
+      ta.value = session.draft || '';
+      ta.addEventListener('input', () => { session.draft = ta.value; });
+      const insert = h('select', { 'aria-label': 'Insert a draft', disabled: !caseObj }, h('option', { value: '' }, caseObj ? 'Insert a draft from this case…' : 'Pick a case to insert its drafts'));
+      if (caseObj) {
+        V().listDrafts(caseObj.id).then((list) => insert.append(...list.map((d) => h('option', { value: d.slug }, d.title)))).catch(() => {});
+        insert.addEventListener('change', async () => {
+          if (!insert.value) return;
+          const d = await V().readDraft(caseObj.id, insert.value);
+          if (d) ta.value = session.draft = `${ta.value ? `${ta.value}\n\n` : ''}${d.body}`;
+          insert.value = '';
+          ta.focus();
+        });
+      }
+      const sendBtn = h('button', { class: 'btn primary', type: 'button', disabled: !online }, session.service === 'claude-web' ? 'Check, copy & open claude.ai' : 'Check & send');
+      sendBtn.addEventListener('click', async () => {
+        const text = ta.value.trim();
+        if (!text) return;
+        sendBtn.disabled = true;
+        try {
+          const full = caseObj ? await V().getCase(caseObj.id) : null;
+          const ok = session.service === 'claude-web' ? await viaClaudeWeb(text, full) : await viaApi(text, full);
+          if (ok) ta.value = session.draft = '';
+        } catch (err) {
+          toast(err.message, 'error', 10000);
+        } finally {
+          sendBtn.disabled = !CVOutbound.isOnline();
+          draw();
+        }
+      });
+
+      page.replaceChildren(...[
+        h('h1', {}, 'Research & drafting (online)'),
+        status,
+        h('div', { class: 'online-settings row' },
+          h('label', { class: 'field' }, h('span', {}, 'Service'), service),
+          h('label', { class: 'field' }, h('span', {}, 'Purpose'), purpose),
+          h('label', { class: 'field grow' }, h('span', {}, 'Case (for its names and drafts)'), caseSel)),
+        apiBox,
+        h('div', { class: 'row' }, h('h2', {}, 'Conversation'), h('div', { class: 'spacer' }),
+          session.turns.length ? h('label', { class: 'check-row small' }, (() => {
+            const cb = h('input', { type: 'checkbox', checked: session.showReal });
+            cb.addEventListener('change', () => { session.showReal = cb.checked; draw(); });
+            return cb;
+          })(), h('span', {}, 'Show real names (on this computer only)')) : null,
+          session.turns.length ? h('button', { class: 'btn small', type: 'button', onclick: () => { reset(); draw(); } }, 'Clear conversation') : null),
+        convo,
+        h('div', { class: 'online-compose' }, ta,
+          h('div', { class: 'row' }, insert, h('div', { class: 'spacer' }), sendBtn)),
+        h('p', { class: 'muted small' }, 'Placeholders ([NAME_1] …) are kept for the whole conversation, so the same person always gets the same one. The conversation is kept in memory only; save an answer to a case to keep it.')].filter(Boolean));
+    };
+
+    // One exchange: what was sent (redacted), and the answer.
+    function turnView(t) {
+      const show = (s) => (session.showReal ? CVPii.rehydrate(s, session.map) : s);
+      const answerBox = t.answer != null
+        ? h('div', { class: 'turn-answer' }, h('div', { class: 'turn-label' }, `Answer${t.model ? ` · ${t.model}` : ''}`),
+          h('div', { class: 'notes-preview answer-md', html: Markdown.render(show(t.answer)) }),
+          h('div', { class: 'row' },
+            h('button', { class: 'btn small', type: 'button', onclick: () => copy(show(t.answer)) }, 'Copy'),
+            h('button', { class: 'btn small', type: 'button', onclick: () => saveAsDraft(t) }, 'Save to case as draft…')))
+        : t.service === 'claude-web'
+          ? pasteBack(t)
+          : h('p', { class: 'muted' }, 'Waiting for the answer…');
+      return h('article', { class: 'turn' },
+        h('div', { class: 'turn-sent' }, h('div', { class: 'turn-label' }, `Sent (${t.service === 'claude-web' ? 'copied for claude.ai' : 'to the API'}) · ${t.purpose}`),
+          h('pre', { class: 'preview-text' }, show(t.sent))),
+        answerBox);
+    }
+
+    function pasteBack(t) {
+      const box = ui.h('textarea', { rows: 5, placeholder: 'Paste Claude\'s answer here. The placeholders in it are replaced with the real values on this computer.' });
+      return ui.h('div', { class: 'turn-answer' },
+        ui.h('div', { class: 'turn-label' }, 'Answer from claude.ai'), box,
+        ui.h('div', { class: 'row' },
+          ui.h('button', { class: 'btn small', type: 'button', onclick: () => { copy(t.sent); window.open(CLAUDE_WEB, '_blank', 'noopener,noreferrer'); } }, 'Copy again & open claude.ai'),
+          ui.h('div', { class: 'spacer' }),
+          ui.h('button', { class: 'btn small primary', type: 'button', onclick: () => {
+            if (!box.value.trim()) return;
+            t.answer = box.value;
+            draw();
+          } }, 'Add answer')));
+    }
+
+    async function copy(text) {
+      try { await navigator.clipboard.writeText(text); toast('Copied.', 'success'); } catch { toast('Could not copy. Select the text and press Ctrl+C.', 'error'); }
+    }
+
+    async function saveAsDraft(t) {
+      const cid = session.caseId;
+      if (!cid) return toast('Pick the case at the top first.', 'error');
+      const title = await openDialog((close) => {
+        const inp = h('input', { type: 'text', value: `${session.purpose} notes (online AI)`, maxlength: 120, autofocus: true });
+        return h('form', { onsubmit: (e) => { e.preventDefault(); close(inp.value.trim() || 'Online AI notes'); } },
+          h('h2', {}, 'Save as a draft in this case'),
+          h('p', { class: 'muted small' }, 'Saved on the SSD with the real names put back, marked as AI-assisted. Check every fact before using it.'),
+          ui.field('Title', inp),
+          h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Save')));
+      });
+      if (!title) return;
+      const body = `> Written with online AI (${t.model || 'claude.ai'}) for ${session.purpose.toLowerCase()}. Verify every fact and citation.\n\n${CVPii.rehydrate(t.answer, session.map)}`;
+      try {
+        const slug = await V().newDraftSlug(cid, title);
+        await Save.track(`draft:${cid}:${slug}`, () => V().saveDraft(cid, slug, { title, type: 'other', ai: true }, body));
+        toast('Saved to the case\'s Drafts.', 'success');
+      } catch { /* reported by Save */ }
+    }
+
+    async function viaClaudeWeb(text, caseObj) {
+      const r = await CVOutbound.review({
+        channel: 'claude-web', destination: 'claude.ai (you paste it yourself)', purpose: session.purpose, caseObj,
+        parts: [{ label: 'Your message', text }], mode: 'redact', map: session.map, confirmText: 'Copy & open claude.ai',
+      });
+      if (!r) return false;
+      const turn = { service: 'claude-web', purpose: session.purpose, sent: r.parts[0].text, answer: null };
+      session.turns.push(turn);
+      await copy(r.parts[0].text);
+      window.open(CLAUDE_WEB, '_blank', 'noopener,noreferrer');
+      return true;
+    }
+
+    async function viaApi(text, caseObj) {
+      if (!session.apiKey) throw new Error('Add an Anthropic API key first (or switch to claude.ai).');
+      const r = await CVOutbound.review({
+        channel: 'online-ai', destination: `api.anthropic.com · ${session.model}`, purpose: session.purpose, caseObj,
+        parts: [{ label: 'Your message', text }], mode: 'redact', map: session.map, confirmText: 'Send',
+      });
+      if (!r) return false;
+      const turn = { service: 'online-ai', purpose: session.purpose, sent: r.parts[0].text, answer: null, model: session.model };
+      session.turns.push(turn);
+      draw();
+      const messages = [];
+      for (const t of session.turns) {
+        if (t.service !== 'online-ai') continue;
+        messages.push({ role: 'user', content: t.sent });
+        if (t.answer != null && t !== turn) messages.push({ role: 'assistant', content: t.answer });
+      }
+      const res = await CVOutbound.send(r.ticket, API_URL, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': session.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({ model: session.model, max_tokens: 4096, system: `${SYSTEM} The investigator's purpose: ${session.purpose.toLowerCase()}.`, messages }),
+      });
+      let data = null;
+      try { data = await res.json(); } catch { /* not JSON */ }
+      if (!res.ok) {
+        session.turns.pop();
+        const msg = (data && data.error && data.error.message) || `${res.status} ${res.statusText}`;
+        throw new Error(`The API answered with an error: ${msg}`);
+      }
+      turn.answer = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n\n') || '(empty answer)';
+      turn.model = data.model || session.model;
+      return true;
+    }
+
+    redraw = () => { if (page.isConnected && !(document.activeElement && page.contains(document.activeElement) && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))) draw(); };
+    draw();
+  }
+
+  async function listModels() {
+    if (!session.apiKey) throw new Error('Add the API key first.');
+    const res = await CVOutbound.sendMeta(MODELS_URL, { headers: { 'x-api-key': session.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' } });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error((data && data.error && data.error.message) || `${res.status} ${res.statusText}`);
+    return (data.data || []).map((m) => m.id);
+  }
+
+  let redraw = () => {};
+
+  function init(kit) {
+    ui = kit;
+    CVOutbound.onChange(() => redraw());
+  }
+
+  root.CVOnlineUI = { init, render, reset, DEFAULT_MODEL };
+})(this);

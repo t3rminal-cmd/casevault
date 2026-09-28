@@ -2,13 +2,14 @@
  * Caches the app's own files so CaseVault opens with no internet connection.
  * It never stores case data: in direct mode that is read from the SSD by the page, and in helper
  * mode the helper's /api/ requests are passed through untouched and never cached.
- * Requests to any other origin (for example the local Ollama engine) are not touched.
+ * Requests to any other origin (the local Ollama engine, or api.anthropic.com when the user goes
+ * online) are not touched, and never cached.
  */
 'use strict';
 
 // VERSION is bumped with each release; BUILD is replaced with the commit SHA by the GitHub Pages
 // workflow. Either change gives a new cache, so the installed app picks up the update.
-const VERSION = '1.8.0';
+const VERSION = '1.9.0';
 const BUILD = 'dev';
 const CACHE = `casevault-${VERSION}-${BUILD}`;
 
@@ -19,6 +20,7 @@ const APP_FILES = [
   './css/app.css',
   './js/fs.js',
   './js/helper-fs.js',
+  './js/casefiles.js',
   './js/vault.js',
   './js/markdown.js',
   './js/checker/nlp.js',
@@ -37,6 +39,13 @@ const APP_FILES = [
   './js/drafts/ghost.js',
   './js/drafts/copilot.js',
   './js/drafts/drafts-ui.js',
+  './js/secure/pii.js',
+  './js/secure/outbound.js',
+  './js/secure/mail.js',
+  './js/secure/online-ui.js',
+  './js/secure/mail-ui.js',
+  './js/secure/settings-ui.js',
+  './js/ai/memory.js',
   './js/privacy.js',
   './js/app.js',
   './icons/icon.svg',

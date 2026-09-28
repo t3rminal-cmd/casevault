@@ -6,11 +6,15 @@
  *     case.json           title, number, client, status, tags, dates
  *     notes.md            free-form notes
  *     timeline.json       dated events and deadlines
- *     files/              attached documents, copied in
+ *     files/<Category>/   attached documents, copied in, one folder per document type
+ *                         (Affidavits, Arrest Report, ... Other; see js/casefiles.js)
+ *     mail-log.json       department mail hand-offs
  *     drafts/, checks/    drafts and consistency checks
  *   archive/<case-id>/    archived cases (same layout, read-only in the app)
  *   templates/            document templates
  *   backups/              dated snapshots of vault.json
+ *   logs/                 outbound-YYYY-MM.json: everything that left this computer (never its content)
+ *   secrets/              optional online AI key (only if the user ticks "Remember on SSD")
  *
  * case.json and timeline.json are the source of truth. The index inside vault.json is
  * a fast lookup that gets rebuilt from them every time the vault is opened.
@@ -18,11 +22,11 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.8.0';
+  const APP_VERSION = '1.9.0';
   const SCHEMA = 1;
   const DATA_DIR = 'CaseVault-Data';
   const STATUSES = ['Open', 'Pending', 'Closed', 'Archived'];
-  const DEFAULT_SETTINGS = { backupsToKeep: 30, aiProfile: 'auto', privacyPin: null, privacyIdleMinutes: 0, webllm: true, webllmModel: '', affiant: null, sidebarCollapsed: false };
+  const DEFAULT_SETTINGS = { backupsToKeep: 30, aiProfile: 'auto', privacyPin: null, privacyIdleMinutes: 0, webllm: true, webllmModel: '', affiant: null, sidebarCollapsed: false, mail: null, online: null, piiWatchlist: [] };
 
   let root = null;   // handle to CaseVault-Data
   let vault = null;  // parsed vault.json
@@ -200,6 +204,7 @@ const Vault = (() => {
     const archiveDir = await FS.getDir(root, 'archive'); // created on first archive
     const prevById = new Map(vault.cases.map((c) => [c.id, c]));
     const dirsIn = async (parent) => (parent ? (await FS.list(parent)).filter((e) => e.kind === 'directory') : []);
+    await settleRenames(casesDir);
     const active = await dirsIn(casesDir);
     const archived = await dirsIn(archiveDir);
     const archivedNames = new Set(archived.map((e) => e.name));
@@ -278,8 +283,29 @@ const Vault = (() => {
     throw err;
   }
 
+  // cases/2026-00123 for case number 00123 opened in 2026 (then -2, -3 if taken); a case without a
+  // number gets a dated id like 20260928-k3j9x2, and can be renamed once it has one.
+  async function freeCaseId(base) {
+    const casesDir = await FS.getDir(root, 'cases', true);
+    const archiveDir = await FS.getDir(root, 'archive');
+    const taken = async (name) => vault.cases.some((x) => x.id === name)
+      || (await FS.exists(casesDir, name, 'directory')) || (archiveDir ? await FS.exists(archiveDir, name, 'directory') : false);
+    for (let n = 1; ; n++) {
+      const candidate = n === 1 ? base : `${base}-${n}`;
+      if (!(await taken(candidate))) return candidate;
+    }
+  }
+
+  async function ensureCategoryFolders(dir) {
+    const files = await FS.getDir(dir, 'files', true);
+    for (const folder of CVCaseFiles.FOLDERS) await FS.getDir(files, folder, true);
+    return files;
+  }
+
   async function createCase(fields) {
-    const id = newId();
+    const draft = { number: fields.number || '', dates: { opened: fields.opened || localDay() } };
+    const base = CVCaseFiles.caseFolderName(draft);
+    const id = base ? await freeCaseId(base) : newId();
     const now = nowISO();
     const c = {
       schema: SCHEMA,
@@ -292,7 +318,7 @@ const Vault = (() => {
       dates: { opened: fields.opened || localDay(), closed: '', created: now, updated: now },
     };
     const dir = await caseDir(id, true);
-    await FS.getDir(dir, 'files', true);
+    await ensureCategoryFolders(dir);
     await FS.writeJSON(dir, 'case.json', c);
     await FS.writeText(dir, 'notes.md', '');
     await FS.writeJSON(dir, 'timeline.json', { schema: SCHEMA, events: [] });
@@ -361,7 +387,7 @@ const Vault = (() => {
   async function copyTree(src, dst, onFile) {
     let n = 0;
     for (const e of await FS.list(src)) {
-      if (e.name === MOVE_MARKER) continue;
+      if (e.name === MOVE_MARKER || e.name === RENAME_MARKER) continue;
       if (e.kind === 'directory') {
         n += await copyTree(e.handle, await FS.getDir(dst, e.name, true), onFile);
       } else {
@@ -502,6 +528,74 @@ const Vault = (() => {
     return !!want && String(typed || '').trim() === want;
   };
 
+  /* ---------- renaming a case folder to the 2026-<CaseNo> convention ---------- */
+
+  // Written into the new folder before copying ("copying") and after every file is verified
+  // ("copied"). The next rebuild finishes or undoes an interrupted rename from it.
+  const RENAME_MARKER = '.casevault-rename.json';
+
+  /** The folder name the convention wants for this case, or null (no number, or already named so). */
+  function conventionalId(c) {
+    const base = CVCaseFiles.caseFolderName(c);
+    if (!base || c.id === base || new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d+$`).test(c.id)) return null;
+    return base;
+  }
+
+  /** Rename cases/<id> to cases/<2026-CaseNo>: copy, verify every file, then remove the original. */
+  function renameCaseFolder(id, onFile) {
+    return serial(`case:${id}`, async () => {
+      assertWritable(id);
+      const c = await getCase(id);
+      const base = conventionalId(c);
+      if (!base) return c;
+      const newCaseId = await freeCaseId(base);
+      const casesDir = await FS.getDir(root, 'cases', true);
+      const src = await caseDir(id);
+      const dst = await FS.getDir(casesDir, newCaseId, true);
+      await FS.writeJSON(dst, RENAME_MARKER, { from: id, state: 'copying', at: nowISO() });
+      try {
+        await copyTree(src, dst, onFile);
+      } catch (err) {
+        try { await FS.remove(casesDir, newCaseId, true); } catch { /* the next rebuild tidies up */ }
+        throw err;
+      }
+      c.id = newCaseId;
+      c.previousIds = [...new Set([...(c.previousIds || []), id])];
+      c.dates.updated = nowISO();
+      await FS.writeJSON(dst, 'case.json', c);
+      await FS.writeJSON(dst, RENAME_MARKER, { from: id, state: 'copied', at: nowISO() });
+      await FS.remove(casesDir, id, true);
+      await FS.remove(dst, RENAME_MARKER);
+      const prev = vault.cases.find((e) => e.id === id);
+      vault.cases = vault.cases.filter((e) => e.id !== id);
+      const tl = await FS.readJSON(dst, 'timeline.json').catch(() => null);
+      upsertIndex(indexEntry(c, tl, prev, 'active'));
+      await saveVault();
+      return c;
+    });
+  }
+
+  async function settleRenames(casesDir) {
+    for (const e of await FS.list(casesDir)) {
+      if (e.kind !== 'directory') continue;
+      let marker = null;
+      try { marker = await FS.readJSON(e.handle, RENAME_MARKER); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+      if (!marker) continue;
+      try {
+        if (marker.state === 'copied') {
+          if (marker.from && marker.from !== e.name && (await FS.exists(casesDir, marker.from, 'directory'))) await FS.remove(casesDir, marker.from, true);
+          await FS.remove(e.handle, RENAME_MARKER);
+        } else {
+          // The copy never finished: the original is intact, so drop the partial copy.
+          await FS.remove(casesDir, e.name, true);
+        }
+      } catch (err) {
+        if (FS.isDisconnectError(err)) throw err;
+        console.warn('Could not finish an interrupted rename', e.name, err);
+      }
+    }
+  }
+
   /* ---------- notes ---------- */
 
   async function getNotes(id) {
@@ -536,7 +630,9 @@ const Vault = (() => {
     });
   }
 
-  /* ---------- files ---------- */
+  /* ---------- files (files/<Category>/<name>) ---------- */
+  // A file is addressed by its path inside files/: "Arrest Report/2026-00123 Arrest Report.pdf".
+  // Files from versions before 1.9 sit directly in files/ and are listed as unsorted (folder '').
 
   async function filesDir(id) {
     return (await FS.getDir(await caseDir(id), 'files', !isArchived(id))) || emptyDir;
@@ -550,38 +646,146 @@ const Vault = (() => {
     async getDirectoryHandle() { throw Object.assign(new Error('Not found'), { name: 'NotFoundError' }); },
   };
 
+  /** Create any missing document-type folders (so they show in File Explorer too). */
+  async function ensureFolders(id) {
+    if (isArchived(id)) return;
+    await ensureCategoryFolders(await caseDir(id));
+  }
+
+  // The folder a file lives in. Only the known document folders (or '' for unsorted) are allowed.
+  async function folderDir(id, folder, create = false) {
+    const files = await filesDir(id);
+    if (!folder) return files;
+    if (!CVCaseFiles.isCategory(folder)) {
+      const err = new Error(`Unknown document folder: ${folder}`);
+      err.name = 'TypeError';
+      throw err;
+    }
+    return (await FS.getDir(files, folder, create && !isArchived(id))) || emptyDir;
+  }
+
+  async function fileInfo(e, folder) {
+    const base = { name: CVCaseFiles.joinPath(folder, e.name), folder, base: e.name };
+    if (e.handle.meta) return { ...base, size: e.handle.meta.size, type: '', modified: e.handle.meta.mtime }; // helper mode
+    const f = await e.handle.getFile();
+    return { ...base, size: f.size, type: f.type, modified: f.lastModified };
+  }
+
+  // [{ name: 'Arrest Report/2026-00123 Arrest Report.pdf', folder, base, size, type, modified }]
   async function listFiles(id) {
     const dir = await filesDir(id);
     const out = [];
     for (const e of await FS.list(dir)) {
-      if (e.kind !== 'file') continue;
-      if (e.handle.meta) { // helper mode: size and date come with the listing
-        out.push({ name: e.name, size: e.handle.meta.size, type: '', modified: e.handle.meta.mtime });
-        continue;
+      if (e.kind === 'file') out.push(await fileInfo(e, CVCaseFiles.UNSORTED));
+      else if (e.kind === 'directory' && CVCaseFiles.isCategory(e.name)) {
+        for (const f of await FS.list(e.handle)) if (f.kind === 'file' && !f.name.startsWith('.')) out.push(await fileInfo(f, e.name));
       }
-      const f = await e.handle.getFile();
-      out.push({ name: e.name, size: f.size, type: f.type, modified: f.lastModified });
     }
-    return out.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    const order = (f) => (f.folder ? CVCaseFiles.FOLDERS.indexOf(f.folder) : 99);
+    const stem = (f) => f.base.replace(/\.[^.]{1,10}$/, ''); // "X.pdf" before "X (2).pdf"
+    return out.sort((a, b) => order(a) - order(b) || stem(a).localeCompare(stem(b), undefined, { numeric: true }) || a.base.localeCompare(b.base));
   }
 
-  async function addFile(id, file) {
+  /**
+   * Copy a file into the case. With { folder } it goes into that document folder and is named by
+   * the convention ("2026-00123 Arrest Report.pdf"; { description } adds " - <description>";
+   * { keepName: true } keeps the original name). Without a folder it goes into files/ unchanged.
+   * Returns the new file's path.
+   */
+  async function addFile(id, file, opts = {}) {
     assertWritable(id);
-    const dir = await filesDir(id);
-    const name = await FS.uniqueName(dir, file.name);
+    const folder = opts.folder || CVCaseFiles.UNSORTED;
+    const dir = await folderDir(id, folder, true);
+    let wanted = file.name;
+    if (folder && !opts.keepName) wanted = CVCaseFiles.fileName(await getCase(id), folder, file.name, opts.description || '');
+    const name = await FS.uniqueName(dir, wanted);
     await FS.writeData(dir, name, file);
     await touchIndex(id);
-    return name;
+    return CVCaseFiles.joinPath(folder, name);
   }
 
-  async function readFile(id, name) {
-    return FS.getFile(await filesDir(id), name);
+  async function readFile(id, path) {
+    const { folder, base } = CVCaseFiles.splitPath(path);
+    return FS.getFile(await folderDir(id, folder), base);
   }
 
-  async function deleteFile(id, name) {
+  async function deleteFile(id, path) {
     assertWritable(id);
-    await FS.remove(await filesDir(id), name);
+    const { folder, base } = CVCaseFiles.splitPath(path);
+    await FS.remove(await folderDir(id, folder), base);
     await touchIndex(id);
+  }
+
+  /**
+   * Move a file to another document folder (or rename it in place), naming it by the convention.
+   * The copy is verified byte for byte before the original is removed. Returns the new path.
+   */
+  async function moveFile(id, path, toFolder, opts = {}) {
+    assertWritable(id);
+    const { folder, base } = CVCaseFiles.splitPath(path);
+    const src = await folderDir(id, folder);
+    const file = await FS.getFile(src, base);
+    if (!file) throw Object.assign(new Error(`${base} is no longer in this case.`), { name: 'NotFoundError' });
+    const dst = await folderDir(id, toFolder, true);
+    const c = await getCase(id);
+    const wanted = opts.keepName ? base : CVCaseFiles.fileName(c, toFolder, base, opts.description || '');
+    if (folder === toFolder && wanted === base) return path;
+    const name = await FS.uniqueName(dst, wanted);
+    await FS.writeData(dst, name, file);
+    if (!(await sameBytes(file, await FS.getFile(dst, name)))) {
+      await FS.remove(dst, name).catch(() => {});
+      throw Object.assign(new Error(`The copy of ${base} did not match, so it was not moved.`), { name: 'MoveVerifyError' });
+    }
+    await FS.remove(src, base);
+    await touchIndex(id);
+    return CVCaseFiles.joinPath(toFolder, name);
+  }
+
+  /** Text-only record kept inside the case folder, e.g. mail-log.json. */
+  async function readCaseJSON(id, name) {
+    return FS.readJSON(await caseDir(id), name);
+  }
+  function writeCaseJSON(id, name, data) {
+    return serial(`casejson:${id}:${name}`, async () => {
+      assertWritable(id);
+      await FS.writeJSON(await caseDir(id), name, data);
+    });
+  }
+
+  /* ---------- logs/ and secrets/ (vault level) ---------- */
+
+  /** Append an entry to logs/<name>-YYYY-MM.json (a JSON array). */
+  function appendLog(name, entry) {
+    const file = `${name}-${localDay().slice(0, 7)}.json`;
+    return serial(`log:${file}`, async () => {
+      const dir = await FS.getDir(root, 'logs', true);
+      let list = [];
+      try { list = (await FS.readJSON(dir, file)) || []; } catch (err) { if (FS.isDisconnectError(err)) throw err; list = []; }
+      if (!Array.isArray(list)) list = [];
+      list.push({ at: nowISO(), ...entry });
+      await FS.writeJSON(dir, file, list);
+    });
+  }
+
+  async function readLogs(name, months = 3) {
+    const dir = await FS.getDir(root, 'logs');
+    if (!dir) return [];
+    const files = (await FS.list(dir)).filter((e) => e.kind === 'file' && e.name.startsWith(`${name}-`)).map((e) => e.name).sort().reverse().slice(0, months);
+    const out = [];
+    for (const f of files) { try { out.push(...((await FS.readJSON(dir, f)) || [])); } catch { /* skip a damaged log */ } }
+    return out.sort((a, b) => (b.at || '').localeCompare(a.at || ''));
+  }
+
+  async function readSecret(name) {
+    const dir = await FS.getDir(root, 'secrets');
+    if (!dir) return null;
+    try { return await FS.readJSON(dir, `${name}.json`); } catch { return null; }
+  }
+
+  async function writeSecret(name, value) {
+    const dir = await FS.getDir(root, 'secrets', true);
+    if (value == null) { if (await FS.exists(dir, `${name}.json`)) await FS.remove(dir, `${name}.json`); return; }
+    await FS.writeJSON(dir, `${name}.json`, value);
   }
 
   /* ---------- consistency checks (cases/<id>/checks/) ---------- */
@@ -775,7 +979,8 @@ const Vault = (() => {
     archiveCase, restoreCase, isArchived, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
     getNotes, saveNotes,
     getTimeline, saveTimeline, sortEvents,
-    listFiles, addFile, readFile, deleteFile,
+    listFiles, addFile, readFile, deleteFile, moveFile, ensureFolders, renameCaseFolder, conventionalId, RENAME_MARKER,
+    readCaseJSON, writeCaseJSON, appendLog, readLogs, readSecret, writeSecret,
     listChecks, newCheckName, readCheck, saveCheck, deleteCheck, readTextCache, writeTextCache,
     listDrafts, readDraft, newDraftSlug, saveDraft, deleteDraft,
     listTemplates, readTemplate, saveTemplate, deleteTemplate, addStarterTemplates,

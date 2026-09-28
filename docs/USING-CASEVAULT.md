@@ -117,11 +117,27 @@ Add dated **Events** (things that happened) and **Deadlines** (things that are d
 
 ## Files
 
-On the **Files** tab, drag files onto the box or click **choose files**. They are **copied** into the case's `files` folder on the SSD, and your originals aren't changed. If a file with the same name already exists, the copy is named `name (2).pdf` rather than replacing it.
+Every case has the same document folders, both in CaseVault and on the SSD (`cases\<case>\files\...`):
+
+> Affidavits · Arrest Report · Supplementary Report · Case Report · Deconfliction · Drug Exhibits · Email · Ops Plan · Subpoena Response · Subject Information · Recordings · Vehicle Information · Maps · Other
+
+### Naming convention
+
+- A **new case folder** is named `<year>-<case no.>`, for example `2026-00123` for case 00123 opened in 2026 (the year comes from the **Opened** date). If that name is taken, CaseVault adds `-2`. A case created without a number gets a dated name; add the number on **Details**, then use **Rename folder to 2026-…** there. Every file is copied and checked before the old folder is removed.
+- **Every file** you save is named `<year>-<case no.> <document type>`, for example `2026-00123 Arrest Report.pdf`, `2026-00123 Supplementary Report.pdf`, `2026-00123 Recording.mp3`. A second one becomes `2026-00123 Arrest Report (2).pdf`. You can add a short description: `2026-00123 Supplementary Report - Det. Doe.pdf`.
+- A case number that already starts with the year (`2026-00123`) isn't doubled.
+
+### Adding files
+
+Pick a folder on the left and drop files onto the box (or click **choose files**). With **All documents** selected, CaseVault asks the document type for each file, with a guess from its name (for example `supp 2.pdf` → Supplementary Report, `interview.mp3` → Recordings), and shows the name it will be saved under. Files are **copied**; your originals aren't changed.
 
 - **Open** previews PDFs, images, text, audio, and video right inside CaseVault. Excel and CSV files open as tables (see below).
-- Other types (Word, and so on) can't be previewed. CaseVault shows you where the file is on the SSD, for example `CaseVault-Data\cases\20260928-ab12cd\files\statement.docx`, so you can open it from File Explorer.
+- Other types (Word, and so on) can't be previewed. CaseVault shows you where the file is on the SSD, so you can open it from File Explorer.
+- **Move / rename** moves a file to another folder, or renames it by the convention (the copy is checked before the original is removed).
+- A small **name** badge marks a file that doesn't follow the convention.
 - **Delete** permanently removes the file from the SSD after you confirm.
+- Files added with CaseVault 1.8 or earlier sit in **Unsorted**. Use **File it…** on each to put it in its folder with a conventional name.
+- Drafts exported to the case (**Export → Save to case files**) are filed too: affidavits in Affidavits, summaries in Case Report, others in Other.
 
 ### Excel and CSV files
 
@@ -240,6 +256,59 @@ A plain grey screen covers the whole app, with no case names or data on it. The 
 
 In Firefox, Ctrl + Shift + H normally opens the History window. While CaseVault is the active tab, CaseVault uses it instead. If it ever doesn't respond, use Esc Esc or the Hide button.
 
+## Department mail (Mail tab)
+
+The **Mail** tab of a case prepares an email to your department with documents from that case. CaseVault never sends mail itself and never holds a mail password: it checks the message, then hands it to Outlook, and you press **Send** there, so your department's own mail system (encryption, retention, DLP) handles it.
+
+**One-time setup** in **Vault → Department mail**: your department's mail domain(s), for example `agency.gov` (exactly that domain) or `*.agency.gov` (it and its sub-domains); an optional address book; an optional subject marking such as `[LES]` (can be made required); the footer; and the attachment limit (20 MB by default).
+
+**Safeguards**, checked every time:
+
+1. **Recipients** must all be in the department's domains. Any other address is blocked, not just warned about.
+2. **Attachments** come only from this case, must stay under the size limit, and a file whose name carries a different case number is flagged.
+3. The **subject, message and every readable attachment** are scanned for personal details (see below). The review screen lists what was found. If it finds an SSN, date of birth, ID, card or bank number, you must type `SEND` to go ahead.
+4. You tick **I have checked the recipients, the text and the attachments**.
+
+Then:
+
+- **Check & create Outlook draft** saves the message in the case's **Email** folder as `2026-00123 Email - <subject>.eml` and opens it in Outlook (with Start-CaseVault.bat running) as a new email with the attachments already in it. In Chrome/Edge direct mode, CaseVault shows where the file is; double-click it in File Explorer. This works with classic Outlook for Windows; the new Outlook may open it read-only, in which case attach from the Email folder by hand.
+- **Check & open in mail app (text only)** hands subject and message to your default mail app with a `mailto:` link. No attachments.
+
+Every hand-off is listed under **Mail prepared from this case** (saved in `mail-log.json` in the case folder) and in the outbound log.
+
+## Online research & drafting (optional)
+
+CaseVault is offline by default. If your agency allows it, you can ask Claude research and drafting questions, with personal details hidden first.
+
+1. **Vault → Online features → Allow going online** (one time).
+2. Click **Offline** in the header (it becomes **Online · 15 min** once you go online). CaseVault goes offline again after 15 minutes without use (changeable), whenever it starts, and when the SSD is unplugged.
+3. Choose the **service**, the **purpose** (Research or Drafting) and, optionally, the **case**. With a case, its client, number and drafts are available: **Insert a draft from this case**.
+
+**Services:**
+
+- **claude.ai (my Claude subscription)**: a Claude Pro/Max subscription can't be connected to other apps, so CaseVault does it the safe manual way. It hides the details, copies the result, and opens claude.ai in a new tab. Paste it there, then paste Claude's answer back into CaseVault, which puts the real names back on this computer.
+- **Anthropic API**: answers appear inside CaseVault. Needs an API key from console.anthropic.com, **billed separately** from a subscription. The key stays in memory, or on the SSD in `CaseVault-Data\secrets` if you tick *Remember on the SSD*. Never in the browser.
+
+**What happens to your text:** every message goes through the same review screen. Names, SSNs, dates of birth, IDs, phone numbers, emails, addresses, plates, VINs, case numbers and card/bank numbers are replaced with placeholders like `[NAME_1]` and `[PHONE_1]`. Those can't be un-ticked. Possible names found by pattern can be un-ticked (for example a court's name). **Hide this too** adds anything the scan missed. The box *Exactly what will be sent* shows the final text. The same person keeps the same placeholder for the whole conversation, and answers are shown with the real values put back (untick *Show real names* to see what Claude saw). **Save to case as draft** keeps an answer in the case's Drafts, marked AI-assisted.
+
+Detection is a safety net, not a guarantee. Always read the text before you send it, and add names CaseVault should always hide to **Vault → Always hide (PII watch list)**: subjects, informants, nicknames, street names.
+
+Only `api.anthropic.com` can ever be reached (the page's security policy blocks every other address), only with text you reviewed, and each review allows one request. Case files are never sent automatically.
+
+### Outbound log
+
+**Vault → Outbound log** lists every online AI request and mail hand-off of the last two months: when, where, why, what kinds of details were found, and how many were hidden. Never the text itself. The logs are in `CaseVault-Data\logs\outbound-YYYY-MM.json`.
+
+## Memory indicator
+
+The header shows memory use, for example `RAM 44% · App 180 MB · AI 5.1 GB`. Hover over it (or tab to it) for details:
+
+- **App**: CaseVault's own memory in this tab (Chrome and Edge report it).
+- **AI**: the local model Ollama has loaded, how much of it is on the graphics card and how much in RAM. The Quick profile on the Beelink should show 100% GPU; Thorough is split.
+- **RAM** and **CASEVAULT drive** free space: shown when CaseVault runs through Start-CaseVault.bat (the browser can't read them on its own).
+
+It turns amber, then red, when memory or disk space is running low. **Free AI memory** unloads the local model now instead of after 10 idle minutes. It loads again the next time it's needed.
+
 ## Drafts
 
 The **Drafts** tab is where you write documents for the case: affidavits, subpoenas, memos, case summaries. Drafts are saved as Markdown files in `CaseVault-Data\cases\<case>\drafts\` on the SSD. They autosave like notes, with the same **Saved to SSD** indicator.
@@ -339,11 +408,11 @@ A placeholder with no value (for example a case without a client) becomes `[CONF
 
 | Where | What |
 |---|---|
-| **SSD, `V:\CaseVault-Data\`** | All case data: details, notes, timelines, files, drafts, consistency checks and the text read from documents, templates, settings (including the privacy-screen PIN hash and **My details**), backups. Active cases are in `cases\<case>\`, archived cases in `archive\<case>\` (same contents). |
+| **SSD, `V:\CaseVault-Data\`** | All case data: details, notes, timelines, files (in their document folders), drafts, consistency checks and the text read from documents, mail logs, templates, settings (including the privacy-screen PIN hash, **My details**, mail settings and the PII watch list), backups, the outbound log (`logs\`) and, only if you ask, the online AI key (`secrets\`). Active cases are in `cases\<case>\`, archived cases in `archive\<case>\` (same contents). |
 | **SSD, `W:\`** | The launcher, the helper, the AI engine and its models. No case data. |
 | **The browser on this PC** | The CaseVault app files (so it opens offline), and in Chrome/Edge a *pointer* to the vault folder so it can offer **Reconnect**. No case data. |
 | **GitHub** | Only the app's code. Case data can never be committed; the repository blocks it. |
-| **The internet** | Nothing. The only other program CaseVault talks to is the AI engine (and, in Firefox, the helper) on this same computer, at `127.0.0.1`. |
+| **The internet** | Nothing, unless you go online. Normally CaseVault only talks to the AI engine (and, in Firefox, the helper) on this same computer, at `127.0.0.1`. When you go online for research or drafting, reviewed and redacted text goes to `api.anthropic.com` (API), or you paste it into claude.ai yourself. Department mail is sent by Outlook, not by CaseVault. |
 
 To make a PC forget the vault folder, open **Vault → Disconnect**.
 

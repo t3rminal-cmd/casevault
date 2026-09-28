@@ -13,7 +13,7 @@ let App;
 function app() {
   if (!App) {
     globalThis.location = new URL('http://127.0.0.1:8517/'); // helper-fs.js reads this at load time
-    load('js/checker/nlp.js', 'js/drafts/draft-core.js', 'js/fs.js', 'js/helper-fs.js', 'js/vault.js');
+    load('js/checker/nlp.js', 'js/drafts/draft-core.js', 'js/casefiles.js', 'js/fs.js', 'js/helper-fs.js', 'js/vault.js');
     App = { Vault: get('Vault'), HelperFS: get('HelperFS'), FS: get('FS') };
   }
   return App;

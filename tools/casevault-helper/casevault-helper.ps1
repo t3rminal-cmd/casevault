@@ -34,7 +34,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 
-$HelperVersion = '1.7.0'
+$HelperVersion = '1.9.0'
 $VolumeLabel   = 'CASEVAULT'
 $DataDirName   = 'CaseVault-Data'
 $AppDirName    = 'CaseVault-App'
@@ -286,6 +286,22 @@ function Invoke-Api($stream, $req) {
     return
   }
 
+  if ($op -eq 'sysinfo' -and $m -eq 'GET') {
+    # Memory indicator: this PC's RAM and the vault drive's free space. Numbers only.
+    $ramTotal = 0; $ramFree = 0; $diskTotal = 0; $diskFree = 0
+    try {
+      $os = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction Stop
+      $ramTotal = [long]$os.TotalVisibleMemorySize * 1024
+      $ramFree = [long]$os.FreePhysicalMemory * 1024
+    } catch { }
+    $root = Get-DataRoot
+    if ($root) {
+      try { $di = New-Object System.IO.DriveInfo([System.IO.Path]::GetPathRoot($root)); $diskTotal = $di.TotalSize; $diskFree = $di.AvailableFreeSpace } catch { }
+    }
+    Send-Json $stream 200 ('{"ramTotal":' + $ramTotal + ',"ramFree":' + $ramFree + ',"diskTotal":' + $diskTotal + ',"diskFree":' + $diskFree + '}')
+    return
+  }
+
   if ($op -eq 'webllm' -and $m -eq 'GET') {
     Send-Json $stream 200 (Get-WebLLMModelsJson)
     return
@@ -361,6 +377,14 @@ function Invoke-Api($stream, $req) {
         if ($hasChildren -and -not $recursive) { Send-Error $stream 409 'InvalidModificationError' 'Folder is not empty.'; return }
         [System.IO.Directory]::Delete($full, $true)
       } else { Send-Error $stream 404 'NotFoundError' 'Not found.'; return }
+      Send-Json $stream 200 '{"ok":true}'
+    }
+    'open' {
+      # Only an .eml mail draft inside a case's files\Email folder, opened in the PC's mail program.
+      if ($m -ne 'POST') { Send-Error $stream 405 'NotAllowedError' 'Use POST.'; return }
+      if (-not $isFile) { Send-Error $stream 404 'NotFoundError' 'File not found.'; return }
+      if ($rel -notmatch '^(cases|archive)/[^/]+/files/Email/[^/]+\.eml$') { Send-Error $stream 403 'SecurityError' 'Only mail drafts (.eml) in a case''s Email folder can be opened.'; return }
+      Start-Process -FilePath $full
       Send-Json $stream 200 '{"ok":true}'
     }
     default { Send-Error $stream 404 'NotFoundError' 'Unknown API call.' }

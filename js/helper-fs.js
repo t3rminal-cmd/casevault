@@ -152,5 +152,16 @@ const HelperFS = (() => {
     return new HelperDirectoryHandle('', name || 'CaseVault-Data');
   }
 
-  return { servedByHelper, DEFAULT_URL, info, root };
+  // Opens an .eml mail draft from a case's Email folder in the PC's mail program (Outlook).
+  // The helper refuses anything that isn't an .eml file inside the vault's cases or archive.
+  async function openFile(path) {
+    await call('POST', 'open', path);
+  }
+
+  // { ramTotal, ramFree, diskTotal, diskFree } in bytes (helper mode only), or null.
+  async function sysinfo() {
+    try { return await (await call('GET', 'sysinfo', '')).json(); } catch { return null; }
+  }
+
+  return { servedByHelper, DEFAULT_URL, info, root, openFile, sysinfo };
 })();

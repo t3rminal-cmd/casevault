@@ -44,7 +44,7 @@ Do this on a PC with internet. It's a one-time download.
 2. Double-click **`W:\Start-CaseVault.bat`**. A window titled *CaseVault helper* opens and shows:
 
    ```
-   CaseVault helper 1.5.0
+   CaseVault helper 1.9.0
    Vault     : V:\CaseVault-Data
    App       : V:\CaseVault-App
    AI engine : Ollama started, models in W:\models
@@ -73,6 +73,8 @@ The helper only answers requests that come from the CaseVault page itself:
 - It rejects any foreign `Origin` or cross-site `Sec-Fetch-Site`.
 - Paths are confined to `CaseVault-Data`, and `..` or drive letters are refused.
 - Files are written to a temporary file first and then swapped in, so a pulled cable never leaves half a file.
+- It opens only one kind of file in another program: an `.eml` mail draft inside a case's `files\Email` folder (the Mail tab's Outlook draft). Anything else is refused.
+- For the memory indicator it reports only numbers: total and free RAM, and the vault drive's size and free space.
 
 ## 4. Download models to W:
 
@@ -137,9 +139,13 @@ While the AI is working, a small moving waveform appears next to **AI:** in the 
 - **Beelink GTi12** (i9-12900HK, 32 GB, RTX 3050 6 GB): Quick for everyday checks, Thorough for important documents. Ollama uses the NVIDIA GPU automatically. Keep the NVIDIA driver up to date.
 - **Lenovo L14 vPro** (no NVIDIA GPU): Light, or Rules-only. Quick also runs on the CPU, but expect it to be several times slower.
 
+### Local AI vs. online AI
+
+Everything on this page is the **local** AI: it runs on this PC and nothing leaves it. CaseVault 1.9 also has an optional **online** research & drafting page (Claude via claude.ai or the Anthropic API). It is off by default, never used by the consistency checker or the drafting copilot, and every message is reviewed and redacted first. See *Online research & drafting* in [USING-CASEVAULT.md](USING-CASEVAULT.md). If your policy is local-only, simply leave **Vault → Online features → Allow going online** unticked.
+
 ## 5. Local network access prompt
 
-When a CaseVault page first contacts the engine, Chrome/Edge may ask whether the site may **access other apps and services on this device**. Choose **Allow**. It covers this computer only. The page's built-in security policy still blocks every address except `127.0.0.1:11434`.
+When a CaseVault page first contacts the engine, Chrome/Edge may ask whether the site may **access other apps and services on this device**. Choose **Allow**. It covers this computer only. The page's built-in security policy still blocks every address except `127.0.0.1:11434` (and `api.anthropic.com`, used only after you choose to go online).
 
 ## 6. Keep it offline (optional hardening)
 
