@@ -8,7 +8,7 @@
 
 // VERSION is bumped with each release; BUILD is replaced with the commit SHA by the GitHub Pages
 // workflow. Either change gives a new cache, so the installed app picks up the update.
-const VERSION = '1.6.0';
+const VERSION = '1.7.0';
 const BUILD = 'dev';
 const CACHE = `casevault-${VERSION}-${BUILD}`;
 
@@ -26,6 +26,9 @@ const APP_FILES = [
   './js/checker/sheets.js',
   './js/checker/extract.js',
   './js/checker/ai.js',
+  './js/ai/ollama-shim.js',
+  './js/ai/webllm.js',
+  './js/ai/webllm-worker.js',
   './js/checker/checks-ui.js',
   './js/drafts/draft-core.js',
   './js/drafts/docx.js',
@@ -74,6 +77,8 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
   // Helper mode: /api/ carries case data. Never cache it; let it go straight to the helper.
   if (url.pathname.includes('/api/')) return;
+  // In-browser AI model files (gigabytes) come from the SSD through the helper: never cache them.
+  if (url.pathname.includes('/webllm/')) return;
 
   // Cache first for the app's own files only. Anything else goes to the network uncached.
   event.respondWith((async () => {

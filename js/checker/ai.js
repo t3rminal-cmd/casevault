@@ -188,7 +188,8 @@
    * engine: { base, model, embed }
    * Returns { flags, stats: { statements, reviewed, supported, contradicted, notFound, discarded, errors }, complete }
    */
-  async function review({ docs, engine, fetchImpl = (...args) => globalThis.fetch(...args), onProgress = () => {}, signal } = {}) {
+  async function review({ docs, engine, fetchImpl, onProgress = () => {}, signal } = {}) {
+    fetchImpl = fetchImpl || ((...args) => globalThis.fetch(...args));
     const affidavits = docs.filter((d) => d.role === 'affidavit');
     const reports = docs.filter((d) => d.role === 'report');
     const stats = { statements: 0, reviewed: 0, supported: 0, contradicted: 0, notFound: 0, discarded: 0, errors: 0 };

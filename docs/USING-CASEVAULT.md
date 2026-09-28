@@ -334,6 +334,10 @@ To make a PC forget the vault folder, open **Vault → Disconnect**.
 | A case disappeared from the list | Click **Vault → Rebuild case index**. If its folder is still in `cases\`, it comes back. |
 | *Not saved — reconnect SSD* | See **Saving** above. Keep the window open, reconnect, and wait for green. |
 
-## Not built yet
+## When Ollama isn't running
 
-The **in-browser AI fallback (WebLLM)** is still deferred. When the Ollama engine isn't running, the consistency checker uses its rule-based layer only, and Draft with AI and suggestions are unavailable until the engine is started.
+If Ollama isn't running, CaseVault can use a small **in-browser AI model** instead, if one is on the SSD and CaseVault was opened through `W:\Start-CaseVault.bat`. The header then shows **AI: Connected (In-browser · …)**. The first AI request loads the model from the SSD, with a progress message, which can take a minute. See [AI-SETUP.md](AI-SETUP.md), section 8.
+
+Without Ollama or an in-browser model, the consistency checker uses its rule-based layer only, and Draft with AI and suggestions are unavailable.
+
+**Not built yet:** using the in-browser AI from the hosted/installed app *without* the launcher (it needs a way to read the models from W: directly).

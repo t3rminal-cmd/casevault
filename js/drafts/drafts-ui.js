@@ -161,6 +161,7 @@
     const ghost = CVGhost.createGhost({
       delay: 700,
       fetchSuggestion: (before, signal) => CVCopilot.suggest({
+        fetchImpl: Engine().fetchImpl(),
         base: Engine().detected.base, model: CVCopilot.fastModel(Engine().detected), before, signal,
         caseInfo: { title: c.title, number: c.number, client: c.client },
       }),
@@ -396,7 +397,7 @@
         msg.textContent = 'Finding the relevant passages…';
         const typeLabel = (CVDraft.DOC_TYPES[opts.type] || CVDraft.DOC_TYPES.other).label;
         const query = [typeLabel, caseObj.title, opts.instructions, String(notes).slice(0, 600), ...(timeline.events || []).map((e) => e.title)].join(' ');
-        const hits = await CVCopilot.relevantPassages({ docs, query, engine: { base: det.base, embed: det.embed } });
+        const hits = await CVCopilot.relevantPassages({ docs, query, engine: { base: det.base, embed: det.embed }, fetchImpl: Engine().fetchImpl() });
         const passages = hits.map((p) => ({ ...p, docName: docs[p.doc].name }));
         const template = opts.template ? CVDraft.fillTemplate(await Vault.readTemplate(opts.template), CVDraft.templateContext(caseObj)) : '';
         const messages = CVCopilot.draftMessages({ type: opts.type, template, instructions: opts.instructions, caseObj, timeline, notes, passages });
@@ -411,6 +412,7 @@
         msg.textContent = `Writing with ${choice.model}…`;
         show();
         await CVCopilot.streamChat({
+          fetchImpl: Engine().fetchImpl(),
           base: det.base, model: choice.model, messages, signal: ctrl.signal,
           onText: (piece) => { text += piece; show(); saveNow(1500); schedulePlaceholders(); },
         });

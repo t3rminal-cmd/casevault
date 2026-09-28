@@ -34,7 +34,8 @@
     return `${ctx ? `CASE CONTEXT\n${ctx}\n\n` : ''}TEXT SO FAR (continue it)\n${String(before).slice(-1500)}`;
   }
 
-  async function suggest({ base, model, before, caseInfo, signal, fetchImpl = (...a) => globalThis.fetch(...a) }) {
+  async function suggest({ base, model, before, caseInfo, signal, fetchImpl }) {
+    fetchImpl = fetchImpl || ((...a) => globalThis.fetch(...a));
     const res = await fetchImpl(`${base}/api/generate`, {
       method: 'POST',
       signal,
@@ -133,7 +134,8 @@
   }
 
   /** Stream a chat completion; onText(chunk) receives the text as it arrives. Returns the full text. */
-  async function streamChat({ base, model, messages, onText, signal, fetchImpl = (...a) => globalThis.fetch(...a) }) {
+  async function streamChat({ base, model, messages, onText, signal, fetchImpl }) {
+    fetchImpl = fetchImpl || ((...a) => globalThis.fetch(...a));
     const res = await fetchImpl(`${base}/api/chat`, {
       method: 'POST',
       signal,
