@@ -101,15 +101,17 @@
           } }, 'Delete'))))))
       : h('p', { class: 'muted' }, 'No drafts yet.');
 
+    const archived = Vault.isArchived(c.id);
     panel.replaceChildren(
-      h('div', { class: 'card' },
+      // An archived case is read-only: its drafts can be read and exported, not added to.
+      archived ? null : h('div', { class: 'card' },
         h('h2', {}, 'New draft'),
         h('div', { class: 'form-grid' }, ui.field('Title', title), ui.field('Type', type)),
         h('div', { class: 'field' }, h('span', {}, 'Start from'), startBox),
         h('div', { class: 'form-actions' }, create)),
       h('h2', { class: 'section-title' }, 'Drafts'),
       list,
-      h('p', { class: 'muted small' }, `Saved on the SSD in cases\\${c.id}\\drafts as Markdown files. Templates live in CaseVault-Data\\templates (Vault → Templates).`));
+      h('p', { class: 'muted small' }, `Saved on the SSD in ${archived ? 'archive' : 'cases'}\\${c.id}\\drafts as Markdown files. Templates live in CaseVault-Data\\templates (Vault → Templates).`));
   }
 
   /* =====================================================================
@@ -286,7 +288,7 @@
       confirmCount.textContent = String(ph.length);
       confirmCount.className = `pill ${ph.length ? 'status-pending' : 'status-closed'}`;
       confirmList.replaceChildren(...(ph.length ? ph.map((p) => h('li', {}, h('button', {
-        type: 'button', class: 'linkish', title: `Line ${p.line}`,
+        'data-ro-ok': 'true', type: 'button', class: 'linkish', title: `Line ${p.line}`,
         onclick: () => {
           if (!preview.hidden) btnEdit.click();
           ta.focus();
@@ -301,8 +303,8 @@
     drawPlaceholders();
 
     // ---- toolbar
-    const btnEdit = h('button', { class: 'btn small active', type: 'button' }, 'Edit');
-    const btnPreview = h('button', { class: 'btn small', type: 'button' }, 'Preview');
+    const btnEdit = h('button', { 'data-ro-ok': 'true', class: 'btn small active', type: 'button' }, 'Edit');
+    const btnPreview = h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button' }, 'Preview');
     btnEdit.addEventListener('click', () => { preview.hidden = true; wrap.hidden = false; btnEdit.classList.add('active'); btnPreview.classList.remove('active'); ta.focus(); });
     btnPreview.addEventListener('click', () => {
       ghost.stop();
@@ -318,8 +320,8 @@
       h('summary', { class: 'btn small' }, 'Export ▾'),
       h('div', { class: 'menu-items' },
         h('button', { type: 'button', onclick: () => exportDocx('case') }, 'Save .docx to case files (SSD)'),
-        h('button', { type: 'button', onclick: () => exportDocx('download') }, 'Save .docx to this computer…'),
-        h('button', { type: 'button', onclick: copyPlain }, 'Copy as plain text')));
+        h('button', { 'data-ro-ok': 'true', type: 'button', onclick: () => exportDocx('download') }, 'Save .docx to this computer…'),
+        h('button', { 'data-ro-ok': 'true', type: 'button', onclick: copyPlain }, 'Copy as plain text')));
     const delBtn = h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
       if (!(await confirmDialog({ title: `Delete "${meta.title}"?`, message: 'The draft is permanently deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
       const t = Save.timers.get(saveKey);

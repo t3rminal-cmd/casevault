@@ -71,9 +71,22 @@ If the helper window was closed while Firefox was open, CaseVault shows **"The C
 
 - **+ New case** asks for a title (required), case/file number, client, status, opened date, and tags.
 - The **left list** shows open and pending cases, most recently changed first. Use the search box (title, number, client, or tag) and the filter to find others.
-- **Details** tab: edit any field. Setting the status to *Closed* or *Archived* fills in the closed date for you.
-- **Status** values: *Open*, *Pending*, *Closed*, *Archived*. Archive a case instead of deleting it when you might need it again.
-- **Delete case** (at the bottom of Details) permanently removes the case folder and every attached file from the SSD. You must type `DELETE` to confirm.
+- **Details** tab: edit any field. Setting the status to *Closed* fills in the closed date for you.
+- **Status** values: *Open*, *Pending*, *Closed*, *Archived*. Choosing *Archived* asks **"Move this case to the archive?"** (see below).
+- **Case actions** (at the bottom of Details) has **Archive case…** and **Delete case…** side by side.
+
+### Archive a case
+
+**Archive case…** moves the whole case folder from `CaseVault-Data\cases\<case>\` to `CaseVault-Data\archive\<case>\`: notes, timeline, files, drafts and checks. CaseVault copies every file, reads each copy back and compares it with the original byte for byte, and only then removes the original. If anything goes wrong on the way (the SSD is unplugged, a copy doesn't match), the case stays where it was, unchanged, and CaseVault says so. The status becomes *Archived*, and the closed date is filled in if it was empty.
+
+- Archived cases leave the case list. They appear under **Archived (N)** at the bottom of the list; click it to fold it open. The search box searches them too.
+- An archived case opens **read-only**, with an *Archived case* banner. You can read the notes and timeline, open files, read drafts and past checks, and export a copy of a draft to this computer. Nothing can be changed or added.
+- **Restore to active cases** (in the banner or under Case actions) moves it back to `cases\` with the status it had before, and it can be changed again.
+- If a move was interrupted halfway, CaseVault sorts it out the next time it opens the vault (or on **Vault → Rebuild case index**). A copy that was fully checked is kept. An unfinished copy is ignored, and the original stays in place.
+
+### Delete a case
+
+**Delete case…** permanently deletes the case from the SSD: notes, timeline, files, drafts and checks. There is no trash. To confirm, type the case number (or the title, if the case has no number). The same window offers **Archive instead**. Archived cases can be deleted too.
 
 **Hide the case list** with the button at the top of the list (or `Ctrl + \`) to give the page more room. The list shrinks to a thin strip with **Show the case list** and **+** (new case); the same **Show** button also appears at the left of the header. On a phone-sized window the list hides completely. CaseVault remembers the choice in `vault.json`.
 
@@ -202,7 +215,7 @@ Click the same button again to set a flag back to open. Use the filters to show 
 
 ### Where checks are saved
 
-Each run is saved as `CaseVault-Data\cases\<case>\checks\<date>-check.json`. A second run on the same day is saved as `<date>-2-check.json`, and so on. Past checks are listed on the Checks tab, newest first, with their counts and how many flags are still open.
+Each run is saved as `CaseVault-Data\cases\<case>\checks\<date>-check.json`. A second run on the same day is saved as `<date>-2-check.json`, and so on. Past checks are listed on the Checks tab, newest first, with their counts and how many flags are still open. To remove one, open it and click **Delete this check** (you're asked first; the documents themselves aren't touched).
 
 The AI engine setup (profiles, models, the launcher) is in [AI-SETUP.md](AI-SETUP.md). Click the **AI:** status in the header to choose a profile.
 
@@ -326,7 +339,7 @@ A placeholder with no value (for example a case without a client) becomes `[CONF
 
 | Where | What |
 |---|---|
-| **SSD, `V:\CaseVault-Data\`** | All case data: details, notes, timelines, files, drafts, consistency checks and the text read from documents, templates, settings (including the privacy-screen PIN hash), backups. |
+| **SSD, `V:\CaseVault-Data\`** | All case data: details, notes, timelines, files, drafts, consistency checks and the text read from documents, templates, settings (including the privacy-screen PIN hash and **My details**), backups. Active cases are in `cases\<case>\`, archived cases in `archive\<case>\` (same contents). |
 | **SSD, `W:\`** | The launcher, the helper, the AI engine and its models. No case data. |
 | **The browser on this PC** | The CaseVault app files (so it opens offline), and in Chrome/Edge a *pointer* to the vault folder so it can offer **Reconnect**. No case data. |
 | **GitHub** | Only the app's code. Case data can never be committed; the repository blocks it. |

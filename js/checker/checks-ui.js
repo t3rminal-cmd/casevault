@@ -339,7 +339,10 @@
           h('td', { class: 'muted small' }, k.engine ? (k.engine.model || 'Rules only') : '', k.complete === false ? ' (stopped early)' : '')))))
       : h('p', { class: 'muted' }, 'No checks yet.');
 
-    panel.replaceChildren(banner(), form, h('h2', { class: 'section-title' }, 'Past checks'), past);
+    // An archived case is read-only: its past checks can be opened, but no new ones run.
+    const archived = Vault.isArchived(c.id);
+    panel.replaceChildren(banner(), archived ? h('p', { class: 'muted' }, 'This case is archived. Past checks can be opened and read; restore the case to run a new one.') : form,
+      h('h2', { class: 'section-title' }, 'Past checks'), past);
   }
 
   /* =====================================================================
@@ -558,7 +561,7 @@
     }
 
     const sevChips = ['High', 'Medium', 'Low'].map((s) => {
-      const b = h('button', { type: 'button', class: `chip sev-${s.toLowerCase()} ${view.severity.has(s) ? 'on' : ''}`, title: SEVERITY_HELP[s], 'aria-pressed': String(view.severity.has(s)) }, `${s} ${counts[s]}`);
+      const b = h('button', { 'data-ro-ok': 'true', type: 'button', class: `chip sev-${s.toLowerCase()} ${view.severity.has(s) ? 'on' : ''}`, title: SEVERITY_HELP[s], 'aria-pressed': String(view.severity.has(s)) }, `${s} ${counts[s]}`);
       b.addEventListener('click', () => {
         if (view.severity.has(s)) view.severity.delete(s); else view.severity.add(s);
         b.classList.toggle('on'); b.setAttribute('aria-pressed', String(view.severity.has(s)));
@@ -566,9 +569,9 @@
       });
       return b;
     });
-    const statusSel = h('select', { 'aria-label': 'Show' }, [['all', 'All flags'], ['open', 'Open only'], ['done', 'Resolved only']].map(([v, l]) => h('option', { value: v, selected: view.status === v }, l)));
+    const statusSel = h('select', { 'data-ro-ok': 'true', 'aria-label': 'Show' }, [['all', 'All flags'], ['open', 'Open only'], ['done', 'Resolved only']].map(([v, l]) => h('option', { value: v, selected: view.status === v }, l)));
     statusSel.addEventListener('change', () => { view.status = statusSel.value; draw(); });
-    const layerSel = h('select', { 'aria-label': 'Layer' }, [['all', 'Rules + AI'], ['rules', 'Rules only'], ['ai', 'AI only']].map(([v, l]) => h('option', { value: v, selected: view.layer === v }, l)));
+    const layerSel = h('select', { 'data-ro-ok': 'true', 'aria-label': 'Layer' }, [['all', 'Rules + AI'], ['rules', 'Rules only'], ['ai', 'AI only']].map(([v, l]) => h('option', { value: v, selected: view.layer === v }, l)));
     layerSel.addEventListener('change', () => { view.layer = layerSel.value; draw(); });
 
     const st = data.ai && data.ai.stats;
@@ -596,10 +599,33 @@
           `AI reviewed ${st.reviewed} of ${st.statements} statements: ${st.supported} supported, ${st.contradicted} contradicted, ${st.notFound} not found.`,
           st.discarded ? h('strong', {}, ` ${st.discarded} AI answer${st.discarded === 1 ? ' was' : 's were'} discarded because the quoted text was not found in the reports.`) : '') : null,
         data.ai && !data.ai.complete ? h('p', { class: 'warn-text small' }, `The AI review did not finish${data.ai.error ? ` (${data.ai.error})` : ''}. Statements after that point were not reviewed by AI.`) : null,
-        h('p', { class: 'muted small' }, `Saved on the SSD: cases\\${c.id}\\checks\\${name}`)),
+        h('div', { class: 'row result-foot' },
+          h('p', { class: 'muted small' }, `Saved on the SSD: ${Vault.isArchived(c.id) ? 'archive' : 'cases'}\\${c.id}\\checks\\${name}`),
+          h('div', { class: 'spacer' }),
+          h('button', { class: 'btn small ghost danger-text', type: 'button', onclick: () => deleteCheck(c, name, data) }, 'Delete this check'))),
       h('div', { class: 'filters' }, sevChips, h('div', { class: 'spacer' }), layerSel, statusSel),
       list);
     draw();
+  }
+
+  async function deleteCheck(c, name, data) {
+    const { confirmDialog, Save, toast, go } = ui;
+    const when = data.created ? ui.fmtDateTime(Date.parse(data.created)) : name;
+    const ok = await confirmDialog({
+      title: 'Delete this check?',
+      message: `The check of ${data.affidavit || 'the reports'} from ${when} is deleted from the SSD, with its flags and notes. The documents themselves are not touched.`,
+      confirmText: 'Delete check',
+      danger: true,
+    });
+    if (!ok) return;
+    const key = `check:${c.id}:${name}`;
+    const pending = Save.timers.get(key);
+    if (pending) { clearTimeout(pending.timer); Save.timers.delete(key); }
+    try {
+      await Save.track(`delete-check:${c.id}:${name}`, () => Vault.deleteCheck(c.id, name));
+      toast('Check deleted.');
+      go(c.id, 'checks');
+    } catch { /* reported by Save */ }
   }
 
   function flagCard(c, data, f, save, onChange) {
@@ -627,7 +653,7 @@
       return b;
     });
 
-    const quote = (loc, label) => h('button', { type: 'button', class: 'quote', title: 'Show this in the document', onclick: () => openLocation(c, data, loc) },
+    const quote = (loc, label) => h('button', { 'data-ro-ok': 'true', type: 'button', class: 'quote', title: 'Show this in the document', onclick: () => openLocation(c, data, loc) },
       h('span', { class: 'quote-where' }, label, ': ', where(loc)),
       h('span', { class: 'quote-text' }, '“', markText(loc.text, loc.highlight), '”'));
 
