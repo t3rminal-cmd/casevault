@@ -1010,6 +1010,7 @@
           h('button', { class: 'btn', type: 'button', onclick: async () => {
             try { const name = await Save.track('backup', () => Vault.backupNow()); toast(`Backup saved: ${name}`, 'success'); close(); } catch { /* reported */ }
           } }, 'Back up now')),
+        privacySettings(v),
         h('h3', {}, 'Maintenance'),
         h('div', { class: 'row' },
           h('button', { class: 'btn', type: 'button', onclick: async () => {
@@ -1031,6 +1032,59 @@
           } }, 'Disconnect')),
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done')));
     });
+  }
+
+  // Privacy screen settings, shown inside the Vault panel. The PIN form is inline because the app
+  // has a single dialog element.
+  function privacySettings(v) {
+    const status = h('span', {});
+    const form = h('div', { class: 'row', hidden: true });
+    const pin1 = h('input', { type: 'password', inputmode: 'numeric', maxlength: 6, class: 'narrow pin', placeholder: 'PIN', 'aria-label': 'New PIN (4 to 6 digits)', autocomplete: 'off' });
+    const pin2 = h('input', { type: 'password', inputmode: 'numeric', maxlength: 6, class: 'narrow pin', placeholder: 'Repeat', 'aria-label': 'Repeat the PIN', autocomplete: 'off' });
+    const setBtn = h('button', { class: 'btn', type: 'button' });
+    const removeBtn = h('button', { class: 'btn', type: 'button' }, 'Remove PIN');
+    const draw = () => {
+      const has = !!v.settings.privacyPin;
+      status.textContent = has ? 'A PIN is set. It is needed to leave the privacy screen.' : 'No PIN: one click leaves the privacy screen.';
+      setBtn.textContent = has ? 'Change PIN…' : 'Set PIN…';
+      removeBtn.hidden = !has;
+    };
+    const savePin = async () => {
+      if (!CVPrivacy.isValidPin(pin1.value)) return toast('The PIN must be 4 to 6 digits.', 'error');
+      if (pin1.value !== pin2.value) return toast('The two PINs are different.', 'error');
+      const record = await CVPrivacy.makePinRecord(pin1.value);
+      pin1.value = pin2.value = '';
+      try {
+        await Save.track('settings', () => Vault.updateSettings({ privacyPin: record }));
+        form.hidden = true;
+        draw();
+        toast('Privacy screen PIN saved (only a salted hash is stored).', 'success');
+      } catch { /* reported by Save */ }
+    };
+    setBtn.addEventListener('click', () => { form.hidden = !form.hidden; if (!form.hidden) pin1.focus(); });
+    removeBtn.addEventListener('click', async () => {
+      try { await Save.track('settings', () => Vault.updateSettings({ privacyPin: null })); draw(); toast('PIN removed.'); } catch { /* reported */ }
+    });
+    for (const i of [pin1, pin2]) i.addEventListener('input', () => { i.value = i.value.replace(/\D/g, '').slice(0, 6); });
+    pin2.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); savePin(); } });
+    form.append(pin1, pin2, h('button', { class: 'btn primary', type: 'button', onclick: savePin }, 'Save PIN'),
+      h('button', { class: 'btn', type: 'button', onclick: () => { form.hidden = true; pin1.value = pin2.value = ''; } }, 'Cancel'));
+
+    const idle = h('select', { 'aria-label': 'Hide automatically after' },
+      [[0, 'Off'], [1, '1 minute'], [2, '2 minutes'], [5, '5 minutes'], [10, '10 minutes'], [15, '15 minutes'], [30, '30 minutes']]
+        .map(([m, label]) => h('option', { value: m, selected: Number(v.settings.privacyIdleMinutes || 0) === m }, label)));
+    idle.addEventListener('change', () => {
+      Save.track('settings', () => Vault.updateSettings({ privacyIdleMinutes: Number(idle.value) })).catch(() => {});
+    });
+    draw();
+    return h('section', {},
+      h('h3', {}, 'Privacy screen'),
+      h('p', { class: 'muted small' }, 'Press ', h('kbd', {}, 'Ctrl'), '+', h('kbd', {}, 'Shift'), '+', h('kbd', {}, 'H'), ', press ', h('kbd', {}, 'Esc'), ' twice quickly, or click ', h('strong', {}, 'Hide'),
+        ' to cover CaseVault with a blank screen. The tab title changes to "New Tab", media pauses and pending edits are saved.'),
+      h('div', { class: 'row' }, status, h('div', { class: 'spacer' }), setBtn, removeBtn),
+      form,
+      h('div', { class: 'row' }, h('label', { class: 'inline' }, 'Hide automatically after ', idle, ' without activity')),
+      h('p', { class: 'hint' }, 'For real security when you leave, press ', h('kbd', {}, 'Windows key'), ' + ', h('kbd', {}, 'L'), ' to lock the PC. The privacy screen only hides what is on screen.'));
   }
 
   $('#btn-vault').addEventListener('click', showVaultPanel);
@@ -1070,6 +1124,14 @@
   // Small toolkit shared with the consistency checker screen (js/checker/checks-ui.js).
   window.CaseVaultUI = { h, $, toast, openDialog, confirmDialog, field, fmtDate, fmtDateTime, fmtSize, Save, state, go, previewFile, onDriveLost };
   CVChecks.init(window.CaseVaultUI);
+
+  // Privacy screen: Ctrl+Shift+H, Esc twice, or the "Hide" button. See js/privacy.js.
+  CVPrivacy.init({
+    flush: () => Save.flushAll(),
+    getPinRecord: () => (Vault.data && Vault.data.settings.privacyPin) || null,
+    getIdleMinutes: () => (Vault.data && Vault.data.settings.privacyIdleMinutes) || 0,
+    button: $('#btn-privacy'),
+  });
 
   Save.render();
   launch();

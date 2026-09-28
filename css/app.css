@@ -492,3 +492,36 @@ button.quote:hover { border-color: var(--accent); }
 .sheet-table thead th { position: sticky; top: 0; background: var(--surface-2); color: var(--muted); font-weight: 600; z-index: 1; }
 .sheet-table .rownum { position: sticky; left: 0; background: var(--surface-2); color: var(--muted); text-align: right; font-weight: 600; }
 .sheet-table tr.target td, .sheet-table tr.target th { background: var(--accent-soft); outline: 1px solid var(--accent); }
+
+/* ---------- privacy screen ---------- */
+
+.privacy-screen {
+  /* A plain, neutral screen, like an empty new tab. Deliberately no text that names the app or a case. */
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #f1f3f4;
+  color: #5f6368;
+  display: grid;
+  place-items: center;
+  outline: none;
+}
+.privacy-screen:not([open]) { display: none; }
+.privacy-screen::backdrop { background: #f1f3f4; }
+@media (prefers-color-scheme: dark) {
+  .privacy-screen, .privacy-screen::backdrop { background: #202124; color: #9aa0a6; }
+}
+.privacy-unlock { display: grid; justify-items: center; gap: .4rem; }
+.privacy-unlock input { width: 7.5rem; text-align: center; letter-spacing: .3em; font-size: 1.1rem; background: transparent; border-color: currentColor; color: inherit; opacity: .6; }
+.privacy-unlock input:focus { opacity: 1; }
+.privacy-msg { min-height: 1.2em; margin: 0; font-size: .85rem; }
+.privacy-hint { position: fixed; bottom: 1.5rem; left: 0; right: 0; text-align: center; font-size: .8rem; opacity: .5; margin: 0; }
+.hint { font-size: .85rem; background: var(--accent-soft); border-radius: 6px; padding: .5rem .7rem; }
+kbd { font-family: var(--mono); font-size: .8em; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 .35em; background: var(--surface-2); }
+input.pin { width: 6.5em; letter-spacing: .2em; }
