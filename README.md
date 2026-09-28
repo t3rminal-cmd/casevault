@@ -15,7 +15,7 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.6)
+## Features (v1.7)
 
 - Cases with number, client, status, tags, and opened/closed dates; search and filter
 - Free-form notes (Markdown, with preview)
@@ -39,7 +39,9 @@ The app detects the browser and picks the mode by itself. The data format on the
   - export to `.docx` (no library) or plain text
   - one-click consistency check of an affidavit draft
 
-**Not yet built (deferred):** the in-browser WebLLM fallback for when Ollama isn't running. Checks then fall back to rules only, and the drafting AI features are unavailable.
+- **In-browser AI fallback**: when Ollama isn't running, a small WebLLM model runs on the PC's graphics chip (WebGPU), loaded from `W:\webllm` through the helper. The checker and drafting copilot use it unchanged via an Ollama-compatible shim. The browser's copy of the model is deleted right after loading.
+
+**Not yet built:** the in-browser AI in the hosted/installed app when it's opened *without* the launcher (direct mode). It currently needs the helper to serve the model files.
 
 ## Guides
 
@@ -88,9 +90,12 @@ CaseVault-Data/
 | `js/drafts/ghost.js` | Inline suggestion (ghost text) logic |
 | `js/drafts/copilot.js` | Local-AI calls for suggestions and Draft with AI |
 | `js/drafts/drafts-ui.js` | Drafts tab, editor, export, template settings |
-| `vendor/` | Bundled pdf.js, Tesseract.js and SheetJS (see `vendor/README.md` for versions, licenses and provenance) |
+| `js/ai/webllm.js`, `js/ai/webllm-worker.js` | In-browser AI fallback: availability, lazy loading, cache cleanup; the worker that runs WebLLM |
+| `js/ai/ollama-shim.js` | Answers Ollama-style API calls from the in-browser engine |
+| `vendor/` | Bundled pdf.js, Tesseract.js, SheetJS and WebLLM (see `vendor/README.md` for versions, licenses and provenance) |
 | `tools/Start-CaseVault.bat` | Launcher for the CV-AI partition: starts the helper and Ollama |
-| `tools/casevault-helper/` | The Firefox helper (Windows PowerShell 5.1, 127.0.0.1 only) |
+| `tools/casevault-helper/` | The Firefox helper (Windows PowerShell 5.1, 127.0.0.1 only); also serves in-browser models from `W:\webllm`, and holds `Get-WebLLM-Model.ps1` |
+| `tools/Get-WebLLM-Model.bat` | One-time download of an in-browser model onto the CV-AI drive |
 | `tests/` | Unit tests (`node --test tests/*.test.js`) and a mock Ollama server |
 | `scripts/check-no-case-data.sh` | CI guard: fails if anything resembling case data is committed |
 
