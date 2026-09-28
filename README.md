@@ -81,6 +81,7 @@ CaseVault-Data/
 | `js/checker/nlp.js` | Sentence splitting, similarity, BM25 retrieval, verbatim-quote finder |
 | `js/checker/rules.js` | Layer 1: fact extraction and cross-document comparison |
 | `js/checker/extract.js` | Text from PDF (pdf.js + OCR), DOCX, TXT, images (Tesseract) |
+| `js/checker/xfa.js` | XFA (LiveCycle) PDF forms: reads the filled-in fields as checker text |
 | `js/checker/ai.js` | Layer 2: Ollama detection, profiles, retrieval, classification, quote verification |
 | `js/checker/checks-ui.js` | Checks tab, results, engine status and AI settings |
 | `js/checker/sheets.js` | Spreadsheets (.xlsx/.xls/.csv) for the preview and the checker |

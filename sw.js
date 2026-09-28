@@ -24,6 +24,7 @@ const APP_FILES = [
   './js/checker/nlp.js',
   './js/checker/rules.js',
   './js/checker/sheets.js',
+  './js/checker/xfa.js',
   './js/checker/extract.js',
   './js/checker/ai.js',
   './js/ai/ollama-shim.js',

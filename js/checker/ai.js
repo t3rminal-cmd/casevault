@@ -92,8 +92,8 @@
 
   const BOILERPLATE = /\b(sworn|subscribed|notary|my commission|under penalty of perjury|affiant further sayeth|signature|signed this)\b/i;
 
-  // Spreadsheet rows carry their sheet and row number as the location.
-  const cellOf = (p) => (p.sheet != null ? { sheet: p.sheet, row: p.row } : {});
+  // Spreadsheet rows carry their sheet and row number as the location; XFA form fields their path.
+  const cellOf = (p) => (p.sheet != null ? { sheet: p.sheet, row: p.row } : p.field != null ? { field: p.field } : {});
 
   function statementsOf(doc, limit = 250) {
     const out = [];

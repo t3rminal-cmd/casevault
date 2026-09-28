@@ -945,8 +945,35 @@
 
     await openDialog((close) => {
       let body;
-      if (kind === 'pdf') body = h('iframe', { class: 'preview-frame', src: blobUrl(typed) + (page ? `#page=${page}` : ''), title: name });
-      else if (kind === 'image') body = h('img', { class: 'preview-img', src: blobUrl(typed), alt: name });
+      if (kind === 'pdf') {
+        // XFA forms (Adobe LiveCycle) only say "Please wait..." in the browser's PDF viewer, so
+        // CaseVault draws them itself; ordinary PDFs use the browser's viewer.
+        body = h('div', { class: 'xfa-preview' }, h('p', { class: 'muted' }, 'Opening…'));
+        const pdfFrame = () => h('iframe', { class: 'preview-frame', src: blobUrl(typed) + (page ? `#page=${page}` : ''), title: name });
+        file.arrayBuffer().then(async (buf) => {
+          const data = new Uint8Array(buf);
+          const fields = await CVExtract.readXfaFields(data);
+          if (!fields.xfa) return body.replaceWith(pdfFrame());
+          const view = h('div', { class: 'xfa-view' });
+          const note = h('p', { class: 'muted small' }, 'XFA form (Adobe LiveCycle), shown read-only.');
+          const showFields = () => CVExtract.renderXfa(view, data, fields, at && at.field, { fieldsOnly: true });
+          const showForm = () => CVExtract.renderXfa(view, data, fields, at && at.field);
+          const toggle = h('button', { class: 'btn small ghost', type: 'button', onclick: () => {
+            const toFields = toggle.dataset.mode !== 'fields';
+            toggle.dataset.mode = toFields ? 'fields' : 'form';
+            toggle.textContent = toFields ? 'Show the form' : 'Show filled-in fields';
+            view.replaceChildren(h('p', { class: 'muted' }, 'Opening…'));
+            (toFields ? showFields : showForm)();
+          } });
+          // Coming from a check result: start on the fields list with that field highlighted.
+          const startFields = !!(at && at.field);
+          toggle.dataset.mode = startFields ? 'fields' : 'form';
+          toggle.textContent = startFields ? 'Show the form' : 'Show filled-in fields';
+          body.replaceChildren(h('div', { class: 'xfa-bar' }, note, fields.paragraphs.length ? toggle : null), view);
+          const mode = await (startFields ? showFields() : showForm());
+          if (mode === 'fields' && !startFields) toggle.remove();
+        }).catch((err) => body.replaceChildren(h('p', { class: 'error-text' }, `Could not open this PDF: ${err.message}`)));
+      } else if (kind === 'image') body = h('img', { class: 'preview-img', src: blobUrl(typed), alt: name });
       else if (kind === 'image-svg') body = h('img', { class: 'preview-img', src: blobUrl(new Blob([file], { type: 'image/svg+xml' })), alt: name });
       else if (kind === 'audio') body = h('audio', { controls: true, src: blobUrl(typed) });
       else if (kind === 'video') body = h('video', { class: 'preview-img', controls: true, src: blobUrl(typed) });

@@ -211,9 +211,14 @@
     return [text.slice(0, a), h('mark', {}, text.slice(a, b)), text.slice(b)];
   }
 
+  // "Report.pdf · page 3", "Log.xlsx · Sheet1 row 12", "Form.pdf · page 1 · Timeline row 2" (XFA field)
+  function at(loc) {
+    if (loc.sheet != null) return `${loc.sheet} row ${loc.row}`;
+    return [loc.page ? `page ${loc.page}` : null, loc.field || null].filter(Boolean).join(' · ') || null;
+  }
+
   function where(loc) {
-    const at = loc.sheet != null ? `${loc.sheet} row ${loc.row}` : loc.page ? `page ${loc.page}` : null;
-    return [loc.doc, at].filter(Boolean).join(' · ');
+    return [loc.doc, at(loc)].filter(Boolean).join(' · ');
   }
 
   async function checkableFiles(c) {
@@ -240,7 +245,8 @@
       throw err;
     }
     const cached = await Vault.readTextCache(c.id, name, file.size, file.lastModified);
-    if (cached && cached.paragraphs) return { ...cached, size: file.size, modified: file.lastModified };
+    // Text read by an older version of the reader is read again (e.g. XFA forms before v1.8).
+    if (cached && cached.paragraphs && (cached.extractor || 1) >= CVExtract.VERSION) return { ...cached, size: file.size, modified: file.lastModified };
     const out = await CVExtract.extract(file, name, onProgress);
     await Vault.writeTextCache(c.id, name, file.size, file.lastModified, out);
     return { ...out, size: file.size, modified: file.lastModified };
@@ -369,7 +375,7 @@
           const src = draft && role === 'affidavit' ? { kind: 'draft', draft: draft.slug } : null;
           const d = await documentText(c, name, (msg) => { activity.textContent = `${name}: ${msg}`; }, src);
           docs.push({ name, role, kind: d.kind, paragraphs: d.paragraphs, docIndex: docs.length });
-          docInfo.push({ name, role, kind: d.kind, ...(src ? { draft: src.draft } : {}), pageCount: d.pageCount, ocrPages: d.ocrPages || [], warnings: d.warnings || [], size: d.size, modified: d.modified });
+          docInfo.push({ name, role, kind: d.kind, ...(src ? { draft: src.draft } : {}), pageCount: d.pageCount, paragraphCount: d.paragraphs.length, ...(d.xfa ? { xfa: true } : {}), ocrPages: d.ocrPages || [], warnings: d.warnings || [], size: d.size, modified: d.modified });
           done(li, d.ocrPages && d.ocrPages.length ? 'done warn' : 'done');
         } catch (err) {
           if (FS.isDisconnectError(err)) throw err;
@@ -523,13 +529,20 @@
 
     const st = data.ai && data.ai.stats;
     const docsLine = (data.documents || []).map((d) => h('li', {},
-      h('strong', {}, d.name), ` (${d.role === 'affidavit' ? 'checked' : 'report'}${d.pageCount ? `, ${d.pageCount} page${d.pageCount === 1 ? '' : 's'}` : ''})`,
+      h('strong', {}, d.name), ` (${d.role === 'affidavit' ? 'checked' : 'report'}${d.xfa ? ', XFA form' : ''}${d.pageCount ? `, ${d.pageCount} page${d.pageCount === 1 ? '' : 's'}` : ''})`,
       d.skipped ? h('span', { class: 'error-text' }, ` Skipped: ${d.error}`) : null,
       ...(d.warnings || []).map((w) => h('span', { class: 'warn-text block small' }, w))));
+
+    // Documents that gave no usable text weren't really compared: say so above the results.
+    const empty = (data.documents || []).filter((d) => !d.skipped && d.paragraphCount === 0);
+    const emptyCard = empty.length ? h('div', { class: 'card warn-card', role: 'note' },
+      h('strong', {}, `No usable text in ${empty.map((d) => d.name).join(', ')}.`),
+      h('p', { class: 'small' }, `${empty.length === 1 ? 'This document was' : 'These documents were'} not compared, so a clean result doesn't mean ${empty.length === 1 ? 'it agrees' : 'they agree'}. See the notes under Documents below.`)) : null;
 
     panel.replaceChildren(
       back,
       banner(),
+      emptyCard,
       h('div', { class: 'card result-head' },
         h('h2', {}, data.affidavit ? `Check of ${data.affidavit}` : 'Reports cross-check'),
         h('p', { class: 'muted' }, `${data.created ? fmtDateTime(Date.parse(data.created)) : ''} · `,
@@ -607,7 +620,7 @@
       let lastPage = null;
       const body = h('div', { class: 'doc-view' });
       for (const p of doc.paragraphs) {
-        const section = p.sheet != null ? `Sheet: ${p.sheet}` : p.page ? `Page ${p.page}` : null;
+        const section = p.sheet != null ? `Sheet: ${p.sheet}` : p.field != null ? 'Form fields (XFA)' : p.page ? `Page ${p.page}` : null;
         if (section && section !== lastPage) { body.append(h('div', { class: 'doc-page' }, section)); lastPage = section; }
         const isTarget = p.index === loc.paragraph;
         let content = [p.text];
@@ -620,12 +633,12 @@
       return h('div', { class: 'preview' },
         h('div', { class: 'preview-head' },
           h('h2', {}, loc.doc),
-          h('span', { class: 'muted small' }, loc.sheet != null ? `${loc.sheet} row ${loc.row}` : loc.page ? `page ${loc.page}` : ''),
+          h('span', { class: 'muted small' }, at(loc) || ''),
           h('div', { class: 'spacer' }),
           h('button', { class: 'btn', type: 'button', onclick: () => {
             close();
             if (info && info.kind === 'draft') ui.go(c.id, 'drafts', info.draft);
-            else ui.previewFile(c, loc.doc, loc.page, loc.sheet != null ? { sheet: loc.sheet, row: loc.row } : null);
+            else ui.previewFile(c, loc.doc, loc.page, loc.sheet != null ? { sheet: loc.sheet, row: loc.row } : loc.field != null ? { field: loc.field } : null);
           } }, info && info.kind === 'draft' ? 'Open draft' : 'Open original'),
           h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Close')),
         changed ? h('p', { class: 'warn-text small' }, 'This file has changed since the check was run. The highlighted text may have moved.') : null,

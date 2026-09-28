@@ -580,3 +580,53 @@ input.pin { width: 6.5em; letter-spacing: .2em; }
 .template-editor { display: grid; gap: .5rem; margin-top: .6rem; }
 .template-text { font-family: var(--mono); font-size: .85rem; }
 @media (max-width: 1000px) { .draft-grid { grid-template-columns: 1fr; } .confirm-panel { position: static; } }
+
+/* ---------- XFA forms (Adobe LiveCycle) ---------- */
+.xfa-preview { flex: 1; display: flex; flex-direction: column; min-height: 0; gap: .4rem; }
+.xfa-bar { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.xfa-bar p { margin: 0; }
+.xfa-view { flex: 1; overflow: auto; min-height: 0; background: var(--surface-2); border-radius: 6px; padding: .6rem; }
+.xfa-pages { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+.xfa-fields { width: 100%; background: var(--surface); }
+.xfa-fields th { text-align: left; vertical-align: top; width: 32%; font-weight: 600; }
+.xfa-fields td { white-space: pre-wrap; overflow-wrap: anywhere; }
+.xfa-fields tr.target td, .xfa-fields tr.target th { background: var(--accent-soft); outline: 1px solid var(--accent); }
+.warn-card { border-left: 4px solid var(--warn); background: var(--warn-soft); }
+.warn-card p { margin: .3rem 0 0; }
+
+/* The form drawn by pdf.js: a trimmed copy of the xfaLayer rules from pdf.js's viewer CSS.
+   The page is always black on white, like the printed form. */
+.xfa-page.xfaLayer { position: relative; max-width: 100%; overflow: auto; background: #fff; color: #000; line-height: 1.2; text-align: initial; box-shadow: 0 1px 4px rgb(0 0 0 / .25); }
+.xfaLayer * { color: inherit; font: inherit; font-style: inherit; font-weight: inherit; font-kerning: inherit; letter-spacing: -0.01px; text-align: inherit; text-decoration: inherit; box-sizing: border-box; background-color: transparent; padding: 0; margin: 0; line-height: inherit; }
+.xfaPage { overflow: hidden; position: relative; }
+.xfaContentarea { position: absolute; }
+.xfaPrintOnly { display: none; }
+.xfaFont { color: black; font-weight: normal; font-kerning: none; font-size: 10px; font-style: normal; letter-spacing: 0; text-decoration: none; vertical-align: 0; }
+.xfaCaption { overflow: hidden; flex: 0 0 auto; }
+.xfaCaptionForCheckButton { overflow: hidden; flex: 1 1 auto; }
+.xfaLabel { height: 100%; width: 100%; }
+.xfaLeft { display: flex; flex-direction: row; align-items: center; }
+.xfaRight { display: flex; flex-direction: row-reverse; align-items: center; }
+.xfaLeft > .xfaCaption, .xfaLeft > .xfaCaptionForCheckButton, .xfaRight > .xfaCaption, .xfaRight > .xfaCaptionForCheckButton { max-height: 100%; }
+.xfaTop { display: flex; flex-direction: column; align-items: flex-start; }
+.xfaBottom { display: flex; flex-direction: column-reverse; align-items: flex-start; }
+.xfaTop > .xfaCaption, .xfaTop > .xfaCaptionForCheckButton, .xfaBottom > .xfaCaption, .xfaBottom > .xfaCaptionForCheckButton { width: 100%; }
+.xfaBorder { background-color: transparent; position: absolute; pointer-events: none; }
+.xfaWrapped { width: 100%; height: 100%; }
+.xfaTextfield, .xfaSelect { height: 100%; width: 100%; flex: 1 1 auto; border: none; resize: none; background-color: rgb(0 54 255 / .08); color: #000; opacity: 1; -webkit-text-fill-color: #000; }
+.xfaTop > .xfaTextfield, .xfaTop > .xfaSelect, .xfaBottom > .xfaTextfield, .xfaBottom > .xfaSelect { flex: 0 1 auto; }
+.xfaButton { width: 100%; height: 100%; border: none; text-align: center; }
+.xfaLink { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+.xfaCheckbox, .xfaRadio { width: 100%; height: 100%; flex: 0 0 auto; border: none; }
+.xfaRich { white-space: pre-wrap; width: 100%; height: 100%; }
+.xfaImage { object-position: left top; object-fit: contain; width: 100%; height: 100%; }
+.xfaLrTb, .xfaRlTb, .xfaTb { display: flex; flex-direction: column; align-items: stretch; }
+.xfaLr { display: flex; flex-direction: row; align-items: stretch; flex: 0 0 auto; }
+.xfaRl { display: flex; flex-direction: row-reverse; align-items: stretch; flex: 0 0 auto; }
+.xfaTb > div { flex: 1 1 auto; }
+.xfaPosition, .xfaArea { position: relative; }
+.xfaValignMiddle { display: flex; align-items: center; }
+.xfaTable { display: flex; flex-direction: column; align-items: stretch; }
+.xfaTable .xfaRow { display: flex; flex-direction: row; align-items: stretch; }
+.xfaTable .xfaRlRow { display: flex; flex-direction: row-reverse; align-items: stretch; flex: 1; }
+.xfaTable .xfaRow > div, .xfaTable .xfaRlRow > div { flex: 1 1 auto; }

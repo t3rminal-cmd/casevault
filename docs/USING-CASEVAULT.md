@@ -118,6 +118,16 @@ Attach `.xlsx`, `.xls`, `.ods` and `.csv` files like any other file.
 - The spreadsheet reader (SheetJS) is part of CaseVault and loads only when you open a spreadsheet. Nothing is downloaded.
 - **Consistency checks** read spreadsheets row by row, as in `Evidence row 5: Item=17; Plate=ABC-1284`. A flag points at the sheet and row. **Open original** opens the table with that row highlighted.
 
+### XFA PDF forms (Adobe LiveCycle)
+
+Some agency forms are *XFA* PDFs, made with Adobe LiveCycle Designer. In Chrome, Edge or Firefox's own PDF viewer they only say *"Please wait... upgrade to the latest version of Adobe Reader"*, because the real content is stored as form data inside the file. CaseVault reads that form data itself.
+
+- **Open** recognises an XFA form and draws it inside CaseVault, read-only. The bar above it says *XFA form (Adobe LiveCycle)*. **Show filled-in fields** switches to a plain list of every filled-in field, in form order.
+- If the form can't be drawn (some complex forms), CaseVault shows the list of filled-in fields instead.
+- Empty fields, and image fields such as signatures and photos, are left out of the list.
+- An XFA form is never run through OCR: its "Please wait" page has nothing to read.
+- A password-protected (encrypted) XFA form is read through the PDF reader instead. If nothing can be read from it, the check says so.
+
 ## Saving
 
 There's no Save button. **Every change is written to the SSD automatically**, within about a second. The indicator at the top right shows:
@@ -138,13 +148,13 @@ The **Checks** tab compares an affidavit draft (or any document) against the rep
 
 ### Running a check
 
-1. Attach the affidavit and the reports on the **Files** tab. PDF (including scanned PDFs), Word (`.docx`), Excel (`.xlsx`, `.xls`), CSV, TXT, and photos (PNG/JPG) can be checked. Old `.doc` files must be saved as `.docx` or PDF first. To check a draft you're writing in CaseVault, use **Run consistency check** in the Drafts tab instead.
+1. Attach the affidavit and the reports on the **Files** tab. PDF (including scanned PDFs and XFA forms), Word (`.docx`), Excel (`.xlsx`, `.xls`), CSV, TXT, and photos (PNG/JPG) can be checked. Old `.doc` files must be saved as `.docx` or PDF first. To check a draft you're writing in CaseVault, use **Run consistency check** in the Drafts tab instead.
 2. Open **Checks**. Under **Document to check**, pick the affidavit. (Choose *none* to only compare the reports with each other.)
 3. Tick the reports to compare against. All of them are ticked by default.
 4. **Include AI review** is available when the header shows **AI: Connected**. Without it, the rule-based checks still run.
 5. Click **Run check**. A window shows each step: reading each document (scanned pages go through OCR), the rule checks, then the AI review statement by statement. **Cancel** stops the check. If the AI review was already under way, what it found so far is saved.
 
-The text read from each document is kept on the SSD (`checks\text-cache`), so re-running a check is quick. OCR only runs again if the file changes.
+The text read from each document is kept on the SSD (`checks\text-cache`), so re-running a check is quick. OCR only runs again if the file changes, or when a newer CaseVault reads that kind of file better (v1.8 re-reads PDFs once, for XFA forms).
 
 ### What gets checked
 
@@ -159,6 +169,10 @@ The text read from each document is kept on the SSD (`checks\text-cache`), so re
 - phone numbers
 - money amounts
 - counts (*three shots* vs *two shots*)
+
+**XFA forms** are read field by field: each filled-in field becomes one line such as `Reporting officer: Officer Alex Sample`, using the form's own captions (or the field name when there's no caption). A repeated section, such as a timeline table, gives one line per row: `Timeline row 2: Date=03/14/2026; Type=Interview; Narrative=...`. A flag from a form points at *page 1* and the field or row, for example `Report.pdf · page 1 · Timeline row 2`. **Open original** lists the form's fields with that one highlighted.
+
+**No usable text.** If a document gave no text at all (an empty scan, or an XFA form whose fields couldn't be read), a warning box at the top of the results says it wasn't compared. A check with no flags against that document means nothing.
 
 **AI review (optional).** For each statement in the affidavit, CaseVault finds the most relevant report passages. The local AI decides whether the statement is **Supported**, **Contradicted**, or **Not found in reports**, and it must quote the exact report sentence it relied on. **If that quote can't be found word-for-word in the report, the answer is thrown away**, and the results tell you how many were. This stops the AI from inventing sources.
 

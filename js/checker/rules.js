@@ -247,8 +247,8 @@
   }
 
   /** Split documents into sentences, each with its facts and its location. */
-  // Spreadsheet rows carry their sheet and row number as the location.
-  const cellOf = (p) => (p.sheet != null ? { sheet: p.sheet, row: p.row } : {});
+  // Spreadsheet rows carry their sheet and row number as the location; XFA form fields their path.
+  const cellOf = (p) => (p.sheet != null ? { sheet: p.sheet, row: p.row } : p.field != null ? { field: p.field } : {});
 
   function analyze(docs) {
     return docs.map((doc, d) => {
