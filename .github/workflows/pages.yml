@@ -28,9 +28,10 @@ jobs:
       - name: App makes no external requests (offline rule)
         run: |
           # Any http(s) URL in the shipped app files must point at localhost.
-          # (schemas.openxmlformats.org is the Word XML namespace name; it is an identifier, never fetched.)
-          hits=$(grep -EnoH 'https?://[^"'"'"' )<>]+' index.html sw.js manifest.webmanifest css/*.css js/*.js js/checker/*.js \
-                 | grep -Ev 'https?://(localhost|127\.0\.0\.1)(:[0-9]+)?|http://schemas\.openxmlformats\.org/' || true)
+          # XML namespace names used when reading/writing Word files are identifiers, never fetched:
+          # schemas.openxmlformats.org, purl.org/dc, www.w3.org/2001/XMLSchema-instance.
+          hits=$(grep -EnoH 'https?://[^"'"'"' )<>]+' index.html sw.js manifest.webmanifest css/*.css js/*.js js/checker/*.js js/drafts/*.js \
+                 | grep -Ev 'https?://(localhost|127\.0\.0\.1)(:[0-9]+)?|http://schemas\.openxmlformats\.org/|http://purl\.org/dc/|http://www\.w3\.org/2001/XMLSchema-instance' || true)
           if [ -n "$hits" ]; then
             echo "::error::External URLs found in app files. CaseVault must work 100% offline:"
             echo "$hits"
@@ -39,9 +40,9 @@ jobs:
           echo "OK: app files reference no external hosts."
 
       - name: JavaScript parses
-        run: for f in js/*.js js/checker/*.js sw.js; do node --check "$f"; done
+        run: for f in js/*.js js/checker/*.js js/drafts/*.js sw.js; do node --check "$f"; done
 
-      - name: Unit tests (rule-based checker)
+      - name: Unit tests
         run: node --test tests/*.test.js
 
       - name: Every file the service worker caches exists

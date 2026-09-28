@@ -110,6 +110,8 @@ The header shows the engine status: **AI: Connected (Quick · qwen2.5:7b)**, **A
 
 The choice is stored in the vault (`vault.json`), so it follows the SSD.
 
+**Drafts** use the same engine. *Draft with AI* uses the model of the chosen profile. The grey **suggestions while typing** always use the smallest installed chat model (Light if you have it), and keep it loaded for 30 minutes so suggestions stay quick. Install a Light model (`qwen2.5:3b`) even on the Beelink if you want snappy suggestions.
+
 - **Beelink GTi12** (i9-12900HK, 32 GB, RTX 3050 6 GB): Quick for everyday checks, Thorough for important documents. Ollama uses the NVIDIA GPU automatically. Keep the NVIDIA driver up to date.
 - **Lenovo L14 vPro** (no NVIDIA GPU): Light, or Rules-only. Quick also runs on the CPU, but expect it to be several times slower.
 

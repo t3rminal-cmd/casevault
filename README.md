@@ -15,7 +15,7 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.5)
+## Features (v1.6)
 
 - Cases with number, client, status, tags, and opened/closed dates; search and filter
 - Free-form notes (Markdown, with preview)
@@ -29,8 +29,17 @@ The app detects the browser and picks the mode by itself. The data format on the
   - **AI layer:** local Ollama; Supported / Contradicted / Not found, with every quote verified word-for-word against the report (answers that fail are discarded)
   - side-by-side results with click-to-source, High/Medium/Low severity, and Fix / Not an issue / Explained, saved to `checks/<date>-check.json`
   - AI profiles (Quick / Thorough / Light / Rules-only), auto-detected from installed models
+- **Excel and CSV**: `.xlsx/.xls/.ods/.csv` open as tables with sheet tabs, and the checker reads them row by row with sheet + row locations (bundled SheetJS, loaded only when needed)
+- **Privacy screen**: Ctrl+Shift+H, Esc twice, or **Hide** instantly covers the app (the tab title becomes "New Tab", media pauses, edits are saved). Optional 4–6 digit PIN, stored as a salted SHA-256 hash, and optional auto-hide after inactivity
+- **Drafts with a local-AI copilot**: Markdown drafts per case, saved to `drafts/` on the SSD
+  - inline grey suggestions (Tab accepts)
+  - **Draft with AI** from the case details, timeline, notes and attached documents, never inventing facts and marking gaps as `[CONFIRM: ...]`
+  - a checklist of placeholders
+  - agency templates with `{{placeholders}}`
+  - export to `.docx` (no library) or plain text
+  - one-click consistency check of an affidavit draft
 
-**Not yet built:** the in-browser WebLLM fallback for when Ollama isn't running (checks fall back to rules only).
+**Not yet built (deferred):** the in-browser WebLLM fallback for when Ollama isn't running. Checks then fall back to rules only, and the drafting AI features are unavailable.
 
 ## Guides
 
@@ -48,8 +57,10 @@ CaseVault-Data/
     notes.md                 free-form notes
     timeline.json            dated events and deadlines
     files/                   attached documents, copied in
+    drafts/                  drafts: <slug>.md (Markdown, details in the first line)
     checks/                  consistency checks: <date>-check.json
       text-cache/            text read from documents (so OCR runs once)
+  templates/                 your document templates (*.md)
   backups/                   dated snapshots of vault.json
 ```
 
@@ -70,7 +81,14 @@ CaseVault-Data/
 | `js/checker/extract.js` | Text from PDF (pdf.js + OCR), DOCX, TXT, images (Tesseract) |
 | `js/checker/ai.js` | Layer 2: Ollama detection, profiles, retrieval, classification, quote verification |
 | `js/checker/checks-ui.js` | Checks tab, results, engine status and AI settings |
-| `vendor/` | Bundled pdf.js and Tesseract.js (see `vendor/README.md` for versions and licenses) |
+| `js/checker/sheets.js` | Spreadsheets (.xlsx/.xls/.csv) for the preview and the checker |
+| `js/privacy.js` | Privacy screen: shortcut, cover, PIN hashing, idle timer |
+| `js/drafts/draft-core.js` | Draft file format, [CONFIRM: ...] placeholders, templates, starter templates |
+| `js/drafts/docx.js` | Markdown to .docx, with a tiny built-in zip writer |
+| `js/drafts/ghost.js` | Inline suggestion (ghost text) logic |
+| `js/drafts/copilot.js` | Local-AI calls for suggestions and Draft with AI |
+| `js/drafts/drafts-ui.js` | Drafts tab, editor, export, template settings |
+| `vendor/` | Bundled pdf.js, Tesseract.js and SheetJS (see `vendor/README.md` for versions, licenses and provenance) |
 | `tools/Start-CaseVault.bat` | Launcher for the CV-AI partition: starts the helper and Ollama |
 | `tools/casevault-helper/` | The Firefox helper (Windows PowerShell 5.1, 127.0.0.1 only) |
 | `tests/` | Unit tests (`node --test tests/*.test.js`) and a mock Ollama server |
