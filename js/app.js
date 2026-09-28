@@ -583,7 +583,7 @@
    * Case view
    * ===================================================================== */
 
-  const TABS = [['details', 'Details'], ['notes', 'Notes'], ['timeline', 'Timeline'], ['files', 'Files'], ['checks', 'Checks']];
+  const TABS = [['details', 'Details'], ['notes', 'Notes'], ['timeline', 'Timeline'], ['files', 'Files'], ['drafts', 'Drafts'], ['checks', 'Checks']];
 
   async function showCase(id, tab, sub = null) {
     const token = ++state.renderToken;
@@ -616,7 +616,7 @@
         h('a', { href: `#/case/${encodeURIComponent(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab) }, label))),
       panel));
 
-    const renderers = { details: renderDetails, notes: renderNotes, timeline: renderTimeline, files: renderFiles, checks: (...a) => CVChecks.render(...a) };
+    const renderers = { details: renderDetails, notes: renderNotes, timeline: renderTimeline, files: renderFiles, drafts: (...a) => CVDraftsUI.render(...a), checks: (...a) => CVChecks.render(...a) };
     try {
       await renderers[tab](panel, c, token, sub);
     } catch (err) {
@@ -1011,6 +1011,7 @@
             try { const name = await Save.track('backup', () => Vault.backupNow()); toast(`Backup saved: ${name}`, 'success'); close(); } catch { /* reported */ }
           } }, 'Back up now')),
         privacySettings(v),
+        CVDraftsUI.templateSettings(),
         h('h3', {}, 'Maintenance'),
         h('div', { class: 'row' },
           h('button', { class: 'btn', type: 'button', onclick: async () => {
@@ -1122,8 +1123,9 @@
   }
 
   // Small toolkit shared with the consistency checker screen (js/checker/checks-ui.js).
-  window.CaseVaultUI = { h, $, toast, openDialog, confirmDialog, field, fmtDate, fmtDateTime, fmtSize, Save, state, go, previewFile, onDriveLost };
+  window.CaseVaultUI = { h, $, toast, openDialog, confirmDialog, field, fmtDate, fmtDateTime, fmtSize, Save, state, go, refresh: () => route(), previewFile, onDriveLost };
   CVChecks.init(window.CaseVaultUI);
+  CVDraftsUI.init(window.CaseVaultUI);
 
   // Privacy screen: Ctrl+Shift+H, Esc twice, or the "Hide" button. See js/privacy.js.
   CVPrivacy.init({
