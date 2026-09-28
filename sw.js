@@ -2,7 +2,7 @@
  * Caches the app's own files so CaseVault opens with no internet connection.
  * It never stores case data: in direct mode that is read from the SSD by the page, and in helper
  * mode the helper's /api/ requests are passed through untouched and never cached.
- * Requests to any other origin (for example the local Ollama engine in v1.5) are not touched.
+ * Requests to any other origin (for example the local Ollama engine) are not touched.
  */
 'use strict';
 

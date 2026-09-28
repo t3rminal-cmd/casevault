@@ -5,7 +5,7 @@ This guide prepares the **SanDisk Extreme 1TB** for CaseVault on Windows 11 Pro.
 | Partition | Letter | File system | Size | Encrypted | Holds |
 |---|---|---|---|---|---|
 | **CASEVAULT** | `V:` | exFAT | ~850 GB | Yes, BitLocker To Go | `CaseVault-Data\` (cases, backups, check results) and `CaseVault-App\` (offline copy of the app) |
-| **CV-AI** | `W:` | NTFS | ~150 GB | No (holds no case data) | `ollama\`, `models\`, `Start-CaseVault-AI.bat` |
+| **CV-AI** | `W:` | NTFS | ~150 GB | No (holds no case data) | `Start-CaseVault.bat`, `casevault-helper\`, `ollama\`, `models\` |
 
 > ⚠️ **Partitioning erases the drive.** Copy anything you need off the SSD first.
 
@@ -37,7 +37,7 @@ Windows remembers the letter you gave each partition, **per computer**. Repeat s
 If a letter is already taken on some PC (a network drive, for example), choose any free letter. **Nothing breaks:**
 
 - **CaseVault** doesn't use drive letters. If it can't find the vault, click **Reconnect**. If that fails, click **Choose folder…** and pick `CaseVault-Data` on the SSD once. The app recognises the vault by its ID, not its letter.
-- **`Start-CaseVault-AI.bat`** finds its own drive letter every time it runs.
+- **`Start-CaseVault.bat`** and the helper work from their own drive letter, and the helper finds the CASEVAULT partition by its label.
 
 ## 3. Encrypt V: with BitLocker To Go
 
@@ -70,7 +70,7 @@ On **V:**:
 ```
 V:\
   CaseVault-Data\     ← created by CaseVault the first time you connect (don't make it by hand)
-  CaseVault-App\      ← offline copy of the app (see USING-CASEVAULT.md, "Offline copy")
+  CaseVault-App\      ← offline copy of the app; also what the Firefox helper serves (see USING-CASEVAULT.md)
 ```
 
 On **W:**, following [AI-SETUP.md](AI-SETUP.md):
@@ -79,7 +79,9 @@ On **W:**, following [AI-SETUP.md](AI-SETUP.md):
 W:\
   ollama\                   ← portable Ollama for Windows
   models\                   ← AI model files
-  Start-CaseVault-AI.bat    ← launcher
+  Start-CaseVault.bat       ← launcher (helper for Firefox + AI engine)
+  casevault-helper\         ← the helper script
+  logs\                     ← created automatically
 ```
 
 ## 5. Look after the drive
