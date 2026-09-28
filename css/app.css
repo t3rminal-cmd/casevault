@@ -847,3 +847,5 @@ table.files td.fname { min-width: 14rem; }
 .radio-row + .radio-row { margin-top: .35rem; }
 .vault-panel h4 { margin: 1rem 0 .3rem; font-size: .95rem; }
 .pass-row { margin: .35rem 0 0 1.8rem; }
+.nowrap { white-space: nowrap; }
+.list-none { list-style: none; margin-left: -1.2em; }

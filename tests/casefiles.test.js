@@ -144,3 +144,11 @@ test('an interrupted rename is finished or undone on the next open', async () =>
   const ids = Vault.data.cases.map((x) => x.id).sort();
   assert.deepStrictEqual(ids, ['2026-2', a.id].sort());
 });
+
+test('a description that starts with the document type is not repeated (v1.9.1)', () => {
+  const c = { number: '00123', dates: { opened: '2026-03-14' } };
+  assert.strictEqual(CF.fileName(c, 'Affidavits', 'x.docx', 'Affidavit - arrest warrant'), '2026-00123 Affidavit - arrest warrant.docx');
+  assert.strictEqual(CF.fileName(c, 'Affidavits', 'x.docx', 'Affidavit'), '2026-00123 Affidavit.docx');
+  assert.strictEqual(CF.fileName(c, 'Case Report', 'x.docx', 'Case report summary'), '2026-00123 Case Report - summary.docx');
+  assert.strictEqual(CF.fileName(c, 'Supplementary Report', 'x.pdf', 'Det. Doe'), '2026-00123 Supplementary Report - Det. Doe.pdf');
+});

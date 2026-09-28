@@ -43,6 +43,13 @@
     return `${fmtDate(Vault.localDay(d))} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
+  // Short date for tables: "28 Sep 22:48" this year, "28 Sep 2025" before.
+  function fmtShortDateTime(ms) {
+    const d = new Date(ms);
+    const day = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    return d.getFullYear() === new Date().getFullYear() ? `${day} ${pad(d.getHours())}:${pad(d.getMinutes())}` : `${day} ${d.getFullYear()}`;
+  }
+
   function fmtSize(n) {
     if (n < 1024) return `${n} B`;
     const units = ['KB', 'MB', 'GB', 'TB'];
@@ -1095,7 +1102,7 @@
             f.folder && prefix && !CF.followsConvention(c, f.folder, f.base) ? h('span', { class: 'pill warn-pill', title: `Not named ${prefix} ${CF.byFolder(f.folder).label}` }, 'name') : null),
           current ? null : h('td', { class: 'muted small' }, f.folder || 'Unsorted'),
           h('td', { class: 'num muted' }, fmtSize(f.size)),
-          h('td', { class: 'muted' }, fmtDateTime(f.modified)),
+          h('td', { class: 'muted nowrap', title: fmtDateTime(f.modified) }, fmtShortDateTime(f.modified)),
           h('td', { class: 'actions' },
             h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', onclick: () => previewFile(c, f.name) }, 'Open'),
             h('button', { class: 'btn small ghost', type: 'button', onclick: () => moveFileDialog(c, f, current) }, f.folder ? 'Move / rename' : 'File it…'),

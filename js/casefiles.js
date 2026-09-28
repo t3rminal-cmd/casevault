@@ -84,7 +84,10 @@
   function fileName(c, folder, originalName, description = '') {
     const cat = byFolder(folder) || byFolder('Other');
     const prefix = casePrefix(c) || `${yearOf(c)}-NOCASENO`;
-    const desc = clean(description).slice(0, 80);
+    // A description that starts with the document type isn't repeated: a draft titled
+    // "Affidavit - arrest warrant" is saved as "2026-00123 Affidavit - arrest warrant.docx".
+    const type = cat.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/s$/, '');
+    const desc = clean(description).replace(new RegExp(`^${type}s?\\b\\s*[-–—:,]?\\s*`, 'i'), '').slice(0, 80);
     return `${prefix} ${cat.label}${desc ? ` - ${desc}` : ''}${extOf(originalName)}`;
   }
 

@@ -161,8 +161,8 @@
             h('p', {}, h('span', { class: 'pill status-pending' }, 'Offline'), ' The local AI engine is not running, so checks use the rule-based layer only.'),
             h('p', { class: 'muted small' }, 'To use AI review, double-click Start-CaseVault.bat on the CV-AI drive (for example W:\\) and click "Check again". See docs/AI-SETUP.md.')),
         d.status === 'connected' && d.engine !== 'webllm' && h('p', { class: 'muted small' },
-          `Installed models: ${d.models.map((m) => m.name).join(', ') || 'none'}.`,
-          d.embed ? ` Passage search uses ${d.embed}.` : ' Tip: install nomic-embed-text for better passage search.'),
+          `Installed models: ${d.models.map((m) => m.name).join(', ') || 'none'}.`),
+        d.status === 'connected' && d.engine !== 'webllm' && embedStatus(d),
         h('h3', {}, 'Profile on this PC'),
         h('p', { class: 'muted small' }, 'Remembered by this PC\'s browser, not on the SSD, so the Beelink and the L14 can each use the model that suits them.'),
         h('div', { class: 'radio-list' }, radios),
@@ -172,6 +172,25 @@
           h('button', { class: 'btn', type: 'button', onclick: async () => { close(); await Engine.refresh(); showEngineDialog(); } }, 'Check again'),
           h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done')));
     });
+  }
+
+  // Passage search (embedding model): which report passages the AI reads for each statement.
+  function embedStatus(d) {
+    const { h, toast } = ui;
+    if (d.embed) return h('p', { class: 'small ok-text' }, `✓ Passage search: ${d.embed}. The AI review and Draft with AI find the relevant report passages by meaning, not only by keywords.`);
+    const cmd = 'W:\\ollama\\ollama.exe pull nomic-embed-text';
+    return h('div', { class: 'card warn-card' },
+      h('strong', {}, 'Passage search model not installed'),
+      h('p', { class: 'small' }, 'Without it the AI reads the passages found by keywords only, and can miss one written in other words. Install nomic-embed-text (about 0.3 GB) once:'),
+      h('ol', { class: 'small' },
+        h('li', {}, 'Leave the Start-CaseVault.bat window open (the AI engine must be running).'),
+        h('li', {}, 'Press Windows key + R, type cmd and press Enter.'),
+        h('li', {}, 'Paste this and press Enter (use your drive letter if it isn\'t W:), then wait for "success":'),
+        h('li', { class: 'list-none' }, h('code', {}, cmd), ' ',
+          h('button', { class: 'btn small', type: 'button', onclick: async () => {
+            try { await navigator.clipboard.writeText(cmd); toast('Command copied.', 'success'); } catch { toast('Select the command and press Ctrl+C.', 'error'); }
+          } }, 'Copy')),
+        h('li', {}, 'Come back here and click "Check again".')));
   }
 
   // In-browser engine settings, inside the AI engine dialog.
