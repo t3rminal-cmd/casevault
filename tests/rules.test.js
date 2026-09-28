@@ -107,6 +107,13 @@ test('names: one pair of swapped letters is flagged (Sampel / Sample)', () => {
   assert.ok(name, flags.map((f) => f.title).join('\n'));
   assert.strictEqual(name.title, 'Name spelled differently: "Sampel" vs "Sample"');
   assert.ok(!R.isNameVariant('form', 'from'), 'short words are left alone');
+  // The affidavit uses both spellings: the source shown is the report's.
+  const both = R.compare([
+    doc1('Affidavit.docx', 'affidavit', 'Officer Alex Sampel responded. Later Officer Sample saw the car.'),
+    doc1('Report.pdf', 'report', 'Officer Alex Sample responded to the call.'),
+  ]).find((f) => f.type === 'name');
+  assert.deepStrictEqual([both.statement.doc, both.source.doc], ['Affidavit.docx', 'Report.pdf']);
+  assert.strictEqual(both.title, 'Name spelled differently: "Sampel" vs "Sample"');
 });
 
 test('case numbers: 00123 and 2026-00123 are the same; different years are not', () => {

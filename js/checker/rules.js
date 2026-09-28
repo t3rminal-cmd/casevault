@@ -417,10 +417,20 @@
         const a = names[i];
         const b = names[j];
         if (!isNameVariant(a, b)) continue;
-        // Prefer showing the affidavit's spelling as the statement.
-        const oa = pickOccurrence(docs, occurrences.get(a));
-        const ob = pickOccurrence(docs, occurrences.get(b));
-        const [st, src] = docs[ob.sent.doc].role === 'affidavit' && docs[oa.sent.doc].role !== 'affidavit' ? [ob, oa] : [oa, ob];
+        // Show the affidavit's spelling as the statement and, when there is one, a report's
+        // spelling as the source (the affidavit may use both spellings itself).
+        const inRole = (list, role) => list.find((o) => docs[o.sent.doc].role === role);
+        const la = occurrences.get(a);
+        const lb = occurrences.get(b);
+        let st;
+        let src;
+        if (inRole(la, 'affidavit') && inRole(lb, 'report') && !inRole(la, 'report')) [st, src] = [inRole(la, 'affidavit'), inRole(lb, 'report')];
+        else if (inRole(lb, 'affidavit') && inRole(la, 'report') && !inRole(lb, 'report')) [st, src] = [inRole(lb, 'affidavit'), inRole(la, 'report')];
+        else {
+          const oa = pickOccurrence(docs, la);
+          const ob = pickOccurrence(docs, lb);
+          [st, src] = docs[ob.sent.doc].role === 'affidavit' && docs[oa.sent.doc].role !== 'affidavit' ? [ob, oa] : [oa, ob];
+        }
         push(makeFlag(docs, {
           severity: 'High',
           type: 'name',
