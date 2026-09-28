@@ -21,6 +21,7 @@ const APP_FILES = [
   './js/markdown.js',
   './js/checker/nlp.js',
   './js/checker/rules.js',
+  './js/checker/sheets.js',
   './js/checker/extract.js',
   './js/checker/ai.js',
   './js/checker/checks-ui.js',
@@ -41,6 +42,8 @@ const APP_FILES = [
   './vendor/tesseract/core/tesseract-core-simd-lstm.wasm.js',
   './vendor/tesseract/core/tesseract-core-lstm.wasm.js',
   './vendor/tesseract/lang/eng.traineddata.gz',
+  // Spreadsheets (.xlsx/.xls/.csv), loaded only when one is opened
+  './vendor/sheetjs/xlsx.full.min.js',
 ];
 
 self.addEventListener('install', (event) => {

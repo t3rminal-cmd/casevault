@@ -135,7 +135,8 @@
   }
 
   function where(loc) {
-    return [loc.doc, loc.page ? `page ${loc.page}` : null].filter(Boolean).join(' · ');
+    const at = loc.sheet != null ? `${loc.sheet} row ${loc.row}` : loc.page ? `page ${loc.page}` : null;
+    return [loc.doc, at].filter(Boolean).join(' · ');
   }
 
   async function checkableFiles(c) {
@@ -515,7 +516,8 @@
       let lastPage = null;
       const body = h('div', { class: 'doc-view' });
       for (const p of doc.paragraphs) {
-        if (p.page && p.page !== lastPage) { body.append(h('div', { class: 'doc-page' }, `Page ${p.page}`)); lastPage = p.page; }
+        const section = p.sheet != null ? `Sheet: ${p.sheet}` : p.page ? `Page ${p.page}` : null;
+        if (section && section !== lastPage) { body.append(h('div', { class: 'doc-page' }, section)); lastPage = section; }
         const isTarget = p.index === loc.paragraph;
         let content = [p.text];
         if (isTarget && loc.end > loc.start && p.text.slice(loc.start, loc.end) === loc.text) {
@@ -527,9 +529,9 @@
       return h('div', { class: 'preview' },
         h('div', { class: 'preview-head' },
           h('h2', {}, loc.doc),
-          h('span', { class: 'muted small' }, loc.page ? `page ${loc.page}` : ''),
+          h('span', { class: 'muted small' }, loc.sheet != null ? `${loc.sheet} row ${loc.row}` : loc.page ? `page ${loc.page}` : ''),
           h('div', { class: 'spacer' }),
-          h('button', { class: 'btn', type: 'button', onclick: () => { close(); ui.previewFile(c, loc.doc, loc.page); } }, 'Open original'),
+          h('button', { class: 'btn', type: 'button', onclick: () => { close(); ui.previewFile(c, loc.doc, loc.page, loc.sheet != null ? { sheet: loc.sheet, row: loc.row } : null); } }, 'Open original'),
           h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Close')),
         changed ? h('p', { class: 'warn-text small' }, 'This file has changed since the check was run. The highlighted text may have moved.') : null,
         body);

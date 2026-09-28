@@ -830,7 +830,8 @@
 
   const PREVIEWABLE = {
     pdf: 'pdf', png: 'image', jpg: 'image', jpeg: 'image', gif: 'image', webp: 'image', bmp: 'image', svg: 'image-svg',
-    txt: 'text', md: 'text', csv: 'text', json: 'text', log: 'text', xml: 'text',
+    txt: 'text', md: 'text', json: 'text', log: 'text', xml: 'text',
+    csv: 'sheet', tsv: 'sheet', xlsx: 'sheet', xlsm: 'sheet', xls: 'sheet', ods: 'sheet',
     mp3: 'audio', wav: 'audio', m4a: 'audio', ogg: 'audio', mp4: 'video', webm: 'video', mov: 'video',
   };
   const MIME = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp', mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', ogg: 'audio/ogg', mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime' };
@@ -893,7 +894,41 @@
       table);
   }
 
-  async function previewFile(c, name, page = null) {
+  // Spreadsheet preview: one scrollable table per sheet, with sheet tabs. Cell text is only ever
+  // set with textContent (via h()), never as HTML. `at` = { sheet, row } highlights a row.
+  const PREVIEW_ROWS = 2000;
+
+  function sheetTable(sheet, targetRow) {
+    if (!sheet.rows.length) return h('p', { class: 'muted' }, 'This sheet is empty.');
+    const shown = sheet.rows.slice(0, PREVIEW_ROWS);
+    const cols = Array.from({ length: sheet.columns }, (_, i) => CVSheets.columnLetter((sheet.startCol || 0) + i));
+    const table = h('table', { class: 'sheet-table' },
+      h('thead', {}, h('tr', {}, h('th', { class: 'rownum' }, ''), cols.map((l) => h('th', {}, l)))),
+      h('tbody', {}, shown.map((r) => h('tr', { class: r.row === targetRow ? 'target' : null, 'data-row': r.row },
+        h('th', { class: 'rownum' }, String(r.row)),
+        cols.map((_, i) => h('td', {}, r.cells[i] || ''))))));
+    const more = sheet.rows.length > PREVIEW_ROWS || sheet.truncated;
+    return h('div', {}, table, more ? h('p', { class: 'muted small' }, `Showing the first ${shown.length} rows. Open the file in Excel to see everything.`) : null);
+  }
+
+  function sheetPreview(sheets, at) {
+    const view = h('div', { class: 'sheet-view' });
+    const tabs = h('div', { class: 'sheet-tabs', role: 'tablist' });
+    const show = (i) => {
+      [...tabs.children].forEach((b, k) => { b.classList.toggle('active', k === i); b.setAttribute('aria-selected', String(k === i)); });
+      const sheet = sheets[i];
+      view.replaceChildren(sheetTable(sheet, at && at.sheet === sheet.name ? at.row : null));
+      const target = view.querySelector('tr.target');
+      if (target) requestAnimationFrame(() => target.scrollIntoView({ block: 'center' }));
+    };
+    sheets.forEach((sheet, i) => tabs.append(h('button', { type: 'button', role: 'tab', class: 'sheet-tab', onclick: () => show(i) }, sheet.name)));
+    const start = Math.max(0, at ? sheets.findIndex((s) => s.name === at.sheet) : 0);
+    if (sheets.length) show(start);
+    else view.append(h('p', { class: 'muted' }, 'This spreadsheet has no sheets.'));
+    return [sheets.length > 1 ? tabs : null, view];
+  }
+
+  async function previewFile(c, name, page = null, at = null) {
     let file;
     try {
       file = await Vault.readFile(c.id, name);
@@ -915,7 +950,12 @@
       else if (kind === 'image-svg') body = h('img', { class: 'preview-img', src: blobUrl(new Blob([file], { type: 'image/svg+xml' })), alt: name });
       else if (kind === 'audio') body = h('audio', { controls: true, src: blobUrl(typed) });
       else if (kind === 'video') body = h('video', { class: 'preview-img', controls: true, src: blobUrl(typed) });
-      else if (kind === 'text') {
+      else if (kind === 'sheet') {
+        body = h('div', { class: 'sheet-preview' }, h('p', { class: 'muted' }, 'Reading the spreadsheet…'));
+        CVSheets.read(file, name)
+          .then((sheets) => body.replaceChildren(...sheetPreview(sheets, at).filter(Boolean)))
+          .catch((err) => body.replaceChildren(h('p', { class: 'error-text' }, `Could not read this spreadsheet: ${err.message}`)));
+      } else if (kind === 'text') {
         body = h('pre', { class: 'preview-text' }, 'Loading…');
         file.slice(0, 2_000_000).text().then((t) => { body.textContent = t; });
       } else {
