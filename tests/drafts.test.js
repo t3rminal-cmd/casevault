@@ -229,3 +229,11 @@ test('every listed placeholder has a value source', () => {
   }
   assert.strictEqual(new Set(groups.flatMap((g) => g.keys)).size, groups.flatMap((g) => g.keys).length);
 });
+
+test('contacts on the Details tab fill {{case.officer.*}} and {{case.prosecutor.*}}', () => {
+  const c = { number: 'TEST-0002', contacts: { officer: { name: 'Det. Alex Sample', email: 'alex.sample@agency.example', phone: '555-0100' }, prosecutor: { title: 'AUSA', name: 'Jordan Example', email: 'jordan@usao.example', phone: '555-0199' }, others: [{ role: 'Finance', name: 'Pat Placeholder' }] } };
+  const out = D.fillTemplate('{{case.officer.name}} {{case.officer.phone}} / {{case.prosecutor.title}} {{case.prosecutor.name}} {{case.prosecutor.email}}', D.templateContext(c, new Date(2026, 8, 29)));
+  assert.strictEqual(out, 'Det. Alex Sample 555-0100 / AUSA Jordan Example jordan@usao.example');
+  assert.ok(D.placeholderGroups().some((g) => g.title === 'Contacts' && g.keys.includes('case.prosecutor.email')));
+  assert.match(D.fillTemplate('{{case.officer.email}}', D.templateContext({}, new Date())), /CONFIRM/, 'empty contact asks you to confirm');
+});

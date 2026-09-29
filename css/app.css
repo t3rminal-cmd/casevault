@@ -205,7 +205,9 @@ textarea { resize: vertical; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .rail-only { display: none; }
 
-/* Collapsed: a thin rail with the toggle and "new case"; the header shows a matching toggle. */
+/* Collapsed: a thin rail with the toggle and "new case". The header's own toggle is only for
+ * phone width, where the rail is hidden too (one toggle on screen at a time). */
+#btn-sidebar-expand { display: none; }
 body.sidebar-collapsed .sidebar { width: 2.9rem; align-items: center; }
 body.sidebar-collapsed .sidebar-head { align-items: center; gap: .35rem; padding: .45rem 0; }
 body.sidebar-collapsed .sidebar-body { display: none; }
@@ -318,7 +320,7 @@ body.sidebar-collapsed .rail-only { display: inline-flex; }
 /* timeline */
 .timeline-form {
   display: grid;
-  grid-template-columns: 160px 120px 130px 1fr;
+  grid-template-columns: 160px 150px 130px 1fr;
   gap: .7rem;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -460,6 +462,7 @@ table.files .actions { text-align: right; white-space: nowrap; }
   .save-status { white-space: nowrap; }
   /* Phone width: collapsed means hidden; the header button brings it back. */
   body.sidebar-collapsed .sidebar { display: none; }
+  body.sidebar-collapsed #btn-sidebar-expand:not([hidden]) { display: inline-flex; }
   .main { padding: 1rem; }
   .form-grid, .timeline-form { grid-template-columns: 1fr; }
   .tl-item { grid-template-columns: 1fr; gap: .3rem; }
@@ -1216,6 +1219,18 @@ table.sided td { width: 4.5rem; text-align: center; }
 .folder-item.drop-target { background: var(--accent-soft); outline: 2px dashed var(--accent); outline-offset: -2px; }
 .folder-item .folder-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .folder-reset { margin-top: .3rem; align-self: center; }
+/* Arrange folders dialog (v1.13). */
+.arrange-list { list-style: none; margin: .6rem 0 0; padding: 0; max-height: 60vh; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+.arrange-item { display: flex; align-items: center; gap: .5rem; padding: .3rem .5rem; border-bottom: 1px solid var(--border); background: var(--surface); cursor: grab; }
+.arrange-item:last-child { border-bottom: 0; }
+.arrange-item.dragging { opacity: .5; }
+.arrange-item.drop-target { outline: 2px dashed var(--accent); outline-offset: -2px; }
+.arrange-item .arrange-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arrange-item .grip-cell { color: var(--muted); display: inline-flex; }
+.arrange-item .icon-btn[disabled] { opacity: .3; cursor: default; }
+.arrange-form { min-width: min(26rem, 80vw); }
+.arrange-form .dialog-actions { align-items: center; }
+.merge-hint { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
 .files-table-wrap { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
 .files-table-wrap table.files { table-layout: fixed; width: 100%; border: 0; border-radius: 0; box-shadow: none; }
 .files-table-wrap col.col-grip { width: 2rem; }
@@ -1369,29 +1384,75 @@ input.narrow-wide { width: 9rem; }
 .behavior-prompt { width: 100%; resize: vertical; min-height: 12rem; }
 
 /* Ask AI (#/chat) */
-.chat-page { width: 100%; max-width: 980px; margin-inline: auto; display: flex; flex-direction: column; height: calc(100vh - 7.5rem); min-height: 28rem; }
-.chat-head { display: flex; align-items: center; gap: .5rem; }
-.chat-head h1 { margin: 0; }
-.chat-options { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: .6rem 1rem; align-items: end; margin: .8rem 0; }
-.chat-options .check-row { padding-bottom: .5rem; }
-@media (max-width: 760px) { .chat-options { grid-template-columns: 1fr; } }
-.chat-thread { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem .2rem; display: flex; flex-direction: column; gap: 1.1rem; border-top: 1px solid var(--border); }
-.chat-msg { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr); gap: .7rem; align-items: start; }
-.chat-avatar { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background: var(--surface-2); color: var(--muted); font-size: 1.1rem; }
+.chat-float { position: fixed; z-index: 40; right: 1.2rem; bottom: 1.2rem; width: min(30rem, calc(100vw - 2rem)); height: min(40rem, calc(100vh - 6rem)); min-width: 20rem; min-height: 18rem; max-width: calc(100vw - 1rem); max-height: calc(100vh - 1rem); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg); overflow: hidden; resize: both; }
+.chat-float[hidden] { display: none; }
+.chat-float.big { left: 50% !important; top: 50% !important; right: auto; bottom: auto; transform: translate(-50%, -50%); width: min(62rem, calc(100vw - 2rem)); height: calc(100vh - 4rem); resize: none; }
+.chat-float.min { height: auto !important; min-height: 0; resize: none; width: 16rem; }
+.chat-float.min .chat-float-body { display: none; }
+.chat-float.moving { user-select: none; opacity: .92; }
+.chat-float-head { display: flex; align-items: center; gap: .15rem; padding: .35rem .4rem .35rem .8rem; border-bottom: 1px solid var(--border); background: var(--surface-2); cursor: move; touch-action: none; }
+.chat-float.big .chat-float-head { cursor: default; }
+.chat-float.min .chat-float-head { border-bottom: 0; }
+.chat-float-title { display: flex; align-items: center; gap: .45rem; color: var(--accent); }
+.chat-float-title strong { color: var(--text); }
+.chat-float-head .icon-btn { width: 1.9rem; height: 1.9rem; }
+.chat-float-body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: .6rem .8rem .5rem; }
+.chat-float .chat-options { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: .4rem .6rem; align-items: end; margin: 0 0 .5rem; }
+.chat-float .chat-options .check-row { grid-column: 1 / -1; padding: 0; }
+.chat-float .chat-options .field { margin: 0; min-width: 0; }
+.chat-float .chat-options select { width: 100%; }
+.chat-thread { flex: 1; min-height: 0; overflow-y: auto; padding: .7rem .1rem; display: flex; flex-direction: column; gap: .9rem; border-top: 1px solid var(--border); }
+.chat-msg { display: grid; grid-template-columns: 1.9rem minmax(0, 1fr); gap: .55rem; align-items: start; }
+.chat-avatar { display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: 50%; background: var(--surface-2); color: var(--muted); font-size: 1rem; }
 .chat-msg.assistant .chat-avatar { background: var(--accent-soft); color: var(--accent); }
-.chat-msg.user .chat-content { background: var(--surface-2); border-radius: 1rem; padding: .6rem .9rem; justify-self: start; max-width: 100%; }
+.chat-msg.user .chat-content { background: var(--surface-2); border-radius: 1rem; padding: .5rem .8rem; justify-self: start; max-width: 100%; }
 .chat-msg.user .chat-body { white-space: pre-wrap; }
-.chat-body { line-height: 1.6; overflow-wrap: anywhere; }
+.chat-body { line-height: 1.55; overflow-wrap: anywhere; font-size: .92rem; }
 .chat-body > :first-child { margin-top: 0; }
 .chat-body > :last-child { margin-bottom: 0; }
 .chat-body pre { background: var(--surface-2); padding: .7rem; border-radius: .6rem; overflow-x: auto; }
+.chat-body table { display: block; overflow-x: auto; }
 .chat-tools { display: flex; gap: .2rem; margin-top: .3rem; opacity: .7; }
 .chat-msg:hover .chat-tools { opacity: 1; }
-.chat-empty { margin: auto; text-align: center; max-width: 38rem; display: grid; justify-items: center; gap: .4rem; }
-.chat-empty-icon { display: grid; place-items: center; width: 3.4rem; height: 3.4rem; border-radius: 1rem; background: var(--accent-soft); color: var(--accent); font-size: 1.6rem; }
-.chat-starters { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; margin-top: .6rem; }
-.chat-composer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .6rem; align-items: end; padding: .6rem; border: 1px solid var(--border); border-radius: 1rem; background: var(--surface); box-shadow: var(--shadow); }
-.chat-input { border: 0; resize: none; box-shadow: none !important; background: transparent; min-height: 4.4rem; max-height: 4.4rem; }
+.chat-empty { margin: auto; text-align: center; max-width: 24rem; display: grid; justify-items: center; gap: .3rem; }
+.chat-empty h2 { font-size: 1.05rem; margin: .3rem 0 0; }
+.chat-empty-icon { display: grid; place-items: center; width: 2.8rem; height: 2.8rem; border-radius: .9rem; background: var(--accent-soft); color: var(--accent); font-size: 1.3rem; }
+.chat-starters { display: flex; flex-wrap: wrap; justify-content: center; gap: .4rem; margin-top: .4rem; }
+.chat-composer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; align-items: end; padding: .45rem; border: 1px solid var(--border); border-radius: .9rem; background: var(--surface); box-shadow: var(--shadow); }
+.chat-input { border: 0; resize: none; box-shadow: none !important; background: transparent; min-height: 3.6rem; max-height: 3.6rem; }
 .chat-actions { display: flex; gap: .4rem; }
-.chat-foot { display: flex; align-items: center; gap: .35rem; justify-content: center; margin: .5rem 0 0; }
+.chat-foot { display: flex; align-items: center; gap: .35rem; justify-content: center; margin: .4rem 0 0; text-align: center; }
+/* Keep the toasts clear of the chat box. */
+body.chat-open .toasts { right: auto; left: 1rem; }
+@media (max-width: 640px) {
+  .chat-float, .chat-float.big { left: .5rem !important; right: .5rem; top: auto !important; bottom: .5rem; transform: none; width: auto; height: 75vh; min-width: 0; resize: none; }
+  .chat-float.min { height: auto !important; }
+}
 @media (max-width: 1100px) { #btn-chat { font-size: 0; gap: 0; padding: .45em .6em; } #btn-chat .bi { font-size: 1.05rem; } }
+
+/* v1.13: contacts on the Details tab. Each row: role, name, email, phone (and remove). */
+.contacts { margin-top: 2rem; border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.2rem; background: var(--surface); box-shadow: var(--shadow); }
+.contacts h3 { display: flex; align-items: center; gap: .5rem; margin: 0 0 .6rem; }
+.contact-row { display: grid; grid-template-columns: minmax(10rem, 1fr) minmax(0, 1.3fr) minmax(0, 1.5fr) minmax(0, 1fr) 2.1rem; gap: .5rem .8rem; align-items: end; padding: .55rem 0; border-top: 1px solid var(--border); }
+.contacts > .contact-row:first-of-type { border-top: 0; }
+.contact-row .field { margin: 0; min-width: 0; }
+.contact-row input, .contact-row select { width: 100%; }
+.contact-fixed { display: flex; align-items: center; min-height: 2.35rem; font-weight: 600; }
+.contact-remove { align-self: end; margin-bottom: .15rem; }
+.contact-add { margin-top: .6rem; }
+@media (max-width: 900px) {
+  .contact-row { grid-template-columns: 1fr 1fr; }
+  .contact-row .contact-remove { justify-self: end; grid-column: 2; }
+}
+
+/* v1.13: time boxes (js/timefield.js): type the time, or pick it and press "Set time". */
+.time-field, .field > span.time-field { position: relative; display: flex; align-items: stretch; min-width: 0; font-size: inherit; font-weight: inherit; color: inherit; }
+.time-field .time-text { flex: 1; min-width: 0; width: 100%; padding-right: 2.4rem; font-variant-numeric: tabular-nums; }
+.time-field .time-btn { position: absolute; right: .15rem; top: 50%; transform: translateY(-50%); width: 1.9rem; height: 1.9rem; }
+.time-pop { position: absolute; z-index: 60; top: calc(100% + .3rem); left: 0; min-width: 14.5rem; padding: .7rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg); display: grid; gap: .6rem; }
+.time-pop.up { top: auto; bottom: calc(100% + .3rem); }
+.time-pop-row { display: flex; align-items: center; justify-content: center; gap: .35rem; }
+.time-pop-row select { width: 4.6rem; font-variant-numeric: tabular-nums; }
+.time-colon { font-weight: 700; }
+.time-pop-actions { display: flex; gap: .35rem; justify-content: flex-end; }
+.time-pop-actions .time-set { margin-left: auto; }

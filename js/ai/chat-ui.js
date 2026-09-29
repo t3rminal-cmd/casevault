@@ -1,6 +1,10 @@
-/* CaseVault — Ask AI (#/chat): a chat with the AI on this computer, like claude.ai but offline.
- * Pick a model and, optionally, a case to ask about. The conversation stays in this window until
- * you save it to a case (as a draft) or start a new chat. See js/ai/chat.js.
+/* CaseVault — Ask AI: a chat with the AI on this computer, like claude.ai but offline, in a
+ * floating box. It stays open while you move around CaseVault, so you can keep writing a draft or
+ * notes next to it; "Insert" puts an answer where your cursor was.
+ *
+ * Pick a model and, optionally, a case to ask about. Until the first question, the case follows
+ * the case you have open. The conversation stays in this window until you save it to a case (as a
+ * draft) or start a new chat. See js/ai/chat.js.
  */
 'use strict';
 
@@ -8,155 +12,291 @@
   let ui = null;
   const Engine = () => root.CVChecks.Engine;
   // This window only.
-  const mem = { turns: [], caseId: undefined, useCase: true, searchFiles: false, model: '' };
+  const mem = { turns: [], caseId: '', searchFiles: false, model: '', open: false, size: 'normal' };
   let ctrl = null;
+  let els = null; // the floating box, built once
+  let lastEditor = null; // the notes/draft box you were typing in, for "Insert"
 
   const models = () => ((Engine().detected && Engine().detected.chat) || []).map((m) => m.name);
+  const activeCases = () => (Vault.data.cases || []).filter((c) => c.status !== 'Archived').sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
+  const caseLabel = (c) => `${c.title || 'Untitled case'}${c.number ? ` · ${c.number}` : ''}`;
 
-  async function render(main) {
+  // Remember the last text box you typed in outside the chat, so an answer can go there.
+  function trackEditors() {
+    document.addEventListener('focusin', (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLTextAreaElement) || t.readOnly || t.disabled) return;
+      if (els && els.box.contains(t)) return;
+      if (t.closest('dialog')) return;
+      lastEditor = t;
+    });
+  }
+
+  function insertIntoEditor(text) {
+    const t = lastEditor;
+    if (!t || !t.isConnected) { ui.toast('Click in a draft or your notes first, where the answer should go.', 'error', 5000); return; }
+    const start = t.selectionStart ?? t.value.length;
+    const end = t.selectionEnd ?? start;
+    const before = t.value.slice(0, start);
+    const piece = `${before && !before.endsWith('\n') ? '\n\n' : ''}${text.trim()}\n`;
+    t.setRangeText(piece, start, end, 'end');
+    // The editor saves on input, as when you type.
+    t.dispatchEvent(new Event('input', { bubbles: true }));
+    t.focus();
+    ui.toast('Inserted.', 'success', 1500);
+  }
+
+  function build() {
     const { h } = ui;
-    await Engine().refresh().catch(() => {});
-    const cases = (Vault.data.cases || []).filter((c) => c.status !== 'Archived').sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
-    if (mem.caseId === undefined) mem.caseId = ui.state.lastCaseId && cases.some((c) => c.id === ui.state.lastCaseId) ? ui.state.lastCaseId : '';
-
-    const list = models();
-    const choice = Engine().choice();
-    const fallback = choice && choice.model;
-    if (!mem.model || !list.includes(mem.model)) mem.model = (Vault.data.settings.chatModel && list.includes(Vault.data.settings.chatModel)) ? Vault.data.settings.chatModel : fallback || list[0] || '';
-    const modelSel = h('select', { 'aria-label': 'Model', title: 'The AI model on this computer that answers. Add models with Ollama; they show up here.' },
-      list.length ? list.map((m) => h('option', { value: m, selected: m === mem.model }, m)) : h('option', { value: '' }, 'No AI engine found'));
+    const modelSel = h('select', { 'aria-label': 'Model', title: 'The AI model on this computer that answers. Add models with Ollama; they show up here.' });
     modelSel.addEventListener('change', () => { mem.model = modelSel.value; ui.Save.track('settings', () => Vault.updateSettings({ chatModel: modelSel.value })).catch(() => {}); });
-    const caseSel = h('select', { 'aria-label': 'Case', title: 'Ask about a case: its details, timeline and notes go with each question.' },
-      h('option', { value: '' }, 'No case: general questions'),
-      cases.map((c) => h('option', { value: c.id, selected: c.id === mem.caseId }, `${c.title || 'Untitled case'}${c.number ? ` · ${c.number}` : ''}`)));
+    const caseSel = h('select', { 'aria-label': 'Case', title: 'Ask about a case: its details, contacts, timeline and notes go with each question.' });
     const searchFiles = h('input', { type: 'checkbox', checked: mem.searchFiles });
     const filesToggle = h('label', { class: 'check-row small', title: 'Also look through the case\'s documents for the passages that answer the question. Slower the first time a document is read.' }, searchFiles, h('span', {}, 'Search the case files'));
     const syncCase = () => { mem.caseId = caseSel.value; filesToggle.hidden = !caseSel.value; };
-    caseSel.addEventListener('change', syncCase);
+    caseSel.addEventListener('change', () => { syncCase(); mem.casePicked = true; });
     searchFiles.addEventListener('change', () => { mem.searchFiles = searchFiles.checked; });
-    syncCase();
 
     const thread = h('div', { class: 'chat-thread', 'aria-live': 'polite' });
     const input = h('textarea', { class: 'chat-input', rows: 3, placeholder: 'Ask anything. Enter sends, Shift+Enter makes a new line.', 'aria-label': 'Your question' });
     const sendBtn = h('button', { class: 'btn primary chat-send', type: 'button', icon: 'send', title: 'Send (Enter)' }, 'Send');
     const stopBtn = h('button', { class: 'btn chat-send', type: 'button', icon: 'x-circle', hidden: true, title: 'Stop the answer; what is written so far is kept.' }, 'Stop');
 
-    const bubble = (t) => {
-      const body = h('div', { class: 'chat-body' });
-      if (t.role === 'user') body.textContent = t.content;
-      else body.innerHTML = Markdown.render(t.content) || '';
-      const tools = t.role === 'assistant' && t.content ? h('div', { class: 'chat-tools' },
-        h('button', { class: 'icon-btn', type: 'button', title: 'Copy this answer', onclick: async () => { try { await navigator.clipboard.writeText(t.content); ui.toast('Copied.', 'success', 1500); } catch { ui.toast('Could not copy.', 'error'); } } }, ui.icon('copy'), h('span', { class: 'sr-only' }, 'Copy'))) : null;
-      return h('div', { class: `chat-msg ${t.role}` },
-        h('span', { class: 'chat-avatar' }, ui.icon(t.role === 'user' ? 'person-circle' : 'robot')),
-        h('div', { class: 'chat-content' }, body, t.error ? h('p', { class: 'error-text small' }, t.error) : null, tools));
-    };
-    const empty = () => h('div', { class: 'chat-empty' },
-      h('span', { class: 'chat-empty-icon' }, ui.icon('chat-left-text')),
-      h('h2', {}, 'Ask the AI on this computer'),
-      h('p', { class: 'muted' }, 'Nothing leaves this PC. Pick a case to ask about it, or ask anything else.'),
-      h('div', { class: 'chat-starters' }, ['Summarize this case so far', 'What is still missing for the affidavit?', 'Make a timeline table of the key events', 'Explain the difference between possession and possession with intent'].map((q) =>
-        h('button', { class: 'btn small', type: 'button', onclick: () => { input.value = q; input.focus(); } }, q))));
-    const draw = () => {
-      thread.replaceChildren(...(mem.turns.length ? mem.turns.map(bubble) : [empty()]));
-      thread.scrollTop = thread.scrollHeight;
-    };
+    const iconBtn = (icon, label, onclick, extra = {}) => h('button', { class: 'icon-btn', type: 'button', title: label, onclick, ...extra }, ui.icon(icon), h('span', { class: 'sr-only' }, label));
+    const sizeBtn = iconBtn('arrows-angle-expand', 'Bigger', () => setSize(mem.size === 'big' ? 'normal' : 'big'));
+    const minBtn = iconBtn('dash-lg', 'Minimize: keep the chat, out of the way', () => setSize(mem.size === 'min' ? 'normal' : 'min'));
+    const newBtn = iconBtn('plus-lg', 'New chat. The current conversation is cleared unless you saved it.', () => { if (ctrl) ctrl.abort(); mem.turns = []; mem.casePicked = false; followOpenCase(); draw(); input.focus(); });
+    const saveBtn = iconBtn('save', 'Save the conversation to a case as a draft, on the SSD.', () => saveToCase());
+    const closeBtn = iconBtn('x-lg', 'Close. The conversation is kept until you start a new chat or close CaseVault.', () => toggle(false));
+    const title = h('div', { class: 'chat-float-title' }, ui.icon('chat-left-text'), h('strong', {}, 'Ask AI'));
+    const head = h('div', { class: 'chat-float-head', title: 'Drag to move' }, title, h('div', { class: 'spacer' }), newBtn, saveBtn, sizeBtn, minBtn, closeBtn);
+    const box = h('section', { class: 'chat-float', id: 'chat-float', role: 'dialog', 'aria-label': 'Ask AI', hidden: true },
+      head,
+      h('div', { class: 'chat-float-body' },
+        h('div', { class: 'chat-options' }, ui.field('Model', modelSel), ui.field('Case', caseSel), filesToggle),
+        thread,
+        h('div', { class: 'chat-composer' }, input, h('div', { class: 'chat-actions' }, sendBtn, stopBtn)),
+        h('p', { class: 'muted small chat-foot' }, ui.icon('shield-lock-fill'), ' Local AI only: nothing leaves this computer. Answers can be wrong; check them.')));
+    document.body.append(box);
 
-    async function send() {
-      const q = input.value.trim();
-      if (!q || ctrl) return;
-      if (!modelSel.value) { ui.toast('No AI engine is running. Start Start-CaseVault.bat on the CV-AI drive, then try again.', 'error', 8000); return; }
-      input.value = '';
-      const history = mem.turns.filter((t) => !t.error && t.content).map((t) => ({ role: t.role, content: t.content }));
-      mem.turns.push({ role: 'user', content: q });
-      const answer = { role: 'assistant', content: '' };
-      mem.turns.push(answer);
-      draw();
-      const answerEl = thread.lastElementChild.querySelector('.chat-body');
-      answerEl.replaceChildren(h('span', { class: 'spinner', 'aria-hidden': 'true' }), ' Thinking…');
-      ctrl = new AbortController();
-      const my = ctrl;
-      sendBtn.hidden = true; stopBtn.hidden = false;
-      let pending = false;
-      const paint = () => { pending = false; if (answerEl.isConnected) { answerEl.innerHTML = Markdown.render(answer.content); thread.scrollTop = thread.scrollHeight; } };
-      try {
-        const det = Engine().detected;
-        // The context size that suits the chosen model's size (as Draft with AI's suggestions do).
-        const numCtx = CVCopilot.numCtxForModel(det, modelSel.value);
-        let material = '';
-        if (caseSel.value) {
-          const entry = (Vault.data.cases || []).find((c) => c.id === caseSel.value);
-          const [caseObj, timeline, notes] = await Promise.all([Vault.getCase(entry.id), Vault.getTimeline(entry.id), Vault.getNotes(entry.id)]);
-          let passages = [];
-          if (searchFiles.checked) {
-            const files = (await Vault.listFiles(entry.id)).filter((f) => CVExtract.kindOf(f.name));
-            const docs = [];
-            for (const f of files) {
-              if (my.signal.aborted) break;
-              answerEl.textContent = `Reading ${f.base}…`;
-              try { const d = await CVChecks.documentText(entry, f.name); docs.push({ name: f.base, docIndex: docs.length, paragraphs: d.paragraphs }); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
-            }
-            answerEl.textContent = 'Finding the passages that answer it…';
-            const hits = await CVCopilot.relevantPassages({ docs, query: q, engine: { base: det.base, embed: det.embed }, fetchImpl: Engine().fetchImpl(), k: 8 });
-            passages = hits.map((p) => ({ ...p, docName: docs[p.doc].name }));
-          }
-          material = CVChat.caseMaterial({ caseObj, timeline, notes, passages }, Math.floor(numCtx * 3.5 * 0.45));
-        }
-        const messages = CVChat.buildMessages({ history, question: q, material, numCtx });
-        if (CVActivity.heavyBusy()) answerEl.textContent = 'Waiting for the check or draft that is running…';
-        await CVActivity.exclusive('chat', () => CVCopilot.streamChat({
-          fetchImpl: Engine().fetchImpl(), base: det.base, model: modelSel.value, messages, signal: my.signal, numCtx,
-          onText: (piece) => { answer.content += piece; if (!pending) { pending = true; requestAnimationFrame(paint); } },
-        }), { label: 'Answering…', model: modelSel.value });
-        paint();
-      } catch (err) {
-        if (my.signal.aborted) { if (!answer.content) answer.content = '_Stopped._'; } else answer.error = FS.isDisconnectError(err) ? 'The SSD was disconnected.' : `Could not answer: ${err.message}`;
-      } finally {
-        ctrl = null;
-        sendBtn.hidden = false; stopBtn.hidden = true;
-        draw();
-        input.focus();
-      }
-    }
-    sendBtn.addEventListener('click', send);
+    // Drag the box by its title bar. Where it goes is kept for this window only.
+    head.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || e.target.closest('button') || mem.size === 'big') return;
+      const r = box.getBoundingClientRect();
+      const dx = e.clientX - r.left; const dy = e.clientY - r.top;
+      head.setPointerCapture(e.pointerId);
+      box.classList.add('moving');
+      const move = (ev) => {
+        const x = Math.max(4, Math.min(ev.clientX - dx, innerWidth - r.width - 4));
+        const y = Math.max(4, Math.min(ev.clientY - dy, innerHeight - 40));
+        mem.pos = { x, y };
+        place();
+      };
+      const up = () => { head.removeEventListener('pointermove', move); head.removeEventListener('pointerup', up); box.classList.remove('moving'); };
+      head.addEventListener('pointermove', move);
+      head.addEventListener('pointerup', up);
+    });
+
+    sendBtn.addEventListener('click', () => send());
     stopBtn.addEventListener('click', () => { if (ctrl) ctrl.abort(); });
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } });
+    box.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); setSize('min'); } });
 
-    const saveBtn = h('button', { class: 'btn small', type: 'button', icon: 'save', title: 'Save the conversation to a case as a draft, on the SSD.', onclick: async () => {
-      if (!mem.turns.some((t) => t.content)) return ui.toast('Nothing to save yet.', 'error');
-      const id = caseSel.value || (await pickCaseId(cases));
-      if (!id) return;
-      const title = `Ask AI ${new Date().toLocaleDateString()}`;
-      try {
-        const slug = await Vault.newDraftSlug(id, title);
-        await ui.Save.track(`draft:${id}:${slug}`, () => Vault.saveDraft(id, slug, { title, type: 'other', ai: true, created: new Date().toISOString() }, CVChat.transcript(mem.turns.filter((t) => t.content), { title, model: modelSel.value })));
-        ui.toast(`Saved to the case as the draft "${title}".`, 'success', 5000);
-      } catch { /* reported by Save */ }
-    } }, 'Save to case');
-    const newBtn = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', title: 'Start over. The current conversation is cleared unless you saved it.', onclick: () => { if (ctrl) ctrl.abort(); mem.turns = []; draw(); input.focus(); } }, 'New chat');
+    els = { box, head, modelSel, caseSel, searchFiles, filesToggle, syncCase, thread, input, sendBtn, stopBtn, sizeBtn, minBtn };
+    // Until you ask something (or pick a case yourself), the case follows the one you have open.
+    root.addEventListener('hashchange', () => { if (mem.open) followOpenCase(); });
+  }
 
-    main.replaceChildren(h('section', { class: 'chat-page' },
-      h('div', { class: 'chat-head' },
-        h('h1', { class: 'page-title', icon: 'chat-left-text' }, 'Ask AI'),
-        h('div', { class: 'spacer' }), newBtn, saveBtn),
-      h('div', { class: 'chat-options' }, ui.field('Model', modelSel), ui.field('Case', caseSel), filesToggle),
-      thread,
-      h('div', { class: 'chat-composer' }, input, h('div', { class: 'chat-actions' }, sendBtn, stopBtn)),
-      h('p', { class: 'muted small chat-foot' }, ui.icon('shield-lock-fill'), ' Local AI only: nothing leaves this computer. AI answers can be wrong; check them against the case.')));
+  // Where you dragged the box (the CSP allows styles set from a script, not in the markup).
+  function place() {
+    if (!els) return;
+    const { box } = els;
+    if (mem.pos && mem.size !== 'big') {
+      box.style.left = `${Math.round(Math.min(mem.pos.x, innerWidth - 120))}px`;
+      box.style.top = `${Math.round(Math.min(mem.pos.y, innerHeight - 40))}px`;
+      box.style.right = 'auto';
+      box.style.bottom = 'auto';
+    } else {
+      box.style.left = ''; box.style.top = ''; box.style.right = ''; box.style.bottom = '';
+    }
+  }
+
+  function setSize(size) {
+    const { box, sizeBtn, minBtn } = els;
+    // A size you set by dragging the corner is kept for "normal" and set aside for big/minimized.
+    if (mem.size === 'normal') mem.userSize = { w: box.style.width, h: box.style.height };
+    mem.size = size;
+    box.style.width = size === 'normal' && mem.userSize ? mem.userSize.w : '';
+    box.style.height = size === 'normal' && mem.userSize ? mem.userSize.h : '';
+    box.classList.toggle('big', size === 'big');
+    box.classList.toggle('min', size === 'min');
+    sizeBtn.replaceChildren(ui.icon(size === 'big' ? 'arrows-angle-contract' : 'arrows-angle-expand'), ui.h('span', { class: 'sr-only' }, size === 'big' ? 'Smaller' : 'Bigger'));
+    sizeBtn.title = size === 'big' ? 'Smaller' : 'Bigger';
+    minBtn.title = size === 'min' ? 'Show the chat again' : 'Minimize: keep the chat, out of the way';
+    place();
+    if (size !== 'min') els.input.focus();
+  }
+
+  function followOpenCase() {
+    if (!els || mem.turns.length || mem.casePicked) return;
+    const open = ui.state.caseId && activeCases().some((c) => c.id === ui.state.caseId) ? ui.state.caseId : '';
+    if (open && els.caseSel.value !== open) { els.caseSel.value = open; els.syncCase(); }
+  }
+
+  async function refreshOptions() {
+    const { h } = ui;
+    const { modelSel, caseSel } = els;
+    await Engine().refresh().catch(() => {});
+    const list = models();
+    const choice = Engine().choice();
+    const fallback = choice && choice.model;
+    if (!mem.model || !list.includes(mem.model)) mem.model = (Vault.data.settings.chatModel && list.includes(Vault.data.settings.chatModel)) ? Vault.data.settings.chatModel : fallback || list[0] || '';
+    modelSel.replaceChildren(...(list.length ? list.map((m) => h('option', { value: m, selected: m === mem.model }, m)) : [h('option', { value: '' }, 'No AI engine found')]));
+    const cases = activeCases();
+    if (mem.caseId && !cases.some((c) => c.id === mem.caseId)) mem.caseId = '';
+    caseSel.replaceChildren(h('option', { value: '' }, 'No case: general questions'), ...cases.map((c) => h('option', { value: c.id, selected: c.id === mem.caseId }, caseLabel(c))));
+    caseSel.value = mem.caseId;
+    els.syncCase();
+    followOpenCase();
+  }
+
+  function bubble(t) {
+    const { h } = ui;
+    const body = h('div', { class: 'chat-body' });
+    if (t.role === 'user') body.textContent = t.content;
+    else body.innerHTML = Markdown.render(t.content) || '';
+    const tools = t.role === 'assistant' && t.content ? h('div', { class: 'chat-tools' },
+      h('button', { class: 'icon-btn', type: 'button', title: 'Copy this answer', onclick: async () => { try { await navigator.clipboard.writeText(t.content); ui.toast('Copied.', 'success', 1500); } catch { ui.toast('Could not copy.', 'error'); } } }, ui.icon('copy'), h('span', { class: 'sr-only' }, 'Copy')),
+      h('button', { class: 'icon-btn', type: 'button', title: 'Insert this answer where your cursor was in the draft or notes you were writing', onclick: () => insertIntoEditor(t.content) }, ui.icon('box-arrow-in-down-left'), h('span', { class: 'sr-only' }, 'Insert into your draft or notes'))) : null;
+    return h('div', { class: `chat-msg ${t.role}` },
+      h('span', { class: 'chat-avatar' }, ui.icon(t.role === 'user' ? 'person-circle' : 'robot')),
+      h('div', { class: 'chat-content' }, body, t.error ? h('p', { class: 'error-text small' }, t.error) : null, tools));
+  }
+
+  function empty() {
+    const { h } = ui;
+    return h('div', { class: 'chat-empty' },
+      h('span', { class: 'chat-empty-icon' }, ui.icon('chat-left-text')),
+      h('h2', {}, 'Ask the AI on this computer'),
+      h('p', { class: 'muted small' }, 'Nothing leaves this PC. Keep working while it answers.'),
+      h('div', { class: 'chat-starters' }, ['Summarize this case so far', 'What is still missing for the affidavit?', 'Make a timeline table of the key events', 'Explain possession vs. possession with intent'].map((q) =>
+        h('button', { class: 'btn small', type: 'button', onclick: () => { els.input.value = q; els.input.focus(); } }, q))));
+  }
+
+  function draw() {
+    const { thread } = els;
+    thread.replaceChildren(...(mem.turns.length ? mem.turns.map(bubble) : [empty()]));
+    thread.scrollTop = thread.scrollHeight;
+  }
+
+  async function send() {
+    const { input, modelSel, caseSel, searchFiles, thread, sendBtn, stopBtn } = els;
+    const { h } = ui;
+    const q = input.value.trim();
+    if (!q || ctrl) return;
+    if (!modelSel.value) { ui.toast('No AI engine is running. Start Start-CaseVault.bat on the CV-AI drive, then try again.', 'error', 8000); return; }
+    input.value = '';
+    const history = mem.turns.filter((t) => !t.error && t.content).map((t) => ({ role: t.role, content: t.content }));
+    mem.turns.push({ role: 'user', content: q });
+    const answer = { role: 'assistant', content: '' };
+    mem.turns.push(answer);
     draw();
-    input.focus();
+    const answerEl = thread.lastElementChild.querySelector('.chat-body');
+    answerEl.replaceChildren(h('span', { class: 'spinner', 'aria-hidden': 'true' }), ' Thinking…');
+    ctrl = new AbortController();
+    const my = ctrl;
+    sendBtn.hidden = true; stopBtn.hidden = false;
+    let pending = false;
+    const paint = () => { pending = false; if (answerEl.isConnected) { answerEl.innerHTML = Markdown.render(answer.content); thread.scrollTop = thread.scrollHeight; } };
+    try {
+      const det = Engine().detected;
+      // The context size that suits the chosen model's size (as Draft with AI's suggestions do).
+      const numCtx = CVCopilot.numCtxForModel(det, modelSel.value);
+      let material = '';
+      if (caseSel.value) {
+        const entry = (Vault.data.cases || []).find((c) => c.id === caseSel.value);
+        const [caseObj, timeline, notes] = await Promise.all([Vault.getCase(entry.id), Vault.getTimeline(entry.id), Vault.getNotes(entry.id)]);
+        let passages = [];
+        if (searchFiles.checked) {
+          const files = (await Vault.listFiles(entry.id)).filter((f) => CVExtract.kindOf(f.name));
+          const docs = [];
+          for (const f of files) {
+            if (my.signal.aborted) break;
+            answerEl.textContent = `Reading ${f.base}…`;
+            try { const d = await CVChecks.documentText(entry, f.name); docs.push({ name: f.base, docIndex: docs.length, paragraphs: d.paragraphs }); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+          }
+          answerEl.textContent = 'Finding the passages that answer it…';
+          const hits = await CVCopilot.relevantPassages({ docs, query: q, engine: { base: det.base, embed: det.embed }, fetchImpl: Engine().fetchImpl(), k: 8 });
+          passages = hits.map((p) => ({ ...p, docName: docs[p.doc].name }));
+        }
+        material = CVChat.caseMaterial({ caseObj, timeline, notes, passages }, Math.floor(numCtx * 3.5 * 0.45));
+      }
+      const messages = CVChat.buildMessages({ history, question: q, material, numCtx });
+      if (CVActivity.heavyBusy()) answerEl.textContent = 'Waiting for the check or draft that is running…';
+      await CVActivity.exclusive('chat', () => CVCopilot.streamChat({
+        fetchImpl: Engine().fetchImpl(), base: det.base, model: modelSel.value, messages, signal: my.signal, numCtx,
+        onText: (piece) => { answer.content += piece; if (!pending) { pending = true; requestAnimationFrame(paint); } },
+      }), { label: 'Answering…', model: modelSel.value });
+      paint();
+    } catch (err) {
+      if (my.signal.aborted) { if (!answer.content) answer.content = '_Stopped._'; } else answer.error = FS.isDisconnectError(err) ? 'The SSD was disconnected.' : `Could not answer: ${err.message}`;
+    } finally {
+      ctrl = null;
+      sendBtn.hidden = false; stopBtn.hidden = true;
+      draw();
+      // Don't pull the cursor out of the draft you went back to while it answered.
+      if (els.box.contains(document.activeElement) || document.activeElement === document.body) input.focus();
+    }
+  }
+
+  async function saveToCase() {
+    if (!mem.turns.some((t) => t.content)) return ui.toast('Nothing to save yet.', 'error');
+    const id = els.caseSel.value || (await pickCaseId(activeCases()));
+    if (!id) return;
+    const title = `Ask AI ${new Date().toLocaleDateString()}`;
+    try {
+      const slug = await Vault.newDraftSlug(id, title);
+      await ui.Save.track(`draft:${id}:${slug}`, () => Vault.saveDraft(id, slug, { title, type: 'other', ai: true, created: new Date().toISOString() }, CVChat.transcript(mem.turns.filter((t) => t.content), { title, model: els.modelSel.value })));
+      ui.toast(`Saved to the case as the draft "${title}".`, 'success', 5000);
+    } catch { /* reported by Save */ }
   }
 
   async function pickCaseId(cases) {
     const { h } = ui;
     if (!cases.length) { ui.toast('Create a case first.', 'error'); return null; }
-    const sel = h('select', { 'aria-label': 'Case' }, cases.map((c) => h('option', { value: c.id }, `${c.title || 'Untitled case'}${c.number ? ` · ${c.number}` : ''}`)));
+    const sel = h('select', { 'aria-label': 'Case' }, cases.map((c) => h('option', { value: c.id }, caseLabel(c))));
     return ui.openDialog((close) => h('form', { onsubmit: (e) => { e.preventDefault(); close(sel.value); } },
       h('h2', { icon: 'folder2-open' }, 'Save the chat to a case'), ui.field('Case', sel),
       h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Save'))));
   }
 
-  function init(kit) { ui = kit; }
+  /** Open (true), close (false) or switch the floating chat. */
+  async function toggle(want) {
+    if (!els) build();
+    const open = want == null ? !mem.open || mem.size === 'min' : want;
+    mem.open = open;
+    els.box.hidden = !open;
+    document.body.classList.toggle('chat-open', open);
+    const btn = document.getElementById('btn-chat');
+    if (btn) btn.setAttribute('aria-expanded', String(open));
+    if (!open) return;
+    if (mem.size === 'min') setSize('normal');
+    place();
+    if (!mem.turns.length) draw();
+    els.input.focus();
+    await refreshOptions();
+  }
 
-  root.CVChatUI = { init, render };
+  /** The SSD was disconnected or the vault closed: hide the chat and forget the conversation. */
+  function reset() {
+    if (ctrl) ctrl.abort();
+    mem.turns = []; mem.caseId = ''; mem.casePicked = false;
+    if (els) { els.box.hidden = true; draw(); }
+    mem.open = false;
+    document.body.classList.remove('chat-open');
+  }
+
+  function init(kit) { ui = kit; trackEditors(); }
+
+  root.CVChatUI = { init, toggle, reset, isOpen: () => mem.open };
 })(this);

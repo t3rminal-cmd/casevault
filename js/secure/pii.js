@@ -263,6 +263,12 @@
       push(caseObj.number, 'casenum');
       push(caseObj.fileNumber, 'casenum');
       if (caseObj.id && /\d/.test(caseObj.id)) push(caseObj.id, 'casenum');
+      // Contacts on the Details tab (case officer, prosecutor, others).
+      const k = caseObj.contacts || {};
+      for (const p of [k.officer, k.prosecutor, ...(Array.isArray(k.others) ? k.others : [])]) {
+        if (!p) continue;
+        push(p.name); push(p.phone, 'phone'); push(p.email, 'email');
+      }
     }
     for (const c of caseIndex || []) { push(c.number, 'casenum'); push(c.fileNumber, 'casenum'); push(c.client); }
     if (affiant) { push(affiant.name); push(affiant.phone, 'phone'); push(affiant.email, 'email'); push(affiant.address, 'address'); }

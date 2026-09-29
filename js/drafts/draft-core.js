@@ -113,6 +113,12 @@
       'case.tags': (c.tags || []).join(', '), 'case.opened': d.opened, 'case.closed': d.closed,
       today: longDate(now), 'today.iso': isoDate(now),
     };
+    // Contacts from the Details tab.
+    const k = c.contacts || {};
+    for (const [who, obj] of [['officer', k.officer], ['prosecutor', k.prosecutor]]) {
+      for (const f of ['name', 'email', 'phone']) ctx[`case.${who}.${f}`] = String((obj && obj[f]) || '').trim();
+    }
+    ctx['case.prosecutor.title'] = String((k.prosecutor && k.prosecutor.title) || '').trim();
     for (const k of AFFIANT_FIELDS) {
       ctx[`affiant.${k}`] = k === 'address' ? String(a[k] || '').replace(/\r\n?/g, '\n').trim() : String(a[k] || '').trim();
     }
@@ -127,6 +133,7 @@
     const g = (title, keys) => ({ title, keys });
     return [
       g('Case', ['case.fileNumber', 'case.number', 'case.title', 'case.client', 'case.status', 'case.opened', 'case.closed', 'case.tags']),
+      g('Contacts', ['case.officer.name', 'case.officer.email', 'case.officer.phone', 'case.prosecutor.title', 'case.prosecutor.name', 'case.prosecutor.email', 'case.prosecutor.phone']),
       g('Date', ['today', 'today.iso']),
       g('You', AFFIANT_FIELDS.map((k) => `affiant.${k}`)),
       g('Arrest details', ['arrest.name', 'arrest.dob', 'arrest.description', 'arrest.charges', 'arrest.names', 'arrest.count',
