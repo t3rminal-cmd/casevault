@@ -76,10 +76,11 @@ The header has, from left to right: the vault folder, the **Offline** / **AI** /
 - **Point at a button** (or reach it with Tab) to see what it does in a hover box. Buttons show just an icon and a short name; the explanation is in the hover box.
 - Labels have no brackets, and the longer explanations aren't printed on the page: an **ⓘ** next to a heading, label or box holds them. Point at it (or Tab to it) to read it. In the Vault, pointing at a section's heading shows what that section is for, and pointing at a box in **My details** shows which `{{affiant.…}}` placeholder it fills.
 - **Opening a file** (the eye button) shows it in a window that fills almost the whole screen, so wide Word tables, spreadsheets and PDFs aren't cut off.
-- **Ask AI** in the header opens a chat with the AI on this computer (see *Ask AI*).
+- **Ask AI** in the header opens a floating chat with the AI on this computer that stays open while you work (see *Ask AI*).
 - The page is centred and uses the width of the screen, from a phone up to 1920×1080 and larger. Case actions are same-size buttons in one row.
 - The **Overview** shows your case counts, then, each under a line: **Upcoming deadlines**, **Recently updated**, and **Quick links** (see below).
 - On a narrow window the header buttons shrink to their icons.
+- **Hide the case list** is the button at the top of the list (or Ctrl+\\). The list shrinks to a thin strip with the same button to bring it back. On a phone-width window the list hides completely and the button moves to the header.
 - **Vault** opens the settings. The list on its left (This vault, Backups, Privacy screen, My details, Templates, Library, AI writing behavior, Quick links, Online features, Always hide, Department mail, Outbound log, Maintenance) jumps to each section, and follows along as you scroll. **Done** is at the top right.
 
 ### Quick links
@@ -101,6 +102,7 @@ OSINT and LEO links open the website **in a new browser tab**, outside CaseVault
 - The case list and the case's header show both, for example *File F-2026-01 · Case 00123*, and the search box finds either. Templates can use `{{case.fileNumber}}` and `{{case.number}}`.
 - The **left list** shows open and pending cases, most recently changed first. Use the search box (title, number, client, or tag) and the filter to find others.
 - **Details** tab: edit any field. A short note under **Status** says what the status means and, for a Pending case, what you're waiting on.
+- **Contacts** (on the Details tab, under the case fields): the **case officer**, the **prosecutor** (choose **ASA** or **AUSA**), each with name, email and phone, and **Add contact** for anyone else on the case: Finance, Asset Forfeiture, the Narcotic Team Supervisor and so on (pick a role from the list or type your own). The bin button removes one. They save with the case on the SSD, go to **Ask AI** with the case, and templates can use `{{case.officer.name}}`, `{{case.prosecutor.title}}`, `{{case.prosecutor.email}}` and so on.
 - **Case actions** (at the bottom of Details) has **Close case…** (or **Reopen case**), **Add arrest details**, **Archive case…** and **Delete case…**.
 
 ### Open, Pending, Closed, Archived: which one?
@@ -178,6 +180,8 @@ Notes save on their own as you type. The **Save** button next to Preview writes 
 
 Add dated **Events** (things that happened) and **Deadlines** (things that are due), with an optional time and note.
 
+- **Time:** type it (`0930`, `9:30`, `9:30 pm` and `21:30` all work; it becomes `09:30` or `21:30` when you leave the box), or click the **clock** button, pick the hour and minute, and press **Set time**. **Now** fills in the current time, **Clear** empties it, and Esc closes the picker without changing anything. The arrest and Miranda times on the Arrest details tab work the same way.
+
 - Entries are always sorted by date.
 - Deadlines show *due today*, *in N days* (amber within a week), or *N days overdue* (red).
 - Tick the checkbox on a deadline when it's done. It's crossed out and no longer counts as upcoming.
@@ -188,13 +192,13 @@ Add dated **Events** (things that happened) and **Deadlines** (things that are d
 
 Every case has the same document folders, both in CaseVault and on the SSD (`cases\<case>\files\...`):
 
-> Case Initiation · Affidavit Drafts · Affidavit Final · Warrant Drafts · Warrant Final · Warrants Signed · Arrest Report · Supplementary Report · Case Report · Deconfliction · Drug Exhibits · Other Exhibits · Email · Ops Plan · Subpoena Drafts · Subpoena Sent · Subpoena Response · Subject Information · Recordings (with **Video** and **Audio** sub-folders) · Vehicle Information · Maps · Case Closing · Other
+> Case Overview · Case Initiation · Affidavit Drafts · Affidavit Final · Warrant Drafts · Warrant Final · Arrest Report · Supplementary Report · Case Report · Deconfliction · Drug Exhibits · Other Exhibits · Email · Ops Plan · Subpoena Drafts · Subpoena Response · Subject Information · Recordings (with **Video** and **Audio** sub-folders) · Vehicle Information · Maps · Case Closing · Other
 
-Cases made before v1.11 keep their **Affidavits** folder: it still shows (and works) while it holds files; new files go to Affidavit Drafts or Affidavit Final.
+Folders that are no longer used (**Affidavits** from before v1.11; **Warrants Signed** and **Subpoena Sent** from before v1.13) still show, and work, while they hold files. Open one and click **Move them to Warrant Final** (or Affidavit Final, or Subpoena Response) to move its files into the folder that replaced it; each file is renamed by that folder's convention. New files never go to them.
 
 ### Arranging folders and files
 
-- **Folders:** drag a folder up or down the list to put it where you want (or select it and press **Alt+↑ / Alt+↓**). The order is the same in every case. **Standard order** puts it back.
+- **Folders:** click **Arrange folders** under the folder list. Use the up and down arrows (or drag a folder in that list), then **Save order**. **Standard order** puts them back. You can also drag a folder in the list itself, or select it and press **Alt+↑ / Alt+↓**. The order is the same in every case; Video and Audio stay under Recordings.
 - **Move a file:** drag it from the table onto a folder on the left. It's renamed by that folder's convention, like **Move / rename**.
 - **Sort:** click a column heading (Name, Type, Size, Added) to sort by it; click again to reverse.
 - **Your own order:** in a folder, click **Custom** and drag the rows into the order you want. It's kept for that folder in the case (`file-order.json`).
@@ -209,7 +213,7 @@ The table has one row per file with clear lines: **Name** (with the folder under
 
 ### Adding files
 
-Pick a folder on the left and drop files onto the box (or click **choose files**). With **All documents** selected, CaseVault asks the document type for each file, with a guess from its name (for example `supp 2.pdf` → Supplementary Report, `search warrant signed.pdf` → Warrants Signed, `interview.mp3` → Recordings › Audio, `bodycam.mp4` → Recordings › Video), and shows the name it will be saved under. Files are **copied**; your originals aren't changed.
+Pick a folder on the left and drop files onto the box (or click **choose files**). With **All documents** selected, CaseVault asks the document type for each file, with a guess from its name (for example `supp 2.pdf` → Supplementary Report, `search warrant signed.pdf` → Warrant Final, `case overview.docx` → Case Overview, `interview.mp3` → Recordings › Audio, `bodycam.mp4` → Recordings › Video), and shows the name it will be saved under. Files are **copied**; your originals aren't changed.
 
 - **Open** previews PDFs, images, text, audio, and video right inside CaseVault. Excel and CSV files open as tables (see below).
 - **Word files (.docx)** open inside CaseVault as a readable, read-only page: headings, bold/italic/underline, numbered and bulleted lists and tables are kept; fonts, spacing and pictures aren't. Open the file in Word for the exact layout. Old **.doc** files can't be shown: open them in Word and *Save As* .docx.
@@ -242,13 +246,14 @@ Some agency forms are *XFA* PDFs, made with Adobe LiveCycle Designer. In Chrome,
 
 ## Ask AI
 
-**Ask AI** in the header opens a chat, like claude.ai, with the AI **on this computer**: nothing you type leaves the PC, and it works offline.
+**Ask AI** in the header opens a chat, like claude.ai, with the AI **on this computer**: nothing you type leaves the PC, and it works offline. It opens in a **floating box** in the corner, so you can keep writing a draft or your notes, or move between tabs and cases, while it answers.
 
+- **The box:** drag its title bar to move it and its bottom-right corner to resize it. The buttons on the title bar are **New chat**, **Save to case**, **Bigger** (a large box in the middle of the screen; click again for the normal size), **Minimize** (just the title bar; Esc does the same) and **Close**. Closing keeps the conversation; **Ask AI** brings it back.
 - **Model:** every AI model installed in Ollama on W: (and the in-browser model, if that's what's running). Your choice is remembered in the vault. See *Other models* in [AI-SETUP.md](AI-SETUP.md) to add one, including a less-filtered model.
-- **Case:** pick a case to ask about it. Its details, timeline and notes go with each question, and the AI is told to answer from them and say where each fact comes from. **Search the case files** also reads the case's documents and sends the passages that answer your question (slower the first time a document is read). Choose *No case* for general questions.
+- **Case:** until you ask your first question, it follows the case you have open. Or pick any case, or *No case* for general questions. The case's details, contacts, timeline and notes go with each question, and the AI is told to answer from them and say where each fact comes from. **Search the case files** also reads the case's documents and sends the passages that answer your question (slower the first time a document is read).
 - Type and press **Enter** (Shift+Enter for a new line). **Stop** ends an answer early and keeps what's written. Earlier questions and answers go along, so you can ask follow-ups; the oldest drop off when the AI's window is full.
-- Answers are formatted (lists, tables). The copy button copies one.
-- The conversation stays in this window only. **Save to case** saves it as a draft in a case (on the SSD); **New chat** clears it.
+- Answers are formatted (lists, tables). Under each answer: **Copy**, and **Insert**, which puts the answer where your cursor was in the draft or notes you were last typing in (click in it first). It saves like your own typing.
+- The conversation stays in this window only. **Save to case** saves it as a draft in a case (on the SSD); **New chat** clears it. Unplugging the SSD clears it too.
 - If a check or Draft with AI is running, the question waits for it (the AI does one thing at a time).
 - AI answers can be wrong. Check anything you use against the case.
 
@@ -574,6 +579,8 @@ There's no required layout. Plain text works; to format it, `# ` at the start of
 |---|---|
 | `{{case.title}}`, `{{case.number}}`, `{{case.client}}`, `{{case.status}}`, `{{case.tags}}` | The case's details |
 | `{{case.opened}}`, `{{case.closed}}` | The case's dates |
+| `{{case.officer.name}}`, `{{case.officer.email}}`, `{{case.officer.phone}}` | The case officer, from **Contacts** on the Details tab |
+| `{{case.prosecutor.title}}` (ASA or AUSA), `{{case.prosecutor.name}}`, `{{case.prosecutor.email}}`, `{{case.prosecutor.phone}}` | The prosecutor, from **Contacts** |
 | `{{affiant.name}}`, `{{affiant.title}}`, `{{affiant.agency}}` | Your details from **Vault → My details** |
 | `{{affiant.address}}` | Your address, on as many lines as you typed |
 | `{{affiant.phone}}`, `{{affiant.email}}` | Your phone number and email |

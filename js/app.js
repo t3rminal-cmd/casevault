@@ -446,6 +446,7 @@
     state.connected = false;
     CVOutbound.goOffline('drive disconnected');
     CVApiKey.forget();
+    CVChatUI.reset();
     renderNetStatus();
     Save.render();
     gateLost();
@@ -540,7 +541,8 @@
   function route() {
     if (!state.connected) return;
     if (/^#\/online\b/.test(location.hash)) return showOnline();
-    if (/^#\/chat\b/.test(location.hash)) return showChat();
+    // Old #/chat links open the floating Ask AI box over the overview.
+    if (/^#\/chat\b/.test(location.hash)) { history.replaceState(null, '', '#/'); CVChatUI.toggle(true); }
     const ref = location.hash.match(/^#\/reference(?:\/([\w-]+))?/);
     if (ref) return showReference(ref[1] || null);
     const m = location.hash.match(/^#\/case\/([^/]+)(?:\/(\w+))?(?:\/([^/]+))?/);
@@ -562,17 +564,6 @@
       if (FS.isDisconnectError(err)) return onDriveLost();
       console.error(err);
       toast(`Could not open online AI: ${err.message}`, 'error');
-    });
-  }
-
-  function showChat() {
-    state.caseId = null;
-    state.caseObj = null;
-    renderCaseList();
-    CVChatUI.render($('#main')).catch((err) => {
-      if (FS.isDisconnectError(err)) return onDriveLost();
-      console.error(err);
-      toast(`Could not open Ask AI: ${err.message}`, 'error');
     });
   }
 
@@ -707,7 +698,7 @@
   const TABS = [['details', 'Details'], ['notes', 'Notes'], ['timeline', 'Timeline'], ['files', 'Files'], ['mail', 'Mail'], ['drafts', 'Drafts'], ['checks', 'Checks']];
   // The Arrest details tab appears once a case has arrest details, or is closed "by arrest".
   const FOLDER_ICONS = {
-    '': 'collection', unsorted: 'folder', 'Case Initiation': 'flag', 'Affidavit Drafts': 'pencil-square', 'Affidavit Final': 'file-earmark-ruled', Affidavits: 'file-earmark-ruled',
+    '': 'collection', unsorted: 'folder', 'Case Overview': 'journal-richtext', 'Case Initiation': 'flag', 'Affidavit Drafts': 'pencil-square', 'Affidavit Final': 'file-earmark-ruled', Affidavits: 'file-earmark-ruled',
     'Warrant Drafts': 'pencil-fill', 'Warrant Final': 'file-earmark-text', 'Warrants Signed': 'shield-fill-check', 'Arrest Report': 'person-badge', 'Supplementary Report': 'file-earmark-text',
     'Case Report': 'journal-bookmark', Deconfliction: 'signpost-split', 'Drug Exhibits': 'capsule-pill', 'Other Exhibits': 'box-seam', Email: 'envelope',
     'Ops Plan': 'map', 'Subpoena Drafts': 'pencil-square', 'Subpoena Sent': 'send', 'Subpoena Response': 'inbox', 'Subject Information': 'person-vcard',
@@ -863,6 +854,7 @@
         h('p', { class: 'muted span-2 small' },
           `Created ${c.dates.created ? fmtDateTime(Date.parse(c.dates.created)) : '—'} · Folder: ${archived ? 'archive' : 'cases'}\\${c.id}`
           + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),
+      contactsSection(c, save),
       // Archive and delete side by side, so the gentler choice is always in view.
       h('section', { class: 'case-actions', 'data-ro-ok': 'true', 'aria-labelledby': 'case-actions-title' },
         h('h3', { id: 'case-actions-title', icon: 'sliders' }, 'Case actions'),
@@ -881,6 +873,53 @@
           !archived && Vault.conventionalId(c) ? h('button', { class: 'btn action-btn', type: 'button', icon: 'folder', title: `Renames this case's folder on the SSD to the <year>-<case no.> convention (${Vault.conventionalId(c)}). Every file is copied and checked first.`, onclick: () => renameCaseFolder(c) }, 'Rename folder') : null,
           !archived ? h('button', { class: 'btn action-btn', type: 'button', icon: 'archive', title: 'Keeps everything, read-only, in CaseVault-Data\\archive. It leaves the case list but can still be opened, searched and restored.', onclick: () => archiveCase(c) }, 'Archive case…') : null,
           h('button', { class: 'btn danger action-btn', type: 'button', icon: 'trash3', title: 'Permanently deletes the case from the SSD. There is no trash to get it back from.', onclick: () => deleteCase(c) }, 'Delete case…'))));
+  }
+
+  /* Contacts on the Details tab: the case officer, the prosecutor (ASA or AUSA) and anyone else
+   * the case needs (finance, asset forfeiture, the narcotic team supervisor…). Kept in case.json
+   * as c.contacts; {{case.officer.*}} and {{case.prosecutor.*}} fill templates. */
+  const CONTACT_ROLES = ['Finance', 'Asset Forfeiture', 'Narcotic Team Supervisor', 'Task Force Officer', 'Analyst', 'Lab', 'Victim Advocate'];
+  function contactsSection(c, save) {
+    const k = c.contacts = Object.assign({ officer: {}, prosecutor: {}, others: [] }, c.contacts || {});
+    k.officer = k.officer || {}; k.prosecutor = k.prosecutor || {}; k.others = Array.isArray(k.others) ? k.others : [];
+    if (!k.prosecutor.title) k.prosecutor.title = 'ASA';
+    const input = (obj, key, attrs) => {
+      const el = h('input', { value: obj[key] || '', ...attrs });
+      el.addEventListener('input', () => { obj[key] = el.value.trim(); save(); });
+      return el;
+    };
+    const person = (obj, who) => [
+      field('Name', input(obj, 'name', { maxlength: 120, autocomplete: 'off', 'aria-label': `${who} name` })),
+      field('Email', input(obj, 'email', { type: 'email', maxlength: 200, autocomplete: 'off', 'aria-label': `${who} email` })),
+      field('Phone', input(obj, 'phone', { type: 'tel', maxlength: 40, autocomplete: 'off', 'aria-label': `${who} phone` })),
+    ];
+    const proTitle = h('select', { 'aria-label': 'Prosecutor title', title: 'ASA: Assistant State\'s Attorney. AUSA: Assistant United States Attorney.' },
+      ['ASA', 'AUSA'].map((t) => h('option', { value: t, selected: t === k.prosecutor.title }, t)));
+    proTitle.addEventListener('change', () => { k.prosecutor.title = proTitle.value; save(); });
+
+    const roles = h('datalist', { id: 'contact-roles' }, CONTACT_ROLES.map((r) => h('option', { value: r })));
+    const others = h('div', { class: 'contact-others' });
+    const drawOthers = () => {
+      others.replaceChildren(...k.others.map((o, i) => h('div', { class: 'contact-row' },
+        field('Role', input(o, 'role', { maxlength: 80, list: 'contact-roles', placeholder: 'e.g. Finance', 'aria-label': `Contact ${i + 1} role` })),
+        ...person(o, `Contact ${i + 1}`),
+        h('button', { class: 'icon-btn danger-icon contact-remove', type: 'button', title: 'Remove this contact', onclick: () => { k.others.splice(i, 1); drawOthers(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Remove contact ${i + 1}`)))));
+    };
+    drawOthers();
+    const add = h('button', { class: 'btn small', type: 'button', icon: 'person-plus', title: 'Add someone else on the case: finance, asset forfeiture, the narcotic team supervisor…', onclick: () => {
+      k.others.push({ role: '', name: '', email: '', phone: '' });
+      drawOthers();
+      const last = others.lastElementChild && others.lastElementChild.querySelector('input');
+      if (last) last.focus();
+    } }, 'Add contact');
+
+    return h('section', { class: 'contacts', 'aria-labelledby': 'contacts-title' },
+      h('h3', { id: 'contacts-title', icon: 'people', title: 'Who to reach on this case. The case officer and prosecutor fill {{case.officer.name}}, {{case.prosecutor.email}} and so on in templates.' }, 'Contacts'),
+      roles,
+      h('div', { class: 'contact-row' }, h('div', { class: 'field contact-role' }, h('span', {}, 'Role'), h('strong', { class: 'contact-fixed' }, 'Case officer')), ...person(k.officer, 'Case officer')),
+      h('div', { class: 'contact-row' }, h('label', { class: 'field contact-role' }, h('span', {}, 'Role'), proTitle), ...person(k.prosecutor, 'Prosecutor')),
+      others,
+      h('div', { class: 'contact-add' }, add));
   }
 
   // Pending edits to a case that is being deleted are dropped rather than written.
@@ -1049,7 +1088,7 @@
 
     const f = {
       date: h('input', { type: 'date', required: true, value: today() }),
-      time: h('input', { type: 'time' }),
+      time: CVTimeField.create({ label: 'Time' }),
       kind: h('select', {}, h('option', { value: 'event' }, 'Event'), h('option', { value: 'deadline' }, 'Deadline')),
       title: h('input', { required: true, maxlength: 200, placeholder: 'What happened / what is due' }),
       note: h('textarea', { rows: 2, maxlength: 4000, placeholder: 'Details, optional' }),
@@ -1263,7 +1302,28 @@
         CF.childrenOf(f).map((k) => folderBtn(k, CF.shortName(k), count(k), { child: true })),
       ]),
       unsorted.length ? folderBtn('unsorted', 'Unsorted', unsorted.length) : null,
-      archived ? null : h('button', { class: 'btn small ghost folder-reset', type: 'button', icon: 'arrow-counterclockwise', title: 'Put the folders back in the standard order.', hidden: !saved.length, onclick: async () => { await saveFolderOrder(null); showCase(c.id, 'files', current || null); } }, 'Standard order'));
+      archived ? null : h('button', { class: 'btn small ghost folder-reset', type: 'button', icon: 'list-check', title: 'Put the folders in your own order, with up and down buttons. You can also drag a folder in this list.', onclick: async () => {
+        const order = await arrangeFoldersDialog(ordered.filter(visible));
+        if (!order) return;
+        await saveFolderOrder(order);
+        showCase(c.id, 'files', current || null);
+      } }, 'Arrange folders'));
+
+    // A folder from an older version (Warrants Signed…): offer to move its files into the folder
+    // that replaced it.
+    const legacy = CF.byFolder(current);
+    const mergeNote = legacy && legacy.mergeInto && shown.length && !archived
+      ? h('p', { class: 'hint merge-hint' }, `${current} is no longer used; ${legacy.mergeInto} replaces it. `,
+        h('button', { class: 'btn small', type: 'button', icon: 'arrow-left-right', onclick: async () => {
+          if (!(await confirmDialog({ title: `Move ${shown.length} file${shown.length === 1 ? '' : 's'} to ${legacy.mergeInto}?`, message: `Each file is renamed by the convention for ${legacy.mergeInto}.`, confirmText: 'Move' }))) return;
+          let moved = 0;
+          for (const f of shown) {
+            try { await Save.track(`file-move:${c.id}:${f.name}`, () => Vault.moveFile(c.id, f.name, legacy.mergeInto, {})); moved++; } catch { break; }
+          }
+          if (moved) toast(`Moved ${moved} file${moved === 1 ? '' : 's'} to ${legacy.mergeInto}.`, 'success', 5000);
+          location.hash = `#/case/${encodeURIComponent(c.id)}/files/${encodeURIComponent(legacy.mergeInto)}`;
+        } }, `Move them to ${legacy.mergeInto}`))
+      : null;
 
     // ---- file table: Name, Type, Size, Added. Click a heading to sort; "Custom" is your own
     // order (drag the rows), kept per folder in the case's file-order.json.
@@ -1367,11 +1427,63 @@
     const where = `${archived ? 'archive' : 'cases'}\\${c.id}\\files${current && current !== 'unsorted' ? `\\${current.replace('/', '\\')}` : ''}`;
     panel.replaceChildren(...[
       prefix ? null : h('p', { class: 'hint' }, 'This case has no case number yet, so files are named ', h('code', {}, `${new Date().getFullYear()}-NOCASENO …`), '. Add the number on the Details tab first to have them named ', h('code', {}, '2026-<CaseNo> <Type>'), '.'),
+      mergeNote,
       unsorted.length && !archived ? h('p', { class: 'hint' }, `${unsorted.length} file${unsorted.length === 1 ? ' was' : 's were'} added before document folders existed. Open "Unsorted" and use "File it…" to move each into its folder with a conventional name.`) : null,
       h('div', { class: 'files-layout' }, nav,
         h('div', { class: 'files-main' }, drop, input,
           h('p', { class: 'muted small files-where' }, `${shown.length} file${shown.length === 1 ? '' : 's'} · ${where}${dragRows ? ' · drag rows to arrange them' : ''}${!archived ? ' · drag a file onto a folder to move it' : ''}`),
           table))].filter(Boolean));
+  }
+
+  // The folder list in your own order: ↑/↓ buttons (or drag a row). Resolves the new order, or null.
+  function arrangeFoldersDialog(folders) {
+    const order = [...folders];
+    return openDialog((close) => {
+      const list = h('ol', { class: 'arrange-list' });
+      let dragging = null;
+      const move = (i, j) => { if (j < 0 || j >= order.length) return; [order[i], order[j]] = [order[j], order[i]]; draw(order[j]); };
+      function draw(focusName) {
+        list.replaceChildren(...order.map((f, i) => {
+          const li = h('li', { class: 'arrange-item', draggable: 'true' },
+            h('span', { class: 'grip-cell', 'aria-hidden': 'true' }, I('grip-vertical')),
+            h('span', { class: 'folder-icon' }, I(FOLDER_ICONS[f] || 'folder')),
+            h('span', { class: 'arrange-name' }, f),
+            h('button', { class: 'icon-btn', type: 'button', title: 'Move up', disabled: i === 0, 'data-dir': 'up', onclick: () => move(i, i - 1) }, I('arrow-up'), h('span', { class: 'sr-only' }, `Move ${f} up`)),
+            h('button', { class: 'icon-btn', type: 'button', title: 'Move down', disabled: i === order.length - 1, 'data-dir': 'down', onclick: () => move(i, i + 1) }, I('arrow-down'), h('span', { class: 'sr-only' }, `Move ${f} down`)));
+          li.addEventListener('dragstart', (e) => { dragging = f; e.dataTransfer.setData('text/plain', f); e.dataTransfer.effectAllowed = 'move'; li.classList.add('dragging'); });
+          li.addEventListener('dragend', () => { dragging = null; li.classList.remove('dragging'); });
+          li.addEventListener('dragover', (e) => { if (dragging && dragging !== f) { e.preventDefault(); li.classList.add('drop-target'); } });
+          li.addEventListener('dragleave', () => li.classList.remove('drop-target'));
+          li.addEventListener('drop', (e) => {
+            e.preventDefault();
+            li.classList.remove('drop-target');
+            if (!dragging || dragging === f) return;
+            const moving = dragging;
+            const from = order.indexOf(moving);
+            order.splice(from, 1);
+            // Dragged down: lands after this folder; dragged up: before it.
+            order.splice(order.indexOf(f) + (from < i ? 1 : 0), 0, moving);
+            draw(moving);
+          });
+          return li;
+        }));
+        if (focusName) {
+          const li = list.children[order.indexOf(focusName)];
+          const btn = li && (li.querySelector('button:not([disabled])'));
+          if (btn) btn.focus();
+        }
+      }
+      draw();
+      return h('form', { class: 'arrange-form', onsubmit: (e) => { e.preventDefault(); close([...order]); } },
+        h('h2', { icon: 'list-check' }, 'Arrange folders'),
+        h('p', { class: 'muted small explain' }, 'The order is the same for every case. Sub-folders such as Video and Audio stay under their folder.'),
+        list,
+        h('div', { class: 'dialog-actions' },
+          h('button', { class: 'btn ghost', type: 'button', icon: 'arrow-counterclockwise', title: 'Put the folders back in the standard order.', onclick: () => close(CVCaseFiles.ALL_FOLDERS.filter((f) => !CVCaseFiles.parentOf(f))) }, 'Standard order'),
+          h('div', { class: 'spacer' }),
+          h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
+          h('button', { class: 'btn primary', type: 'submit' }, 'Save order')));
+    });
   }
 
   function chooseTypes(c, list, preset) {
@@ -1763,7 +1875,7 @@
 
   $('#btn-vault').addEventListener('click', () => showVaultPanel());
   $('#btn-reference').addEventListener('click', () => { location.hash = '#/reference'; });
-  $('#btn-chat').addEventListener('click', () => { location.hash = '#/chat'; });
+  $('#btn-chat').addEventListener('click', () => CVChatUI.toggle());
 
   // Theme: automatic -> light -> dark. The button shows what's in effect.
   function drawThemeButton() {
@@ -1809,7 +1921,8 @@
     const label = collapsed ? 'Show the case list' : 'Hide the case list';
     collapseBtn.title = `${label} (Ctrl+\\)`;
     collapseBtn.querySelector('.sr-only').textContent = label;
-    if (focus) (collapsed ? expandBtn : collapseBtn).focus();
+    // The header toggle shows only at phone width; otherwise the rail's toggle keeps focus.
+    if (focus) (collapsed && expandBtn.getClientRects().length ? expandBtn : collapseBtn).focus();
     if (save && state.connected && !!Vault.data.settings.sidebarCollapsed !== collapsed) {
       Save.track('settings', () => Vault.updateSettings({ sidebarCollapsed: collapsed })).catch(() => {});
     }

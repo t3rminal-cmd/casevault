@@ -18,6 +18,14 @@
   const chars = (tokens) => Math.floor(tokens * 3.5);
   const clip = (s, n) => { s = String(s || '').trim(); return s.length > n ? `${s.slice(0, Math.max(0, n - 20))} …[shortened]` : s; };
 
+  // "Case officer: Name, email, phone" lines from the Details tab's contacts.
+  function contactLines(k) {
+    if (!k) return [];
+    const line = (role, p) => { const bits = p ? [p.name, p.email, p.phone].map((x) => String(x || '').trim()).filter(Boolean) : []; return bits.length ? `${role}: ${bits.join(', ')}` : null; };
+    return [line('Case officer', k.officer), line((k.prosecutor && k.prosecutor.title) || 'Prosecutor', k.prosecutor),
+      ...(Array.isArray(k.others) ? k.others : []).map((o) => line(String(o.role || '').trim() || 'Contact', o))];
+  }
+
   /** The case as text: { caseObj, timeline, notes, passages: [{ docName, page, text }] } -> string. */
   function caseMaterial({ caseObj = null, timeline = null, notes = '', passages = [] } = {}, budget = 6000) {
     if (!caseObj) return '';
@@ -27,6 +35,7 @@
       `Title: ${c.title || '(none)'}`, c.fileNumber ? `File number: ${c.fileNumber}` : null, `Case number: ${c.number || '(none)'}`,
       c.client ? `Client: ${c.client}` : null, `Status: ${c.status || ''}`, d.opened ? `Opened: ${d.opened}` : null,
       c.tags && c.tags.length ? `Tags: ${c.tags.join(', ')}` : null,
+      ...contactLines(c.contacts),
     ].filter(Boolean).join('\n');
     const events = ((timeline && timeline.events) || []).map((e) => `- ${e.date}${e.time ? ` ${e.time}` : ''} ${e.kind === 'deadline' ? '[deadline] ' : ''}${e.title}${e.note ? ` (${String(e.note).replace(/\s+/g, ' ')})` : ''}`).join('\n');
     const parts = [`## Case details\n${facts}`];

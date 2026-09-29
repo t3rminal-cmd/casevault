@@ -37,3 +37,11 @@ test('transcript for saving to a case', () => {
   assert.match(t, /^# Ask AI\n\n> AI-assisted conversation \(qwen2\.5:7b\)/);
   assert.match(t, /\*\*Question:\*\*\n\nQ1\n\n\*\*Answer:\*\*\n\nA1\n$/);
 });
+
+test('case material lists the contacts', () => {
+  const m = C.caseMaterial({ caseObj: { title: 'Test case', number: 'TEST-1', contacts: { officer: { name: 'Det. Alex Sample', phone: '555-0100' }, prosecutor: { title: 'AUSA', name: 'Jordan Example', email: 'jordan@usao.example' }, others: [{ role: 'Narcotic Team Supervisor', name: 'Sgt. Pat Placeholder' }, { role: '', name: '' }] } } });
+  assert.match(m, /Case officer: Det\. Alex Sample, 555-0100/);
+  assert.match(m, /AUSA: Jordan Example, jordan@usao\.example/);
+  assert.match(m, /Narcotic Team Supervisor: Sgt\. Pat Placeholder/);
+  assert.doesNotMatch(m, /Contact:/, 'empty rows are left out');
+});

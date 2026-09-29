@@ -16,15 +16,17 @@
 (function (root) {
   // folder: the sub-folder of files/ · label: the document type in the file name.
   // "Recordings/Video" is a sub-folder of Recordings. legacy: kept for files saved by older
-  // versions (shown only when it holds files, never offered for new files).
+  // versions (shown only when it holds files, never offered for new files); mergeInto: the folder
+  // that replaced it, offered as a one-click move.
   const CATEGORIES = [
+    { folder: 'Case Overview', label: 'Case Overview' },
     { folder: 'Case Initiation', label: 'Case Initiation' },
     { folder: 'Affidavit Drafts', label: 'Affidavit Draft' },
     { folder: 'Affidavit Final', label: 'Affidavit' },
-    { folder: 'Affidavits', label: 'Affidavit', legacy: true },
+    { folder: 'Affidavits', label: 'Affidavit', legacy: true, mergeInto: 'Affidavit Final' },
     { folder: 'Warrant Drafts', label: 'Warrant Draft' },
     { folder: 'Warrant Final', label: 'Warrant' },
-    { folder: 'Warrants Signed', label: 'Signed Warrant' },
+    { folder: 'Warrants Signed', label: 'Signed Warrant', legacy: true, mergeInto: 'Warrant Final' },
     { folder: 'Arrest Report', label: 'Arrest Report' },
     { folder: 'Supplementary Report', label: 'Supplementary Report' },
     { folder: 'Case Report', label: 'Case Report' },
@@ -34,7 +36,7 @@
     { folder: 'Email', label: 'Email' },
     { folder: 'Ops Plan', label: 'Ops Plan' },
     { folder: 'Subpoena Drafts', label: 'Subpoena Draft' },
-    { folder: 'Subpoena Sent', label: 'Subpoena' },
+    { folder: 'Subpoena Sent', label: 'Subpoena', legacy: true, mergeInto: 'Subpoena Response' },
     { folder: 'Subpoena Response', label: 'Subpoena Response' },
     { folder: 'Subject Information', label: 'Subject Information' },
     { folder: 'Recordings', label: 'Recording' },
@@ -125,11 +127,12 @@
 
   // Best guess of the document type from the original file name. Returns a folder, or 'Other'.
   const GUESSES = [
+    [/case[ _-]?(overview|summary|synopsis)|synopsis/i, 'Case Overview'],
     [/case[ _-]?(initiat|open)|initiation|opening[ _-]?(memo|report)/i, 'Case Initiation'],
     [/case[ _-]?clos|closing[ _-]?(memo|report)/i, 'Case Closing'],
     [/(affidavit|affid\b|\bpc[ _-]?aff|probable[ _-]?cause|declaration).*(draft|v\d|\bdft\b)|draft.*(affidavit|affid\b)/i, 'Affidavit Drafts'],
     [/affidavit|affid\b|\bpc[ _-]?aff|probable[ _-]?cause|declaration/i, 'Affidavit Final'],
-    [/signed.*warrant|warrant.*signed|executed.*warrant|warrant.*(return|executed)/i, 'Warrants Signed'],
+    [/signed.*warrant|warrant.*signed|executed.*warrant|warrant.*(return|executed)/i, 'Warrant Final'],
     [/warrant.*(draft|v\d|\bdft\b)|draft.*warrant/i, 'Warrant Drafts'],
     [/warrant/i, 'Warrant Final'],
     [/supp(lement(al|ary)?)?[ _-]?(rpt|report)?\b|\bsupp\b/i, 'Supplementary Report'],
@@ -137,7 +140,7 @@
     [/deconflict/i, 'Deconfliction'],
     [/subpoena.*(response|return|records|produc)|(response|return|records).*subpoena/i, 'Subpoena Response'],
     [/subpoena.*draft|draft.*subpoena/i, 'Subpoena Drafts'],
-    [/subpoena/i, 'Subpoena Sent'],
+    [/subpoena/i, 'Subpoena Response'],
     [/ops?[ _-]?plan|operations?[ _-]?plan|op[ _-]?order/i, 'Ops Plan'],
     [/drug|lab[ _-]?(report|result)|narcotic|cocaine|heroin|fentanyl|meth|marijuana|cannabis|controlled[ _-]?substance/i, 'Drug Exhibits'],
     [/exhibit|evidence|property|firearm|weapon|gun|knife|ammo|ammunition|latent|fingerprint|dna/i, 'Other Exhibits'],

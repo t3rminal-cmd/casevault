@@ -240,3 +240,9 @@ test('API key: locked with a passphrase on the SSD, never stored readable', asyn
   assert.strictEqual(K.describe({ key }).kind, 'plain', 'a v1.9 record still reads');
   assert.strictEqual(K.describe(null).kind, null);
 });
+
+test('case contacts are known terms for redaction', () => {
+  const known = P.knownTerms({ caseObj: { contacts: { officer: { name: 'Det. Alex Sample', phone: '555-0100' }, prosecutor: { title: 'ASA', name: 'Jordan Example', email: 'jordan@sao.example' }, others: [{ role: 'Finance', name: 'Pat Placeholder' }] } } });
+  const values = known.map((k) => k.value);
+  for (const v of ['Det. Alex Sample', '555-0100', 'Jordan Example', 'jordan@sao.example', 'Pat Placeholder']) assert.ok(values.includes(v), v);
+});
