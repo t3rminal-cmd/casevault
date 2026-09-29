@@ -163,6 +163,34 @@ The header shows the engine status: **AI: Connected (Quick · qwen2.5:7b)**, **A
 
 **Drafts** use the same engine. *Draft with AI* uses the model of the chosen profile. **AI suggestions while typing** always use the smallest installed chat model (Light if you have it). Install a Light model (`qwen2.5:3b`) even on the Beelink if you want snappy suggestions.
 
+### Other models, including less-filtered ones
+
+Any chat model Ollama can run works in CaseVault. **Ask AI** (the chat) has a model list with every installed model, so you can add one and pick it there without changing the profiles the checker and drafts use.
+
+Mainstream models (Qwen, Llama, Gemma) sometimes refuse or hedge on law-enforcement topics: drugs, weapons, violence, how a crime was committed. **Less-filtered** fine-tunes answer those plainly. The best-known family is **Dolphin**; others are published as *abliterated* versions of mainstream models. Sizes that fit your PCs:
+
+| PC | Model | Download | Notes |
+|---|---|---|---|
+| Beelink (RTX 3050, 6 GB) | `dolphin3` (Dolphin 3.0, Llama 3.1 8B) | ~4.9 GB | Same size class as Quick; fits the GPU at CaseVault's 4,096-token context |
+| Beelink | `dolphin-mistral` (7B) | ~4.1 GB | Older, also fits the GPU |
+| L14 (CPU only) | `dolphin-phi` (2.7B) | ~1.6 GB | Small enough for the processor; weaker answers |
+
+```bat
+W:\ollama\ollama.exe pull dolphin3
+W:\ollama\ollama.exe list
+```
+
+Then in CaseVault: **Ask AI** → **Model** → `dolphin3:latest`. Your choice is remembered in the vault.
+
+Model names on ollama.com change over time: if a `pull` says *file does not exist*, search **ollama.com/library** (or ollama.com/search for "abliterated") and use the name shown there, in a 7–8B size for the Beelink.
+
+Before you rely on one:
+
+- **Fewer refusals, not more knowledge.** These models aren't smarter; they're just less likely to say no. They're also more likely to go along with a wrong premise or make something up, so check every answer, as with any AI.
+- **Keep the default models for checks and drafts.** The consistency checker and Draft with AI are tuned and tested with Qwen. Use the less-filtered model in Ask AI.
+- **Still offline.** The download needs internet once; after that it runs on W: like the others, and nothing you ask leaves the PC.
+- **Policy.** Follow your agency's rules on which AI tools you may use.
+
 ### Speed on a small GPU (6 GB)
 
 CaseVault sets these for you, so a 6 GB card like the RTX 3050 isn't overloaded:

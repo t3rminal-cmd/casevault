@@ -77,8 +77,8 @@
                 title: 'Go online?',
                 message: h('div', {},
                   h('p', {}, 'Online AI is for research and drafting only. Every message is checked for personal details, which are replaced with placeholders, and you see exactly what will be sent before it goes.'),
-                  h('p', { class: 'muted small' }, `CaseVault will only connect to ${CVOutbound.ALLOWED_HOSTS.join(', ')}. It goes offline again after ${onlineSettings().idleMinutes} minutes without use, and every time it starts.`),
-                  h('p', { class: 'muted small' }, 'Follow your agency\'s policy on using cloud AI services.')),
+                  h('p', { class: 'muted small explain' }, `CaseVault will only connect to ${CVOutbound.ALLOWED_HOSTS.join(', ')}. It goes offline again after ${onlineSettings().idleMinutes} minutes without use, and every time it starts.`),
+                  h('p', { class: 'muted small explain' }, 'Follow your agency\'s policy on using cloud AI services.')),
                 confirmText: 'Go online',
               });
               if (!ok) return;
@@ -175,7 +175,7 @@
         convo,
         h('div', { class: 'online-compose' }, ta,
           h('div', { class: 'row' }, insert, h('div', { class: 'spacer' }), sendBtn)),
-        h('p', { class: 'muted small' }, 'Placeholders ([NAME_1] …) are kept for the whole conversation, so the same person always gets the same one. The conversation is kept in memory only; save an answer to a case to keep it.')].filter(Boolean));
+        h('p', { class: 'muted small explain' }, 'Placeholders ([NAME_1] …) are kept for the whole conversation, so the same person always gets the same one. The conversation is kept in memory only; save an answer to a case to keep it.')].filter(Boolean));
     };
 
     // One exchange: what was sent (redacted), and the answer.
@@ -221,7 +221,7 @@
         const inp = h('input', { type: 'text', value: `${session.purpose} notes (online AI)`, maxlength: 120, autofocus: true });
         return h('form', { onsubmit: (e) => { e.preventDefault(); close(inp.value.trim() || 'Online AI notes'); } },
           h('h2', {}, 'Save as a draft in this case'),
-          h('p', { class: 'muted small' }, 'Saved on the SSD with the real names put back, marked as AI-assisted. Check every fact before using it.'),
+          h('p', { class: 'muted small explain' }, 'Saved on the SSD with the real names put back, marked as AI-assisted. Check every fact before using it.'),
           ui.field('Title', inp),
           h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Save')));
       });

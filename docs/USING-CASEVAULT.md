@@ -74,7 +74,9 @@ The header has, from left to right: the vault folder, the **Offline** / **AI** /
 - **Theme button** (half circle, sun or moon): switches between *automatic* (follows Windows' light or dark setting), *light* and *dark*. Each PC remembers its own choice in the browser; it's a display preference, not case data.
 - Icons mark every tab, button and document folder, and each file in a case shows an icon for its type (PDF, Word, Excel, picture, audio, video, email).
 - **Point at a button** (or reach it with Tab) to see what it does in a hover box. Buttons show just an icon and a short name; the explanation is in the hover box.
-- Labels have no brackets: extra detail (for example *Separate tags with commas* on Tags) is in the hover box. In the Vault, an ⓘ after a heading means pointing at the heading shows what that section is for, and pointing at a box in **My details** shows which `{{affiant.…}}` placeholder it fills.
+- Labels have no brackets, and the longer explanations aren't printed on the page: an **ⓘ** next to a heading, label or box holds them. Point at it (or Tab to it) to read it. In the Vault, pointing at a section's heading shows what that section is for, and pointing at a box in **My details** shows which `{{affiant.…}}` placeholder it fills.
+- **Opening a file** (the eye button) shows it in a window that fills almost the whole screen, so wide Word tables, spreadsheets and PDFs aren't cut off.
+- **Ask AI** in the header opens a chat with the AI on this computer (see *Ask AI*).
 - The page is centred and uses the width of the screen, from a phone up to 1920×1080 and larger. Case actions are same-size buttons in one row.
 - The **Overview** shows your case counts, then, each under a line: **Upcoming deadlines**, **Recently updated**, and **Quick links** (see below).
 - On a narrow window the header buttons shrink to their icons.
@@ -237,6 +239,18 @@ Some agency forms are *XFA* PDFs, made with Adobe LiveCycle Designer. In Chrome,
 - Empty fields, and image fields such as signatures and photos, are left out of the list.
 - An XFA form is never run through OCR: its "Please wait" page has nothing to read.
 - A password-protected (encrypted) XFA form is read through the PDF reader instead. If nothing can be read from it, the check says so.
+
+## Ask AI
+
+**Ask AI** in the header opens a chat, like claude.ai, with the AI **on this computer**: nothing you type leaves the PC, and it works offline.
+
+- **Model:** every AI model installed in Ollama on W: (and the in-browser model, if that's what's running). Your choice is remembered in the vault. See *Other models* in [AI-SETUP.md](AI-SETUP.md) to add one, including a less-filtered model.
+- **Case:** pick a case to ask about it. Its details, timeline and notes go with each question, and the AI is told to answer from them and say where each fact comes from. **Search the case files** also reads the case's documents and sends the passages that answer your question (slower the first time a document is read). Choose *No case* for general questions.
+- Type and press **Enter** (Shift+Enter for a new line). **Stop** ends an answer early and keeps what's written. Earlier questions and answers go along, so you can ask follow-ups; the oldest drop off when the AI's window is full.
+- Answers are formatted (lists, tables). The copy button copies one.
+- The conversation stays in this window only. **Save to case** saves it as a draft in a case (on the SSD); **New chat** clears it.
+- If a check or Draft with AI is running, the question waits for it (the AI does one thing at a time).
+- AI answers can be wrong. Check anything you use against the case.
 
 ## Reference
 

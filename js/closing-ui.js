@@ -98,7 +98,7 @@
 
     panel.replaceChildren(
       h('div', { class: 'toolbar' },
-        h('p', { class: 'muted small' }, 'These details fill {{arrest.…}} in templates, for the arrest report. Saved in this case\'s folder on the SSD (arrest.json).'),
+        h('p', { class: 'muted small explain' }, 'These details fill {{arrest.…}} in templates, for the arrest report. Saved in this case\'s folder on the SSD (arrest.json).'),
         h('div', { class: 'spacer' }), status, saveBtn),
       list,
       h('div', { class: 'row' },
@@ -178,7 +178,7 @@
         close({ disposition: sel.d.key, reason: sel.d.key === 'exceptional' ? reason.value : '', date: date.value, note: note.value.trim() });
       } },
       h('h2', {}, `Close "${c.title || 'Untitled case'}"`),
-      h('p', { class: 'muted small' }, 'Close a case when the investigation is finished. Choose how it ended. A closed case stays in the list (filter: Closed) until you archive it, and can be reopened.'),
+      h('p', { class: 'muted small explain' }, 'Close a case when the investigation is finished. Choose how it ended. A closed case stays in the list (filter: Closed) until you archive it, and can be reopened.'),
       loose.length ? h('div', { class: 'card warn-card' }, h('strong', {}, 'Before you close'), h('ul', { class: 'small' }, loose.map((x) => h('li', {}, x.text))),
         h('p', { class: 'small muted' }, 'You can still close the case; this is a reminder.')) : h('p', { class: 'small ok-text' }, '✓ No open deadlines, check flags or [CONFIRM: …] left.'),
       h('h3', {}, 'Disposition'),
@@ -238,7 +238,7 @@
       const addDeadline = h('input', { type: 'checkbox', checked: true });
       return h('form', { onsubmit: (e) => { e.preventDefault(); close({ reason: reason.value, detail: detail.value.trim(), followUp: follow.value, addDeadline: addDeadline.checked }); } },
         h('h2', {}, 'Set the case to Pending'),
-        h('p', { class: 'muted small' }, 'Pending means you\'re waiting on someone else and can\'t move the case forward yourself. Set it back to Open when you can work it again.'),
+        h('p', { class: 'muted small explain' }, 'Pending means you\'re waiting on someone else and can\'t move the case forward yourself. Set it back to Open when you can work it again.'),
         h('div', { class: 'form-grid' }, ui.field('Waiting on', reason), ui.field('Details', detail), ui.field('Follow up by', follow), h('div')),
         h('label', { class: 'check-row' }, addDeadline, h('span', {}, 'Add the follow-up date to the timeline as a deadline, so it shows in the case list and the Overview')),
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Set to Pending')));

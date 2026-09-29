@@ -16,8 +16,8 @@
 (function (root) {
   const LOADING_AFTER_MS = 10000; // no first response after this long: the model is probably loading
   const WARM_MS = 10 * 60 * 1000; // matches keep_alive "10m": a model used this recently is still loaded
-  const HEAVY = new Set(['check', 'draft']);
-  const DEFAULT_LABEL = { check: 'Checking…', draft: 'Drafting…', suggest: 'Suggesting…', embed: 'Indexing…' };
+  const HEAVY = new Set(['check', 'draft', 'chat']);
+  const DEFAULT_LABEL = { check: 'Checking…', draft: 'Drafting…', chat: 'Answering…', suggest: 'Suggesting…', embed: 'Indexing…' };
 
   function createActivity({ now = () => Date.now() } = {}) {
     const tasks = new Map(); // id -> { id, kind, label, model, start, waiting }
