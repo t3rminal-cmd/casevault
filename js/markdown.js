@@ -1,6 +1,7 @@
 /* CaseVault — a tiny, safe Markdown previewer for notes.md.
  * Everything is HTML-escaped first, so nothing in a note can run as code.
- * Supports: # headings, **bold**, *italic*, `code`, ``` blocks, - / 1. lists, > quotes, --- rules.
+ * Supports: # headings, **bold**, *italic*, ++underline++, `code`, ``` blocks, - / 1. lists,
+ * > quotes, --- rules, and | tables | (a header row, then a |---| line).
  */
 'use strict';
 
@@ -11,9 +12,15 @@ const Markdown = (() => {
     return esc(s)
       .replace(/`([^`]+)`/g, '<code>$1</code>')
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\+\+([^+\n]+)\+\+/g, '<u>$1</u>')
       .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>')
       .replace(/(^|\W)_([^_\s][^_]*)_(?=\W|$)/g, '$1<em>$2</em>');
   }
+
+  const isRow = (l) => /^\s*\|.*\|\s*$/.test(l);
+  const isRule = (l) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l);
+  /** "| a | b\\|c |" -> ["a", "b|c"] */
+  const cells = (l) => l.trim().replace(/^\|/, '').replace(/\|$/, '').split(/(?<!\\)\|/).map((c) => c.trim().replace(/\\\|/g, '|'));
 
   function render(src) {
     const lines = String(src || '').replace(/\r\n?/g, '\n').split('\n');
@@ -43,6 +50,18 @@ const Markdown = (() => {
 
       let m;
       if (!line.trim()) { flushPara(); closeList(); continue; }
+      // | a | b |  followed by  |---|---|  starts a table.
+      if (isRow(line) && i + 1 < lines.length && isRule(lines[i + 1])) {
+        flushPara(); closeList();
+        const head = cells(line);
+        const align = cells(lines[i + 1]).map((c) => (/^:-+:$/.test(c) ? 'center' : /-+:$/.test(c) ? 'right' : ''));
+        const body = [];
+        i += 1;
+        while (i + 1 < lines.length && isRow(lines[i + 1])) body.push(cells(lines[++i]));
+        const td = (tag, c, j) => `<${tag}${align[j] ? ` class="al-${align[j]}"` : ''}>${inline(c)}</${tag}>`;
+        out.push(`<div class="md-table-wrap"><table class="md-table"><thead><tr>${head.map((c, j) => td('th', c, j)).join('')}</tr></thead><tbody>${body.map((r) => `<tr>${head.map((_, j) => td('td', r[j] || '', j)).join('')}</tr>`).join('')}</tbody></table></div>`);
+        continue;
+      }
       if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
         flushPara(); closeList();
         const level = Math.min(m[1].length + 1, 6); // h1 in notes renders as h2 on the page
@@ -71,5 +90,6 @@ const Markdown = (() => {
     return out.join('\n');
   }
 
-  return { render, escape: esc };
+  return { render, escape: esc, cells, isRow, isRule };
 })();
+if (typeof module !== 'undefined' && module.exports) module.exports = Markdown;

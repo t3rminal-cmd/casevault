@@ -97,7 +97,7 @@
     const d = c.dates || {};
     const a = affiant || {};
     const ctx = {
-      'case.title': c.title, 'case.number': c.number, 'case.client': c.client, 'case.status': c.status,
+      'case.title': c.title, 'case.number': c.number, 'case.fileNumber': c.fileNumber, 'case.client': c.client, 'case.status': c.status,
       'case.tags': (c.tags || []).join(', '), 'case.opened': d.opened, 'case.closed': d.closed,
       today: longDate(now), 'today.iso': isoDate(now),
     };
@@ -114,7 +114,7 @@
   function placeholderGroups(arrestKeys = []) {
     const g = (title, keys) => ({ title, keys });
     return [
-      g('Case', ['case.number', 'case.title', 'case.client', 'case.status', 'case.opened', 'case.closed', 'case.tags']),
+      g('Case', ['case.fileNumber', 'case.number', 'case.title', 'case.client', 'case.status', 'case.opened', 'case.closed', 'case.tags']),
       g('Date', ['today', 'today.iso']),
       g('You (Vault → My details)', AFFIANT_FIELDS.map((k) => `affiant.${k}`)),
       g('Arrest details (first arrestee; arrest.2.name for the second…)', ['arrest.name', 'arrest.dob', 'arrest.description', 'arrest.charges', 'arrest.names', 'arrest.count',
@@ -293,6 +293,9 @@ ${GENERIC_NOTE}
       .replace(/^[ \t]*(-{3,}|\*{3,}|_{3,})[ \t]*$/gm, '')
       .replace(/\*\*\*([^*]+)\*\*\*/g, '$1')
       .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\+\+([^+\n]+)\+\+/g, '$1')
+      .replace(/^[ \t]*\|?[ \t]*:?-{2,}:?[ \t]*(\|[ \t]*:?-{2,}:?[ \t]*)*\|?[ \t]*$/gm, '')
+      .replace(/^[ \t]*\|(.*)\|[ \t]*$/gm, (all, inner) => inner.split('|').map((c) => c.trim()).join('   '))
       .replace(/(^|[^*\w])\*([^*\n]+)\*/g, '$1$2')
       .replace(/(^|\W)_([^_\n]+)_(?=\W|$)/g, '$1$2')
       .replace(/`([^`]+)`/g, '$1')

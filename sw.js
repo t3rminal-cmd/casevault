@@ -31,6 +31,7 @@ const APP_FILES = [
   './js/casefiles.js',
   './js/vault.js',
   './js/markdown.js',
+  './js/format-bar.js',
   './js/checker/nlp.js',
   './js/checker/rules.js',
   './js/checker/sheets.js',

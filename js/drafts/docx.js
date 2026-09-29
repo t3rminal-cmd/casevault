@@ -1,7 +1,7 @@
 /* CaseVault drafts — export Markdown to a Word .docx file, with no library.
  *
  * A .docx is a zip of a few XML files. This writes the minimum Word needs: headings, paragraphs,
- * bold/italic/code runs, bullet and numbered lists, block quotes, and line breaks. [CONFIRM: ...]
+ * bold/italic/underline/code runs, bullet and numbered lists, block quotes, tables, and line breaks. [CONFIRM: ...]
  * placeholders are highlighted yellow so they stand out in Word. The zip uses "stored" (no
  * compression), which every zip reader accepts and keeps this file short.
  *
@@ -86,6 +86,10 @@
 
   /* ---------------- Markdown -> blocks ---------------- */
 
+  const isRow = (l) => /^\s*\|.*\|\s*$/.test(l);
+  const isRule = (l) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l);
+  const cells = (l) => l.trim().replace(/^\|/, '').replace(/\|$/, '').split(/(?<!\\)\|/).map((c) => c.trim().replace(/\\\|/g, '|'));
+
   function blocks(md) {
     const lines = String(md || '').replace(/\r\n?/g, '\n').split('\n');
     const out = [];
@@ -93,10 +97,18 @@
     let list = null; // { type: 'bullet'|'number', id }
     let listCount = 0;
     const endPara = () => { if (para) out.push(para); para = null; };
-    for (const raw of lines) {
-      const line = raw.replace(/\s+$/, '');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].replace(/\s+$/, '');
       let m;
       if (!line.trim()) { endPara(); list = null; continue; }
+      if (isRow(line) && i + 1 < lines.length && isRule(lines[i + 1])) {
+        endPara(); list = null;
+        const rows = [cells(line)];
+        i += 1;
+        while (i + 1 < lines.length && isRow(lines[i + 1])) rows.push(cells(lines[++i]));
+        out.push({ kind: 'table', rows });
+        continue;
+      }
       if (/^\s{0,3}(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) { endPara(); list = null; out.push({ kind: 'rule' }); continue; }
       if ((m = /^\s{0,3}(#{1,6})\s+(.*)$/.exec(line))) { endPara(); list = null; out.push({ kind: 'heading', level: Math.min(m[1].length, 3), text: m[2] }); continue; }
       if ((m = /^(\s*)[-*+]\s+(?:\[[ xX]\]\s+)?(.*)$/.exec(line))) {
@@ -127,13 +139,14 @@
   // Split into runs: ***both***, **bold**, *italic* / _italic_, `code`, and [CONFIRM: ...].
   function runs(text) {
     const out = [];
-    const re = /(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*\s][^*]*\*|(?<![\w])_[^_\s][^_]*_(?![\w])|`[^`]+`|\[CONFIRM:[^\]\n]*\])/g;
+    const re = /(\+\+[^+\n]+\+\+|\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*\s][^*]*\*|(?<![\w])_[^_\s][^_]*_(?![\w])|`[^`]+`|\[CONFIRM:[^\]\n]*\])/g;
     let last = 0;
     let m;
     while ((m = re.exec(text))) {
       if (m.index > last) out.push({ t: text.slice(last, m.index) });
       const tok = m[0];
-      if (tok.startsWith('***')) out.push({ t: tok.slice(3, -3), b: true, i: true });
+      if (tok.startsWith('++')) out.push({ t: tok.slice(2, -2), u: true });
+      else if (tok.startsWith('***')) out.push({ t: tok.slice(3, -3), b: true, i: true });
       else if (tok.startsWith('**')) out.push({ t: tok.slice(2, -2), b: true });
       else if (tok.startsWith('`')) out.push({ t: tok.slice(1, -1), code: true });
       else if (tok.startsWith('[CONFIRM:')) out.push({ t: tok, confirm: true });
@@ -146,7 +159,7 @@
 
   function runXml(r, extra = '') {
     const props = [
-      r.b ? '<w:b/>' : '', r.i ? '<w:i/>' : '',
+      r.b ? '<w:b/>' : '', r.i ? '<w:i/>' : '', r.u ? '<w:u w:val="single"/>' : '',
       r.code ? '<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/>' : '',
       r.confirm ? '<w:highlight w:val="yellow"/>' : '', extra,
     ].join('');
@@ -167,6 +180,13 @@
       if (b.kind === 'heading') return paragraphXml([b.text], `<w:pStyle w:val="Heading${b.level}"/>`);
       if (b.kind === 'item') return paragraphXml([b.text], `<w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="${b.level}"/><w:numId w:val="${b.id}"/></w:numPr>`);
       if (b.kind === 'quote') return paragraphXml([b.text], '<w:pStyle w:val="Quote"/>');
+      if (b.kind === 'table') {
+        const cols = Math.max(...b.rows.map((r) => r.length));
+        const width = Math.floor(9360 / cols); // the text width between the margins, in twips
+        const border = '<w:tblBorders>' + ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map((k) => `<w:${k} w:val="single" w:sz="4" w:space="0" w:color="999999"/>`).join('') + '</w:tblBorders>';
+        const row = (r, head) => `<w:tr>${head ? '<w:trPr><w:tblHeader/></w:trPr>' : ''}${Array.from({ length: cols }, (_, j) => `<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/>${head ? '<w:shd w:val="clear" w:color="auto" w:fill="E9ECEF"/>' : ''}</w:tcPr>${paragraphXml([r[j] || ''], '', head ? '<w:b/>' : '')}</w:tc>`).join('')}</w:tr>`;
+        return `<w:tbl><w:tblPr><w:tblW w:w="${width * cols}" w:type="dxa"/>${border}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${Array.from({ length: cols }, () => `<w:gridCol w:w="${width}"/>`).join('')}</w:tblGrid>${b.rows.map((r, k) => row(r, k === 0)).join('')}</w:tbl><w:p/>`;
+      }
       if (b.kind === 'rule') return '<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="999999"/></w:pBdr></w:pPr></w:p>';
       return paragraphXml(b.lines);
     }).join('');

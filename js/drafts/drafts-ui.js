@@ -337,6 +337,8 @@
     } }, 'Delete');
 
     const genStatus = h('div', { class: 'gen-status', hidden: true });
+    const fmtBar = CVFormatBar.attach(ta, { h, icon: ui.icon });
+    new MutationObserver(() => { fmtBar.hidden = wrap.hidden; }).observe(wrap, { attributes: true, attributeFilter: ['hidden'] });
 
     panel.replaceChildren(
       back,
@@ -344,6 +346,7 @@
       h('div', { class: 'draft-head' }, titleInput, typeSelect),
       h('div', { class: 'toolbar draft-toolbar' },
         h('div', { class: 'segmented' }, btnEdit, btnPreview),
+        fmtBar,
         h('label', { class: 'check-row suggest-toggle' }, suggestToggle, h('span', {}, 'AI suggestions ', suggestNote)),
         h('div', { class: 'spacer' }),
         genBtn, checkBtn, exportMenu, saveBtn, delBtn),

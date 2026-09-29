@@ -56,7 +56,7 @@ test('numbered and bulleted lists (numbering.xml), tables and page breaks', () =
   assert.strictEqual(blocks[3].type, 'table');
   assert.deepStrictEqual(blocks[3].rows.map((r) => r.map((c) => V.plain(c[0].runs))), [['Item', 'Value'], ['2', '$2,540']]);
   assert.ok(blocks.some((b) => b.type === 'break'));
-  assert.strictEqual(V.toMarkdown(blocks), '1. First fact\n2. Second fact\n- A bullet\n\nItem | Value\n2 | $2,540\n\n---\n\nPage two\n');
+  assert.strictEqual(V.toMarkdown(blocks), '1. First fact\n2. Second fact\n- A bullet\n\n| Item | Value |\n| --- | --- |\n| 2 | $2,540 |\n\n---\n\nPage two\n');
 });
 
 test('Word to Markdown keeps {{placeholders}} and formatting (for templates)', () => {
@@ -81,5 +81,5 @@ test('Word to template: placeholders split over runs stay whole, «x» becomes {
     + `<w:p>${r('Case No. ')}${r('{{case.', '<w:b/>')}${r('number}}')}${r(' for ')}${r('«arrest.name»')}</w:p>`
     + `<w:tbl><w:tr><w:tc>${p('DOB')}</w:tc><w:tc><w:p>${r('{{arrest')}${r('.dob}}', '<w:i/>')}</w:p></w:tc></w:tr></w:tbl>`,
   ));
-  assert.strictEqual(V.toTemplate(blocks), '# Arrest report\n\nCase No. **{{case.number}}** for {{arrest.name}}\n\nDOB | {{arrest.dob}}\n');
+  assert.strictEqual(V.toTemplate(blocks), '# Arrest report\n\nCase No. **{{case.number}}** for {{arrest.name}}\n\n| DOB | {{arrest.dob}} |\n| --- | --- |\n');
 });

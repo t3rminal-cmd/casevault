@@ -469,7 +469,7 @@
    * ===================================================================== */
 
   const isArchivedEntry = (c) => c.location === 'archive';
-  const matchesSearch = (c, q) => !q || [c.title, c.number, c.client, ...(c.tags || [])].join(' ').toLowerCase().includes(q);
+  const matchesSearch = (c, q) => !q || [c.title, c.fileNumber, c.number, c.client, ...(c.tags || [])].join(' ').toLowerCase().includes(q);
 
   // Cases in cases/ (the archive has its own section below the list).
   function filteredCases() {
@@ -491,7 +491,7 @@
         'aria-current': c.id === state.caseId ? 'page' : null,
       },
       h('div', { class: 'case-item-top' }, h('span', { class: 'case-item-title' }, c.title || 'Untitled case'), statusPill(c.status)),
-      h('div', { class: 'case-item-meta muted' }, [c.number, c.client].filter(Boolean).join(' · ') || '\u00a0'),
+      h('div', { class: 'case-item-meta muted' }, [c.fileNumber && `File ${c.fileNumber}`, c.number && `Case ${c.number}`, c.client].filter(Boolean).join(' · ') || '\u00a0'),
       c.status === 'Pending' && c.pending ? h('div', { class: 'case-item-due', icon: 'hourglass-split' }, `Waiting on ${c.pending.reason}`) : null,
       due && h('div', { class: `case-item-due ${due.cls}`, icon: 'calendar-event' }, `${c.nextDeadline.title || 'Deadline'}: ${due.text}`)));
   }
@@ -627,6 +627,9 @@
     if (!state.connected) return;
     const result = await openDialog((close) => {
       const numberIn = h('input', { name: 'number', maxlength: 100 });
+      // One file number can hold several cases: offer the file numbers already in use.
+      const fileNumbers = [...new Set((Vault.data.cases || []).map((x) => x.fileNumber).filter(Boolean))].sort();
+      const fileList = h('datalist', { id: 'file-numbers' }, fileNumbers.map((n) => h('option', { value: n })));
       const openedIn = h('input', { name: 'opened', type: 'date', value: today() });
       const folderNote = h('span', {});
       const showFolder = () => {
@@ -642,13 +645,15 @@
         e.preventDefault();
         const fd = new FormData(form);
         close({
-          title: fd.get('title').trim(), number: fd.get('number').trim(), client: fd.get('client').trim(),
+          title: fd.get('title').trim(), fileNumber: fd.get('fileNumber').trim(), number: fd.get('number').trim(), client: fd.get('client').trim(),
           status: fd.get('status'), opened: fd.get('opened'), tags: parseTags(fd.get('tags')),
         });
       } },
       h('h2', { class: 'span-2' }, 'New case'),
       field('Title', h('input', { name: 'title', required: true, autofocus: true, maxlength: 200 }), 'span-2'),
-      field('Case / file number', numberIn),
+      field('File number', h('input', { name: 'fileNumber', maxlength: 100, list: 'file-numbers', title: 'The investigation file. Several cases can share one file number.' })),
+      field('Case number', numberIn),
+      fileList,
       field('Client', h('input', { name: 'client', maxlength: 200 })),
       field('Status', h('select', { name: 'status' }, Vault.STATUSES.map((s) => h('option', {}, s)))),
       field('Opened', openedIn),
@@ -777,7 +782,7 @@
   }
 
   function caseSubtitle(c) {
-    return [c.number && `No. ${c.number}`, c.client, statusPill(c.status), c.dates.opened && `Opened ${fmtDate(c.dates.opened)}`]
+    return [c.fileNumber && `File ${c.fileNumber}`, c.number && `Case ${c.number}`, c.client, statusPill(c.status), c.dates.opened && `Opened ${fmtDate(c.dates.opened)}`]
       .filter(Boolean).flatMap((x, i) => (i ? [' · ', x] : [x]));
   }
 
@@ -826,7 +831,8 @@
     panel.replaceChildren(
       h('form', { class: 'form-grid', onsubmit: (e) => e.preventDefault() },
         field('Title', bind(h('input', { value: c.title, maxlength: 200 }), (v) => { c.title = v; }), 'span-2'),
-        field('Case / file number', bind(h('input', { value: c.number, maxlength: 100 }), (v) => { c.number = v; })),
+        field('File number', bind(h('input', { value: c.fileNumber || '', maxlength: 100, title: 'The investigation file. Several cases can share one file number.' }), (v) => { c.fileNumber = v; })),
+        field('Case number', bind(h('input', { value: c.number, maxlength: 100 }), (v) => { c.number = v; })),
         field('Client', bind(h('input', { value: c.client, maxlength: 200 }), (v) => { c.client = v; })),
         h('label', { class: 'field' }, h('span', {}, 'Status'), statusSelect, statusNote),
         field('Tags (comma separated)', bind(h('input', { value: c.tags.join(', '), maxlength: 300 }), (v) => { c.tags = parseTags(v); })),
@@ -996,18 +1002,19 @@
 
     const btnEdit = h('button', { 'data-ro-ok': 'true', class: 'btn small active', type: 'button' }, 'Edit');
     const btnPreview = h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button' }, 'Preview');
+    const fmtBar = CVFormatBar.attach(ta, { h, icon: I });
     btnEdit.addEventListener('click', () => {
-      preview.hidden = true; ta.hidden = false; ta.focus();
+      preview.hidden = true; ta.hidden = false; fmtBar.hidden = false; ta.focus();
       btnEdit.classList.add('active'); btnPreview.classList.remove('active');
     });
     btnPreview.addEventListener('click', () => {
       preview.innerHTML = Markdown.render(ta.value) || '<p class="muted">Nothing written yet.</p>';
-      preview.hidden = false; ta.hidden = true;
+      preview.hidden = false; ta.hidden = true; fmtBar.hidden = true;
       btnPreview.classList.add('active'); btnEdit.classList.remove('active');
     });
 
     panel.replaceChildren(
-      h('div', { class: 'toolbar' }, h('div', { class: 'segmented' }, btnEdit, btnPreview), h('div', { class: 'spacer' }), counter, status, btnSave),
+      h('div', { class: 'toolbar' }, h('div', { class: 'segmented' }, btnEdit, btnPreview), fmtBar, h('div', { class: 'spacer' }), counter, status, btnSave),
       ta, preview);
   }
 

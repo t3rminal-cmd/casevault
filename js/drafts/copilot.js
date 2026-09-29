@@ -99,7 +99,7 @@
     const c = caseObj || {};
     const d = c.dates || {};
     const facts = [
-      `Title: ${c.title || '(none)'}`, `Case number: ${c.number || '(none)'}`, `Client: ${c.client || '(none)'}`,
+      `Title: ${c.title || '(none)'}`, `File number: ${c.fileNumber || '(none)'}`, `Case number: ${c.number || '(none)'}`, `Client: ${c.client || '(none)'}`,
       `Status: ${c.status || '(none)'}`, `Opened: ${d.opened || '(none)'}`, c.tags && c.tags.length ? `Tags: ${c.tags.join(', ')}` : null,
     ].filter(Boolean).join('\n');
     const events = (timeline.events || []).map((e) => `- ${e.date}${e.time ? ` ${e.time}` : ''} [${e.kind === 'deadline' ? 'deadline' : 'event'}${e.done ? ', done' : ''}] ${e.title}${e.note ? ` (${e.note.replace(/\s+/g, ' ')})` : ''}`).join('\n');
