@@ -322,6 +322,12 @@
         h('button', { type: 'button', onclick: () => exportDocx('case') }, 'Save .docx to case files (SSD)'),
         h('button', { 'data-ro-ok': 'true', type: 'button', onclick: () => exportDocx('download') }, 'Save .docx to this computer…'),
         h('button', { 'data-ro-ok': 'true', type: 'button', onclick: copyPlain }, 'Copy as plain text')));
+    // Drafts save by themselves; Save (or Ctrl+S) writes now and says so.
+    const saveBtn = h('button', { class: 'btn small primary', type: 'button', title: 'Save now (Ctrl+S). Drafts also save by themselves.', onclick: async () => {
+      save(0);
+      await Save.flushAll();
+      if (!Save.failed.has(saveKey)) toast(`Saved to the SSD (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}).`, 'success', 2500);
+    } }, 'Save');
     const delBtn = h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
       if (!(await confirmDialog({ title: `Delete "${meta.title}"?`, message: 'The draft is permanently deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
       const t = Save.timers.get(saveKey);
@@ -339,7 +345,7 @@
         h('div', { class: 'segmented' }, btnEdit, btnPreview),
         h('label', { class: 'check-row suggest-toggle' }, suggestToggle, h('span', {}, 'AI suggestions ', suggestNote)),
         h('div', { class: 'spacer' }),
-        genBtn, checkBtn, exportMenu, delBtn),
+        genBtn, checkBtn, exportMenu, saveBtn, delBtn),
       genStatus,
       h('div', { class: 'draft-grid' },
         h('div', { class: 'draft-main' }, wrap, preview),

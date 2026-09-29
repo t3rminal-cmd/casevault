@@ -910,10 +910,23 @@
     };
     updateCount();
 
+    // Notes save by themselves a moment after typing stops; Save (or Ctrl+S) writes them now.
+    const key = `notes:${c.id}`;
+    const status = h('span', { class: 'note-save-status small muted', role: 'status', 'aria-live': 'polite' }, text ? '✓ Saved on the SSD' : '');
+    const markSaved = () => { status.className = 'note-save-status small ok-text'; status.textContent = `✓ Saved ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`; };
+    const saveNotes = (value) => async () => { await Vault.saveNotes(c.id, value); if (ta.value === value) markSaved(); };
     ta.addEventListener('input', () => {
       updateCount();
-      const value = ta.value;
-      Save.schedule(`notes:${c.id}`, () => Vault.saveNotes(c.id, value), 700);
+      status.className = 'note-save-status small warn-text';
+      status.textContent = 'Not saved yet…';
+      Save.schedule(key, saveNotes(ta.value), 700);
+    });
+    const btnSave = h('button', { class: 'btn small primary', type: 'button', title: 'Save now (Ctrl+S). Notes also save by themselves.' }, 'Save');
+    btnSave.addEventListener('click', async () => {
+      const pending = Save.timers.get(key);
+      if (pending) { clearTimeout(pending.timer); Save.timers.delete(key); }
+      btnSave.disabled = true;
+      try { await Save.run(key, saveNotes(ta.value)); markSaved(); } catch { /* shown by the header indicator */ } finally { btnSave.disabled = false; }
     });
 
     const btnEdit = h('button', { 'data-ro-ok': 'true', class: 'btn small active', type: 'button' }, 'Edit');
@@ -929,7 +942,7 @@
     });
 
     panel.replaceChildren(
-      h('div', { class: 'toolbar' }, h('div', { class: 'segmented' }, btnEdit, btnPreview), h('div', { class: 'spacer' }), counter),
+      h('div', { class: 'toolbar' }, h('div', { class: 'segmented' }, btnEdit, btnPreview), h('div', { class: 'spacer' }), counter, status, btnSave),
       ta, preview);
   }
 
