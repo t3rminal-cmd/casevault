@@ -52,3 +52,15 @@ test('Word export: underline runs and a real table', () => {
   assert.match(xml, /<w:tbl>.*<w:tblHeader\/>.*<w:t xml:space="preserve">A<\/w:t>.*<w:t xml:space="preserve">2<\/w:t>.*<\/w:tbl>/s);
   assert.ok(zlib);
 });
+
+test('Tab indents, Shift+Tab outdents, one line or several', () => {
+  const F = require('../js/format-bar.js');
+  assert.deepStrictEqual(F.indent('ab', 1, 1), { text: 'a\tb', start: 2, end: 2 });
+  const two = 'one\ntwo\nthree';
+  const r = F.indent(two, 0, 7);
+  assert.strictEqual(r.text, '\tone\n\ttwo\nthree');
+  assert.strictEqual(F.indent(r.text, r.start, r.end, true).text, two);
+  assert.strictEqual(F.indent('\tx', 2, 2, true).text, 'x');
+  assert.strictEqual(F.indent('    x', 5, 5, true).text, 'x', 'four spaces count as one indent');
+  assert.strictEqual(F.indent('x', 1, 1, true).text, 'x', 'nothing to take off');
+});

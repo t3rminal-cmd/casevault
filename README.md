@@ -15,7 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.16)
+## Features (v1.17)
+
+- **Reports** tab: the case notes and every draft in one list; Tab and Shift+Tab indent in notes and reports (kept in the preview and the Word export)
 
 - Case tabs in working order (Details, Timeline, Drafts, Files, Mail, Notes, Checks); a red bell on the right of any case with an open deadline; an X to close every box; blue chat bubble for Ask AI and a ⋮ menu
 

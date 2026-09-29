@@ -784,7 +784,7 @@
           h('div', { class: 'spacer' }),
           h('button', { class: 'btn', type: 'button', onclick: () => {
             close();
-            if (info && info.kind === 'draft') ui.go(c.id, 'drafts', info.draft);
+            if (info && info.kind === 'draft') ui.go(c.id, 'reports', info.draft);
             else ui.previewFile(c, loc.doc, loc.page, loc.sheet != null ? { sheet: loc.sheet, row: loc.row } : loc.field != null ? { field: loc.field } : null);
           } }, info && info.kind === 'draft' ? 'Open draft' : 'Open original'),
           h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Close')),

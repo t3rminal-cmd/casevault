@@ -85,7 +85,7 @@ The header has three parts:
   - **Options** and **Contact Dev** (see below).
 
 - Every box that opens over the page (the Vault, Options, New case, a file preview…) has an **X** at the top right to close it without changing anything, like Esc.
-- The case tabs are, in order: **Details**, **Timeline**, **Drafts**, **Files**, **Mail**, **Notes**, **Checks** (with **Arrest details** after Details once you add them).
+- The case tabs are, in order: **Details**, **Timeline**, **Reports**, **Files**, **Mail**, **Checks** (with **Arrest details** after Details once you add them).
 - **Theme:** *automatic* follows Windows' light or dark setting. Each PC remembers its own choice in the browser; it's a display preference, not case data.
 - Icons mark every tab, button and document folder, and each file in a case shows an icon for its type (PDF, Word, Excel, picture, audio, video, email).
 - **Point at a button** (or reach it with Tab) to see what it does in a hover box. Buttons show just an icon and a short name; the explanation is in the hover box.
@@ -175,9 +175,15 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
-## Notes
+## Reports (case notes and drafts)
 
-The **Notes** tab is a large free-form page, saved as `notes.md` in the case folder. You can use simple formatting and check it with **Preview**:
+The **Reports** tab has everything you write for a case in one list: **Case notes** is always at the top, followed by every report and draft (including Draft with AI's). **New report** above the list starts one: Blank, from a **Template**, or **Draft with AI** (see *Drafts* below). Click a name to open it; **← All reports** goes back to the list. Old links to the Notes or Drafts tab open the same place.
+
+**Tab indents** in the case notes and in every report, like in Word: **Tab** puts in an indent (with several lines selected, it indents each one) and **Shift+Tab** takes one off. Indents show in Preview and become tab stops in the Word export. When an AI suggestion is showing in a report, Tab accepts it instead. To leave the box with the keyboard, press **Esc**, then **Tab**.
+
+### Case notes
+
+**Case notes** is a large free-form page, saved as `notes.md` in the case folder. You can use simple formatting and check it with **Preview**:
 
 ```
 # Heading

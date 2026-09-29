@@ -126,7 +126,7 @@
       const slug = await Vault.newDraftSlug(c.id, title);
       await Save.track(`draft:${c.id}:${slug}`, () => Vault.saveDraft(c.id, slug, { title, type: 'other', ai: false, template: tpl.file, created: new Date().toISOString() }, body));
       toast(`Draft made from "${tpl.title}". Check every [CONFIRM: …].`, 'success', 6000);
-      ui.go(c.id, 'drafts', slug);
+      ui.go(c.id, 'reports', slug);
     } catch { /* reported by Save */ }
   }
 
