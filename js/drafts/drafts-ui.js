@@ -133,7 +133,7 @@
     };
 
     // ---- header
-    const banner = h('div', { class: 'ai-banner', role: 'note', hidden: !meta.ai }, '⚠ ', AI_BANNER);
+    const banner = h('div', { class: 'ai-banner', role: 'note', hidden: !meta.ai }, ui.icon('exclamation-triangle-fill'), ' ', AI_BANNER);
     const titleInput = h('input', { class: 'draft-title', value: meta.title, maxlength: 150, 'aria-label': 'Draft title' });
     titleInput.addEventListener('input', () => { meta.title = titleInput.value.trim() || slug; save(); });
     const typeSelect = h('select', { 'aria-label': 'Document type' }, Object.entries(CVDraft.DOC_TYPES).map(([k, t]) => h('option', { value: k, selected: k === meta.type }, t.label)));
@@ -424,8 +424,13 @@
     async function openGenerate() {
       await Engine().refresh();
       if (!aiReady()) return toast('The local AI engine is not connected. Start Start-CaseVault.bat on the CV-AI drive, then try again.', 'error', 8000);
-      const [files, templates] = await Promise.all([Vault.listFiles(c.id), Vault.listTemplates()]);
+      const [files, templates, forms, arrest] = await Promise.all([Vault.listFiles(c.id), Vault.listTemplates(),
+        CVReferenceUI.importedComplaints().catch(() => []), Vault.readCaseJSON(c.id, 'arrest.json').catch(() => null)]);
       const docs = files.filter((f) => CVExtract.kindOf(f.name));
+      // A complaint form to follow: the one this draft was started from, else one matching the charges.
+      const charges = ((arrest && arrest.arrestees) || []).flatMap((a) => a.charges || []);
+      const suggested = CVReference.suggestComplaints(charges).map((x) => x.id);
+      const preset = meta.reference || (forms.find((f) => f.form && suggested.includes(f.form.id)) || {}).path || '';
       const opts = await ui.openDialog((close) => {
         const type = h('select', {}, Object.entries(CVDraft.DOC_TYPES).map(([k, t]) => h('option', { value: k, selected: k === meta.type }, t.label)));
         const tpl = h('select', {}, h('option', { value: '' }, '(none: use the standard structure)'),
@@ -434,11 +439,16 @@
         const useNotes = h('input', { type: 'checkbox', checked: true });
         const docBoxes = docs.map((f) => h('input', { type: 'checkbox', value: f.name, checked: true }));
         const instr = h('textarea', { rows: 3, placeholder: 'Optional, e.g. "Focus on the events of March 14" or "Formal tone, third person".' });
+        const form = h('select', {}, h('option', { value: '' }, forms.length ? '(none)' : '(no complaint forms on the SSD: Reference → Narcotics)'),
+          forms.map((f) => h('option', { value: f.path, selected: f.path === preset }, `${f.name}${f.form && suggested.includes(f.form.id) ? ' (matches the charges)' : ''}`)));
+        const useValues = h('input', { type: 'checkbox', checked: /drug|narcotic|cocaine|heroin|fentanyl|meth|cannabis/i.test(`${c.title} ${(c.tags || []).join(' ')}`) });
+        const useCodes = h('input', { type: 'checkbox' });
         const replace = h('input', { type: 'radio', name: 'gen-mode', value: 'replace', checked: !ta.value.trim() });
         const append = h('input', { type: 'radio', name: 'gen-mode', value: 'append', checked: !!ta.value.trim() });
         return h('form', { class: 'gen-form', onsubmit: (e) => {
           e.preventDefault();
-          close({ type: type.value, template: tpl.value, timeline: useTimeline.checked, notes: useNotes.checked, docs: docBoxes.filter((b) => b.checked).map((b) => b.value), instructions: instr.value.trim(), mode: replace.checked ? 'replace' : 'append' });
+          close({ type: type.value, template: tpl.value, timeline: useTimeline.checked, notes: useNotes.checked, docs: docBoxes.filter((b) => b.checked).map((b) => b.value), instructions: instr.value.trim(), mode: replace.checked ? 'replace' : 'append',
+            reference: form.value, values: useValues.checked, codes: useCodes.checked });
         } },
         h('h2', {}, 'Draft with AI'),
         h('p', { class: 'muted small' }, `Uses ${CVChecks.profileLabel(Engine().choice())} on this computer. The AI is told to use only this case's material and to write [CONFIRM: ...] for anything missing.`),
@@ -451,6 +461,11 @@
             h('label', { class: 'check-row' }, useNotes, h('span', {}, 'Notes')),
             docBoxes.map((b) => h('label', { class: 'check-row' }, b, h('span', {}, b.value))),
             docs.length ? null : h('p', { class: 'muted small' }, 'No attached documents to draw on.'))),
+        h('div', { class: 'field' }, h('span', {}, 'Reference (for wording, statutes and codes; not facts)'),
+          h('div', { class: 'check-reports' },
+            h('label', { class: 'field' }, h('span', { class: 'small' }, 'Complaint form to follow'), form),
+            h('label', { class: 'check-row' }, useValues, h('span', {}, 'Narcotics street values')),
+            h('label', { class: 'check-row' }, useCodes, h('span', {}, 'Incident location and UCR codes')))),
         ui.field('Instructions', instr),
         ta.value.trim() ? h('div', { class: 'row' }, h('label', { class: 'check-row' }, replace, h('span', {}, 'Replace the current text')), h('label', { class: 'check-row' }, append, h('span', {}, 'Add below the current text'))) : null,
         h('div', { class: 'dialog-actions' },
@@ -507,11 +522,21 @@
           const hits = await CVCopilot.relevantPassages({ docs, query, engine: { base: det.base, embed: det.embed }, fetchImpl: Engine().fetchImpl() });
           const passages = hits.map((p) => ({ ...p, docName: docs[p.doc].name }));
           const template = opts.template ? CVDraft.fillTemplate(await Vault.readTemplate(opts.template), CVDraft.templateContext(caseObj, new Date(), Vault.data.settings.affiant, await CVClosingUI.templateExtra(caseObj))) : '';
-          const messages = CVCopilot.draftMessages({ type: opts.type, template, instructions: opts.instructions, caseObj, timeline, notes, passages, numCtx });
+          const references = [];
+          if (opts.reference) {
+            msg.textContent = 'Reading the complaint form…';
+            const formText = await CVReferenceUI.complaintText(opts.reference).catch(() => '');
+            const f = CVReference.complaintByFileName(opts.reference);
+            if (formText) references.push({ title: `Complaint form: ${f ? f.name : opts.reference.split('/').pop()}`, text: formText });
+            else toast('The complaint form could not be read; drafting without it.', 'error', 6000);
+          }
+          if (opts.values) references.push({ title: 'Narcotics street values', text: CVReference.narcoticsText() });
+          if (opts.codes) references.push({ title: 'Incident location codes', text: CVReference.locationCodesText() }, { title: 'UCR codes', text: CVReference.ucrText() });
+          const messages = CVCopilot.draftMessages({ type: opts.type, template, instructions: opts.instructions, caseObj, timeline, notes, passages, references, numCtx });
 
           Object.assign(meta, {
-            ai: true, type: opts.type, ...(opts.template ? { template: opts.template } : {}),
-            generated: { model: choice.model, at: new Date().toISOString(), sources: ['case details', opts.timeline && 'timeline', opts.notes && 'notes', ...opts.docs].filter(Boolean) },
+            ai: true, type: opts.type, ...(opts.template ? { template: opts.template } : {}), ...(opts.reference ? { reference: opts.reference } : {}),
+            generated: { model: choice.model, at: new Date().toISOString(), sources: ['case details', opts.timeline && 'timeline', opts.notes && 'notes', ...opts.docs, ...references.map((r) => `reference: ${r.title}`)].filter(Boolean) },
           });
           banner.hidden = false;
           typeSelect.value = meta.type;
@@ -646,7 +671,7 @@
     });
 
     draw();
-    return h('section', {},
+    return h('section', { 'data-section': 'templates' },
       h('h3', {}, 'Templates'),
       h('p', { class: 'muted small' }, 'Your own document formats for Drafts, kept as Markdown files in CaseVault-Data\\templates on the SSD. To add one: Import your agency\'s Word form (or a .md/.txt file), or New template and paste the text. Where a case detail goes, put a placeholder like {{case.number}}: the editor lists them all. # at the start of a line makes a heading, **bold**, *italic*, - for a list.'),
       box,

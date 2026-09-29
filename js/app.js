@@ -15,7 +15,8 @@
     const el = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs || {})) {
       if (v == null || v === false) continue;
-      if (k === 'class') el.className = v;
+      if (k === 'icon') el.prepend(CVIcons.icon(v));
+      else if (k === 'class') el.className = v;
       else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
       else if (k === 'value' || k === 'checked' || k === 'selected') el[k] = v;
       else if (k === 'html') el.innerHTML = v; // only ever used with Markdown.render output (escaped)
@@ -73,7 +74,9 @@
   }
 
   const parseTags = (s) => [...new Set(String(s).split(',').map((t) => t.trim()).filter(Boolean))];
-  const statusPill = (status) => h('span', { class: `pill status-${String(status).toLowerCase()}` }, status);
+  const STATUS_ICONS = { Open: 'folder2-open', Pending: 'hourglass-split', Closed: 'lock-fill', Archived: 'archive' };
+  const statusPill = (status) => h('span', { class: `pill status-${String(status).toLowerCase()}`, icon: STATUS_ICONS[status] }, status);
+  const I = (name, opts) => CVIcons.icon(name, opts);
 
   function toast(message, kind = 'info', ms = 4000) {
     const el = h('div', { class: `toast ${kind}`, role: kind === 'error' ? 'alert' : 'status' }, message);
@@ -219,6 +222,7 @@
         el.className = 'save-status saved';
         el.textContent = 'Connected to SSD';
       }
+      el.prepend(I({ error: 'exclamation-triangle-fill', saving: 'arrow-repeat', saved: 'hdd-fill' }[el.className.split(' ')[1]] || 'hdd'));
     },
   };
 
@@ -488,8 +492,8 @@
       },
       h('div', { class: 'case-item-top' }, h('span', { class: 'case-item-title' }, c.title || 'Untitled case'), statusPill(c.status)),
       h('div', { class: 'case-item-meta muted' }, [c.number, c.client].filter(Boolean).join(' · ') || '\u00a0'),
-      c.status === 'Pending' && c.pending ? h('div', { class: 'case-item-due' }, `⏳ Waiting on ${c.pending.reason}`) : null,
-      due && h('div', { class: `case-item-due ${due.cls}` }, `⏰ ${c.nextDeadline.title || 'Deadline'}: ${due.text}`)));
+      c.status === 'Pending' && c.pending ? h('div', { class: 'case-item-due', icon: 'hourglass-split' }, `Waiting on ${c.pending.reason}`) : null,
+      due && h('div', { class: `case-item-due ${due.cls}`, icon: 'calendar-event' }, `${c.nextDeadline.title || 'Deadline'}: ${due.text}`)));
   }
 
   function renderCaseList() {
@@ -499,7 +503,7 @@
     const cases = filteredCases();
     const activeCount = Vault.data.cases.filter((c) => !isArchivedEntry(c)).length;
     list.replaceChildren(...(cases.length ? cases.map(caseItem) : [h('li', { class: 'empty muted' },
-      activeCount ? 'No cases match.' : Vault.data.cases.length ? 'No active cases.' : 'No cases yet. Click "+ New case".')]));
+      activeCount ? 'No cases match.' : Vault.data.cases.length ? 'No active cases.' : 'No cases yet. Click "New case".')]));
 
     // Archived cases: a collapsible section, searched with the same box.
     const q = $('#case-search').value.trim().toLowerCase();
@@ -526,6 +530,8 @@
   function route() {
     if (!state.connected) return;
     if (/^#\/online\b/.test(location.hash)) return showOnline();
+    const ref = location.hash.match(/^#\/reference(?:\/([\w-]+))?/);
+    if (ref) return showReference(ref[1] || null);
     const m = location.hash.match(/^#\/case\/([^/]+)(?:\/(\w+))?(?:\/([^/]+))?/);
     if (m) showCase(decodeURIComponent(m[1]), m[2] || 'details', m[3] || null);
     else showDashboard();
@@ -548,13 +554,24 @@
     });
   }
 
+  function showReference(section) {
+    state.caseId = null;
+    state.caseObj = null;
+    renderCaseList();
+    CVReferenceUI.render($('#main'), section).catch((err) => {
+      if (FS.isDisconnectError(err)) return onDriveLost();
+      console.error(err);
+      toast(`Could not open the reference: ${err.message}`, 'error');
+    });
+  }
+
   function renderNetStatus() {
     const el = $('#net-status');
     if (!state.connected) { el.hidden = true; return; }
     const on = CVOutbound.isOnline();
     el.hidden = false;
     el.className = `net-status ${on ? 'on' : 'off'}`;
-    el.textContent = on ? `Online · ${CVOutbound.minutesLeft()} min` : 'Offline';
+    el.replaceChildren(I(on ? 'globe2' : 'shield-lock-fill'), on ? `Online · ${CVOutbound.minutesLeft()} min` : 'Offline');
     el.title = on
       ? `Online AI is on: CaseVault may reach ${CVOutbound.ALLOWED_HOSTS.join(', ')} with text you review. Click to manage or go offline.`
       : 'CaseVault is offline: nothing leaves this computer. Click for online research & drafting.';
@@ -576,10 +593,14 @@
     const recent = [...cases].sort((a, b) => (b.updated || '').localeCompare(a.updated || '')).slice(0, 8);
 
     $('#main').replaceChildren(h('section', { class: 'dashboard' },
-      h('h1', {}, 'Overview'),
+      h('h1', { class: 'page-title', icon: 'speedometer2' }, 'Overview'),
       h('div', { class: 'stats' },
-        ...Vault.STATUSES.map((s) => h('div', { class: 'stat' }, h('div', { class: 'stat-num' }, count(s)), h('div', { class: 'stat-label' }, s)))),
-      h('h2', {}, 'Upcoming deadlines'),
+        ...Vault.STATUSES.map((s) => h('div', { class: `stat stat-${s.toLowerCase()}` },
+          h('span', { class: 'stat-icon' }, I(STATUS_ICONS[s])),
+          h('div', {}, h('div', { class: 'stat-num' }, count(s)), h('div', { class: 'stat-label' }, s))))),
+      h('h2', { class: 'section-title', icon: 'lightning-charge' }, 'Quick reference'),
+      CVReferenceUI.quickLinks(),
+      h('h2', { class: 'section-title', icon: 'calendar-event' }, 'Upcoming deadlines'),
       deadlines.length
         ? h('ul', { class: 'plain-list' }, deadlines.map((c) => {
           const due = dueLabel(c.nextDeadline.date);
@@ -589,13 +610,13 @@
             h('span', { class: `due ${due.cls}` }, due.text)));
         }))
         : h('p', { class: 'muted' }, 'No open deadlines. Add them from a case\'s Timeline tab.'),
-      h('h2', {}, 'Recently updated'),
+      h('h2', { class: 'section-title', icon: 'clock-history' }, 'Recently updated'),
       recent.length
         ? h('ul', { class: 'plain-list' }, recent.map((c) => h('li', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}`, class: 'row-link' },
           h('span', {}, h('strong', {}, c.title || 'Untitled case'), c.number ? ` · ${c.number}` : ''),
           statusPill(c.status),
           h('span', { class: 'muted' }, c.updated ? fmtDateTime(Date.parse(c.updated)) : '')))))
-        : h('p', { class: 'muted' }, 'Create your first case with "+ New case".')));
+        : h('p', { class: 'muted' }, 'Create your first case with "New case".')));
   }
 
   /* =====================================================================
@@ -658,6 +679,26 @@
 
   const TABS = [['details', 'Details'], ['notes', 'Notes'], ['timeline', 'Timeline'], ['files', 'Files'], ['mail', 'Mail'], ['drafts', 'Drafts'], ['checks', 'Checks']];
   // The Arrest details tab appears once a case has arrest details, or is closed "by arrest".
+  const FOLDER_ICONS = {
+    '': 'collection', unsorted: 'folder', Affidavits: 'file-earmark-ruled', 'Arrest Report': 'person-badge', 'Supplementary Report': 'file-earmark-text',
+    'Case Report': 'journal-bookmark', Deconfliction: 'signpost-split', 'Drug Exhibits': 'capsule-pill', 'Other Exhibits': 'box-seam', Email: 'envelope',
+    'Ops Plan': 'map', 'Subpoena Response': 'bank2', 'Subject Information': 'person-vcard', Recordings: 'mic', 'Vehicle Information': 'car-front', Maps: 'geo-alt', Other: 'folder',
+  };
+  const FILE_ICONS = { pdf: 'file-earmark-pdf-fill', word: 'file-earmark-word-fill', sheet: 'file-earmark-spreadsheet', image: 'file-earmark-image', audio: 'file-earmark-music', video: 'file-earmark-play', text: 'file-earmark-text', mail: 'envelope-paper', zip: 'file-earmark-zip', other: 'file-earmark' };
+  function fileKind(name) {
+    const ext = (/\.([a-z0-9]+)$/i.exec(name) || [])[1]?.toLowerCase() || '';
+    if (ext === 'pdf') return 'pdf';
+    if (/^(docx?|docm|rtf|odt)$/.test(ext)) return 'word';
+    if (/^(xlsx?|xlsm|ods|csv)$/.test(ext)) return 'sheet';
+    if (/^(png|jpe?g|gif|webp|bmp|tiff?|heic)$/.test(ext)) return 'image';
+    if (/^(mp3|wav|m4a|aac|ogg|wma|flac)$/.test(ext)) return 'audio';
+    if (/^(mp4|mov|avi|mkv|webm|wmv)$/.test(ext)) return 'video';
+    if (/^(txt|md|log|json|xml)$/.test(ext)) return 'text';
+    if (/^(eml|msg)$/.test(ext)) return 'mail';
+    if (/^(zip|7z|rar)$/.test(ext)) return 'zip';
+    return 'other';
+  }
+  const TAB_ICONS = { details: 'info-circle', arrest: 'person-vcard', notes: 'journal-text', timeline: 'clock-history', files: 'files', mail: 'envelope', drafts: 'pencil-square', checks: 'clipboard2-check' };
   const tabsFor = (c) => (CVClosingUI.hasArrestTab(c) ? [TABS[0], ['arrest', 'Arrest details'], ...TABS.slice(1)] : TABS);
 
   async function showCase(id, tab, sub = null) {
@@ -680,6 +721,7 @@
     const tabs = tabsFor(c);
     if (!tabs.some(([t]) => t === tab)) tab = 'details';
     state.caseId = id;
+    state.lastCaseId = id;
     state.tab = tab;
     renderCaseList();
 
@@ -687,15 +729,16 @@
     const panel = h('div', { class: 'tab-panel', role: 'tabpanel' });
     $('#main').replaceChildren(h('section', { class: `case ${archived ? 'archived' : ''}` },
       archived ? h('div', { class: 'archived-banner', role: 'note' },
+        I('archive', { cls: 'banner-icon' }),
         h('div', {}, h('strong', {}, 'Archived case'),
           h('span', { class: 'small block' }, 'Read-only. Notes, files, drafts and checks can be opened and searched, but not changed.')),
         h('div', { class: 'spacer' }),
-        h('button', { class: 'btn', type: 'button', onclick: () => restoreCase(c) }, 'Restore to active cases')) : null,
+        h('button', { class: 'btn', type: 'button', icon: 'arrow-counterclockwise', onclick: () => restoreCase(c) }, 'Restore to active cases')) : null,
       h('div', { class: 'case-head' },
         h('h1', { id: 'case-title' }, c.title || 'Untitled case'),
         h('div', { class: 'case-sub muted', id: 'case-sub' }, caseSubtitle(c))),
       h('nav', { class: 'tabs', role: 'tablist' }, tabs.map(([t, label]) =>
-        h('a', { href: `#/case/${encodeURIComponent(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab) }, label))),
+        h('a', { href: `#/case/${encodeURIComponent(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab), icon: TAB_ICONS[t] }, label))),
       panel));
     // Read-only: everything in the tab that could change the case is switched off, now and as
     // the tab redraws. (vault.js refuses the writes too.)
@@ -784,33 +827,33 @@
           + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),
       // Archive and delete side by side, so the gentler choice is always in view.
       h('section', { class: 'case-actions', 'data-ro-ok': 'true', 'aria-labelledby': 'case-actions-title' },
-        h('h3', { id: 'case-actions-title' }, 'Case actions'),
+        h('h3', { id: 'case-actions-title', icon: 'sliders' }, 'Case actions'),
         h('div', { class: 'case-actions-grid' },
           archived
             ? h('div', { class: 'case-action' },
-              h('button', { class: 'btn', type: 'button', onclick: () => restoreCase(c) }, 'Restore to active cases'),
+              h('button', { class: 'btn', type: 'button', icon: 'arrow-counterclockwise', onclick: () => restoreCase(c) }, 'Restore to active cases'),
               h('p', { class: 'muted small' }, 'Moves the case back to the active list, with the status it had before, so it can be changed again.'))
             : h('div', { class: 'case-action' },
-              h('button', { class: 'btn', type: 'button', onclick: () => archiveCase(c) }, 'Archive case…'),
+              h('button', { class: 'btn', type: 'button', icon: 'archive', onclick: () => archiveCase(c) }, 'Archive case…'),
               h('p', { class: 'muted small' }, 'Keeps everything, read-only, in CaseVault-Data\\archive. It leaves the case list but can still be opened, searched and restored.')),
           !archived ? (c.status === 'Closed'
             ? h('div', { class: 'case-action' },
-              h('button', { class: 'btn', type: 'button', onclick: () => CVClosingUI.reopenCase(c) }, 'Reopen case'),
+              h('button', { class: 'btn', type: 'button', icon: 'unlock', onclick: () => CVClosingUI.reopenCase(c) }, 'Reopen case'),
               h('p', { class: 'muted small' }, 'Back to Open, for new information. The closing is kept in the case\'s history.'))
             : h('div', { class: 'case-action' },
-              h('button', { class: 'btn primary', type: 'button', onclick: () => CVClosingUI.closeCaseDialog(c) }, 'Close case…'),
+              h('button', { class: 'btn primary', type: 'button', icon: 'lock-fill', onclick: () => CVClosingUI.closeCaseDialog(c) }, 'Close case…'),
               h('p', { class: 'muted small' }, 'When the investigation is finished: choose how it ended (arrest, exceptionally cleared, unfounded…). Lists loose ends first.'))) : null,
           !archived && !CVClosingUI.hasArrestTab(c) ? h('div', { class: 'case-action' },
-            h('button', { class: 'btn', type: 'button', onclick: async () => {
+            h('button', { class: 'btn', type: 'button', icon: 'person-vcard', onclick: async () => {
               c.arrest = true;
               try { await Save.track(`case:${c.id}`, () => Vault.saveCase(structuredClone(c))); go(c.id, 'arrest'); } catch { /* reported */ }
             } }, 'Add arrest details'),
             h('p', { class: 'muted small' }, 'Arrestee, arrest and charges, for the arrest report. Adds an Arrest details tab.')) : null,
           !archived && Vault.conventionalId(c) ? h('div', { class: 'case-action' },
-            h('button', { class: 'btn', type: 'button', onclick: () => renameCaseFolder(c) }, `Rename folder to ${Vault.conventionalId(c)}`),
+            h('button', { class: 'btn', type: 'button', icon: 'folder', onclick: () => renameCaseFolder(c) }, `Rename folder to ${Vault.conventionalId(c)}`),
             h('p', { class: 'muted small' }, 'Renames this case\'s folder on the SSD to the <year>-<case no.> convention. Every file is copied and checked first.')) : null,
           h('div', { class: 'case-action' },
-            h('button', { class: 'btn danger', type: 'button', onclick: () => deleteCase(c) }, 'Delete case…'),
+            h('button', { class: 'btn danger', type: 'button', icon: 'trash3', onclick: () => deleteCase(c) }, 'Delete case…'),
             h('p', { class: 'muted small' }, 'Permanently deletes the case from the SSD. There is no trash to get it back from.')))));
   }
 
@@ -1094,6 +1137,7 @@
     input.addEventListener('change', () => { addFiles([...input.files]); input.value = ''; });
     const target = current && current !== 'unsorted' ? current : '';
     const drop = h('div', { class: 'dropzone', tabindex: '0', role: 'button', 'aria-label': 'Add files' },
+      I('upload', { cls: 'drop-icon' }),
       h('strong', {}, target ? `Drop files into ${target}` : 'Drop files here'), ' or ', h('span', { class: 'link' }, 'choose files'),
       h('div', { class: 'muted small' }, target
         ? `Saved as "${CF.fileName(c, target, 'x.pdf').replace(/\.pdf$/, '')}…" in files\\${target}. The originals are not changed.`
@@ -1127,7 +1171,7 @@
     const folderBtn = (key, label, n) => h('a', {
       href: `#/case/${encodeURIComponent(c.id)}/files${key ? `/${encodeURIComponent(key)}` : ''}`,
       class: `folder-item ${current === key ? 'active' : ''}`, 'data-ro-ok': 'true', 'aria-current': current === key ? 'page' : null,
-    }, h('span', { class: 'folder-icon', 'aria-hidden': 'true' }, '📁'), h('span', { class: 'folder-name' }, label), h('span', { class: 'folder-count muted' }, n ? String(n) : ''));
+    }, h('span', { class: 'folder-icon' }, I(FOLDER_ICONS[key] || 'folder')), h('span', { class: 'folder-name' }, label), h('span', { class: 'folder-count muted' }, n ? String(n) : ''));
 
     const nav = h('nav', { class: 'folder-nav', 'aria-label': 'Document folders' },
       folderBtn('', 'All documents', files.length),
@@ -1138,15 +1182,15 @@
       ? h('table', { class: 'files' },
         h('thead', {}, h('tr', {}, h('th', {}, 'Name'), current ? null : h('th', {}, 'Folder'), h('th', { class: 'num' }, 'Size'), h('th', {}, 'Added'), h('th', {}, ''))),
         h('tbody', {}, shown.map((f) => h('tr', {},
-          h('td', { class: 'fname' }, h('button', { 'data-ro-ok': 'true', class: 'linkish', type: 'button', onclick: () => previewFile(c, f.name) }, f.base),
+          h('td', { class: 'fname' }, h('span', { class: `file-icon ${fileKind(f.base)}` }, I(FILE_ICONS[fileKind(f.base)])), h('button', { 'data-ro-ok': 'true', class: 'linkish', type: 'button', onclick: () => previewFile(c, f.name) }, f.base),
             f.folder && prefix && !CF.followsConvention(c, f.folder, f.base) ? h('span', { class: 'pill warn-pill', title: `Not named ${prefix} ${CF.byFolder(f.folder).label}` }, 'name') : null),
           current ? null : h('td', { class: 'muted small' }, f.folder || 'Unsorted'),
           h('td', { class: 'num muted' }, fmtSize(f.size)),
           h('td', { class: 'muted nowrap', title: fmtDateTime(f.modified) }, fmtShortDateTime(f.modified)),
           h('td', { class: 'actions' },
-            h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', onclick: () => previewFile(c, f.name) }, 'Open'),
-            h('button', { class: 'btn small ghost', type: 'button', onclick: () => moveFileDialog(c, f, current) }, f.folder ? 'Move / rename' : 'File it…'),
-            h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
+            h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'eye', onclick: () => previewFile(c, f.name) }, 'Open'),
+            h('button', { class: 'btn small ghost', type: 'button', icon: 'arrow-left-right', onclick: () => moveFileDialog(c, f, current) }, f.folder ? 'Move / rename' : 'File it…'),
+            h('button', { class: 'btn small ghost danger-ghost', type: 'button', icon: 'trash3', onclick: async () => {
               if (!(await confirmDialog({ title: 'Delete this file?', message: `"${f.base}" will be permanently deleted from the SSD.`, confirmText: 'Delete', danger: true }))) return;
               try {
                 await Save.track(`file-del:${c.id}:${f.name}`, () => Vault.deleteFile(c.id, f.name));
@@ -1354,7 +1398,7 @@
    * ===================================================================== */
 
   async function showVaultPanel(section = null) {
-    if (section) setTimeout(() => { const el = dialogEl.querySelector(`[data-section="${section}"]`); if (el) el.scrollIntoView({ block: 'start' }); }, 50);
+    if (section) setTimeout(() => { const el = dialogEl.querySelector(`.vault-content [data-section="${section}"]`); if (el) el.scrollIntoView({ block: 'start' }); }, 50);
     if (!state.connected) return;
     let backups = [];
     try { backups = await Vault.listBackups(); } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
@@ -1366,39 +1410,36 @@
         keep.value = n;
         Save.track('settings', () => Vault.updateSettings({ backupsToKeep: n })).catch(() => {});
       });
-      return h('div', { class: 'vault-panel' },
-        h('h2', {}, 'Vault'),
-        h('dl', { class: 'kv' },
-          h('dt', {}, 'Folder'), h('dd', {}, Vault.root.name),
-          h('dt', {}, 'Cases'), h('dd', {}, String(v.cases.length)),
-          h('dt', {}, 'Created'), h('dd', {}, v.created ? fmtDateTime(Date.parse(v.created)) : '—'),
-          h('dt', {}, 'Vault ID'), h('dd', { class: 'mono small' }, v.vaultId || '—'),
-          h('dt', {}, 'App version'), h('dd', {}, Vault.APP_VERSION),
-          h('dt', {}, 'Mode'), h('dd', {}, MODE === 'direct' ? 'Direct (browser opens the SSD)' : 'Helper (CaseVault helper on 127.0.0.1)')),
+      const info = h('section', { 'data-section': 'vault' },
+        h('h3', {}, 'This vault'),
+        h('div', { class: 'vault-facts' },
+          [['folder2-open', 'Folder', Vault.root.name], ['collection', 'Cases', String(v.cases.length)], ['calendar-event', 'Created', v.created ? fmtDateTime(Date.parse(v.created)) : '—'],
+            ['shield-check', 'App version', Vault.APP_VERSION], [MODE === 'direct' ? 'usb-drive' : 'plug', 'Mode', MODE === 'direct' ? 'Direct (browser opens the SSD)' : 'Helper (CaseVault helper on 127.0.0.1)']]
+            .map(([ic, k, val]) => h('div', { class: 'fact' }, h('span', { class: 'fact-icon' }, I(ic)), h('span', {}, h('span', { class: 'small muted block' }, k), h('strong', {}, val))))),
+        h('p', { class: 'muted small' }, 'Vault ID ', h('span', { class: 'mono' }, v.vaultId || '—')));
+      const backupsSec = h('section', { 'data-section': 'backups' },
         h('h3', {}, 'Backups'),
-        h('p', { class: 'muted' }, `A copy of vault.json is saved to the backups folder once a day. ${backups.length} backup${backups.length === 1 ? '' : 's'} on the SSD${backups[0] ? `, newest: ${backups[0]}` : ''}.`),
+        h('p', {}, `A copy of vault.json is saved to the backups folder once a day. ${backups.length} backup${backups.length === 1 ? '' : 's'} on the SSD${backups[0] ? `, newest: ${backups[0]}` : ''}.`),
         h('p', { class: 'muted small' }, 'This covers the case index and settings. To back up whole cases (notes, timelines, files), copy the entire CaseVault-Data folder to a second encrypted drive.'),
         h('div', { class: 'row' },
           h('label', { class: 'inline' }, 'Keep the newest ', keep, ' backups'),
           h('div', { class: 'spacer' }),
-          h('button', { class: 'btn', type: 'button', onclick: async () => {
+          h('button', { class: 'btn', type: 'button', icon: 'save', onclick: async () => {
             try { const name = await Save.track('backup', () => Vault.backupNow()); toast(`Backup saved: ${name}`, 'success'); close(); } catch { /* reported */ }
-          } }, 'Back up now')),
-        privacySettings(v),
-        affiantSettings(v),
-        CVSecureSettings.onlineSection(),
-        CVSecureSettings.watchSection(),
-        CVSecureSettings.mailSection(),
-        CVSecureSettings.logSection(),
-        CVDraftsUI.templateSettings(),
+          } }, 'Back up now')));
+      const referenceSec = h('section', { 'data-section': 'reference' },
+        h('h3', {}, 'Reference library'),
+        h('p', { class: 'muted small' }, 'Narcotics values, complaint forms, the DUI guide and code lists. The complaint PDFs are imported once onto the SSD (CaseVault-Data\\reference) and can be used by Draft with AI.'),
+        h('div', { class: 'row' }, h('button', { class: 'btn', type: 'button', icon: 'book', onclick: () => { close(); location.hash = '#/reference/narcotics'; } }, 'Open Reference')));
+      const maintenance = h('section', { 'data-section': 'maintenance' },
         h('h3', {}, 'Maintenance'),
-        h('div', { class: 'row' },
-          h('button', { class: 'btn', type: 'button', onclick: async () => {
+        h('div', { class: 'row wrap' },
+          h('button', { class: 'btn', type: 'button', icon: 'arrow-repeat', onclick: async () => {
             try { await Save.track('reindex', () => Vault.rebuildIndex()); renderCaseList(); toast('Case index rebuilt from the case folders.', 'success'); } catch { /* reported */ }
           } }, 'Rebuild case index'),
-          h('button', { class: 'btn', type: 'button', onclick: () => { close(); showSelfTest(); } }, 'Run self-test…'),
-          MODE === 'direct' && h('button', { class: 'btn', type: 'button', onclick: async () => { close(); await Save.flushAll(); pickFolder(); } }, 'Open a different vault…'),
-          MODE === 'direct' && h('button', { class: 'btn', type: 'button', onclick: async () => {
+          h('button', { class: 'btn', type: 'button', icon: 'clipboard2-pulse', onclick: () => { close(); showSelfTest(); } }, 'Run self-test…'),
+          MODE === 'direct' && h('button', { class: 'btn', type: 'button', icon: 'folder2-open', onclick: async () => { close(); await Save.flushAll(); pickFolder(); } }, 'Open a different vault…'),
+          MODE === 'direct' && h('button', { class: 'btn', type: 'button', icon: 'box-arrow-left', onclick: async () => {
             close();
             await Save.flushAll();
             if (Save.failed.size) return toast('Some changes are not saved yet. Reconnect the SSD first.', 'error');
@@ -1410,8 +1451,35 @@
             renderCaseList();
             Save.render();
             gateWelcome();
-          } }, 'Disconnect')),
-        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done')));
+          } }, 'Disconnect')));
+
+      // Each section is a card; the list on the left jumps to it and follows the scrolling.
+      const SECTION_ICONS = { vault: 'safe2', backups: 'save', privacy: 'eye-slash', affiant: 'person-badge', templates: 'file-earmark-ruled', reference: 'book', online: 'globe2', pii: 'fingerprint', mail: 'envelope-at', log: 'list-check', maintenance: 'tools' };
+      const sections = [info, backupsSec, privacySettings(v), affiantSettings(v), CVDraftsUI.templateSettings(), referenceSec,
+        CVSecureSettings.onlineSection(), CVSecureSettings.watchSection(), CVSecureSettings.mailSection(), CVSecureSettings.logSection(), maintenance];
+      const scroller = h('div', { class: 'vault-content' });
+      const nav = h('nav', { class: 'vault-nav', 'aria-label': 'Vault settings' });
+      sections.forEach((sec, i) => {
+        const key = sec.dataset.section || `s${i}`;
+        sec.dataset.section = key;
+        sec.classList.add('vault-card');
+        const title = sec.querySelector('h3');
+        if (title && !title.querySelector('svg')) title.prepend(I(SECTION_ICONS[key] || 'gear'));
+        scroller.append(sec);
+        nav.append(h('button', { type: 'button', class: 'vault-nav-item', 'data-target': key, onclick: () => sec.scrollIntoView({ block: 'start', behavior: 'smooth' }) },
+          I(SECTION_ICONS[key] || 'gear'), h('span', {}, title ? title.textContent.replace(/\s*\(.*\)$/, '') : key)));
+      });
+      const spy = new IntersectionObserver((entries) => {
+        const top = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (!top) return;
+        for (const b of nav.children) b.classList.toggle('active', b.dataset.target === top.target.dataset.section);
+      }, { root: scroller, rootMargin: '0px 0px -70% 0px' });
+      sections.forEach((sec) => spy.observe(sec));
+      nav.firstChild.classList.add('active');
+      return h('div', { class: 'vault-panel' },
+        h('div', { class: 'vault-panel-head' }, h('span', { class: 'vault-badge' }, I('safe2')), h('div', {}, h('h2', {}, 'Vault'), h('p', { class: 'muted small' }, `${Vault.root.name} · ${v.cases.length} case${v.cases.length === 1 ? '' : 's'}`)),
+          h('div', { class: 'spacer' }), h('button', { class: 'btn primary', type: 'button', icon: 'check2', onclick: () => close() }, 'Done')),
+        h('div', { class: 'vault-panel-body' }, nav, scroller));
     });
   }
 
@@ -1419,7 +1487,7 @@
   async function showSelfTest() {
     if (!state.connected) return;
     const env = { Vault, FS, Engine: CVChecks.Engine, mode: MODE };
-    const icons = { waiting: '·', running: '…', pass: '✓', warn: '!', fail: '✗' };
+    const icons = { waiting: 'three-dots', running: 'arrow-repeat', pass: 'check-circle-fill', warn: 'exclamation-triangle-fill', fail: 'x-circle' };
     let results = [];
     const list = h('ol', { class: 'selftest-list' });
     const summary = h('p', { class: 'muted' }, 'Running. This takes up to a minute; the AI test can take longer the first time.');
@@ -1429,11 +1497,11 @@
     const draw = (r) => {
       results = r;
       list.replaceChildren(...r.map((x) => h('li', { class: `selftest-item ${x.status}` },
-        h('span', { class: 'selftest-icon', 'aria-hidden': 'true' }, icons[x.status] || '·'),
+        h('span', { class: 'selftest-icon' }, I(icons[x.status] || 'three-dots')),
         h('div', {}, h('strong', {}, x.name), h('span', { class: 'sr-only' }, ` ${x.status}`), x.detail ? h('span', { class: 'small block muted' }, x.detail) : null))));
     };
     const dialog = openDialog((close) => h('div', { class: 'selftest' },
-      h('h2', {}, 'Self-test'),
+      h('h2', { icon: 'clipboard2-pulse' }, 'Self-test'),
       h('p', { class: 'muted small' }, 'Uses its own made-up documents, never your cases. Writes one small test file to the SSD and deletes it.'),
       list, summary,
       h('div', { class: 'dialog-actions' }, copy, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Close'))));
@@ -1466,7 +1534,7 @@
       inputs[k].addEventListener('change', save);
       return h('div', { class: 'field' }, h('label', { for: id }, LABELS[k], ' ', h('code', { class: 'small muted' }, `{{affiant.${k}}}`)), inputs[k]);
     });
-    return h('section', {},
+    return h('section', { 'data-section': 'affiant' },
       h('h3', {}, 'My details (for templates)'),
       h('p', { class: 'muted small' }, 'Filled into templates wherever they say ', h('code', {}, '{{affiant.name}}'), ' and so on. Anything left empty becomes a [CONFIRM: ...] placeholder. Stored in vault.json on the SSD.'),
       h('div', { class: 'affiant-grid' }, rows));
@@ -1515,7 +1583,7 @@
       Save.track('settings', () => Vault.updateSettings({ privacyIdleMinutes: Number(idle.value) })).catch(() => {});
     });
     draw();
-    return h('section', {},
+    return h('section', { 'data-section': 'privacy' },
       h('h3', {}, 'Privacy screen'),
       h('p', { class: 'muted small' }, 'Press ', h('kbd', {}, 'Ctrl'), '+', h('kbd', {}, 'Shift'), '+', h('kbd', {}, 'H'), ', press ', h('kbd', {}, 'Esc'), ' twice quickly, or click ', h('strong', {}, 'Hide'),
         ' to cover CaseVault with a blank screen. The tab title changes to "New Tab", media pauses and pending edits are saved.'),
@@ -1526,6 +1594,19 @@
   }
 
   $('#btn-vault').addEventListener('click', () => showVaultPanel());
+  $('#btn-reference').addEventListener('click', () => { location.hash = '#/reference'; });
+
+  // Theme: automatic -> light -> dark. The button shows what's in effect.
+  function drawThemeButton() {
+    const t = CVTheme.get();
+    const btn = $('#btn-theme');
+    btn.replaceChildren(I(t === 'auto' ? 'circle-half' : t === 'dark' ? 'moon-stars-fill' : 'sun-fill'), h('span', { class: 'sr-only' }, CVTheme.LABELS[t]));
+    btn.title = `${CVTheme.LABELS[t]}. Click to change.`;
+  }
+  $('#btn-theme').addEventListener('click', () => { CVTheme.next(); toast(CVTheme.LABELS[CVTheme.get()], 'info', 1800); });
+  CVTheme.onChange(drawThemeButton);
+  drawThemeButton();
+  CVIcons.decorate();
 
   /* =====================================================================
    * Global behaviour
@@ -1590,7 +1671,7 @@
   }
 
   // Small toolkit shared with the consistency checker screen (js/checker/checks-ui.js).
-  window.CaseVaultUI = { h, $, toast, openDialog, confirmDialog, field, fmtDate, fmtDateTime, fmtSize, Save, state, go, refresh: () => route(), previewFile, onDriveLost, showVaultPanel };
+  window.CaseVaultUI = { h, icon: I, $, toast, openDialog, confirmDialog, field, fmtDate, fmtDateTime, fmtSize, Save, state, go, refresh: () => route(), previewFile, onDriveLost, showVaultPanel };
   CVChecks.init(window.CaseVaultUI);
   CVOutbound.init(window.CaseVaultUI);
   CVOutbound.onChange(renderNetStatus);
@@ -1605,6 +1686,7 @@
   CVActivityLib.mount(CVActivity, $('#ai-activity'));
   CVDraftsUI.init(window.CaseVaultUI);
   CVClosingUI.init(window.CaseVaultUI);
+  CVReferenceUI.init(window.CaseVaultUI);
 
   // Privacy screen: Ctrl+Shift+H, Esc twice, or the "Hide" button. See js/privacy.js.
   CVPrivacy.init({

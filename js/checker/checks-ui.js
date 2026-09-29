@@ -113,7 +113,7 @@
       'rules-only': 'AI: Rules-only',
       checking: 'AI: checking…',
     }[st];
-    el.textContent = text;
+    el.replaceChildren(CVIcons.icon(st === 'connected' ? 'cpu' : st === 'checking' ? 'arrow-repeat' : 'exclamation-circle'), text);
     el.title = {
       connected: Engine.inBrowser()
         ? 'Ollama is not running, so CaseVault uses the in-browser AI model on this PC\'s graphics chip. Click for AI settings.'
@@ -234,7 +234,7 @@
    * ===================================================================== */
 
   function banner() {
-    return ui.h('div', { class: 'ai-banner', role: 'note' }, '⚠ ', BANNER);
+    return ui.h('div', { class: 'ai-banner', role: 'note' }, ui.icon('exclamation-triangle-fill'), ' ', BANNER);
   }
 
   function markText(text, highlight) {

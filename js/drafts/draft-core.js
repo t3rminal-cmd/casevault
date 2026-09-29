@@ -31,6 +31,10 @@
       label: 'Memo',
       guide: 'An internal memo with a To / From / Date / Re header, then purpose, relevant facts, and recommended next steps.',
     },
+    complaint: {
+      label: 'Criminal complaint',
+      guide: 'A criminal complaint that follows the reference complaint form\'s layout and statutory wording: the caption, the defendant, the offense charged with its statute citation, the date and place, the substance and its weight, and the complainant\'s signature and verification. Use [CONFIRM: ...] for anything not in the case material.',
+    },
     other: { label: 'Other', guide: 'A clear, well-structured document.' },
   };
 
