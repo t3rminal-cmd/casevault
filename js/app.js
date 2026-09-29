@@ -100,10 +100,13 @@
       const close = (value) => {
         if (done) return;
         done = true;
+        dialogEl.onclose = null; // this dialog's "close" event arrives later; it isn't for the next one
         dialogEl.close();
         resolve(value);
       };
-      dialogEl.onclose = () => { if (!done) { done = true; resolve(undefined); } };
+      // Esc or the browser closing it. A late "close" event from the previous dialog (one dialog
+      // replaced by the next, e.g. Vault → Run self-test) finds the dialog open again: ignore it.
+      dialogEl.onclose = () => { if (dialogEl.open) return; if (!done) { done = true; resolve(undefined); } };
       dialogEl.append(build(close));
       dialogEl.showModal();
       const focus = dialogEl.querySelector('[autofocus]') || dialogEl.querySelector('input, textarea, select, button');
