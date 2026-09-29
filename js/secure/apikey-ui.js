@@ -99,7 +99,7 @@
     return h('details', { class: 'key-guide', open },
       h('summary', {}, 'How to get an API key, step by step'),
       steps(),
-      h('p', { class: 'muted small' }, 'Anthropic\'s commercial terms say API data isn\'t used to train models by default. Check them, and your agency\'s policy, before using the API with case work. CaseVault still hides names and numbers before anything is sent.'));
+      h('p', { class: 'muted small explain' }, 'Anthropic\'s commercial terms say API data isn\'t used to train models by default. Check them, and your agency\'s policy, before using the API with case work. CaseVault still hides names and numbers before anything is sent.'));
   }
 
   /* ---------- dialogs ---------- */
@@ -151,7 +151,7 @@
           problem,
           h('fieldset', { class: 'plain-fieldset' }, h('legend', {}, 'Where to keep it'), wSession.el, wLocked.el, passRow, wPlain.el),
           h('label', { class: 'check-row' }, billing, h('span', {}, 'I understand API use is billed by Anthropic to the Console account, separately from any Claude subscription.')),
-          h('p', { class: 'muted small' }, 'The key is only ever sent to api.anthropic.com, in the request header. It is never written to vault.json, the browser, or any log.'))),
+          h('p', { class: 'muted small explain' }, 'The key is only ever sent to api.anthropic.com, in the request header. It is never written to vault.json, the browser, or any log.'))),
       h('div', { class: 'dialog-actions' },
         h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
         save));
@@ -189,7 +189,7 @@
         h('h2', {}, 'Unlock the API key'),
         h('p', { class: 'muted small' }, `Key ${state.stored.masked}, saved on the SSD. Type the passphrase you chose when you added it.`),
         ui.field('Passphrase', p),
-        h('p', { class: 'muted small' }, 'Forgot it? Remove the key and add it again (create a new key in the Console if you no longer have it).'),
+        h('p', { class: 'muted small explain' }, 'Forgot it? Remove the key and add it again (create a new key in the Console if you no longer have it).'),
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Unlock')));
     });
     if (!pass) return false;

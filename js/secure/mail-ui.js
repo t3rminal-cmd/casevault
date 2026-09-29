@@ -132,7 +132,7 @@
           ui.field('Subject', subject),
           ui.field('Message', body),
           h('div', { class: 'row' }, outlookBtn, mailtoBtn, h('div', { class: 'spacer' }), discardBtn),
-          h('p', { class: 'muted small' }, 'CaseVault never sends mail itself. It checks the message, saves it in this case\'s Email folder and opens it in Outlook, where you press Send. Only addresses in ',
+          h('p', { class: 'muted small explain' }, 'CaseVault never sends mail itself. It checks the message, saves it in this case\'s Email folder and opens it in Outlook, where you press Send. Only addresses in ',
             h('strong', {}, st.domains.join(', ')), ' are allowed.')),
         h('aside', { class: 'mail-attach' }, h('h3', {}, 'Attach from this case'), sizeNote, attachList)),
       historyView(c, history, files));
@@ -258,7 +258,7 @@
       ui.h('h2', {}, 'Outlook draft ready'),
       ui.h('p', {}, 'Saved in this case\'s Email folder. Open it from File Explorer (double-click): Outlook shows it as a new email with the attachments. Check it and press Send.'),
       ui.h('code', { class: 'path' }, winPath),
-      ui.h('p', { class: 'muted small' }, 'Tip: in File Explorer, go to your CASEVAULT drive and then this folder. With Start-CaseVault.bat running (helper mode), CaseVault opens it in Outlook for you.'),
+      ui.h('p', { class: 'muted small explain' }, 'Tip: in File Explorer, go to your CASEVAULT drive and then this folder. With Start-CaseVault.bat running (helper mode), CaseVault opens it in Outlook for you.'),
       ui.h('div', { class: 'dialog-actions' },
         ui.h('button', { class: 'btn', type: 'button', onclick: async () => { try { await navigator.clipboard.writeText(winPath); ui.toast('Path copied.', 'success'); } catch { /* select it by hand */ } } }, 'Copy path'),
         ui.h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));

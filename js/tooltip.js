@@ -88,5 +88,63 @@
   doc.addEventListener('scroll', () => { if (tip && !tip.hidden) hide(); }, true);
   doc.addEventListener('pointerdown', hide, true);
 
+  /* ---------- explanations become hover boxes ----------
+   * A paragraph marked .explain (the longer "what this does" sentences) is taken off the page and
+   * its text goes into a hover box behind an ⓘ on the nearest heading or label. Its text stays
+   * available to screen readers (aria-label). */
+  const HEAD = 'h1, h2, h3, h4, legend, summary';
+  function tipButton(text) {
+    const b = doc.createElement('span');
+    b.className = 'tip-btn';
+    b.tabIndex = 0;
+    b.setAttribute('role', 'img');
+    b.setAttribute('aria-label', `About this: ${text}`);
+    b.dataset.tip = text;
+    if (root.CVIcons) b.append(root.CVIcons.icon('info-circle'));
+    else b.textContent = 'ⓘ';
+    return b;
+  }
+  function anchorFor(el) {
+    const prev = el.previousElementSibling;
+    if (prev && prev.matches(HEAD)) return prev;
+    if (prev && prev.matches('.field, label.field')) return prev.querySelector(':scope > span') || prev;
+    if (prev) { const inner = prev.querySelector(`:scope > ${HEAD.split(', ').join(', :scope > ')}`); if (inner) return inner; }
+    const parent = el.parentElement;
+    if (parent) {
+      const head = parent.querySelector(`:scope > ${HEAD.split(', ').join(', :scope > ')}`);
+      if (head && head.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) return head;
+    }
+    return null;
+  }
+  function explainify(el) {
+    if (!el.isConnected || el.dataset.explained) return;
+    el.dataset.explained = '1';
+    const text = el.textContent.replace(/\s+/g, ' ').trim();
+    if (!text) return;
+    const anchor = anchorFor(el);
+    const existing = anchor && anchor.querySelector(':scope > .tip-btn');
+    if (existing) {
+      existing.dataset.tip = `${existing.dataset.tip}\n${text}`;
+      existing.setAttribute('aria-label', `About this: ${existing.dataset.tip}`);
+      el.remove();
+    } else if (anchor) {
+      anchor.append(tipButton(text));
+      el.remove();
+    } else {
+      const line = doc.createElement('div');
+      line.className = 'tip-line';
+      line.append(tipButton(text));
+      el.replaceWith(line);
+    }
+  }
+  const scan = (node) => {
+    if (!(node instanceof Element)) return;
+    if (node.matches('.explain')) explainify(node);
+    for (const x of node.querySelectorAll('.explain')) explainify(x);
+  };
+  new MutationObserver((list) => { for (const m of list) for (const n of m.addedNodes) scan(n); })
+    .observe(doc.documentElement, { childList: true, subtree: true });
+  if (doc.body) scan(doc.body);
+
   root.CVTooltip = { hide };
 })(this);

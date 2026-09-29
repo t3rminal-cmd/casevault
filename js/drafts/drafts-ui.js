@@ -111,7 +111,7 @@
         h('div', { class: 'form-actions' }, create))]),
       h('h2', { class: 'section-title' }, 'Drafts'),
       list,
-      h('p', { class: 'muted small' }, `Saved on the SSD in ${archived ? 'archive' : 'cases'}\\${c.id}\\drafts as Markdown files. Templates live in CaseVault-Data\\templates (Vault → Templates).`));
+      h('p', { class: 'muted small explain' }, `Saved on the SSD in ${archived ? 'archive' : 'cases'}\\${c.id}\\drafts as Markdown files. Templates live in CaseVault-Data\\templates (Vault → Templates).`));
   }
 
   /* =====================================================================
@@ -355,7 +355,7 @@
         h('div', { class: 'draft-main' }, wrap, preview),
         h('aside', { class: 'confirm-panel' },
           h('h3', {}, 'To confirm ', confirmCount),
-          h('p', { class: 'muted small' }, 'Every [CONFIRM: ...] in the draft. Click one to jump to it, then replace it with the checked fact.'),
+          h('p', { class: 'muted small explain' }, 'Every [CONFIRM: ...] in the draft. Click one to jump to it, then replace it with the checked fact.'),
           confirmList)));
     drawSuggestState();
     Engine().refresh().then(() => { if (ta.isConnected) drawSuggestState(); });
@@ -613,7 +613,7 @@
     };
     return h('details', { class: 'placeholder-help' },
       h('summary', { title: 'Click one to insert it at the cursor.' }, 'Placeholders'),
-      h('p', { class: 'muted small' }, 'When a draft is made, each placeholder is replaced with the case\'s value. Anything empty or unknown becomes [CONFIRM: …] so nothing slips through. Upper/lower case does not matter.'),
+      h('p', { class: 'muted small explain' }, 'When a draft is made, each placeholder is replaced with the case\'s value. Anything empty or unknown becomes [CONFIRM: …] so nothing slips through. Upper/lower case does not matter.'),
       CVDraft.placeholderGroups(arrestKeys).map((grp) => h('div', { class: 'ph-group' },
         h('span', { class: 'ph-title small' }, grp.title),
         h('span', { class: 'ph-keys' }, grp.keys.map((k) => h('button', { class: 'ph-key', type: 'button', title: `Insert {{${k}}}`, onclick: () => insert(k) }, `{{${k}}}`))))));
@@ -691,7 +691,7 @@
     draw();
     return h('section', { 'data-section': 'templates' },
       h('h3', {}, 'Templates'),
-      h('p', { class: 'muted small' }, 'Your own document formats for Drafts, kept as Markdown files in CaseVault-Data\\templates on the SSD. To add one: Import your agency\'s Word form (or a .md/.txt file), or New template and paste the text. Where a case detail goes, put a placeholder like {{case.number}}: the editor lists them all. # at the start of a line makes a heading, **bold**, *italic*, - for a list.'),
+      h('p', { class: 'muted small explain' }, 'Your own document formats for Drafts, kept as Markdown files in CaseVault-Data\\templates on the SSD. To add one: Import your agency\'s Word form (or a .md/.txt file), or New template and paste the text. Where a case detail goes, put a placeholder like {{case.number}}: the editor lists them all. # at the start of a line makes a heading, **bold**, *italic*, - for a list.'),
       box,
       h('div', { class: 'row' },
         h('button', { class: 'btn small', type: 'button', onclick: () => edit('', '# New template\n\nCase No. {{case.number}}\n') }, 'New template'),

@@ -125,7 +125,7 @@
       const pre = h('pre', { class: 'lib-text' }, 'Reading…');
       const d = ui.openDialog((close) => h('div', { class: 'lib-preview' },
         h('div', { class: 'preview-head' }, h('h2', {}, it.name), h('div', { class: 'spacer' }), h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Close')),
-        h('p', { class: 'muted small' }, 'This is the text Draft with AI reads from this file, or its first part if it is long.'), pre));
+        h('p', { class: 'muted small explain' }, 'This is the text Draft with AI reads from this file, or its first part if it is long.'), pre));
       try { const t = await textOf(it.path); pre.textContent = t.trim() ? t : '(No text found. A scanned PDF needs OCR: open it once in a case, or save it as text.)'; } catch (err) { pre.textContent = `Could not read it: ${err.message}`; }
       await d;
     }
@@ -133,7 +133,7 @@
     draw();
     return h('section', { 'data-section': 'library' },
       h('h3', {}, 'Library'),
-      h('p', { class: 'muted small' }, 'Sample reports and warrants the AI learns to write from (DEA-6, DEA-7, DEA-202…), and directives it follows. Draft with AI uses examples of the document type you are writing, and your "always use" directives. Examples teach the format and wording only: their names and facts are never used. Stored in CaseVault-Data\\library on the SSD; only the AI on this computer reads them.'),
+      h('p', { class: 'muted small explain' }, 'Sample reports and warrants the AI learns to write from (DEA-6, DEA-7, DEA-202…), and directives it follows. Draft with AI uses examples of the document type you are writing, and your "always use" directives. Examples teach the format and wording only: their names and facts are never used. Stored in CaseVault-Data\\library on the SSD; only the AI on this computer reads them.'),
       h('div', { class: 'row lib-add' }, h('span', { class: 'small' }, 'Add to'), target,
         h('button', { class: 'btn small', type: 'button', icon: 'upload', onclick: () => input.click() }, 'Add files…'),
         h('button', { class: 'btn small', type: 'button', icon: 'folder2-open', onclick: () => folderInput.click() }, 'Add a folder…'), input, folderInput),
@@ -190,7 +190,7 @@
     draw();
     return h('section', { 'data-section': 'behavior' },
       h('h3', {}, 'AI writing behavior'),
-      h('p', { class: 'muted small' }, 'The instruction prompt that tells the AI how to write. DEA-6 style is the default; choose another in Draft with AI, edit these, or add your own. Saved in vault.json on the SSD.'),
+      h('p', { class: 'muted small explain' }, 'The instruction prompt that tells the AI how to write. DEA-6 style is the default; choose another in Draft with AI, edit these, or add your own. Saved in vault.json on the SSD.'),
       box);
   }
 

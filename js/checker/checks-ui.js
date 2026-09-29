@@ -108,7 +108,7 @@
     el.hidden = false;
     el.className = `engine-status ${st}`;
     const text = {
-      connected: `AI: Connected (${profileLabel(Engine.choice())})`,
+      connected: `AI: ${profileLabel(Engine.choice())}`,
       offline: 'AI: Offline',
       'rules-only': 'AI: Rules-only',
       checking: 'AI: checking…',
@@ -159,15 +159,15 @@
             choice ? ['. Checks will use ', h('strong', {}, profileLabel(choice)), choice.fallback ? ' (the chosen profile has no model installed)' : '', '.'] : ', but no chat model is installed.')
           : h('div', {},
             h('p', {}, h('span', { class: 'pill status-pending' }, 'Offline'), ' The local AI engine is not running, so checks use the rule-based layer only.'),
-            h('p', { class: 'muted small' }, 'To use AI review, double-click Start-CaseVault.bat on the CV-AI drive (for example W:\\) and click "Check again". See docs/AI-SETUP.md.')),
+            h('p', { class: 'muted small explain' }, 'To use AI review, double-click Start-CaseVault.bat on the CV-AI drive (for example W:\\) and click "Check again". See docs/AI-SETUP.md.')),
         d.status === 'connected' && d.engine !== 'webllm' && h('p', { class: 'muted small' },
           `Installed models: ${d.models.map((m) => m.name).join(', ') || 'none'}.`),
         d.status === 'connected' && d.engine !== 'webllm' && embedStatus(d),
         h('h3', {}, 'Profile on this PC'),
-        h('p', { class: 'muted small' }, 'Remembered by this PC\'s browser, not on the SSD, so the Beelink and the L14 can each use the model that suits them.'),
+        h('p', { class: 'muted small explain' }, 'Remembered by this PC\'s browser, not on the SSD, so the Beelink and the L14 can each use the model that suits them.'),
         h('div', { class: 'radio-list' }, radios),
         webllmSection(),
-        h('p', { class: 'muted small' }, 'Privacy: CaseVault only talks to the AI engine on this computer (127.0.0.1:11434), or runs the in-browser model inside this tab. Nothing is sent anywhere else.'),
+        h('p', { class: 'muted small explain' }, 'Privacy: CaseVault only talks to the AI engine on this computer (127.0.0.1:11434), or runs the in-browser model inside this tab. Nothing is sent anywhere else.'),
         h('div', { class: 'dialog-actions' },
           h('button', { class: 'btn', type: 'button', onclick: async () => { close(); await Engine.refresh(); showEngineDialog(); } }, 'Check again'),
           h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done')));
@@ -225,7 +225,7 @@
     return h('section', {},
       h('h3', { title: 'Used when Ollama is not running.' }, 'In-browser AI'),
       h('label', { class: 'check-row' }, allowed, h('span', {}, 'Use the in-browser AI when Ollama isn\'t running')),
-      h('p', { class: 'muted small' }, 'Runs a small model (models in W:\\webllm) on this PC\'s graphics chip with WebGPU. Slower and less capable than Ollama, but needs nothing installed. Only available when CaseVault is opened through Start-CaseVault.bat.'),
+      h('p', { class: 'muted small explain' }, 'Runs a small model (models in W:\\webllm) on this PC\'s graphics chip with WebGPU. Slower and less capable than Ollama, but needs nothing installed. Only available when CaseVault is opened through Start-CaseVault.bat.'),
       box);
   }
 
@@ -351,7 +351,7 @@
         h('label', { class: 'field', title: 'An affidavit or a draft.' }, h('span', {}, 'Document to check'), affSelect),
         h('div', { class: 'field' }, h('span', {}, 'Compare against'), reportList),
         h('label', { class: 'check-row' }, aiToggle, h('span', {}, 'Include AI review', aiLine)),
-        h('p', { class: 'muted small' }, 'The rule-based checks (dates, times, names, numbers, addresses, plates, phone numbers, amounts, counts) always run. Reports are also cross-checked against each other.'),
+        h('p', { class: 'muted small explain' }, 'The rule-based checks (dates, times, names, numbers, addresses, plates, phone numbers, amounts, counts) always run. Reports are also cross-checked against each other.'),
         h('div', { class: 'form-actions' }, runBtn))
       : h('div', { class: 'card' }, h('h2', {}, 'New check'),
         h('p', { class: 'muted' }, 'Attach the affidavit and the reports on the Files tab first. PDF, DOCX, TXT and photos (PNG/JPG) can be checked.'));
@@ -642,7 +642,7 @@
           st.discarded ? h('strong', {}, ` ${st.discarded} AI answer${st.discarded === 1 ? ' was' : 's were'} discarded because the quoted text was not found in the reports.`) : '') : null,
         data.ai && !data.ai.complete ? h('p', { class: 'warn-text small' }, `The AI review did not finish${data.ai.error ? ` (${data.ai.error})` : ''}. Statements after that point were not reviewed by AI.`) : null,
         h('div', { class: 'row result-foot' },
-          h('p', { class: 'muted small' }, `Saved on the SSD: ${Vault.isArchived(c.id) ? 'archive' : 'cases'}\\${c.id}\\checks\\${name}`),
+          h('p', { class: 'muted small explain' }, `Saved on the SSD: ${Vault.isArchived(c.id) ? 'archive' : 'cases'}\\${c.id}\\checks\\${name}`),
           h('div', { class: 'spacer' }),
           h('button', { class: 'btn small ghost danger-text', type: 'button', onclick: () => deleteCheck(c, name, data) }, 'Delete this check'))),
       h('div', { class: 'filters' }, sevChips, h('div', { class: 'spacer' }), layerSel, statusSel),

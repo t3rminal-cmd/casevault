@@ -130,7 +130,7 @@
     draw();
     return h('section', { 'data-section': 'links' },
       h('h3', {}, 'Quick links'),
-      h('p', { class: 'muted small' }, 'The OSINT and LEO buttons at the bottom of the Overview. Change a name or address (it saves when you leave the box), untick Show to hide a button, or add your own, such as your agency\'s portals. They open in a new browser tab; CaseVault never contacts them itself.'),
+      h('p', { class: 'muted small explain' }, 'The OSINT and LEO buttons at the bottom of the Overview. Change a name or address (it saves when you leave the box), untick Show to hide a button, or add your own, such as your agency\'s portals. They open in a new browser tab; CaseVault never contacts them itself.'),
       box);
   }
 
@@ -143,7 +143,7 @@
     main.replaceChildren(h('section', { class: 'reference' },
       h('div', { class: 'ref-head' },
         h('h1', { class: 'page-title', icon: sec.icon }, sec.title),
-        h('p', { class: 'muted small' }, 'Quick reference only: always follow your department\'s policies.')),
+        h('p', { class: 'muted small explain' }, 'Quick reference only: always follow your department\'s policies.')),
       h('nav', { class: 'ref-nav', 'aria-label': 'Reference' },
         SECTIONS.map((s) => h('a', { href: `#/reference/${s.key}`, class: `ref-pill ${sec.key === s.key ? 'active' : ''}`, 'aria-current': sec.key === s.key ? 'page' : null, icon: s.icon, title: s.blurb }, s.title))),
       body));

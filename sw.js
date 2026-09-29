@@ -9,7 +9,7 @@
 
 // VERSION is bumped with each release; BUILD is replaced with the commit SHA by the GitHub Pages
 // workflow. Either change gives a new cache, so the installed app picks up the update.
-const VERSION = '1.11.1';
+const VERSION = '1.12.0';
 const BUILD = 'dev';
 const CACHE = `casevault-${VERSION}-${BUILD}`;
 
@@ -63,6 +63,8 @@ const APP_FILES = [
   './js/selftest.js',
   './js/closing.js',
   './js/closing-ui.js',
+  './js/ai/chat.js',
+  './js/ai/chat-ui.js',
   './js/library.js',
   './js/library-ui.js',
   './js/reference/links.js',

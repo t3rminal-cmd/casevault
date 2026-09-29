@@ -74,7 +74,9 @@ The header has, from left to right: the vault folder, the **Offline** / **AI** /
 - **Theme button** (half circle, sun or moon): switches between *automatic* (follows Windows' light or dark setting), *light* and *dark*. Each PC remembers its own choice in the browser; it's a display preference, not case data.
 - Icons mark every tab, button and document folder, and each file in a case shows an icon for its type (PDF, Word, Excel, picture, audio, video, email).
 - **Point at a button** (or reach it with Tab) to see what it does in a hover box. Buttons show just an icon and a short name; the explanation is in the hover box.
-- Labels have no brackets: extra detail (for example *Separate tags with commas* on Tags) is in the hover box. In the Vault, an ⓘ after a heading means pointing at the heading shows what that section is for, and pointing at a box in **My details** shows which `{{affiant.…}}` placeholder it fills.
+- Labels have no brackets, and the longer explanations aren't printed on the page: an **ⓘ** next to a heading, label or box holds them. Point at it (or Tab to it) to read it. In the Vault, pointing at a section's heading shows what that section is for, and pointing at a box in **My details** shows which `{{affiant.…}}` placeholder it fills.
+- **Opening a file** (the eye button) shows it in a window that fills almost the whole screen, so wide Word tables, spreadsheets and PDFs aren't cut off.
+- **Ask AI** in the header opens a chat with the AI on this computer (see *Ask AI*).
 - The page is centred and uses the width of the screen, from a phone up to 1920×1080 and larger. Case actions are same-size buttons in one row.
 - The **Overview** shows your case counts, then, each under a line: **Upcoming deadlines**, **Recently updated**, and **Quick links** (see below).
 - On a narrow window the header buttons shrink to their icons.
@@ -238,6 +240,18 @@ Some agency forms are *XFA* PDFs, made with Adobe LiveCycle Designer. In Chrome,
 - An XFA form is never run through OCR: its "Please wait" page has nothing to read.
 - A password-protected (encrypted) XFA form is read through the PDF reader instead. If nothing can be read from it, the check says so.
 
+## Ask AI
+
+**Ask AI** in the header opens a chat, like claude.ai, with the AI **on this computer**: nothing you type leaves the PC, and it works offline.
+
+- **Model:** every AI model installed in Ollama on W: (and the in-browser model, if that's what's running). Your choice is remembered in the vault. See *Other models* in [AI-SETUP.md](AI-SETUP.md) to add one, including a less-filtered model.
+- **Case:** pick a case to ask about it. Its details, timeline and notes go with each question, and the AI is told to answer from them and say where each fact comes from. **Search the case files** also reads the case's documents and sends the passages that answer your question (slower the first time a document is read). Choose *No case* for general questions.
+- Type and press **Enter** (Shift+Enter for a new line). **Stop** ends an answer early and keeps what's written. Earlier questions and answers go along, so you can ask follow-ups; the oldest drop off when the AI's window is full.
+- Answers are formatted (lists, tables). The copy button copies one.
+- The conversation stays in this window only. **Save to case** saves it as a draft in a case (on the SSD); **New chat** clears it.
+- If a check or Draft with AI is running, the question waits for it (the AI does one thing at a time).
+- AI answers can be wrong. Check anything you use against the case.
+
 ## Reference
 
 **Reference** in the header (or the Reference tab of Quick links) opens quick-reference material from LE Cyber-Docs. It's a quick reference only: always follow your department's policies.
@@ -276,7 +290,7 @@ The **Checks** tab compares an affidavit draft (or any document) against the rep
 1. Attach the affidavit and the reports on the **Files** tab. PDF (including scanned PDFs and XFA forms), Word (`.docx`), Excel (`.xlsx`, `.xls`), CSV, TXT, and photos (PNG/JPG) can be checked. Old `.doc` files must be saved as `.docx` or PDF first. To check a draft you're writing in CaseVault, use **Run consistency check** in the Drafts tab instead.
 2. Open **Checks**. Under **Document to check**, pick the affidavit. (Choose *none* to only compare the reports with each other.)
 3. Tick the reports to compare against. All of them are ticked by default.
-4. **Include AI review** is available when the header shows **AI: Connected**. Without it, the rule-based checks still run.
+4. **Include AI review** is available when the header shows the AI model, such as **AI: Quick · qwen2.5:7b**. Without it, the rule-based checks still run.
 5. Click **Run check**. A window shows each step: reading each document (scanned pages go through OCR), the rule checks, then the AI review statement by statement, with the time spent on the current statement and an estimate of the time left. **Cancel** stops the check. If the AI review was already under way, what it found so far is saved.
 
 The text read from each document is kept on the SSD (`checks\text-cache`), so re-running a check is quick. OCR only runs again if the file changes, or when a newer CaseVault reads that kind of file better (v1.8 re-reads PDFs once, for XFA forms).
@@ -459,7 +473,7 @@ Give it a title and a type (Case summary, Affidavit, Subpoena, Memo, Other), the
 
 - **Blank.**
 - **From a template.** Your agency's formats, stored in `CaseVault-Data\templates\` (see *Templates* below). Case details such as the case number are filled in for you.
-- **Draft with AI.** Writes a first draft from this case's material (needs **AI: Connected** in the header).
+- **Draft with AI.** Writes a first draft from this case's material (needs the AI model in the header, not **AI: Offline**).
 
 The editor understands simple Markdown (`#` headings, `**bold**`, `1.` numbered paragraphs, `-` bullets). **Preview** shows it formatted.
 
@@ -609,7 +623,7 @@ To make a PC forget the vault folder, open **Vault → Disconnect**.
 | *Reading PDFs needs the installed app or the helper* | You opened `index.html` straight from the SSD. Use the installed app or the launcher address instead. |
 | Ctrl + Shift + H does nothing | Click in the CaseVault page first (the shortcut only works while CaseVault is the active tab), or use Esc Esc or the **Hide** button. |
 | I forgot the privacy-screen PIN | Reload the page (F5). The screen is gone, and you'll be asked to reconnect in Chrome/Edge. Then set a new PIN under Vault → Privacy screen. |
-| No grey AI suggestions appear | The header must show **AI: Connected**, and **AI suggestions** must be ticked. Suggestions only appear when the cursor is at the end of a line. |
+| No grey AI suggestions appear | The header must show the AI model (not **AI: Offline**), and **AI suggestions** must be ticked. Suggestions only appear when the cursor is at the end of a line. |
 | *Draft with AI* is greyed out | Start `W:\Start-CaseVault.bat` so the AI engine runs, then click the AI pill → **Check again**. |
 | A check says a file was *Skipped* | It couldn't be read (damaged, password-protected, or an unsupported type). Save it as PDF or DOCX and attach it again. |
 | *Drive not connected* | Plug in the SSD, unlock V: with the BitLocker password, then click **Reconnect**. |
@@ -621,7 +635,7 @@ To make a PC forget the vault folder, open **Vault → Disconnect**.
 
 ## When Ollama isn't running
 
-If Ollama isn't running, CaseVault can use a small **in-browser AI model** instead, if one is on the SSD and CaseVault was opened through `W:\Start-CaseVault.bat`. The header then shows **AI: Connected (In-browser · …)**. The first AI request loads the model from the SSD, with a progress message, which can take a minute. See [AI-SETUP.md](AI-SETUP.md), section 8.
+If Ollama isn't running, CaseVault can use a small **in-browser AI model** instead, if one is on the SSD and CaseVault was opened through `W:\Start-CaseVault.bat`. The header then shows **AI: In-browser · …**. The first AI request loads the model from the SSD, with a progress message, which can take a minute. See [AI-SETUP.md](AI-SETUP.md), section 8.
 
 Without Ollama or an in-browser model, the consistency checker uses its rule-based layer only, and Draft with AI and suggestions are unavailable.
 

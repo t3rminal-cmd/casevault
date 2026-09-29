@@ -96,6 +96,12 @@
 
   const dialogEl = $('#dialog');
 
+  const DIALOG_SIZES = [
+    ['panel', '.vault-panel'],
+    ['full', '.preview, .doc-view, .lib-preview'],
+    ['wide', '.type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel'],
+  ];
+
   function openDialog(build) {
     return new Promise((resolve) => {
       dialogEl.replaceChildren();
@@ -111,6 +117,10 @@
       // replaced by the next, e.g. Vault → Run self-test) finds the dialog open again: ignore it.
       dialogEl.onclose = () => { if (dialogEl.open) return; if (!done) { done = true; resolve(undefined); } };
       dialogEl.append(build(close));
+      // The dialog's size comes from what it shows (set here, not with CSS :has(), which older
+      // Firefox versions don't know and would leave file previews 620px wide and clipped).
+      const kind = DIALOG_SIZES.find(([, sel]) => dialogEl.querySelector(sel));
+      dialogEl.className = `dialog${kind ? ` dialog-${kind[0]}` : ''}`;
       dialogEl.showModal();
       const focus = dialogEl.querySelector('[autofocus]') || dialogEl.querySelector('input, textarea, select, button');
       if (focus) focus.focus();
@@ -530,6 +540,7 @@
   function route() {
     if (!state.connected) return;
     if (/^#\/online\b/.test(location.hash)) return showOnline();
+    if (/^#\/chat\b/.test(location.hash)) return showChat();
     const ref = location.hash.match(/^#\/reference(?:\/([\w-]+))?/);
     if (ref) return showReference(ref[1] || null);
     const m = location.hash.match(/^#\/case\/([^/]+)(?:\/(\w+))?(?:\/([^/]+))?/);
@@ -551,6 +562,17 @@
       if (FS.isDisconnectError(err)) return onDriveLost();
       console.error(err);
       toast(`Could not open online AI: ${err.message}`, 'error');
+    });
+  }
+
+  function showChat() {
+    state.caseId = null;
+    state.caseObj = null;
+    renderCaseList();
+    CVChatUI.render($('#main')).catch((err) => {
+      if (FS.isDisconnectError(err)) return onDriveLost();
+      console.error(err);
+      toast(`Could not open Ask AI: ${err.message}`, 'error');
     });
   }
 
@@ -877,7 +899,7 @@
       title: 'Move this case to the archive?',
       message: h('div', {},
         h('p', {}, `"${c.title || 'Untitled case'}" moves to CaseVault-Data\\archive on the SSD, with its notes, timeline, files, drafts and checks. Every file is copied and checked before the original is removed.`),
-        h('p', { class: 'muted small' }, 'It leaves the case list and opens read-only from "Archived" at the bottom of the list. You can restore it at any time.')),
+        h('p', { class: 'muted small explain' }, 'It leaves the case list and opens read-only from "Archived" at the bottom of the list. You can restore it at any time.')),
       confirmText: 'Archive case',
     });
     if (!ok) return;
@@ -945,7 +967,7 @@
       return h('form', { class: 'delete-form', onsubmit: (e) => { e.preventDefault(); if (Vault.deleteConfirmMatches(c, typed.value)) close('delete'); } },
         h('h2', {}, `Delete "${c.title || 'Untitled case'}"?`),
         h('p', { class: 'error-text' }, 'Permanently deletes this case from the SSD: notes, timeline, files, drafts and checks. This can\'t be undone.'),
-        archived ? null : h('p', { class: 'muted small' }, 'To keep it out of the way but safe, archive it instead.'),
+        archived ? null : h('p', { class: 'muted small explain' }, 'To keep it out of the way but safe, archive it instead.'),
         h('label', { class: 'field' },
           h('span', { id: 'delete-help' }, c.number ? 'Type the case number to confirm: ' : 'Type the case title to confirm: ', h('code', {}, want)),
           typed),
@@ -1141,12 +1163,12 @@
     const input = h('input', { type: 'file', multiple: true, hidden: true });
     input.addEventListener('change', () => { addFiles([...input.files]); input.value = ''; });
     const target = current && current !== 'unsorted' ? current : '';
-    const drop = h('div', { class: 'dropzone', tabindex: '0', role: 'button', 'aria-label': 'Add files' },
+    const dropTip = target
+      ? `Saved as "${CF.fileName(c, target, 'x.pdf').replace(/\.pdf$/, '')}…" in files\\${target}. The originals are not changed.`
+      : 'You pick the document type for each file next. They are copied to the SSD and named by the case number; the originals are not changed.';
+    const drop = h('div', { class: 'dropzone', tabindex: '0', role: 'button', 'aria-label': 'Add files', title: dropTip },
       I('upload', { cls: 'drop-icon' }),
-      h('strong', {}, target ? `Drop files into ${target}` : 'Drop files here'), ' or ', h('span', { class: 'link' }, 'choose files'),
-      h('div', { class: 'muted small' }, target
-        ? `Saved as "${CF.fileName(c, target, 'x.pdf').replace(/\.pdf$/, '')}…" in files\\${target}. The originals are not changed.`
-        : 'You pick the document type for each file next. They are copied to the SSD and named by the case number; the originals are not changed.'));
+      h('strong', {}, target ? `Drop files into ${target.replace('/', ' › ')}` : 'Drop files here'), ' or ', h('span', { class: 'link' }, 'choose files'));
     drop.addEventListener('click', () => input.click());
     drop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
     drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
@@ -1371,7 +1393,7 @@
         close(rows.map((r) => ({ file: r.file, folder: r.folder.value, description: r.desc.value.trim() })));
       } },
       h('h2', {}, `Add ${list.length} file${list.length === 1 ? '' : 's'} to the case`),
-      h('p', { class: 'muted small' }, 'Each file goes into its document folder and is named ', h('code', {}, '<year>-<case no.> <document type>'), '. A number like (2) is added when the name is taken.'),
+      h('p', { class: 'muted small explain' }, 'Each file goes into its document folder and is named ', h('code', {}, '<year>-<case no.> <document type>'), '. A number like (2) is added when the name is taken.'),
       h('div', { class: 'table-scroll' }, h('table', { class: 'files' },
         h('thead', {}, h('tr', {}, h('th', {}, 'File'), h('th', {}, 'Document type'), h('th', {}, 'Description'), h('th', {}, 'Saved as'))),
         h('tbody', {}, rows.map((r) => r.el)))),
@@ -1521,7 +1543,7 @@
           ext === 'doc' ? h('p', { class: 'small' }, 'This is an old-style Word file (.doc). Open it in Word and use File → Save As → Word Document (.docx): CaseVault can show and check .docx files.') : null,
           h('p', {}, 'Open it straight from the SSD in its normal program:'),
           h('code', { class: 'path' }, `${Vault.root.name}\\${Vault.isArchived(c.id) ? 'archive' : 'cases'}\\${c.id}\\files\\${name.replace(/\//g, '\\')}`),
-          h('p', { class: 'muted small' }, 'Tip: in File Explorer, paste the folder part of that path after your CaseVault drive letter.'));
+          h('p', { class: 'muted small explain' }, 'Tip: in File Explorer, paste the folder part of that path after your CaseVault drive letter.'));
       }
       return h('div', { class: 'preview' },
         h('div', { class: 'preview-head' },
@@ -1561,7 +1583,7 @@
       const backupsSec = h('section', { 'data-section': 'backups' },
         h('h3', {}, 'Backups'),
         h('p', {}, `A copy of vault.json is saved to the backups folder once a day. ${backups.length} backup${backups.length === 1 ? '' : 's'} on the SSD${backups[0] ? `, newest: ${backups[0]}` : ''}.`),
-        h('p', { class: 'muted small' }, 'This covers the case index and settings. To back up whole cases (notes, timelines, files), copy the entire CaseVault-Data folder to a second encrypted drive.'),
+        h('p', { class: 'muted small explain' }, 'This covers the case index and settings. To back up whole cases (notes, timelines, files), copy the entire CaseVault-Data folder to a second encrypted drive.'),
         h('div', { class: 'row' },
           h('label', { class: 'inline' }, 'Keep the newest ', keep, ' backups'),
           h('div', { class: 'spacer' }),
@@ -1623,7 +1645,7 @@
       sections.forEach((sec) => spy.observe(sec));
       nav.firstChild.classList.add('active');
       return h('div', { class: 'vault-panel' },
-        h('div', { class: 'vault-panel-head' }, h('span', { class: 'vault-badge' }, I('safe2')), h('div', {}, h('h2', {}, 'Vault'), h('p', { class: 'muted small' }, `${Vault.root.name} · ${v.cases.length} case${v.cases.length === 1 ? '' : 's'}`)),
+        h('div', { class: 'vault-panel-head' }, h('span', { class: 'vault-badge' }, I('safe2')), h('div', {}, h('h2', {}, 'Vault'), h('p', { class: 'muted small explain' }, `${Vault.root.name} · ${v.cases.length} case${v.cases.length === 1 ? '' : 's'}`)),
           h('div', { class: 'spacer' }), h('button', { class: 'btn primary', type: 'button', icon: 'check2', onclick: () => close() }, 'Done')),
         h('div', { class: 'vault-panel-body' }, nav, scroller));
     });
@@ -1648,7 +1670,7 @@
     };
     const dialog = openDialog((close) => h('div', { class: 'selftest' },
       h('h2', { icon: 'clipboard2-pulse' }, 'Self-test'),
-      h('p', { class: 'muted small' }, 'Uses its own made-up documents, never your cases. Writes one small test file to the SSD and deletes it.'),
+      h('p', { class: 'muted small explain' }, 'Uses its own made-up documents, never your cases. Writes one small test file to the SSD and deletes it.'),
       list, summary,
       h('div', { class: 'dialog-actions' }, copy, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Close'))));
     const final = await CVSelfTest.run(env, draw);
@@ -1674,15 +1696,15 @@
     const rows = CVDraft.AFFIANT_FIELDS.map((k) => {
       const id = `affiant-${k}`;
       inputs[k] = k === 'address'
-        ? h('textarea', { id, rows: 3, autocomplete: 'off' })
+        ? h('textarea', { id, rows: 3, autocomplete: 'off', class: 'affiant-wide' })
         : h('input', { id, type: TYPES[k] || 'text', autocomplete: 'off' });
       inputs[k].value = a[k] || '';
       inputs[k].addEventListener('change', save);
-      return h('div', { class: 'field', title: `Fills {{affiant.${k}}} in templates.` }, h('label', { for: id }, LABELS[k]), inputs[k]);
+      return h('div', { class: `field${k === 'address' ? ' affiant-address' : ''}`, title: `Fills {{affiant.${k}}} in templates.` }, h('label', { for: id }, LABELS[k]), inputs[k]);
     });
     return h('section', { 'data-section': 'affiant' },
       h('h3', {}, 'My details'),
-      h('p', { class: 'muted small' }, 'Filled into templates wherever they say ', h('code', {}, '{{affiant.name}}'), ' and so on. Anything left empty becomes a [CONFIRM: ...] placeholder. Stored in vault.json on the SSD.'),
+      h('p', { class: 'muted small explain' }, 'Filled into templates wherever they say ', h('code', {}, '{{affiant.name}}'), ' and so on. Anything left empty becomes a [CONFIRM: ...] placeholder. Stored in vault.json on the SSD.'),
       h('div', { class: 'affiant-grid' }, rows));
   }
 
@@ -1731,7 +1753,7 @@
     draw();
     return h('section', { 'data-section': 'privacy' },
       h('h3', {}, 'Privacy screen'),
-      h('p', { class: 'muted small' }, 'Press ', h('kbd', {}, 'Ctrl'), '+', h('kbd', {}, 'Shift'), '+', h('kbd', {}, 'H'), ', press ', h('kbd', {}, 'Esc'), ' twice quickly, or click ', h('strong', {}, 'Hide'),
+      h('p', { class: 'muted small explain' }, 'Press ', h('kbd', {}, 'Ctrl'), '+', h('kbd', {}, 'Shift'), '+', h('kbd', {}, 'H'), ', press ', h('kbd', {}, 'Esc'), ' twice quickly, or click ', h('strong', {}, 'Hide'),
         ' to cover CaseVault with a blank screen. The tab title changes to "New Tab", media pauses and pending edits are saved.'),
       h('div', { class: 'row' }, status, h('div', { class: 'spacer' }), setBtn, removeBtn),
       form,
@@ -1741,6 +1763,7 @@
 
   $('#btn-vault').addEventListener('click', () => showVaultPanel());
   $('#btn-reference').addEventListener('click', () => { location.hash = '#/reference'; });
+  $('#btn-chat').addEventListener('click', () => { location.hash = '#/chat'; });
 
   // Theme: automatic -> light -> dark. The button shows what's in effect.
   function drawThemeButton() {
@@ -1834,6 +1857,7 @@
   CVClosingUI.init(window.CaseVaultUI);
   CVReferenceUI.init(window.CaseVaultUI);
   CVLibraryUI.init(window.CaseVaultUI);
+  CVChatUI.init(window.CaseVaultUI);
 
   // Privacy screen: Ctrl+Shift+H, Esc twice, or the "Hide" button. See js/privacy.js.
   CVPrivacy.init({
