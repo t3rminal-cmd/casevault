@@ -73,3 +73,13 @@ test('a .docx written by CaseVault reads back with its structure', () => {
   assert.deepStrictEqual(kinds, ['heading', 'para', 'ol', 'ol', 'ul']);
   assert.ok(blocks[1].runs.some((r) => r.b && r.text === 'Detective Casey Example'));
 });
+
+test('Word to template: placeholders split over runs stay whole, «x» becomes {{x}}', () => {
+  const r = (t, rPr = '') => `<w:r>${rPr ? `<w:rPr>${rPr}</w:rPr>` : ''}<w:t xml:space="preserve">${t}</w:t></w:r>`;
+  const blocks = V.parse(doc(
+    p('Arrest report', '<w:pStyle w:val="Heading1"/>')
+    + `<w:p>${r('Case No. ')}${r('{{case.', '<w:b/>')}${r('number}}')}${r(' for ')}${r('«arrest.name»')}</w:p>`
+    + `<w:tbl><w:tr><w:tc>${p('DOB')}</w:tc><w:tc><w:p>${r('{{arrest')}${r('.dob}}', '<w:i/>')}</w:p></w:tc></w:tr></w:tbl>`,
+  ));
+  assert.strictEqual(V.toTemplate(blocks), '# Arrest report\n\nCase No. **{{case.number}}** for {{arrest.name}}\n\nDOB | {{arrest.dob}}\n');
+});

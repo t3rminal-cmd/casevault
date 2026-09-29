@@ -160,6 +160,36 @@
     return out.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
   }
 
+  /**
+   * Keep {{placeholders}} (and Word mail-merge style «placeholders») in one piece. Word often splits
+   * "{{case.number}}" over several runs (spell check, a bold part); the placeholder takes the
+   * formatting of its first character.
+   */
+  function joinPlaceholders(runs) {
+    const owner = [];
+    runs.forEach((r, i) => { for (let k = 0; k < r.text.length; k++) owner.push(i); });
+    const text = plain(runs);
+    for (const m of text.matchAll(/\{\{[^{}]*\}\}|«[^«»]*»/g)) for (let k = m.index + 1; k < m.index + m[0].length; k++) owner[k] = owner[m.index];
+    const out = [];
+    for (let k = 0; k < text.length; k++) {
+      const last = out[out.length - 1];
+      if (last && last.from === owner[k]) last.text += text[k];
+      else out.push({ ...runs[owner[k]], text: text[k], from: owner[k] });
+    }
+    return out.map(({ from, ...r }) => r);
+  }
+
+  /** Blocks -> a CaseVault template (Markdown), with «x» turned into {{x}}. */
+  function toTemplate(blocks) {
+    const fix = (runs) => joinPlaceholders(runs).map((r) => ({ ...r, text: r.text.replace(/«\s*([^«»]*?)\s*»/g, '{{$1}}') }));
+    const fixed = blocks.map((b) => {
+      if (b.runs) return { ...b, runs: fix(b.runs) };
+      if (b.rows) return { ...b, rows: b.rows.map((row) => row.map((cell) => cell.map((x) => (x.runs ? { ...x, runs: fix(x.runs) } : x)))) };
+      return b;
+    });
+    return toMarkdown(fixed);
+  }
+
   /** Blocks -> DOM, using only textContent (nothing in the document is treated as HTML). */
   function render(blocks, doc = root.document) {
     const el = (tag, cls) => { const e = doc.createElement(tag); if (cls) e.className = cls; return e; };
@@ -207,7 +237,7 @@
     return frag;
   }
 
-  const api = { parse, toMarkdown, render, readNumbering, plain };
+  const api = { parse, toMarkdown, toTemplate, joinPlaceholders, render, readNumbering, plain };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVDocxView = api;
 })(this);

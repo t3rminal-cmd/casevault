@@ -56,7 +56,7 @@
       radio('blank', 'Blank'),
       radio('template', 'From a template', templates.length
         ? h('span', { class: 'block' }, tplSelect)
-        : h('span', { class: 'muted small block' }, 'No templates yet. ', h('button', { class: 'linkish', type: 'button', onclick: addStarters }, 'Add the 3 generic starter templates'), ' or manage them under Vault → Templates.')),
+        : h('span', { class: 'muted small block' }, 'No templates yet. ', h('button', { class: 'linkish', type: 'button', onclick: addStarters }, 'Add the generic starter templates'), ' or manage them under Vault → Templates.')),
       radio('ai', 'Draft with AI', aiNote));
     drawStart();
 
@@ -558,6 +558,24 @@
    * Templates (shown in the Vault panel)
    * ===================================================================== */
 
+  /** The placeholder list under the template editor: click one to put it at the cursor. */
+  function placeholderHelp(area) {
+    const { h } = ui;
+    const arrestKeys = window.CVClosing ? [...CVClosing.ARRESTEE_FIELDS, ...CVClosing.ARREST_FIELDS].map((f) => f.key) : [];
+    const insert = (key) => {
+      const text = `{{${key}}}`;
+      area.focus();
+      area.setRangeText(text, area.selectionStart, area.selectionEnd, 'end');
+      area.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    return h('details', { class: 'placeholder-help' },
+      h('summary', {}, 'Placeholders (click one to insert it at the cursor)'),
+      h('p', { class: 'muted small' }, 'When a draft is made, each placeholder is replaced with the case\'s value. Anything empty or unknown becomes [CONFIRM: …] so nothing slips through. Upper/lower case does not matter.'),
+      CVDraft.placeholderGroups(arrestKeys).map((grp) => h('div', { class: 'ph-group' },
+        h('span', { class: 'ph-title small' }, grp.title),
+        h('span', { class: 'ph-keys' }, grp.keys.map((k) => h('button', { class: 'ph-key', type: 'button', title: `Insert {{${k}}}`, onclick: () => insert(k) }, `{{${k}}}`))))));
+  }
+
   function templateSettings() {
     const { h, toast, Save } = ui;
     const box = h('div', {});
@@ -586,7 +604,7 @@
       editor.replaceChildren(
         ui.field('File name', name),
         area,
-        h('p', { class: 'muted small' }, 'Placeholders: {{case.title}} {{case.number}} {{case.client}} {{case.status}} {{case.opened}} {{case.tags}} {{today}} {{today.iso}}, and {{confirm: what to check}}. Anything missing becomes [CONFIRM: ...].'),
+        placeholderHelp(area),
         h('div', { class: 'row' },
           h('div', { class: 'spacer' }),
           h('button', { class: 'btn', type: 'button', onclick: () => { editor.hidden = true; } }, 'Cancel'),
@@ -605,21 +623,36 @@
       area.focus();
     }
 
-    const importInput = h('input', { type: 'file', accept: '.md,.txt,text/markdown,text/plain', hidden: true });
+    // Import: Markdown or text as is; a Word document is converted (headings, bold/italic, lists
+    // and tables kept). {{placeholders}} typed in Word, or «placeholders», carry over.
+    const importInput = h('input', { type: 'file', accept: '.md,.txt,.docx,text/markdown,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document', hidden: true });
     importInput.addEventListener('change', async () => {
       const f = importInput.files[0];
       importInput.value = '';
-      if (f) edit(f.name.replace(/\.txt$/i, '.md'), await f.text());
+      if (!f) return;
+      try {
+        if (/\.docx$/i.test(f.name)) {
+          const buf = await f.arrayBuffer();
+          const xml = await CVExtract.unzipEntry(buf, 'word/document.xml');
+          if (!xml) throw new Error('it has no document body');
+          const numbering = await CVExtract.unzipEntry(buf, 'word/numbering.xml').catch(() => null);
+          const md = CVDocxView.toTemplate(CVDocxView.parse(xml, numbering || ''));
+          edit(FS.safeName(f.name.replace(/\.docx$/i, '.md')), md);
+          toast('Converted from Word. Check the text, add {{placeholders}} where case details go, then Save template.', 'success', 7000);
+        } else {
+          edit(FS.safeName(f.name.replace(/\.txt$/i, '.md')), await f.text());
+        }
+      } catch (err) { toast(`Could not import ${f.name}: ${err.message}`, 'error'); }
     });
 
     draw();
     return h('section', {},
       h('h3', {}, 'Templates'),
-      h('p', { class: 'muted small' }, 'Your own document formats for Drafts (Markdown files in CaseVault-Data\\templates on the SSD).'),
+      h('p', { class: 'muted small' }, 'Your own document formats for Drafts, kept as Markdown files in CaseVault-Data\\templates on the SSD. To add one: Import your agency\'s Word form (or a .md/.txt file), or New template and paste the text. Where a case detail goes, put a placeholder like {{case.number}}: the editor lists them all. # at the start of a line makes a heading, **bold**, *italic*, - for a list.'),
       box,
       h('div', { class: 'row' },
         h('button', { class: 'btn small', type: 'button', onclick: () => edit('', '# New template\n\nCase No. {{case.number}}\n') }, 'New template'),
-        h('button', { class: 'btn small', type: 'button', onclick: () => importInput.click() }, 'Import .md…'),
+        h('button', { class: 'btn small', type: 'button', onclick: () => importInput.click() }, 'Import Word, .md or .txt…'),
         h('button', { class: 'btn small', type: 'button', onclick: async () => {
           try { const added = await Save.track('templates', () => Vault.addStarterTemplates()); toast(added.length ? `Added ${added.length} generic starter template${added.length === 1 ? '' : 's'}.` : 'The starter templates are already there.', 'success'); draw(); } catch { /* reported */ }
         } }, 'Add generic starter templates'),

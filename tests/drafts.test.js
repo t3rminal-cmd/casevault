@@ -217,3 +217,15 @@ test('.docx export: a valid zip with word/document.xml, headings, runs and lists
     } finally { fs.rmSync(tmp, { force: true }); }
   }
 });
+
+test('every listed placeholder has a value source', () => {
+  const C = require('../js/closing.js');
+  const keys = [...C.ARRESTEE_FIELDS, ...C.ARREST_FIELDS].map((f) => f.key);
+  const groups = D.placeholderGroups(keys);
+  const ctx = D.templateContext({}, new Date(2026, 8, 29), null, { ...C.arrestContext(C.emptyArrest()), ...C.closureContext(null) });
+  for (const k of groups.flatMap((g) => g.keys)) {
+    if (k.startsWith('confirm:')) continue;
+    assert.ok(Object.prototype.hasOwnProperty.call(ctx, k), k);
+  }
+  assert.strictEqual(new Set(groups.flatMap((g) => g.keys)).size, groups.flatMap((g) => g.keys).length);
+});

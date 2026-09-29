@@ -104,6 +104,24 @@
   }
 
   /**
+   * The placeholders a template can use, grouped for the template editor's help list. `arrestKeys`
+   * are the arrest field names (from js/closing.js), so this file stays independent of it.
+   */
+  function placeholderGroups(arrestKeys = []) {
+    const g = (title, keys) => ({ title, keys });
+    return [
+      g('Case', ['case.number', 'case.title', 'case.client', 'case.status', 'case.opened', 'case.closed', 'case.tags']),
+      g('Date', ['today', 'today.iso']),
+      g('You (Vault → My details)', AFFIANT_FIELDS.map((k) => `affiant.${k}`)),
+      g('Arrest details (first arrestee; arrest.2.name for the second…)', ['arrest.name', 'arrest.dob', 'arrest.description', 'arrest.charges', 'arrest.names', 'arrest.count',
+        ...arrestKeys.filter((k) => !['dob'].includes(k)).map((k) => `arrest.${k}`), 'arrest.property', 'arrest.notes']
+        .filter((k, i, all) => all.indexOf(k) === i)),
+      g('Closing', ['closure.disposition', 'closure.reason', 'closure.date', 'closure.note']),
+      g('Ask yourself to check', ['confirm: what to check']),
+    ];
+  }
+
+  /**
    * Fill {{placeholders}}. Known but empty values and unknown names become [CONFIRM: name], so
    * nothing missing slips through. {{confirm: Badge number}} is a shortcut for [CONFIRM: Badge number].
    */
@@ -280,7 +298,7 @@ ${GENERIC_NOTE}
 
   const api = {
     DOC_TYPES, STARTER_TEMPLATES, parseDraft, serializeDraft, slugify, extractPlaceholders,
-    AFFIANT_FIELDS, templateContext, fillTemplate, templateTitle, stripMarkdown,
+    AFFIANT_FIELDS, placeholderGroups, templateContext, fillTemplate, templateTitle, stripMarkdown,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVDraft = api;
