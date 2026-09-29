@@ -27,6 +27,7 @@ const APP_FILES = [
   './js/checker/rules.js',
   './js/checker/sheets.js',
   './js/checker/xfa.js',
+  './js/docxview.js',
   './js/checker/extract.js',
   './js/checker/ai.js',
   './js/ai/activity.js',

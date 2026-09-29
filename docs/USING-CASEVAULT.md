@@ -132,7 +132,8 @@ Every case has the same document folders, both in CaseVault and on the SSD (`cas
 Pick a folder on the left and drop files onto the box (or click **choose files**). With **All documents** selected, CaseVault asks the document type for each file, with a guess from its name (for example `supp 2.pdf` → Supplementary Report, `interview.mp3` → Recordings), and shows the name it will be saved under. Files are **copied**; your originals aren't changed.
 
 - **Open** previews PDFs, images, text, audio, and video right inside CaseVault. Excel and CSV files open as tables (see below).
-- Other types (Word, and so on) can't be previewed. CaseVault shows you where the file is on the SSD, so you can open it from File Explorer.
+- **Word files (.docx)** open inside CaseVault as a readable, read-only page: headings, bold/italic/underline, numbered and bulleted lists and tables are kept; fonts, spacing and pictures aren't. Open the file in Word for the exact layout. Old **.doc** files can't be shown: open them in Word and *Save As* .docx.
+- Other types can't be previewed. CaseVault shows you where the file is on the SSD, so you can open it from File Explorer.
 - **Move / rename** moves a file to another folder, or renames it by the convention (the copy is checked before the original is removed).
 - A small **name** badge marks a file that doesn't follow the convention.
 - **Delete** permanently removes the file from the SSD after you confirm.

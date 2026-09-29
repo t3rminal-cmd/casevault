@@ -1030,7 +1030,7 @@
 
   const PREVIEWABLE = {
     pdf: 'pdf', png: 'image', jpg: 'image', jpeg: 'image', gif: 'image', webp: 'image', bmp: 'image', svg: 'image-svg',
-    txt: 'text', md: 'text', json: 'text', log: 'text', xml: 'text',
+    txt: 'text', md: 'text', json: 'text', log: 'text', xml: 'text', docx: 'docx', docm: 'docx',
     csv: 'sheet', tsv: 'sheet', xlsx: 'sheet', xlsm: 'sheet', xls: 'sheet', ods: 'sheet',
     mp3: 'audio', wav: 'audio', m4a: 'audio', ogg: 'audio', mp4: 'video', webm: 'video', mov: 'video',
   };
@@ -1277,12 +1277,26 @@
         CVSheets.read(file, name)
           .then((sheets) => body.replaceChildren(...sheetPreview(sheets, at).filter(Boolean)))
           .catch((err) => body.replaceChildren(h('p', { class: 'error-text' }, `Could not read this spreadsheet: ${err.message}`)));
+      } else if (kind === 'docx') {
+        // Word: drawn by CaseVault from the file's text and structure (no Word needed). The layout is
+        // simplified; the file itself is unchanged and opens in Word as usual.
+        body = h('div', { class: 'docx-preview' }, h('p', { class: 'muted' }, 'Reading the Word document…'));
+        file.arrayBuffer().then(async (buf) => {
+          const xml = await CVExtract.unzipEntry(buf, 'word/document.xml');
+          if (!xml) throw new Error('it has no document body');
+          const numbering = await CVExtract.unzipEntry(buf, 'word/numbering.xml').catch(() => null);
+          const blocks = CVDocxView.parse(xml, numbering || '');
+          body.replaceChildren(
+            h('p', { class: 'muted small docx-note' }, 'Word document, shown read-only. Headings, bold/italic, lists and tables are kept; fonts, spacing and images are not. The file itself is unchanged: open it in Word for the exact layout.'),
+            h('div', { class: 'docx-page' }, blocks.length ? CVDocxView.render(blocks) : h('p', { class: 'muted' }, 'This document has no text.')));
+        }).catch((err) => body.replaceChildren(h('p', { class: 'error-text' }, `Could not read this Word file: ${err.message}. Open it in Word from the SSD.`)));
       } else if (kind === 'text') {
         body = h('pre', { class: 'preview-text' }, 'Loading…');
         file.slice(0, 2_000_000).text().then((t) => { body.textContent = t; });
       } else {
         body = h('div', { class: 'preview-none' },
           h('p', {}, 'This file type can\'t be shown inside CaseVault.'),
+          ext === 'doc' ? h('p', { class: 'small' }, 'This is an old-style Word file (.doc). Open it in Word and use File → Save As → Word Document (.docx): CaseVault can show and check .docx files.') : null,
           h('p', {}, 'Open it straight from the SSD in its normal program:'),
           h('code', { class: 'path' }, `${Vault.root.name}\\${Vault.isArchived(c.id) ? 'archive' : 'cases'}\\${c.id}\\files\\${name.replace(/\//g, '\\')}`),
           h('p', { class: 'muted small' }, 'Tip: in File Explorer, paste the folder part of that path after your CaseVault drive letter.'));
