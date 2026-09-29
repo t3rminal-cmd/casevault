@@ -488,6 +488,7 @@
       },
       h('div', { class: 'case-item-top' }, h('span', { class: 'case-item-title' }, c.title || 'Untitled case'), statusPill(c.status)),
       h('div', { class: 'case-item-meta muted' }, [c.number, c.client].filter(Boolean).join(' · ') || '\u00a0'),
+      c.status === 'Pending' && c.pending ? h('div', { class: 'case-item-due' }, `⏳ Waiting on ${c.pending.reason}`) : null,
       due && h('div', { class: `case-item-due ${due.cls}` }, `⏰ ${c.nextDeadline.title || 'Deadline'}: ${due.text}`)));
   }
 
@@ -656,10 +657,11 @@
    * ===================================================================== */
 
   const TABS = [['details', 'Details'], ['notes', 'Notes'], ['timeline', 'Timeline'], ['files', 'Files'], ['mail', 'Mail'], ['drafts', 'Drafts'], ['checks', 'Checks']];
+  // The Arrest details tab appears once a case has arrest details, or is closed "by arrest".
+  const tabsFor = (c) => (CVClosingUI.hasArrestTab(c) ? [TABS[0], ['arrest', 'Arrest details'], ...TABS.slice(1)] : TABS);
 
   async function showCase(id, tab, sub = null) {
     const token = ++state.renderToken;
-    if (!TABS.some(([t]) => t === tab)) tab = 'details';
     try {
       if (state.caseId !== id || !state.caseObj) {
         state.caseObj = await Vault.getCase(id);
@@ -674,11 +676,13 @@
       return go(null);
     }
     if (token !== state.renderToken) return;
+    const c = state.caseObj;
+    const tabs = tabsFor(c);
+    if (!tabs.some(([t]) => t === tab)) tab = 'details';
     state.caseId = id;
     state.tab = tab;
     renderCaseList();
 
-    const c = state.caseObj;
     const archived = Vault.isArchived(id);
     const panel = h('div', { class: 'tab-panel', role: 'tabpanel' });
     $('#main').replaceChildren(h('section', { class: `case ${archived ? 'archived' : ''}` },
@@ -690,14 +694,14 @@
       h('div', { class: 'case-head' },
         h('h1', { id: 'case-title' }, c.title || 'Untitled case'),
         h('div', { class: 'case-sub muted', id: 'case-sub' }, caseSubtitle(c))),
-      h('nav', { class: 'tabs', role: 'tablist' }, TABS.map(([t, label]) =>
+      h('nav', { class: 'tabs', role: 'tablist' }, tabs.map(([t, label]) =>
         h('a', { href: `#/case/${encodeURIComponent(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab) }, label))),
       panel));
     // Read-only: everything in the tab that could change the case is switched off, now and as
     // the tab redraws. (vault.js refuses the writes too.)
     if (archived) new MutationObserver(() => applyReadOnly(panel)).observe(panel, { childList: true, subtree: true });
 
-    const renderers = { details: renderDetails, notes: renderNotes, timeline: renderTimeline, files: renderFiles, mail: (...a) => CVMailUI.render(...a), drafts: (...a) => CVDraftsUI.render(...a), checks: (...a) => CVChecks.render(...a) };
+    const renderers = { details: renderDetails, arrest: (...a) => CVClosingUI.renderArrest(...a), notes: renderNotes, timeline: renderTimeline, files: renderFiles, mail: (...a) => CVMailUI.render(...a), drafts: (...a) => CVDraftsUI.render(...a), checks: (...a) => CVChecks.render(...a) };
     try {
       await renderers[tab](panel, c, token, sub);
     } catch (err) {
@@ -750,13 +754,20 @@
         archiveCase(c);
         return;
       }
-      c.status = statusSelect.value;
-      if (c.status === 'Closed' && !c.dates.closed) {
-        c.dates.closed = today();
-        closedInput.value = c.dates.closed;
-      }
+      // Closed goes through "Close case…" (disposition), Pending asks what it's waiting on, and
+      // Open on a closed case reopens it. If the dialog is cancelled, nothing changes.
+      const want = statusSelect.value;
+      statusSelect.value = c.status;
+      if (want === 'Closed') { CVClosingUI.closeCaseDialog(c); return; }
+      if (want === 'Pending') { CVClosingUI.pendingDialog(c); return; }
+      if (want === 'Open' && c.status === 'Closed') { CVClosingUI.reopenCase(c); return; }
+      c.status = want;
+      if (want === 'Open') c.pending = null;
+      statusSelect.value = want;
+      statusNote.textContent = CVClosingUI.statusLine(c);
       save();
     });
+    const statusNote = h('span', { class: 'muted small block status-note' }, CVClosingUI.statusLine(c));
     const archived = Vault.isArchived(c.id);
 
     panel.replaceChildren(
@@ -764,7 +775,7 @@
         field('Title', bind(h('input', { value: c.title, maxlength: 200 }), (v) => { c.title = v; }), 'span-2'),
         field('Case / file number', bind(h('input', { value: c.number, maxlength: 100 }), (v) => { c.number = v; })),
         field('Client', bind(h('input', { value: c.client, maxlength: 200 }), (v) => { c.client = v; })),
-        field('Status', statusSelect),
+        h('label', { class: 'field' }, h('span', {}, 'Status'), statusSelect, statusNote),
         field('Tags (comma separated)', bind(h('input', { value: c.tags.join(', '), maxlength: 300 }), (v) => { c.tags = parseTags(v); })),
         field('Opened', bind(h('input', { type: 'date', value: c.dates.opened || '' }), (v) => { c.dates.opened = v; })),
         field('Closed', bind(closedInput, (v) => { c.dates.closed = v; })),
@@ -782,6 +793,19 @@
             : h('div', { class: 'case-action' },
               h('button', { class: 'btn', type: 'button', onclick: () => archiveCase(c) }, 'Archive case…'),
               h('p', { class: 'muted small' }, 'Keeps everything, read-only, in CaseVault-Data\\archive. It leaves the case list but can still be opened, searched and restored.')),
+          !archived ? (c.status === 'Closed'
+            ? h('div', { class: 'case-action' },
+              h('button', { class: 'btn', type: 'button', onclick: () => CVClosingUI.reopenCase(c) }, 'Reopen case'),
+              h('p', { class: 'muted small' }, 'Back to Open, for new information. The closing is kept in the case\'s history.'))
+            : h('div', { class: 'case-action' },
+              h('button', { class: 'btn primary', type: 'button', onclick: () => CVClosingUI.closeCaseDialog(c) }, 'Close case…'),
+              h('p', { class: 'muted small' }, 'When the investigation is finished: choose how it ended (arrest, exceptionally cleared, unfounded…). Lists loose ends first.'))) : null,
+          !archived && !CVClosingUI.hasArrestTab(c) ? h('div', { class: 'case-action' },
+            h('button', { class: 'btn', type: 'button', onclick: async () => {
+              c.arrest = true;
+              try { await Save.track(`case:${c.id}`, () => Vault.saveCase(structuredClone(c))); go(c.id, 'arrest'); } catch { /* reported */ }
+            } }, 'Add arrest details'),
+            h('p', { class: 'muted small' }, 'Arrestee, arrest and charges, for the arrest report. Adds an Arrest details tab.')) : null,
           !archived && Vault.conventionalId(c) ? h('div', { class: 'case-action' },
             h('button', { class: 'btn', type: 'button', onclick: () => renameCaseFolder(c) }, `Rename folder to ${Vault.conventionalId(c)}`),
             h('p', { class: 'muted small' }, 'Renames this case\'s folder on the SSD to the <year>-<case no.> convention. Every file is copied and checked first.')) : null,
@@ -1580,6 +1604,7 @@
   });
   CVActivityLib.mount(CVActivity, $('#ai-activity'));
   CVDraftsUI.init(window.CaseVaultUI);
+  CVClosingUI.init(window.CaseVaultUI);
 
   // Privacy screen: Ctrl+Shift+H, Esc twice, or the "Hide" button. See js/privacy.js.
   CVPrivacy.init({

@@ -259,6 +259,7 @@
     const push = (value, type = 'known') => { if (value && String(value).trim().length >= 3) out.push({ value: String(value).trim(), type }); };
     if (caseObj) {
       push(caseObj.client);
+      for (const p of caseObj.people || []) push(p); // arrestees (js/closing.js)
       push(caseObj.number, 'casenum');
       if (caseObj.id && /\d/.test(caseObj.id)) push(caseObj.id, 'casenum');
     }

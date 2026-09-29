@@ -194,6 +194,7 @@ const Vault = (() => {
       opened: c.dates?.opened || '',
       updated: [c.dates?.updated, prev?.updated].filter(Boolean).sort().pop() || '',
       nextDeadline: nextDeadline(timeline),
+      pending: c.status === 'Pending' && c.pending ? { reason: c.pending.reason || '', followUp: c.pending.followUp || '' } : null,
     };
   }
 

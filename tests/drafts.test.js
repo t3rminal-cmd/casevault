@@ -35,10 +35,10 @@ async function roundTrip(Vault, rootHandle) {
   assert.deepStrictEqual(list.map((d) => [d.slug, d.title, d.ai]), [[slug, 'Affidavit -- search warrant', true]]);
 
   // Templates
-  assert.deepStrictEqual((await Vault.addStarterTemplates()).length, 3);
+  assert.deepStrictEqual((await Vault.addStarterTemplates()).length, 4);
   assert.deepStrictEqual((await Vault.addStarterTemplates()).length, 0, 'never overwrites');
   const templates = await Vault.listTemplates();
-  assert.deepStrictEqual(templates.map((t) => t.title), ['Affidavit (generic example)', 'Case summary (generic example)', 'Subpoena (generic example)']);
+  assert.deepStrictEqual(templates.map((t) => t.title), ['Affidavit (generic example)', 'Arrest report (generic example)', 'Case summary (generic example)', 'Subpoena (generic example)']);
   await Vault.saveTemplate('agency-affidavit.md', '# Agency affidavit\n\nCase {{case.number}}');
   assert.strictEqual(await Vault.readTemplate('agency-affidavit.md'), '# Agency affidavit\n\nCase {{case.number}}');
 

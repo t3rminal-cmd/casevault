@@ -77,7 +77,7 @@
         if (start === 'template') {
           if (!templates.length) return toast('Add a template first.', 'error');
           const tpl = await Vault.readTemplate(tplSelect.value);
-          body = CVDraft.fillTemplate(tpl, CVDraft.templateContext(state.caseObj || c, new Date(), Vault.data.settings.affiant));
+          body = CVDraft.fillTemplate(tpl, CVDraft.templateContext(state.caseObj || c, new Date(), Vault.data.settings.affiant, await CVClosingUI.templateExtra(state.caseObj || c)));
         }
         if (start === 'ai') body = '';
         const slug = await Vault.newDraftSlug(c.id, name);
@@ -506,7 +506,7 @@
           const query = [typeLabel, caseObj.title, opts.instructions, String(notes).slice(0, 600), ...(timeline.events || []).map((e) => e.title)].join(' ');
           const hits = await CVCopilot.relevantPassages({ docs, query, engine: { base: det.base, embed: det.embed }, fetchImpl: Engine().fetchImpl() });
           const passages = hits.map((p) => ({ ...p, docName: docs[p.doc].name }));
-          const template = opts.template ? CVDraft.fillTemplate(await Vault.readTemplate(opts.template), CVDraft.templateContext(caseObj, new Date(), Vault.data.settings.affiant)) : '';
+          const template = opts.template ? CVDraft.fillTemplate(await Vault.readTemplate(opts.template), CVDraft.templateContext(caseObj, new Date(), Vault.data.settings.affiant, await CVClosingUI.templateExtra(caseObj))) : '';
           const messages = CVCopilot.draftMessages({ type: opts.type, template, instructions: opts.instructions, caseObj, timeline, notes, passages, numCtx });
 
           Object.assign(meta, {

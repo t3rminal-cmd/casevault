@@ -870,3 +870,13 @@ table.files td.fname { min-width: 14rem; }
 .docx-table td { border: 1px solid #bbb; padding: .3em .5em; vertical-align: top; }
 .docx-table td p { margin: 0; }
 .docx-page-break { border: 0; border-top: 2px dashed #ccc; margin: 1.5em 0; }
+
+/* ---------- Arrest details, close case, status ---------- */
+.status-note { margin-top: .3rem; font-weight: 400; }
+.arrestee h3 { margin: 1.1rem 0 .4rem; font-size: .95rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.arrest-grid { grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); max-width: none; }
+.arrest-grid .span-2 { grid-column: 1 / -1; }
+.charges-table input, .charges-table select { min-width: 6rem; }
+.charges-table td { padding: .25rem; }
+.arrestees { display: grid; gap: 1rem; margin-bottom: 1rem; }
+.close-form .radio-list { margin-bottom: .8rem; }

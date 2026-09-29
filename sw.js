@@ -52,6 +52,8 @@ const APP_FILES = [
   './js/ai/memory.js',
   './js/privacy.js',
   './js/selftest.js',
+  './js/closing.js',
+  './js/closing-ui.js',
   './js/app.js',
   './icons/icon.svg',
   './icons/icon-192.png',

@@ -87,7 +87,8 @@
    * the vault settings ({ name, title, agency, address, phone, email }); empty values still become
    * [CONFIRM: affiant.name] and so on.
    */
-  function templateContext(caseObj, now = new Date(), affiant = null) {
+  // extra: more values, e.g. {{arrest.*}} and {{closure.*}} from js/closing.js.
+  function templateContext(caseObj, now = new Date(), affiant = null, extra = null) {
     const c = caseObj || {};
     const d = c.dates || {};
     const a = affiant || {};
@@ -99,7 +100,7 @@
     for (const k of AFFIANT_FIELDS) {
       ctx[`affiant.${k}`] = k === 'address' ? String(a[k] || '').replace(/\r\n?/g, '\n').trim() : String(a[k] || '').trim();
     }
-    return ctx;
+    return extra ? Object.assign(ctx, extra) : ctx;
   }
 
   /**
@@ -107,14 +108,16 @@
    * nothing missing slips through. {{confirm: Badge number}} is a shortcut for [CONFIRM: Badge number].
    */
   function fillTemplate(template, ctx) {
+    const lower = new Map(Object.entries(ctx).map(([k, v]) => [k.toLowerCase(), v]));
     return String(template || '').replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (all, key) => {
       const confirm = /^confirm\s*:\s*(.+)$/i.exec(key);
       if (confirm) return `[CONFIRM: ${confirm[1].trim()}]`;
       const k = key.trim();
-      const v = ctx[k] ?? ctx[k.toLowerCase()];
+      const v = ctx[k] ?? lower.get(k.toLowerCase());
       return v != null && String(v).trim() !== '' ? String(v) : `[CONFIRM: ${k}]`;
     });
   }
+
 
   function templateTitle(text, fileName) {
     const m = /^#\s+(.+)$/m.exec(String(text || ''));
@@ -180,6 +183,47 @@ YOU ARE COMMANDED to {{confirm: appear and testify / produce the following recor
 **Place:** {{confirm: address}}
 
 Issued on {{today}} by {{confirm: issuing attorney or clerk, with contact details}}.
+`,
+    'generic-arrest-report.md': `# Arrest report (generic example)
+
+${GENERIC_NOTE}
+
+**Case No.** {{case.number}} · **Case:** {{case.title}} · **Prepared:** {{today}} by {{affiant.name}}, {{affiant.title}}, {{affiant.agency}}
+
+## Arrestee
+
+- **Name:** {{arrest.name}}
+- **Date of birth:** {{arrest.dob}}
+- **Description:** {{arrest.description}}
+- **Address:** {{arrest.address}}
+- **Phone:** {{arrest.phone}}
+- **DL / ID:** {{arrest.idNumber}}
+
+## Arrest
+
+- **Date and time:** {{arrest.date}} at {{arrest.time}}
+- **Location:** {{arrest.location}}
+- **Type of arrest:** {{arrest.type}} · **Warrant:** {{arrest.warrantNumber}}
+- **Arresting officer:** {{arrest.arrestingOfficer}} · **Assisting:** {{arrest.assistingOfficers}}
+- **Miranda:** {{arrest.miranda}} at {{arrest.mirandaTime}}
+- **Booked into:** {{arrest.facility}} · **Booking number:** {{arrest.bookingNumber}} · **Bond:** {{arrest.bond}}
+
+## Charges
+
+{{arrest.charges}}
+
+## Property seized
+
+{{arrest.property}}
+
+## Narrative
+
+{{confirm: narrative of the arrest}}
+
+{{arrest.notes}}
+
+______________________________
+{{affiant.name}}, {{affiant.title}}, {{confirm: badge number}}
 `,
     'generic-case-summary.md': `# Case summary (generic example)
 
