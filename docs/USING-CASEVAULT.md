@@ -73,13 +73,29 @@ The header has, from left to right: the vault folder, the **Offline** / **AI** /
 
 - **Theme button** (half circle, sun or moon): switches between *automatic* (follows Windows' light or dark setting), *light* and *dark*. Each PC remembers its own choice in the browser; it's a display preference, not case data.
 - Icons mark every tab, button and document folder, and each file in a case shows an icon for its type (PDF, Word, Excel, picture, audio, video, email).
-- The **Overview** shows your case counts, **Quick reference** links (see *Reference* below), upcoming deadlines and recently updated cases.
+- **Point at a button** (or reach it with Tab) to see what it does in a hover box. Buttons show just an icon and a short name; the explanation is in the hover box.
+- The page is centred and uses the width of the screen, from a phone up to 1920×1080 and larger. Case actions are same-size buttons in one row.
+- The **Overview** shows your case counts, then, each under a line: **Upcoming deadlines**, **Recently updated**, and **Quick links** (see below).
 - On a narrow window the header buttons shrink to their icons.
-- **Vault** opens the settings. The list on its left (This vault, Backups, Privacy screen, My details, Templates, Reference library, Online features, Always hide, Department mail, Outbound log, Maintenance) jumps to each section, and follows along as you scroll. **Done** is at the top right.
+- **Vault** opens the settings. The list on its left (This vault, Backups, Privacy screen, My details, Templates, Library, AI writing behavior, Quick links, Online features, Always hide, Department mail, Outbound log, Maintenance) jumps to each section, and follows along as you scroll. **Done** is at the top right.
+
+### Quick links
+
+At the bottom of the Overview, in three tabs:
+
+- **Reference:** Incident location codes, Commonly used UCR and the Narcotic calculator (CaseVault's own pages, see *Reference*).
+- **OSINT:** MaxMind (IP lookup), NumLookup (phone), Google Images (reverse image search), mempool.space, Blockchair and Blockchain.com Explorer (blockchain explorers), and Fingerprint.
+- **LEO:** Accurint, Kodex Portal and Chicago HIDTA, plus any you add.
+
+OSINT and LEO links open the website **in a new browser tab**, outside CaseVault. CaseVault never contacts those sites itself and sends them nothing (not even which page you came from), so it still works offline. Don't paste case details into outside websites unless your policy allows it.
+
+- **Show / hide** lets you hide the buttons you don't use (click the eye on each), and bring them back.
+- **Edit links** (or **Vault → Quick links**) changes a link's name or web address, and adds your own, for example your agency's portals. Chicago HIDTA has no address until you add your portal's. Changes save when you leave the box, in `vault.json` on the SSD.
 
 ## Cases
 
-- **+ New case** asks for a title (required), case/file number, client, status, opened date, and tags.
+- **New case** asks for a title (required), the **file number**, the **case number**, client, status, opened date, and tags. One file number can hold several cases: the File number box offers the file numbers you already use. The case folder and file names use the case number.
+- The case list and the case's header show both, for example *File F-2026-01 · Case 00123*, and the search box finds either. Templates can use `{{case.fileNumber}}` and `{{case.number}}`.
 - The **left list** shows open and pending cases, most recently changed first. Use the search box (title, number, client, or tag) and the filter to find others.
 - **Details** tab: edit any field. A short note under **Status** says what the status means and, for a Pending case, what you're waiting on.
 - **Case actions** (at the bottom of Details) has **Close case…** (or **Reopen case**), **Add arrest details**, **Archive case…** and **Delete case…**.
@@ -141,12 +157,17 @@ The **Notes** tab is a large free-form page, saved as `notes.md` in the case fol
 
 ```
 # Heading
-**bold**, *italic*, `code`
+**bold**, *italic*, ++underline++, `code`
 - bullet point
 1. numbered point
 > quoted text
 ---            (a divider line)
+| Item | Weight |      (a table: a header row,
+| --- | --- |            this line,
+| Exhibit 1 | 28 g |    then one line per row)
 ```
+
+The **formatting bar** above the text does this for you: **B** bold, *I* italic, U underline (or **Ctrl+B / Ctrl+I / Ctrl+U**), heading, bulleted and numbered list (on the selected lines; click again to take it off), and **table** (pick the size on the grid, then type into the cells). Ctrl+Z undoes. Drafts have the same bar, and tables and underline come through in the Word export.
 
 Notes save on their own as you type. The **Save** button next to Preview writes them straight away, and the text beside it shows *✓ Saved 14:02* once they're on the SSD.
 
@@ -164,7 +185,18 @@ Add dated **Events** (things that happened) and **Deadlines** (things that are d
 
 Every case has the same document folders, both in CaseVault and on the SSD (`cases\<case>\files\...`):
 
-> Affidavits · Arrest Report · Supplementary Report · Case Report · Deconfliction · Drug Exhibits · Other Exhibits · Email · Ops Plan · Subpoena Response · Subject Information · Recordings · Vehicle Information · Maps · Other
+> Case Initiation · Affidavit Drafts · Affidavit Final · Warrant Drafts · Warrant Final · Warrants Signed · Arrest Report · Supplementary Report · Case Report · Deconfliction · Drug Exhibits · Other Exhibits · Email · Ops Plan · Subpoena Drafts · Subpoena Sent · Subpoena Response · Subject Information · Recordings (with **Video** and **Audio** sub-folders) · Vehicle Information · Maps · Case Closing · Other
+
+Cases made before v1.11 keep their **Affidavits** folder: it still shows (and works) while it holds files; new files go to Affidavit Drafts or Affidavit Final.
+
+### Arranging folders and files
+
+- **Folders:** drag a folder up or down the list to put it where you want (or select it and press **Alt+↑ / Alt+↓**). The order is the same in every case. **Standard order** puts it back.
+- **Move a file:** drag it from the table onto a folder on the left. It's renamed by that folder's convention, like **Move / rename**.
+- **Sort:** click a column heading (Name, Type, Size, Added) to sort by it; click again to reverse.
+- **Your own order:** in a folder, click **Custom** and drag the rows into the order you want. It's kept for that folder in the case (`file-order.json`).
+
+The table has one row per file with clear lines: **Name** (with the folder underneath in *All documents*; a long name ends in "…", and pointing at it shows the whole name), **Type** (PDF, Word, Video (MP4)…), **Size**, **Added**, and the **Open**, **Move / rename** and **Delete** buttons.
 
 ### Naming convention
 
@@ -174,7 +206,7 @@ Every case has the same document folders, both in CaseVault and on the SSD (`cas
 
 ### Adding files
 
-Pick a folder on the left and drop files onto the box (or click **choose files**). With **All documents** selected, CaseVault asks the document type for each file, with a guess from its name (for example `supp 2.pdf` → Supplementary Report, `interview.mp3` → Recordings), and shows the name it will be saved under. Files are **copied**; your originals aren't changed.
+Pick a folder on the left and drop files onto the box (or click **choose files**). With **All documents** selected, CaseVault asks the document type for each file, with a guess from its name (for example `supp 2.pdf` → Supplementary Report, `search warrant signed.pdf` → Warrants Signed, `interview.mp3` → Recordings › Audio, `bodycam.mp4` → Recordings › Video), and shows the name it will be saved under. Files are **copied**; your originals aren't changed.
 
 - **Open** previews PDFs, images, text, audio, and video right inside CaseVault. Excel and CSV files open as tables (see below).
 - **Word files (.docx)** open inside CaseVault as a readable, read-only page: headings, bold/italic/underline, numbered and bulleted lists and tables are kept; fonts, spacing and pictures aren't. Open the file in Word for the exact layout. Old **.doc** files can't be shown: open them in Word and *Save As* .docx.
@@ -183,7 +215,7 @@ Pick a folder on the left and drop files onto the box (or click **choose files**
 - A small **name** badge marks a file that doesn't follow the convention.
 - **Delete** permanently removes the file from the SSD after you confirm.
 - Files added with CaseVault 1.8 or earlier sit in **Unsorted**. Use **File it…** on each to put it in its folder with a conventional name.
-- Drafts exported to the case (**Export → Save to case files**) are filed too: affidavits in Affidavits, summaries in Case Report, others in Other.
+- Drafts exported to the case (**Export → Save to case files**) are filed too: affidavits in Affidavit Drafts, subpoenas in Subpoena Drafts, summaries and DEA-6 reports in Case Report, others in Other.
 
 ### Excel and CSV files
 
@@ -207,33 +239,18 @@ Some agency forms are *XFA* PDFs, made with Adobe LiveCycle Designer. In Chrome,
 
 ## Reference
 
-**Reference** in the header (or a Quick reference card on the Overview) opens quick-reference material from LE Cyber-Docs. It's a quick reference only: always follow your department's policies, and have charging documents reviewed by your ASA or supervisor.
+**Reference** in the header (or the Reference tab of Quick links) opens quick-reference material from LE Cyber-Docs. It's a quick reference only: always follow your department's policies.
 
-### Narcotics
+### Narcotic calculator
 
 - **Value calculator:** pick the drug, type the amount and the unit (only units with a price are offered), and the street value appears. **Copy for a report** copies one line such as *Cocaine (Powder), 28 grams: approximate street value $3,500.00 (HIDTA 2022, $125.00 per gram).*
 - **Street value chart:** every drug by category, per gram, pill, ounce, pound and kilogram (HIDTA 2022). **≈** marks an estimate (the gram price × 454); **verify** marks a price that needs a current figure.
-- **Narcotic complaint forms:** the Cook County felony complaint forms (CCCR 0662) for cocaine, heroin, fentanyl, methamphetamine, synthetic drugs and cannabis, with the 720 ILCS citation, weight range and class. Search by citation, drug or a weight (type `20 g` to see the forms for 20 grams), and filter by drug and by possession or delivery.
-
-**One-time step: import the complaint PDFs.** The PDFs are agency forms, so they aren't part of CaseVault's code. Copy them onto the SSD once:
-
-1. Get the LE Cyber-Docs folder (download it from GitHub as a ZIP and unzip it, or copy it from a colleague).
-2. In **Reference → Narcotics**, click **Import a folder…** and pick `assets\complaints` inside it (or **Import PDFs…** and select the files).
-3. CaseVault copies them to `CaseVault-Data\reference\complaints\` on the SSD, sorted into `possession`, `delivery` and `other`. The list shows *55 of 55 forms are on the SSD*.
-
-Then each form has **Open** (read it in CaseVault) and **Use in a case…**: pick the case, and CaseVault makes a new draft there with the form's text, set to the *Criminal complaint* type with that form as its reference. Open the draft and use **Draft with AI…** to fill it in from the case (see *Draft with AI*).
-
-### DUI guide
-
-- **SFST checklist:** Horizontal Gaze Nystagmus (left and right eye), Walk and Turn, One-Leg Stand and the alternate tests (alphabet, finger count, count backwards, nose touch, PBT). Tick the clues you observe; each test adds up its clues against the decision point (HGN 4 of 6, Walk and Turn 2 of 8, One-Leg Stand 2 of 4) and turns red at or above it.
-- **DUI flow chart:** Phase I (vehicle in motion) to Phase VIII (finish the arrest). Your answers choose the path: no probable cause ends at Phase III, refusing testing skips to Phase VIII, a breath result under 0.08 goes on to alternate testing. **Now** fills in the current time. Phase VIII has the arrest-processing checklist.
-- Both have **Report details** (officer, star #, date, RD / case #; your name comes from **My details**), **Copy as text**, **Save to a case…** and **Clear**.
-
-What you fill in stays in this window only. It's saved to the SSD only when you choose **Save to a case…**, which adds it to that case as a draft (you can edit and export it like any draft). Nothing is saved on the computer.
 
 ### Incident location codes and Commonly used UCR
 
 Code cards grouped by category. Search by code or words (`agg handgun`), or pick a category. **Click a code to copy it.**
+
+(The DUI guide and the narcotic complaint forms were removed in v1.11. If you imported complaint PDFs in v1.10, they're still on the SSD in `CaseVault-Data\reference\complaints`; move the ones you want into the **Library** or delete the folder.)
 
 ## Saving
 
@@ -466,9 +483,12 @@ With **AI suggestions** ticked in the toolbar, pausing for a moment at the end o
 
 Click **Draft with AI…** in the editor (or pick it when creating a draft) and choose:
 
-- **Document type** and optionally a **template** to follow.
+- **Document type** (including **DEA-6 Report of Investigation**, **DEA-7 drug evidence** and **DEA-202 personal history**) and optionally a **template** to follow.
 - **What to use:** the case details (always), the timeline, the notes, and any attached documents. For long documents, CaseVault picks the passages most relevant to the draft.
-- **Reference** (optional): a **complaint form to follow** (from the forms imported in *Reference → Narcotics*; a form matching the case's arrest charges is picked for you and marked *matches the charges*), the **narcotics street values**, and the **incident location and UCR codes**. The AI uses these only for statutory wording, layout, values and codes, never as facts of the case. The draft's sources list them.
+- **Writing behavior:** how the AI writes. **DEA-6 style** is the default (third person, SYNOPSIS, numbered DETAILS paragraphs in time order, INDEXING). Others: plain narrative report, affidavit / formal legal, brief summary, and any you make (see *AI writing behavior*).
+- **Library:** the examples to write like and the directives to follow (see *The Library*). Examples of the document type you chose are ticked for you, and so are your "always use" directives.
+- **Reference** (optional): the **narcotics street values** and the **incident location and UCR codes**, for values and codes.
+- The AI uses the Library and Reference only for **how** to write (format, headings, tone, wording) and for rules, values and codes, **never as facts of this case**; the names and events in your examples belong to other cases and are never copied. The draft's sources list what was used.
 - Optional **instructions**, such as "focus on the events of March 14".
 - **Replace** the current text, or **add** below it.
 
@@ -483,6 +503,28 @@ AI-written drafts always show this banner:
 > ⚠ AI-generated draft. Verify every fact against the source before signing or filing.
 
 Read an AI draft as a starting point. It can still misstate things, so check every sentence against the reports.
+
+### The Library
+
+**Vault → Library** holds documents the AI learns from, kept in `CaseVault-Data\library` on the SSD:
+
+| Part | What to put there |
+|---|---|
+| **Report examples** | Finished reports written the way you want: DEA-6s, DEA-7s, DEA-202s, supplementary reports |
+| **Warrant examples** | Search and arrest warrants and affidavits to follow |
+| **Directives** | Policies and directives the AI must follow and may cite |
+| **Other** | Anything else to keep at hand |
+
+- **Add files…** or **Add a folder…** (PDF, Word, text; scanned PDFs are read with OCR the first time). Pick which part first with **Add to**.
+- Each example has a **type** (DEA-6, DEA-7, DEA-202, affidavit, warrant…), guessed from its name; change it if the guess is wrong. Draft with AI picks examples of the type you're writing.
+- Each directive has **Always use**: ticked directives go with every Draft with AI.
+- The eye button shows the text the AI reads from the file. Move a file between parts with its list, or delete it.
+- Only the AI on this computer reads the Library; it's never sent online. Long files are shortened to fit the AI's window, so short, typical samples work best (two or three good DEA-6s beat twenty).
+- Examples may contain real names from closed cases: they stay on the encrypted SSD like everything else.
+
+### AI writing behavior
+
+**Vault → AI writing behavior** holds the instruction prompts that tell the AI how to write. Pick one to read or edit it, **Save behavior**, **Make default** (the one Draft with AI starts with; DEA-6 style unless you change it), **New (copy of this)** to make your own, and **Restore original** for a built-in one you've edited.
 
 ### Checking a draft
 
@@ -542,7 +584,7 @@ A placeholder with no value (for example a case without a client) becomes `[CONF
 
 | Where | What |
 |---|---|
-| **SSD, `V:\CaseVault-Data\`** | All case data: details, notes, timelines, files (in their document folders), drafts, consistency checks and the text read from documents, mail logs, templates, the reference library (`reference\\`, e.g. the complaint forms), settings (including the privacy-screen PIN hash, **My details**, mail settings and the PII watch list), backups, the outbound log (`logs\`) and, only if you ask, the online AI key (`secrets\`). Active cases are in `cases\<case>\`, archived cases in `archive\<case>\` (same contents). |
+| **SSD, `V:\CaseVault-Data\`** | All case data: details, notes, timelines, files (in their document folders), drafts, consistency checks and the text read from documents, mail logs, templates, the **Library** for the AI (`library\`), settings (including the AI writing behaviors and Quick links, (including the privacy-screen PIN hash, **My details**, mail settings and the PII watch list), backups, the outbound log (`logs\`) and, only if you ask, the online AI key (`secrets\`). Active cases are in `cases\<case>\`, archived cases in `archive\<case>\` (same contents). |
 | **SSD, `W:\`** | The launcher, the helper, the AI engine and its models. No case data. |
 | **The browser on this PC** | The CaseVault app files (so it opens offline), in Chrome/Edge a *pointer* to the vault folder so it can offer **Reconnect**, and two display preferences (the theme and the AI profile). No case data. |
 | **GitHub** | Only the app's code. Case data can never be committed; the repository blocks it. |

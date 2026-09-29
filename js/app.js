@@ -610,8 +610,8 @@
         : h('p', { class: 'muted' }, 'No open deadlines. Add them from a case\'s Timeline tab.')),
       h('div', { class: 'dash-section' }, h('h2', { class: 'section-title', icon: 'clock-history' }, 'Recently updated'),
       recent.length
-        ? h('ul', { class: 'plain-list' }, recent.map((c) => h('li', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}`, class: 'row-link' },
-          h('span', {}, h('strong', {}, c.title || 'Untitled case'), c.number ? ` · ${c.number}` : ''),
+        ? h('ul', { class: 'plain-list' }, recent.map((c) => h('li', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}`, class: 'row-link recent-row' },
+          h('span', { class: 'recent-title' }, h('strong', {}, c.title || 'Untitled case'), h('span', { class: 'muted' }, [c.fileNumber && ` · File ${c.fileNumber}`, c.number && ` · Case ${c.number}`].filter(Boolean).join(''))),
           statusPill(c.status),
           h('span', { class: 'muted' }, c.updated ? fmtDateTime(Date.parse(c.updated)) : '')))))
         : h('p', { class: 'muted' }, 'Create your first case with "New case".')),
@@ -828,15 +828,15 @@
     const archived = Vault.isArchived(c.id);
 
     panel.replaceChildren(
-      h('form', { class: 'form-grid', onsubmit: (e) => e.preventDefault() },
+      h('form', { class: 'form-grid details-grid', onsubmit: (e) => e.preventDefault() },
         field('Title', bind(h('input', { value: c.title, maxlength: 200 }), (v) => { c.title = v; }), 'span-2'),
         field('File number', bind(h('input', { value: c.fileNumber || '', maxlength: 100, title: 'The investigation file. Several cases can share one file number.' }), (v) => { c.fileNumber = v; })),
         field('Case number', bind(h('input', { value: c.number, maxlength: 100 }), (v) => { c.number = v; })),
         field('Client', bind(h('input', { value: c.client, maxlength: 200 }), (v) => { c.client = v; })),
         h('label', { class: 'field' }, h('span', {}, 'Status'), statusSelect, statusNote),
-        field('Tags (comma separated)', bind(h('input', { value: c.tags.join(', '), maxlength: 300 }), (v) => { c.tags = parseTags(v); })),
         field('Opened', bind(h('input', { type: 'date', value: c.dates.opened || '' }), (v) => { c.dates.opened = v; })),
         field('Closed', bind(closedInput, (v) => { c.dates.closed = v; })),
+        field('Tags (comma separated)', bind(h('input', { value: c.tags.join(', '), maxlength: 300 }), (v) => { c.tags = parseTags(v); }), 'span-2'),
         h('p', { class: 'muted span-2 small' },
           `Created ${c.dates.created ? fmtDateTime(Date.parse(c.dates.created)) : '—'} · Folder: ${archived ? 'archive' : 'cases'}\\${c.id}`
           + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),

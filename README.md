@@ -15,17 +15,21 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.10)
+## Features (v1.11)
 
 - **The LE Cyber-Docs look**: icons throughout (bundled Bootstrap Icons), the Poppins font, rounded cards, and **light / dark / automatic** themes with a switch in the header; a Vault settings panel with a section list
-- **Reference** (from LE Cyber-Docs): narcotics **street value chart** and **value calculator** (HIDTA 2022), **narcotic complaint forms** (imported once onto the SSD, then opened or used to start a draft), the **DUI guide** (SFST checklist that scores the clues, and the DUI flow chart), **incident location codes** and **commonly used UCR** codes; **Draft with AI** can follow a complaint form and use the value chart and codes
-- Cases with number, client, status, tags, and opened/closed dates; search and filter
+- **Reference** (from LE Cyber-Docs): narcotic **value calculator** and **street value chart** (HIDTA 2022), **incident location codes** and **commonly used UCR** codes
+- **Quick links** at the bottom of the Overview: Reference, **OSINT** (MaxMind, NumLookup, Google Images, blockchain explorers, Fingerprint) and **LEO** (Accurint, Kodex, Chicago HIDTA, your own); hide any, edit addresses, add your own; they open in a new tab and CaseVault never contacts them
+- **Library for the AI** (Vault → Library): sample DEA-6/7/202 reports, warrants and directives the AI learns to write from (never their facts), and editable **writing behaviors** with **DEA-6 style** as the default
+- Hover boxes explain every button; the layout is centred and symmetric from a phone to 1920×1080 and up
+- Cases with a **file number** (shared by several cases) and a **case number**, client, status, tags, and opened/closed dates; search and filter
 - **Case status with a purpose**: *Pending* records what you're waiting on and a follow-up date (put on the timeline); **Close case…** records a disposition (cleared by arrest, exceptionally cleared with reason, unfounded, inactive, referred, other) after listing loose ends; **Reopen** keeps the history
 - **Arrest details** tab: arrestees, arrest facts and charges, saved to `arrest.json` and filling `{{arrest.*}}` placeholders for arrest reports
 - **Archive** a case (moved to `archive/` on the SSD after every file is copied and verified; opens read-only; restore any time) or **delete** it permanently (type the case number to confirm)
 - Collapsible case list (Ctrl+\)
 - Free-form notes (Markdown, with preview)
-- **Document folders in every case**: Affidavits, Arrest Report, Supplementary Report, Case Report, Deconfliction, Drug Exhibits, Other Exhibits, Email, Ops Plan, Subpoena Response, Subject Information, Recordings, Vehicle Information, Maps, Other
+- **Document folders in every case**: Case Initiation, Affidavit Drafts/Final, Warrant Drafts/Final, Warrants Signed, Arrest Report, Supplementary Report, Case Report, Deconfliction, Drug Exhibits, Other Exhibits, Email, Ops Plan, Subpoena Drafts/Sent/Response, Subject Information, Recordings (Video, Audio), Vehicle Information, Maps, Case Closing, Other; drag to reorder folders and files, drop a file on a folder to move it, sortable table
+- **Formatting bar** in Notes and Drafts: bold, italic, underline, headings, lists and tables (also in the Word export)
 - **Naming convention**: case folders `2026-<CaseNo>`, files `2026-<CaseNo> <Document type>.ext` (e.g. `2026-00123 Arrest Report.pdf`), with a type guess from the file name, verified moves and renames, and a one-click rename for older case folders
 - **Department mail** (Mail tab): recipients locked to your department's domains, attachment size and case-number checks, a PII scan with a warning (typed confirmation for SSNs, DOBs, IDs, card and bank numbers), then an Outlook draft (`.eml`) with the attachments, saved in the case's Email folder and logged; discard a draft, or delete a saved Outlook draft
 - **Online research & drafting (optional, off by default)**: Claude via your subscription (copy & paste into claude.ai) or the Anthropic API (optional key with Add/Replace/Test/Remove, kept for the session or saved on the SSD locked with a passphrase, and an in-app step-by-step guide); names and numbers replaced with placeholders before anything leaves, a review of the exact text, real values put back only on this PC, one reviewed request per send, auto-offline after 15 minutes, and an **outbound log** on the SSD
@@ -108,7 +112,10 @@ CaseVault-Data/
 | `js/app.js` | User interface, autosave, connect/reconnect |
 | `js/theme.js` | Light / dark / automatic theme (loaded first, so the page never flashes) |
 | `js/icons.js`, `js/icons-data.js` | Icons as inline SVG (a subset of Bootstrap Icons, made by `scripts/make-icons.js`) |
-| `js/reference/ref-data.js`, `js/reference/reference.js`, `js/reference/ref-ui.js` | Reference: the data (values, complaint forms, SFST, DUI flow, codes), the logic (calculator, form matching, SFST score, DUI path, search, AI text), and the screens |
+| `js/reference/ref-data.js`, `js/reference/reference.js`, `js/reference/ref-ui.js`, `js/reference/links.js` | Reference: the data (values, codes), the logic (calculator, search, AI text), the screens and the Quick links (Reference, OSINT, LEO) |
+| `js/library.js`, `js/library-ui.js` | The Library the AI learns from, and the writing behaviors (DEA-6 by default) |
+| `js/format-bar.js` | The formatting bar over Notes and Drafts |
+| `js/tooltip.js` | Hover boxes for every button |
 | `js/closing.js`, `js/closing-ui.js` | Status rules, Pending follow-up, Close case (dispositions, loose ends), Reopen, the Arrest details tab and `{{arrest.*}}` / `{{closure.*}}` values |
 | `js/docxview.js` | Word (.docx) to a read-only preview, and to Markdown for template import |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Installable offline PWA |

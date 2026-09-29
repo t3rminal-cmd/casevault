@@ -89,7 +89,7 @@
     };
     const row = (l) => {
       const name = h('input', { value: l.name, maxlength: 60, 'aria-label': 'Name' });
-      const url = h('input', { value: l.url || '', placeholder: 'https://…', 'aria-label': `${l.name} web address`, spellcheck: 'false' });
+      const url = h('input', { value: l.url || '', placeholder: 'Web address, e.g. portal.example.org', 'aria-label': `${l.name} web address`, spellcheck: 'false' });
       const save = async () => {
         const clean = LK().cleanUrl(url.value);
         if (clean === null) { toast('That is not a web address (it must start with https://).', 'error'); return; }
@@ -117,11 +117,11 @@
     };
     const addRow = (tab) => {
       const name = h('input', { placeholder: 'Name', maxlength: 60, 'aria-label': 'New link name' });
-      const url = h('input', { placeholder: 'https://…', 'aria-label': 'New link address', spellcheck: 'false' });
+      const url = h('input', { placeholder: 'Web address, e.g. portal.example.org', 'aria-label': 'New link address', spellcheck: 'false' });
       return h('form', { class: 'links-add', onsubmit: async (e) => {
         e.preventDefault();
         const clean = LK().cleanUrl(url.value);
-        if (!name.value.trim() || !clean) { toast('Give the link a name and a web address (https://…).', 'error'); return; }
+        if (!name.value.trim() || !clean) { toast('Give the link a name and a web address (for example portal.example.org).', 'error'); return; }
         const custom = [...(savedLinks().custom || []), { id: `custom-${Date.now().toString(36)}`, tab, name: name.value.trim(), url: clean }];
         try { await saveLinks({ custom }); draw(); } catch { /* reported */ }
       } }, name, url, h('button', { class: 'btn small', type: 'submit', icon: 'plus-lg' }, `Add to ${tab === 'leo' ? 'LEO' : 'OSINT'}`));

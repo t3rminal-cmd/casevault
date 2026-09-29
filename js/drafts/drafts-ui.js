@@ -456,7 +456,7 @@
           const ex = library.filter((i) => (CVLibrary.category(i.category) || {}).role === 'example');
           const dir = library.filter((i) => i.category === 'directives');
           libBox.replaceChildren(...(library.length ? [...group('Examples to write like', ex), ...group('Directives to follow', dir)]
-            : [h('p', { class: 'muted small' }, 'The Library is empty. Add sample reports (DEA-6, DEA-7, DEA-202), warrants and directives in Vault → Library.')]));
+            : [h('p', { class: 'muted small' }, 'The Library is empty. Add sample reports (DEA-6, DEA-7, DEA-202), warrants and directives in Vault → Library.')]).flat(Infinity));
         };
         type.addEventListener('change', drawLibrary);
         drawLibrary();
