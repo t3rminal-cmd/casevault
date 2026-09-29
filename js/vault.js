@@ -12,6 +12,7 @@
  *     drafts/, checks/    drafts and consistency checks
  *   archive/<case-id>/    archived cases (same layout, read-only in the app)
  *   templates/            document templates
+ *   reference/            reference documents you import (complaints/possession, /delivery, /other…)
  *   backups/              dated snapshots of vault.json
  *   logs/                 outbound-YYYY-MM.json: everything that left this computer (never its content)
  *   secrets/              optional online AI key (only if the user ticks "Remember on SSD")
@@ -22,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.9.2';
+  const APP_VERSION = '1.10.0';
   const SCHEMA = 1;
   const DATA_DIR = 'CaseVault-Data';
   const STATUSES = ['Open', 'Pending', 'Closed', 'Archived'];
@@ -962,6 +963,54 @@ const Vault = (() => {
     return added;
   }
 
+  /* ---------- reference library (CaseVault-Data/reference/...) ---------- */
+  // Agency reference documents (the narcotic complaint forms…), imported by the user onto the SSD.
+  // Paths are relative to reference/, e.g. "complaints/possession/POSS_402-C_Cocaine_00-15grms.pdf".
+
+  const refParts = (path) => {
+    const parts = String(path || '').split(/[\\/]/).filter(Boolean);
+    if (!parts.length || parts.some((p) => p === '.' || p === '..')) throw new Error(`Not a reference path: ${path}`);
+    return parts;
+  };
+
+  async function referenceDir(parts, create) {
+    let dir = await FS.getDir(root, 'reference', create);
+    for (const p of parts) { if (!dir) return null; dir = await FS.getDir(dir, p, create); }
+    return dir;
+  }
+
+  /** Files under reference/<sub>, one level of sub-folders deep: [{ path, name, size, modified }]. */
+  async function listReference(sub) {
+    const base = await referenceDir(refParts(sub), false);
+    if (!base) return [];
+    const out = [];
+    const walk = async (dir, prefix, depth) => {
+      for (const e of await FS.list(dir)) {
+        if (e.kind === 'directory' && depth < 2) await walk(e.handle, `${prefix}${e.name}/`, depth + 1);
+        else if (e.kind === 'file') { const f = await e.handle.getFile(); out.push({ path: `${sub}/${prefix}${e.name}`, name: e.name, size: f.size, modified: f.lastModified }); }
+      }
+    };
+    await walk(base, '', 0);
+    return out.sort((a, b) => a.path.localeCompare(b.path));
+  }
+
+  async function readReferenceFile(path) {
+    const parts = refParts(path);
+    const dir = await referenceDir(parts.slice(0, -1), false);
+    return dir ? FS.getFile(dir, parts[parts.length - 1]) : null;
+  }
+
+  function saveReferenceFile(path, data) {
+    const parts = refParts(path);
+    return serial(`reference:${path}`, async () => FS.writeData(await referenceDir(parts.slice(0, -1), true), FS.safeName(parts[parts.length - 1]), data));
+  }
+
+  async function deleteReferenceFile(path) {
+    const parts = refParts(path);
+    const dir = await referenceDir(parts.slice(0, -1), false);
+    if (dir) await FS.remove(dir, parts[parts.length - 1]);
+  }
+
   /* ---------- settings ---------- */
 
   function updateSettings(patch) {
@@ -985,5 +1034,6 @@ const Vault = (() => {
     listChecks, newCheckName, readCheck, saveCheck, deleteCheck, readTextCache, writeTextCache,
     listDrafts, readDraft, newDraftSlug, saveDraft, deleteDraft,
     listTemplates, readTemplate, saveTemplate, deleteTemplate, addStarterTemplates,
+    listReference, readReferenceFile, saveReferenceFile, deleteReferenceFile,
   };
 })();

@@ -11,13 +11,14 @@
         content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; font-src 'self'; connect-src 'self' http://localhost:11434 http://127.0.0.1:11434 https://api.anthropic.com; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#1f3a5f">
+  <meta name="theme-color" content="#ffffff">
   <meta name="description" content="Offline case file manager. All data stays on your own SSD.">
   <title>CaseVault</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="css/app.css">
+  <script src="js/theme.js"></script>
 </head>
 <body>
   <!-- Gate: shown until a vault on the SSD is connected -->
@@ -45,8 +46,10 @@
     <span id="mem-status" class="mem-status" hidden></span>
     <span id="ai-activity" class="ai-activity" hidden></span>
     <div id="save-status" class="save-status" role="status" aria-live="polite"></div>
-    <button id="btn-privacy" class="btn ghost" type="button" title="Privacy screen: Ctrl+Shift+H, or press Esc twice">Hide</button>
-    <button id="btn-vault" class="btn ghost" type="button">Vault</button>
+    <button id="btn-reference" class="btn ghost" type="button" data-icon="book" title="Reference: narcotics values, complaints, DUI guide, codes">Reference</button>
+    <button id="btn-privacy" class="btn ghost" type="button" data-icon="eye-slash" title="Privacy screen: Ctrl+Shift+H, or press Esc twice">Hide</button>
+    <button id="btn-theme" class="icon-btn theme-toggle" type="button" title="Theme"><span class="sr-only">Theme</span></button>
+    <button id="btn-vault" class="btn ghost" type="button" data-icon="safe2">Vault</button>
   </header>
 
   <div class="layout">
@@ -57,8 +60,8 @@
       </div>
       <div class="sidebar-body" id="sidebar-body">
       <div class="sidebar-tools">
-        <button id="btn-new-case" class="btn primary block" type="button">+ New case</button>
-        <input id="case-search" type="search" placeholder="Search cases" aria-label="Search cases" autocomplete="off">
+        <button id="btn-new-case" class="btn primary block" type="button" data-icon="plus-lg">New case</button>
+        <div class="search-wrap" data-icon="search"><input id="case-search" type="search" placeholder="Search cases" aria-label="Search cases" autocomplete="off"></div>
         <select id="case-filter" aria-label="Filter by status">
           <option value="active">Open &amp; pending</option>
           <option value="all">All cases</option>
@@ -83,6 +86,8 @@
 
   <dialog id="dialog" class="dialog"></dialog>
 
+  <script src="js/icons-data.js"></script>
+  <script src="js/icons.js"></script>
   <script src="js/fs.js"></script>
   <script src="js/helper-fs.js"></script>
   <script src="js/casefiles.js"></script>
@@ -118,6 +123,9 @@
   <script src="js/selftest.js"></script>
   <script src="js/closing.js"></script>
   <script src="js/closing-ui.js"></script>
+  <script src="js/reference/ref-data.js"></script>
+  <script src="js/reference/reference.js"></script>
+  <script src="js/reference/ref-ui.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

@@ -67,6 +67,16 @@ If Windows gave the drive a different letter and Reconnect can't find it, click 
 
 If the helper window was closed while Firefox was open, CaseVault shows **"The CaseVault helper is not running."** Start `W:\Start-CaseVault.bat` again and click **Reconnect**. Changes you made meanwhile are kept in the window and saved on reconnect.
 
+## Look and theme
+
+The header has, from left to right: the vault folder, the **Offline** / **AI** / **Saved to SSD** indicators, **Reference**, **Hide** (privacy screen), the **theme button**, and **Vault**.
+
+- **Theme button** (half circle, sun or moon): switches between *automatic* (follows Windows' light or dark setting), *light* and *dark*. Each PC remembers its own choice in the browser; it's a display preference, not case data.
+- Icons mark every tab, button and document folder, and each file in a case shows an icon for its type (PDF, Word, Excel, picture, audio, video, email).
+- The **Overview** shows your case counts, **Quick reference** links (see *Reference* below), upcoming deadlines and recently updated cases.
+- On a narrow window the header buttons shrink to their icons.
+- **Vault** opens the settings. The list on its left (This vault, Backups, Privacy screen, My details, Templates, Reference library, Online features, Always hide, Department mail, Outbound log, Maintenance) jumps to each section, and follows along as you scroll. **Done** is at the top right.
+
 ## Cases
 
 - **+ New case** asks for a title (required), case/file number, client, status, opened date, and tags.
@@ -194,6 +204,36 @@ Some agency forms are *XFA* PDFs, made with Adobe LiveCycle Designer. In Chrome,
 - Empty fields, and image fields such as signatures and photos, are left out of the list.
 - An XFA form is never run through OCR: its "Please wait" page has nothing to read.
 - A password-protected (encrypted) XFA form is read through the PDF reader instead. If nothing can be read from it, the check says so.
+
+## Reference
+
+**Reference** in the header (or a Quick reference card on the Overview) opens quick-reference material from LE Cyber-Docs. It's a quick reference only: always follow your department's policies, and have charging documents reviewed by your ASA or supervisor.
+
+### Narcotics
+
+- **Value calculator:** pick the drug, type the amount and the unit (only units with a price are offered), and the street value appears. **Copy for a report** copies one line such as *Cocaine (Powder), 28 grams: approximate street value $3,500.00 (HIDTA 2022, $125.00 per gram).*
+- **Street value chart:** every drug by category, per gram, pill, ounce, pound and kilogram (HIDTA 2022). **≈** marks an estimate (the gram price × 454); **verify** marks a price that needs a current figure.
+- **Narcotic complaint forms:** the Cook County felony complaint forms (CCCR 0662) for cocaine, heroin, fentanyl, methamphetamine, synthetic drugs and cannabis, with the 720 ILCS citation, weight range and class. Search by citation, drug or a weight (type `20 g` to see the forms for 20 grams), and filter by drug and by possession or delivery.
+
+**One-time step: import the complaint PDFs.** The PDFs are agency forms, so they aren't part of CaseVault's code. Copy them onto the SSD once:
+
+1. Get the LE Cyber-Docs folder (download it from GitHub as a ZIP and unzip it, or copy it from a colleague).
+2. In **Reference → Narcotics**, click **Import a folder…** and pick `assets\complaints` inside it (or **Import PDFs…** and select the files).
+3. CaseVault copies them to `CaseVault-Data\reference\complaints\` on the SSD, sorted into `possession`, `delivery` and `other`. The list shows *55 of 55 forms are on the SSD*.
+
+Then each form has **Open** (read it in CaseVault) and **Use in a case…**: pick the case, and CaseVault makes a new draft there with the form's text, set to the *Criminal complaint* type with that form as its reference. Open the draft and use **Draft with AI…** to fill it in from the case (see *Draft with AI*).
+
+### DUI guide
+
+- **SFST checklist:** Horizontal Gaze Nystagmus (left and right eye), Walk and Turn, One-Leg Stand and the alternate tests (alphabet, finger count, count backwards, nose touch, PBT). Tick the clues you observe; each test adds up its clues against the decision point (HGN 4 of 6, Walk and Turn 2 of 8, One-Leg Stand 2 of 4) and turns red at or above it.
+- **DUI flow chart:** Phase I (vehicle in motion) to Phase VIII (finish the arrest). Your answers choose the path: no probable cause ends at Phase III, refusing testing skips to Phase VIII, a breath result under 0.08 goes on to alternate testing. **Now** fills in the current time. Phase VIII has the arrest-processing checklist.
+- Both have **Report details** (officer, star #, date, RD / case #; your name comes from **My details**), **Copy as text**, **Save to a case…** and **Clear**.
+
+What you fill in stays in this window only. It's saved to the SSD only when you choose **Save to a case…**, which adds it to that case as a draft (you can edit and export it like any draft). Nothing is saved on the computer.
+
+### Incident location codes and Commonly used UCR
+
+Code cards grouped by category. Search by code or words (`agg handgun`), or pick a category. **Click a code to copy it.**
 
 ## Saving
 
@@ -428,6 +468,7 @@ Click **Draft with AI…** in the editor (or pick it when creating a draft) and 
 
 - **Document type** and optionally a **template** to follow.
 - **What to use:** the case details (always), the timeline, the notes, and any attached documents. For long documents, CaseVault picks the passages most relevant to the draft.
+- **Reference** (optional): a **complaint form to follow** (from the forms imported in *Reference → Narcotics*; a form matching the case's arrest charges is picked for you and marked *matches the charges*), the **narcotics street values**, and the **incident location and UCR codes**. The AI uses these only for statutory wording, layout, values and codes, never as facts of the case. The draft's sources list them.
 - Optional **instructions**, such as "focus on the events of March 14".
 - **Replace** the current text, or **add** below it.
 
@@ -501,9 +542,9 @@ A placeholder with no value (for example a case without a client) becomes `[CONF
 
 | Where | What |
 |---|---|
-| **SSD, `V:\CaseVault-Data\`** | All case data: details, notes, timelines, files (in their document folders), drafts, consistency checks and the text read from documents, mail logs, templates, settings (including the privacy-screen PIN hash, **My details**, mail settings and the PII watch list), backups, the outbound log (`logs\`) and, only if you ask, the online AI key (`secrets\`). Active cases are in `cases\<case>\`, archived cases in `archive\<case>\` (same contents). |
+| **SSD, `V:\CaseVault-Data\`** | All case data: details, notes, timelines, files (in their document folders), drafts, consistency checks and the text read from documents, mail logs, templates, the reference library (`reference\\`, e.g. the complaint forms), settings (including the privacy-screen PIN hash, **My details**, mail settings and the PII watch list), backups, the outbound log (`logs\`) and, only if you ask, the online AI key (`secrets\`). Active cases are in `cases\<case>\`, archived cases in `archive\<case>\` (same contents). |
 | **SSD, `W:\`** | The launcher, the helper, the AI engine and its models. No case data. |
-| **The browser on this PC** | The CaseVault app files (so it opens offline), and in Chrome/Edge a *pointer* to the vault folder so it can offer **Reconnect**. No case data. |
+| **The browser on this PC** | The CaseVault app files (so it opens offline), in Chrome/Edge a *pointer* to the vault folder so it can offer **Reconnect**, and two display preferences (the theme and the AI profile). No case data. |
 | **GitHub** | Only the app's code. Case data can never be committed; the repository blocks it. |
 | **The internet** | Nothing, unless you go online. Normally CaseVault only talks to the AI engine (and, in Firefox, the helper) on this same computer, at `127.0.0.1`. When you go online for research or drafting, reviewed and redacted text goes to `api.anthropic.com` (API), or you paste it into claude.ai yourself. Department mail is sent by Outlook, not by CaseVault. |
 

@@ -76,6 +76,7 @@
     'Use ONLY facts that appear in the CASE MATERIAL below. Never invent names, dates, times, places, numbers, badge numbers, courts, charges or quotes.',
     'Wherever a needed fact is missing or uncertain, write a placeholder in exactly this form: [CONFIRM: what is needed]. For example [CONFIRM: affiant badge number] or [CONFIRM: court name].',
     'When you state a fact from a report, keep its wording and numbers exactly as in the material.',
+    'Reference material (a complaint form, the street value chart, code lists) is only for statutory wording, layout, street values and codes: never treat it as facts about this case.',
     'Write in Markdown: # headings, short paragraphs, numbered paragraphs where the document type expects them.',
     'Output only the document itself, with no introduction or closing remarks.',
   ].join('\n');
@@ -89,9 +90,11 @@
 
   /**
    * Build the chat messages for a first draft. All inputs are plain data (easy to test):
-   * { type, template, instructions, caseObj, timeline, notes, passages: [{ docName, page, sheet, row, text }] }
+   * { type, template, instructions, caseObj, timeline, notes, passages: [{ docName, page, sheet, row, text }],
+   *   references: [{ title, text }] } — references are forms and reference lists to follow (a complaint
+   *   form, the street value chart, code lists): wording and format, never facts of the case.
    */
-  function draftMessages({ type = 'other', template = '', instructions = '', caseObj = {}, timeline = { events: [] }, notes = '', passages = [], numCtx = 8192 }) {
+  function draftMessages({ type = 'other', template = '', instructions = '', caseObj = {}, timeline = { events: [] }, notes = '', passages = [], references = [], numCtx = 8192 }) {
     const t = D.DOC_TYPES[type] || D.DOC_TYPES.other;
     const c = caseObj || {};
     const d = c.dates || {};
@@ -103,7 +106,19 @@
     // Room for the case material: the context window, less the answer (~1/3 of it), the rules,
     // the template and the other material. Passages (best first) are dropped when they don't fit.
     const reserve = Math.round(numCtx / 3);
-    const fixed = AI.tokensOf(DRAFT_RULES) + AI.tokensOf(template) + AI.tokensOf(instructions) + AI.tokensOf(facts) + AI.tokensOf(events)
+    // Reference material gets at most a quarter of the window, forms first.
+    let refBudget = Math.floor((numCtx / 4) * 3.5);
+    const refs = [];
+    for (const r of references || []) {
+      const text = String(r.text || '').trim();
+      if (!text) continue;
+      const block = `### ${r.title}\n${text.length > refBudget ? `${text.slice(0, Math.max(0, refBudget))} …[shortened]` : text}`;
+      if (refBudget < 200) break;
+      refBudget -= block.length;
+      refs.push(block);
+    }
+    const refText = refs.join('\n\n');
+    const fixed = AI.tokensOf(refText) + AI.tokensOf(DRAFT_RULES) + AI.tokensOf(template) + AI.tokensOf(instructions) + AI.tokensOf(facts) + AI.tokensOf(events)
       + AI.tokensOf(clip(notes, notesChars(numCtx))) + 200;
     let budget = Math.max(1200, Math.floor((numCtx - reserve - fixed) * 3.5));
     const docs = [];
@@ -119,7 +134,8 @@
       `## Timeline\n${events || '(no timeline entries)'}`,
       `## Notes\n${clip(notes, notesChars(numCtx)) || '(no notes)'}`,
       `## Passages from attached documents\n${docs.join('\n\n') || '(no documents)'}`,
-    ].join('\n\n');
+      refText ? `## Reference material (forms and lists to follow for wording, statutes and codes; NOT facts of this case)\n${refText}` : null,
+    ].filter(Boolean).join('\n\n');
     const task = [
       `Write a first draft of: ${t.label}.`,
       t.guide,

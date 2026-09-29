@@ -15,8 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.9.2)
+## Features (v1.10)
 
+- **The LE Cyber-Docs look**: icons throughout (bundled Bootstrap Icons), the Poppins font, rounded cards, and **light / dark / automatic** themes with a switch in the header; a Vault settings panel with a section list
+- **Reference** (from LE Cyber-Docs): narcotics **street value chart** and **value calculator** (HIDTA 2022), **narcotic complaint forms** (imported once onto the SSD, then opened or used to start a draft), the **DUI guide** (SFST checklist that scores the clues, and the DUI flow chart), **incident location codes** and **commonly used UCR** codes; **Draft with AI** can follow a complaint form and use the value chart and codes
 - Cases with number, client, status, tags, and opened/closed dates; search and filter
 - **Case status with a purpose**: *Pending* records what you're waiting on and a follow-up date (put on the timeline); **Close case…** records a disposition (cleared by arrest, exceptionally cleared with reason, unfounded, inactive, referred, other) after listing loose ends; **Reopen** keeps the history
 - **Arrest details** tab: arrestees, arrest facts and charges, saved to `arrest.json` and filling `{{arrest.*}}` placeholders for arrest reports
@@ -104,6 +106,9 @@ CaseVault-Data/
 | `js/selftest.js` | Self-test with built-in made-up documents |
 | `js/markdown.js` | Minimal, escaping Markdown previewer for notes |
 | `js/app.js` | User interface, autosave, connect/reconnect |
+| `js/theme.js` | Light / dark / automatic theme (loaded first, so the page never flashes) |
+| `js/icons.js`, `js/icons-data.js` | Icons as inline SVG (a subset of Bootstrap Icons, made by `scripts/make-icons.js`) |
+| `js/reference/ref-data.js`, `js/reference/reference.js`, `js/reference/ref-ui.js` | Reference: the data (values, complaint forms, SFST, DUI flow, codes), the logic (calculator, form matching, SFST score, DUI path, search, AI text), and the screens |
 | `js/closing.js`, `js/closing-ui.js` | Status rules, Pending follow-up, Close case (dispositions, loose ends), Reopen, the Arrest details tab and `{{arrest.*}}` / `{{closure.*}}` values |
 | `js/docxview.js` | Word (.docx) to a read-only preview, and to Markdown for template import |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Installable offline PWA |
@@ -123,7 +128,7 @@ CaseVault-Data/
 | `js/drafts/drafts-ui.js` | Drafts tab, editor, export, template settings |
 | `js/ai/webllm.js`, `js/ai/webllm-worker.js` | In-browser AI fallback: availability, lazy loading, cache cleanup; the worker that runs WebLLM |
 | `js/ai/ollama-shim.js` | Answers Ollama-style API calls from the in-browser engine |
-| `vendor/` | Bundled pdf.js, Tesseract.js, SheetJS and WebLLM (see `vendor/README.md` for versions, licenses and provenance) |
+| `vendor/` | Bundled pdf.js, Tesseract.js, SheetJS, WebLLM, the Bootstrap Icons license and the Poppins font (see `vendor/README.md` for versions, licenses and provenance) |
 | `tools/Start-CaseVault.bat` | Launcher for the CV-AI partition: starts the helper and Ollama |
 | `tools/casevault-helper/` | The Firefox helper (Windows PowerShell 5.1, 127.0.0.1 only); also serves in-browser models from `W:\webllm`, holds `Get-WebLLM-Model.ps1`, opens `.eml` mail drafts from a case's Email folder in Outlook, and reports RAM and disk space for the memory indicator |
 | `tools/Get-WebLLM-Model.bat` | One-time download of an in-browser model onto the CV-AI drive |

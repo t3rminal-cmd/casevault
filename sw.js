@@ -9,7 +9,7 @@
 
 // VERSION is bumped with each release; BUILD is replaced with the commit SHA by the GitHub Pages
 // workflow. Either change gives a new cache, so the installed app picks up the update.
-const VERSION = '1.9.2';
+const VERSION = '1.10.0';
 const BUILD = 'dev';
 const CACHE = `casevault-${VERSION}-${BUILD}`;
 
@@ -18,6 +18,13 @@ const APP_FILES = [
   './index.html',
   './manifest.webmanifest',
   './css/app.css',
+  './vendor/poppins/poppins-latin-400-normal.woff2',
+  './vendor/poppins/poppins-latin-500-normal.woff2',
+  './vendor/poppins/poppins-latin-600-normal.woff2',
+  './vendor/poppins/poppins-latin-700-normal.woff2',
+  './js/theme.js',
+  './js/icons-data.js',
+  './js/icons.js',
   './js/fs.js',
   './js/helper-fs.js',
   './js/casefiles.js',
@@ -54,6 +61,9 @@ const APP_FILES = [
   './js/selftest.js',
   './js/closing.js',
   './js/closing-ui.js',
+  './js/reference/ref-data.js',
+  './js/reference/reference.js',
+  './js/reference/ref-ui.js',
   './js/app.js',
   './icons/icon.svg',
   './icons/icon-192.png',
