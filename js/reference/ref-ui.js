@@ -81,7 +81,9 @@
   function linksSection() {
     const { h, toast } = ui;
     const box = h('div', {});
+    let savers = []; // each row's save(), for the Save button
     const draw = () => {
+      savers = [];
       const all = LK().linksOf(savedLinks()).filter((l) => l.tab !== 'reference');
       box.replaceChildren(...LK().TABS.filter((t) => t.key !== 'reference').map((t) => h('div', { class: 'links-group' },
         h('h4', {}, ui.icon(t.icon), t.label),
@@ -91,18 +93,21 @@
     const row = (l) => {
       const name = h('input', { value: l.name, maxlength: 60, 'aria-label': 'Name' });
       const url = h('input', { value: l.url || '', placeholder: 'Web address, e.g. portal.example.org', 'aria-label': `${l.name} web address`, spellcheck: 'false' });
-      const save = async () => {
+      const save = async ({ redraw = true } = {}) => {
         const clean = LK().cleanUrl(url.value);
-        if (clean === null) { toast('That is not a web address (it must start with https://).', 'error'); return; }
+        if (clean === null) { toast('That is not a web address (it must start with https://).', 'error'); return false; }
+        if (name.value.trim() === l.name && clean === (l.url || '')) return true;
         const s = savedLinks();
         try {
           if (l.custom) await saveLinks({ custom: (s.custom || []).map((c) => (c.id === l.id ? { ...c, name: name.value.trim() || c.name, url: clean } : c)) });
           else await saveLinks({ edits: { ...(s.edits || {}), [l.id]: { ...((s.edits || {})[l.id] || {}), name: name.value.trim() || l.name, url: clean } } });
-          draw();
-        } catch { /* reported */ }
+          if (redraw) draw();
+          return true;
+        } catch { return false; /* reported */ }
       };
-      name.addEventListener('change', save);
-      url.addEventListener('change', save);
+      savers.push(save);
+      name.addEventListener('change', () => save());
+      url.addEventListener('change', () => save());
       const hidden = h('input', { type: 'checkbox', checked: !l.hidden });
       hidden.addEventListener('change', async () => {
         const set = new Set(savedLinks().hidden || []);
@@ -131,7 +136,14 @@
     return h('section', { 'data-section': 'links' },
       h('h3', {}, 'Quick links'),
       h('p', { class: 'muted small explain' }, 'The OSINT and LEO buttons at the bottom of the Overview. Change a name or address (it saves when you leave the box), untick Show to hide a button, or add your own, such as your agency\'s portals. They open in a new browser tab; CaseVault never contacts them itself.'),
-      box);
+      box,
+      h('div', { class: 'row links-save' }, h('div', { class: 'spacer' }),
+        h('button', { class: 'btn primary', type: 'button', icon: 'save', title: 'Save every name and address in this box to vault.json on the SSD.', onclick: async () => {
+          let ok = true;
+          for (const fn of [...savers]) ok = (await fn({ redraw: false })) && ok;
+          draw();
+          if (ok) toast('Quick links saved to the SSD.', 'success', 2500);
+        } }, 'Save changes')));
   }
 
   /* ---------- Reference pages ---------- */

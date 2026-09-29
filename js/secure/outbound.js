@@ -19,10 +19,11 @@
 'use strict';
 
 (function (root) {
-  const ALLOWED_HOSTS = ['api.anthropic.com'];
+  // The online AI services (v1.15: Google Gemini and OpenRouter added beside Anthropic).
+  const ALLOWED_HOSTS = ['api.anthropic.com', 'generativelanguage.googleapis.com', 'openrouter.ai'];
   const TICKET_MS = 5 * 60 * 1000;
   const CHANNELS = {
-    'online-ai': { label: 'Online AI · Anthropic API', network: true },
+    'online-ai': { label: 'Online AI · API', network: true },
     'claude-web': { label: 'claude.ai · copy and paste', network: false },
     mail: { label: 'Department mail', network: false },
   };

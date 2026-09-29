@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Privacy lock: the page may load only its own files, and may only ever talk to
        localhost (the local Ollama AI engine) and, only when the user goes online for research
-       and drafting, api.anthropic.com. Every online request also passes the outbound gate
+       and drafting, api.anthropic.com, generativelanguage.googleapis.com (Gemini) or openrouter.ai. Every online request also passes the outbound gate
        (js/secure/outbound.js): reviewed, redacted, logged. -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; font-src 'self'; connect-src 'self' http://localhost:11434 http://127.0.0.1:11434 https://api.anthropic.com; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; font-src 'self'; connect-src 'self' http://localhost:11434 http://127.0.0.1:11434 https://api.anthropic.com https://generativelanguage.googleapis.com https://openrouter.ai; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#ffffff">
@@ -50,10 +50,10 @@
       <div id="save-status" class="save-status" role="status" aria-live="polite"></div>
     </div>
     <div class="tb-right">
-      <button id="btn-chat" class="btn ghost" type="button" data-icon="chat-left-text" aria-controls="chat-float" aria-expanded="false" title="Ask the AI on this computer anything, or about a case, in a box you can keep open while you work. Nothing leaves this PC.">Ask AI</button>
-      <button id="btn-privacy" class="btn ghost" type="button" data-icon="eye-slash" title="Privacy screen: Ctrl+Shift+H, or press Esc twice">Hide</button>
+      <button id="btn-chat" class="icon-btn tb-square" type="button" data-icon="robot" aria-controls="chat-float" aria-expanded="false" title="Ask AI: ask the AI on this computer anything, or about a case, in a box you can keep open while you work. Nothing leaves this PC."><span class="sr-only">Ask AI</span></button>
+      <button id="btn-privacy" class="icon-btn tb-square" type="button" data-icon="eye-slash" title="Hide: privacy screen. Ctrl+Shift+H, or press Esc twice"><span class="sr-only">Hide</span></button>
       <div class="menu-wrap">
-        <button id="btn-menu" class="icon-btn menu-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="app-menu" title="Menu"><span class="sr-only">Menu</span></button>
+        <button id="btn-menu" class="icon-btn menu-btn tb-square" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="app-menu" title="Menu"><span class="sr-only">Menu</span></button>
         <div id="app-menu" class="app-menu" role="menu" hidden>
           <button id="btn-reference" class="menu-item" role="menuitem" type="button" data-icon="book" title="Narcotic calculator, location codes, UCR codes">Reference</button>
           <button id="btn-library" class="menu-item" role="menuitem" type="button" data-icon="bookshelf" title="Files the AI learns from: example reports, warrants, directives and references">Library</button>
@@ -103,6 +103,7 @@
   <script src="js/icons-data.js"></script>
   <script src="js/icons.js"></script>
   <script src="js/tooltip.js"></script>
+  <script src="js/formats.js"></script>
   <script src="js/timefield.js"></script>
   <script src="js/fs.js"></script>
   <script src="js/helper-fs.js"></script>

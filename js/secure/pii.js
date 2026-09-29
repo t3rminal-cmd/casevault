@@ -80,8 +80,8 @@
   // Each rule: a global regex, the capture group holding the sensitive value (0 = whole match),
   // and an optional check that the value really is one.
   const RULES = [
-    { type: 'ssn', re: /\b(?!000|666|9\d\d)\d{3}[- ](?!00)\d{2}[- ](?!0000)\d{4}\b/g },
-    { type: 'ssn', re: /\b(?:SSN|SSAN|S\.S\.N\.?|social security(?: number| no\.?| #)?)\s*[:#]?\s*((?!000|666|9\d\d)\d{3}-?\d{2}-?\d{4})\b/gi, group: 1 },
+    { type: 'ssn', re: /\b(?!000|666|9\d\d)\d{3}[-. ](?!00)\d{2}[-. ](?!0000)\d{4}\b/g },
+    { type: 'ssn', re: /\b(?:SSN|SSAN|S\.S\.N\.?|social security(?: number| no\.?| #)?)\s*[:#]?\s*((?!000|666|9\d\d)\d{3}[-.]?\d{2}[-.]?\d{4})\b/gi, group: 1 },
     { type: 'card', re: /\b(?:\d[ -]?){12,18}\d\b/g, ok: (v) => { const d = v.replace(/\D/g, ''); return d.length >= 13 && d.length <= 19 && /^[3-6]/.test(d) && luhn(d); } },
     { type: 'bank', re: /\b(?:acct|account|a\/c|routing|aba|iban)(?:\s*(?:no\.?|number|#))?\s*[:#]?\s*([A-Z]{2}\d{2}[A-Z0-9]{8,30}|\d[\d-]{5,20}\d)\b/gi, group: 1 },
     { type: 'dob', re: /\b(?:DOB|D\.O\.B\.?|date of birth|born(?: on)?|birth ?date)\s*[:#]?\s*((?:\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4})|(?:\d{4}-\d{2}-\d{2})|(?:[A-Z][a-z]{2,8}\.? \d{1,2},? \d{4})|(?:\d{1,2} [A-Z][a-z]{2,8} \d{4}))/gi, group: 1 },

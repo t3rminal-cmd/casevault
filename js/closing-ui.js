@@ -60,7 +60,7 @@
       if (f.type === 'select') el = h('select', {}, f.options.map((o) => h('option', { value: o, selected: (obj[f.key] || '') === o }, o || '—')));
       else if (f.type === 'textarea') el = h('textarea', { rows: 2 });
       else if (f.type === 'time') el = CVTimeField.create({ label: f.label });
-      else el = h('input', { type: f.type || 'text', autocomplete: 'off' });
+      else el = h('input', { type: f.type || 'text', autocomplete: 'off', 'data-format': f.format || null, maxlength: f.format === 'ssn' ? 11 : null });
       if (f.type !== 'select') el.value = obj[f.key] || '';
       el.addEventListener(f.type === 'select' ? 'change' : 'input', () => { obj[f.key] = el.value; changed(); });
       return el;

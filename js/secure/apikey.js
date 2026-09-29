@@ -1,8 +1,9 @@
-/* CaseVault — the Anthropic API key: check, mask, and lock with a passphrase.
+/* CaseVault — online AI API keys (Anthropic, Google Gemini, OpenRouter): check, mask, and lock
+ * with a passphrase.
  *
  * Where the key can live (the user chooses when adding it):
  *   - "session": in memory only. Gone when the tab closes, the vault changes or the SSD is unplugged.
- *   - "locked":  on the SSD in CaseVault-Data/secrets/anthropic.json, encrypted with a passphrase
+ *   - "locked":  on the SSD in CaseVault-Data/secrets/<provider>.json, encrypted with a passphrase
  *                (AES-256-GCM, key from PBKDF2-SHA-256, 310,000 rounds). Asked once per session.
  *   - "plain":   on the SSD unencrypted, protected only by BitLocker on the CASEVAULT drive.
  * Never in the browser's own storage, never in vault.json, never in a log.
@@ -29,11 +30,24 @@
 
   /**
    * Is this an API key CaseVault can use? Returns { ok, key (trimmed), problem }.
-   * Catches the usual mistakes: extra spaces or quotes, an admin key, a subscription (OAuth) token.
+   * Catches the usual mistakes: extra spaces or quotes, an admin key, a subscription (OAuth) token,
+   * a key for another service.
    */
-  function check(input) {
+  function check(input, provider = 'anthropic') {
     const key = String(input || '').trim().replace(/^["'`]+|["'`]+$/g, '').replace(/\s+/g, '');
     if (!key) return { ok: false, key, problem: 'Paste the key first.' };
+    const other = /^sk-ant-/i.test(key) ? 'an Anthropic' : /^AIza/.test(key) ? 'a Google Gemini' : /^sk-or-/i.test(key) ? 'an OpenRouter' : '';
+    if (provider === 'gemini') {
+      if (other && other !== 'a Google Gemini') return { ok: false, key, problem: `That is ${other} key. Paste it under that service instead.` };
+      if (!/^AIza[0-9A-Za-z_-]{30,}$/.test(key)) return { ok: false, key, problem: 'A Gemini API key starts with "AIza" and is 39 characters long. Copy it again from Google AI Studio.' };
+      return { ok: true, key, problem: '' };
+    }
+    if (provider === 'openrouter') {
+      if (other && other !== 'an OpenRouter') return { ok: false, key, problem: `That is ${other} key. Paste it under that service instead.` };
+      if (!/^sk-or-v1-[0-9A-Za-z]{32,}$/.test(key)) return { ok: false, key, problem: 'An OpenRouter key starts with "sk-or-v1-" and is about 70 characters long. Copy it again from openrouter.ai.' };
+      return { ok: true, key, problem: '' };
+    }
+    if (other && other !== 'an Anthropic') return { ok: false, key, problem: `That is ${other} key. Paste it under that service instead.` };
     if (/^sk-ant-admin/i.test(key)) return { ok: false, key, problem: 'That is an Admin key (sk-ant-admin…). It manages the organisation and must not be used here. Create a normal API key instead.' };
     if (/^sk-ant-oat/i.test(key)) return { ok: false, key, problem: 'That is a sign-in token from a Claude subscription, not an API key. Subscriptions can\'t be used through the API; create an API key in the Claude Console.' };
     if (!/^sk-ant-/i.test(key)) return { ok: false, key, problem: 'An Anthropic API key starts with "sk-ant-api". Check that you copied the whole key.' };
@@ -41,11 +55,11 @@
     return { ok: true, key, problem: '' };
   }
 
-  /** "sk-ant-api03-…x7Qa": enough to recognise it in the Console's key list, never enough to use it. */
+  /** "sk-ant-api03-…x7Qa": enough to recognise it in the service's key list, never enough to use it. */
   function mask(key) {
     const k = String(key || '');
     if (k.length < 16) return '••••';
-    const m = /^(sk-ant-api\d{2}-)/.exec(k);
+    const m = /^(sk-ant-api\d{2}-|sk-or-v1-|AIza)/.exec(k);
     return `${m ? m[1] : k.slice(0, 7)}…${k.slice(-4)}`;
   }
 
@@ -82,7 +96,7 @@
   /** What a stored record is: { kind: 'locked'|'plain'|null, masked, saved }. Old v1.9 records ({ key }) are plain. */
   function describe(record) {
     if (!record) return { kind: null, masked: '', saved: '' };
-    if (record.kind === 'locked' && record.data) return { kind: 'locked', masked: record.masked || 'sk-ant-…', saved: record.saved || '' };
+    if (record.kind === 'locked' && record.data) return { kind: 'locked', masked: record.masked || '…', saved: record.saved || '' };
     if (record.key) return { kind: 'plain', masked: mask(record.key), saved: record.saved || '' };
     return { kind: null, masked: '', saved: '' };
   }

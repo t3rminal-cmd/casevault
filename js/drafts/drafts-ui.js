@@ -54,7 +54,7 @@
     }
     startBox.append(
       radio('blank', 'Blank'),
-      radio('template', 'From a template', templates.length
+      radio('template', 'Template', templates.length
         ? h('span', { class: 'block' }, tplSelect)
         : h('span', { class: 'muted small block' }, 'No templates yet. ', h('button', { class: 'linkish', type: 'button', onclick: addStarters }, 'Add the starter templates'), ' or manage them under Vault → Templates.')),
       radio('ai', 'Draft with AI', aiNote));
@@ -70,7 +70,7 @@
 
     const create = h('button', { class: 'btn primary', type: 'button' }, 'Create draft');
     create.addEventListener('click', async () => {
-      const name = title.value.trim() || `${CVDraft.DOC_TYPES[type.value].label} ${new Date().toLocaleDateString()}`;
+      const name = title.value.trim() || `${CVDraft.DOC_TYPES[type.value].label} ${CVFormat.dateText(Vault.localDay())}`;
       const start = Object.values(radios).find((r) => r.checked).value;
       let body = `# ${name}\n\n`;
       try {
@@ -372,9 +372,12 @@
       const type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
       if (where === 'case') {
         try {
-          // Filed by the case's naming convention: an affidavit draft becomes Affidavits\2026-00123 Affidavit - <title>.docx
-          const folder = { affidavit: 'Affidavit Drafts', subpoena: 'Subpoena Drafts', summary: 'Case Report', dea6: 'Case Report' }[meta.type] || 'Other';
-          const description = folder === 'Other' || !/^(affidavit|case report)$/i.test((meta.title || '').trim()) ? (meta.title || '') : '';
+          // Filed by the case's naming convention. Affidavits go with their warrants (v1.15):
+          // Warrant Drafts\2026-00123 Warrant Draft - Affidavit - <title>.docx
+          const folder = { affidavit: 'Warrant Drafts', subpoena: 'Subpoena Drafts', summary: 'Case Report', dea6: 'Case Report' }[meta.type] || 'Other';
+          const title = (meta.title || '').trim();
+          const description = meta.type === 'affidavit' ? `Affidavit${title && !/^affidavit$/i.test(title) ? ` - ${title.replace(/^affidavit\s*[-:]\s*/i, '')}` : ''}`
+            : folder === 'Other' || !/^(affidavit|case report)$/i.test(title) ? title : '';
           const name = await Save.track(`file:${c.id}:${docxName()}`, () => Vault.addFile(c.id, new File([bytes], docxName(), { type }), { folder, description }));
           // Remember exports so the draft's consistency check never compares the draft with its own copy.
           meta.exports = [...new Set([...(meta.exports || []), name])];
@@ -693,7 +696,7 @@
       h('h3', {}, 'Templates'),
       h('p', { class: 'muted small explain' }, 'Your own document formats for Drafts, kept as Markdown files in CaseVault-Data\\templates on the SSD. To add one: Import your agency\'s Word form (or a .md/.txt file), or New template and paste the text. Where a case detail goes, put a placeholder like {{case.number}}: the editor lists them all. # at the start of a line makes a heading, **bold**, *italic*, - for a list.'),
       box,
-      h('div', { class: 'row' },
+      h('div', { class: 'row template-actions' },
         h('button', { class: 'btn small', type: 'button', onclick: () => edit('', '# New template\n\nCase No. {{case.number}}\n') }, 'New template'),
         h('button', { class: 'btn small', type: 'button', onclick: () => importInput.click() }, 'Import Word, .md or .txt…'),
         h('button', { class: 'btn small', type: 'button', onclick: async () => {

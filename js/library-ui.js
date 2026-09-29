@@ -151,7 +151,7 @@
     function draw(selectedId) {
       const list = L().behaviorsOf(settings());
       const def = L().defaultBehaviorId(settings());
-      const pick = h('select', { 'aria-label': 'Behavior' }, list.map((b) => h('option', { value: b.id, selected: b.id === (selectedId || def) }, `${b.name}${b.id === def ? ' · default' : ''}`)));
+      const pick = h('select', { 'aria-label': 'Behavior' }, list.map((b) => h('option', { value: b.id, selected: b.id === (selectedId || def) }, `${b.name}${b.id === def ? ' · Default' : ''}`)));
       const name = h('input', { maxlength: 80, 'aria-label': 'Name' });
       const prompt = h('textarea', { rows: 9, class: 'behavior-prompt', 'aria-label': 'Instruction prompt', spellcheck: 'true' });
       const load = () => { const b = list.find((x) => x.id === pick.value); name.value = b.name; prompt.value = b.prompt; restoreBtn.hidden = !b.builtin; delBtn.hidden = !!b.builtin; };
@@ -178,7 +178,7 @@
         h('div', { class: 'row' },
           h('button', { class: 'btn small', type: 'button', icon: 'check2', title: 'Draft with AI starts with this behavior selected.', onclick: async () => {
             try { await saveAll(settings().aiBehaviors || [], pick.value); toast(`${current().name} is the default.`, 'success'); draw(pick.value); } catch { /* reported */ }
-          } }, 'Make default'),
+          } }, 'Make Default'),
           restoreBtn, delBtn, h('div', { class: 'spacer' }),
           h('button', { class: 'btn small primary', type: 'button', icon: 'save', onclick: async () => {
             const b = current();

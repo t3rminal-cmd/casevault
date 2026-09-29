@@ -198,7 +198,7 @@ test('outbound: nothing goes out offline, without a review, or to another host',
     await assert.rejects(O.sendMeta('https://api.anthropic.com/v1/models'), /offline/);
     assert.deepStrictEqual(O.leaks('{"content":"Call [PHONE_1] about DOE, Jane"}', ['(804) 555-0142', 'DOE, Jane']), ['DOE, Jane']);
     assert.deepStrictEqual(O.leaks('{"content":"all [NAME_1]"}', ['Jane Doe']), []);
-    assert.deepStrictEqual(O.ALLOWED_HOSTS, ['api.anthropic.com']);
+    assert.deepStrictEqual(O.ALLOWED_HOSTS, ['api.anthropic.com', 'generativelanguage.googleapis.com', 'openrouter.ai']);
     assert.strictEqual(calls.length, 0, 'no request was made');
   } finally {
     globalThis.fetch = realFetch;
@@ -245,4 +245,17 @@ test('case contacts are known terms for redaction', () => {
   const known = P.knownTerms({ caseObj: { contacts: { officer: { name: 'Det. Alex Sample', phone: '555-0100' }, prosecutor: { title: 'ASA', name: 'Jordan Example', email: 'jordan@sao.example' }, others: [{ role: 'Finance', name: 'Pat Placeholder' }] } } });
   const values = known.map((k) => k.value);
   for (const v of ['Det. Alex Sample', '555-0100', 'Jordan Example', 'jordan@sao.example', 'Pat Placeholder']) assert.ok(values.includes(v), v);
+});
+
+test('API keys are checked for the service they are pasted under (v1.15)', () => {
+  const K = require('../js/secure/apikey.js');
+  const gem = `AIza${'Sy0123456789abcdefghijklmnopqrstu'.slice(0, 35)}`;
+  const orKey = `sk-or-v1-${'0123456789abcdef'.repeat(4)}`;
+  assert.ok(K.check(gem, 'gemini').ok);
+  assert.ok(K.check(orKey, 'openrouter').ok);
+  assert.match(K.check(orKey, 'gemini').problem, /OpenRouter key/);
+  assert.match(K.check(gem, 'anthropic').problem, /Google Gemini key/);
+  assert.match(K.check('AIzaShort', 'gemini').problem, /39 characters/);
+  assert.strictEqual(K.mask(orKey), `sk-or-v1-…${orKey.slice(-4)}`);
+  assert.strictEqual(K.mask(gem), `AIza…${gem.slice(-4)}`);
 });

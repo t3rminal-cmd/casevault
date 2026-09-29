@@ -4,13 +4,15 @@
  * inserts the text, and every message goes through the outbound gate (js/secure/outbound.js), which
  * replaces names and numbers with placeholders and shows exactly what will be sent.
  *
- * Two services:
+ * Four services:
  *   - "claude.ai with my Claude subscription": CaseVault copies the redacted text and opens claude.ai
  *     in a new tab; the user pastes it there, then pastes the answer back here. (A Claude Pro/Max
  *     subscription can't be connected to other apps; this is how to use it safely.)
  *   - "Anthropic API": answers inside CaseVault with an API key (billed separately from a
  *     subscription). The key is managed by js/secure/apikey-ui.js: in memory, or on the SSD in
  *     CaseVault-Data/secrets, optionally locked with a passphrase. Never in the browser's storage.
+ *   - "Google Gemini" and "OpenRouter" (v1.15): the same, with free tiers. Their own keys, same
+ *     review and redaction; their guides say what the free tiers do with what you send.
  *
  * The conversation and the placeholder map live in memory only. Answers can be saved to a case as
  * a draft, with the real values put back in on this computer.
@@ -21,6 +23,12 @@
   const API_URL = 'https://api.anthropic.com/v1/messages';
   const CLAUDE_WEB = 'https://claude.ai/new';
   const DEFAULT_MODEL = 'claude-sonnet-5';
+  // service -> the key manager (js/secure/apikey-ui.js) and the model to start with.
+  const APIS = {
+    'online-ai': { key: () => CVApiKey, provider: 'anthropic', model: DEFAULT_MODEL, label: 'Anthropic API: Claude, answers here, paid' },
+    gemini: { key: () => CVApiKeys.gemini, provider: 'gemini', model: 'gemini-2.5-flash', label: 'Google Gemini: answers here, free tier' },
+    openrouter: { key: () => CVApiKeys.openrouter, provider: 'openrouter', model: 'meta-llama/llama-3.3-70b-instruct:free', label: 'OpenRouter: answers here, free models' },
+  };
   const SYSTEM = [
     'You are helping a law-enforcement investigator with research and drafting.',
     'Personal and case details in the text were replaced with placeholders such as [NAME_1], [PHONE_2], [ADDRESS_1], [CASENO_1].',
@@ -34,7 +42,7 @@
 
   // In memory only: cleared on reload, "Clear conversation", or when another vault is opened.
   const session = {
-    service: 'claude-web', purpose: 'Research', caseId: '', draft: '', model: '', map: {}, turns: [], showReal: true,
+    service: 'claude-web', purpose: 'Research', caseId: '', draft: '', models: {}, map: {}, turns: [], showReal: true,
   };
 
   const onlineSettings = () => CVOutbound.onlineSettings();
@@ -49,7 +57,8 @@
   async function render(main) {
     const { h, toast, openDialog, Save } = ui;
     const st = onlineSettings();
-    if (!session.model) session.model = st.model || DEFAULT_MODEL;
+    // The model for each API service, remembered in vault.json (online.model is Anthropic's, from v1.9).
+    for (const [svc, a] of Object.entries(APIS)) if (!session.models[svc]) session.models[svc] = (svc === 'online-ai' ? st.model : (st.models || {})[svc]) || a.model;
     const cases = (V().data.cases || []).filter((c) => c.location !== 'archive');
     await CVApiKey.refresh().catch(() => {});
 
@@ -89,7 +98,7 @@
       // --- settings row ---
       const service = h('select', { 'aria-label': 'Service' },
         h('option', { value: 'claude-web', selected: session.service === 'claude-web' }, 'claude.ai: my Claude subscription, copy & paste'),
-        h('option', { value: 'online-ai', selected: session.service === 'online-ai' }, 'Anthropic API: answers here, with an API key'));
+        Object.entries(APIS).map(([svc, a]) => h('option', { value: svc, selected: session.service === svc }, a.label)));
       service.addEventListener('change', () => { session.service = service.value; draw(); });
       const purpose = h('select', { 'aria-label': 'Purpose' }, ['Research', 'Drafting'].map((p) => h('option', { selected: session.purpose === p }, p)));
       purpose.addEventListener('change', () => { session.purpose = purpose.value; });
@@ -98,23 +107,27 @@
       caseSel.addEventListener('change', () => { session.caseId = caseSel.value; draw(); });
 
       let apiBox = null;
-      if (session.service === 'online-ai') {
-        const model = h('input', { type: 'text', value: session.model, class: 'narrow-wide', 'aria-label': 'Model', list: 'cv-models' });
+      const api = APIS[session.service];
+      if (api) {
+        const svc = session.service;
+        const model = h('input', { type: 'text', value: session.models[svc], class: 'model-input', 'aria-label': 'Model', list: 'cv-models' });
         const models = h('datalist', { id: 'cv-models' });
         model.addEventListener('change', () => {
-          session.model = model.value.trim() || DEFAULT_MODEL;
-          Save.track('settings', () => V().updateSettings({ online: { ...onlineSettings(), model: session.model } })).catch(() => {});
+          session.models[svc] = model.value.trim() || api.model;
+          const cur = onlineSettings();
+          const patch = svc === 'online-ai' ? { model: session.models[svc] } : { models: { ...(cur.models || {}), [svc]: session.models[svc] } };
+          Save.track('settings', () => V().updateSettings({ online: { ...cur, ...patch } })).catch(() => {});
         });
         const listBtn = h('button', { class: 'btn small', type: 'button', onclick: async () => {
           try {
-            const r = await CVApiKey.test();
+            const r = await api.key().test();
             models.replaceChildren(...r.models.map((m) => h('option', { value: m })));
             toast(`${r.models.length} models available. Pick one in the Model box.`, 'success');
           } catch (err) { toast(err.message, 'error', 9000); }
         } }, 'List models');
         apiBox = h('div', { class: 'online-api' },
-          h('h2', {}, 'Anthropic API key'),
-          CVApiKey.card(),
+          h('h2', {}, `${CVApiProviders[api.provider].short} API key`),
+          api.key().card(),
           h('div', { class: 'row' }, h('label', { class: 'field' }, h('span', {}, 'Model'), model), models, listBtn));
       }
 
@@ -147,7 +160,7 @@
         sendBtn.disabled = true;
         try {
           const full = caseObj ? await V().getCase(caseObj.id) : null;
-          const ok = session.service === 'claude-web' ? await viaClaudeWeb(text, full) : await viaApi(text, full);
+          const ok = session.service === 'claude-web' ? await viaClaudeWeb(text, full) : await viaApi(text, full, session.service);
           if (ok) ta.value = session.draft = '';
         } catch (err) {
           toast(err.message, 'error', 10000);
@@ -191,7 +204,7 @@
           ? pasteBack(t)
           : h('p', { class: 'muted' }, 'Waiting for the answer…');
       return h('article', { class: 'turn' },
-        h('div', { class: 'turn-sent' }, h('div', { class: 'turn-label' }, `Sent (${t.service === 'claude-web' ? 'copied for claude.ai' : 'to the API'}) · ${t.purpose}`),
+        h('div', { class: 'turn-sent' }, h('div', { class: 'turn-label' }, `Sent (${t.service === 'claude-web' ? 'copied for claude.ai' : `to ${CVApiProviders[APIS[t.service].provider].short}`}) · ${t.purpose}`),
           h('pre', { class: 'preview-text' }, show(t.sent))),
         answerBox);
     }
@@ -247,41 +260,40 @@
       return true;
     }
 
-    async function viaApi(text, caseObj) {
-      if (!CVApiKey.get()) throw new Error(CVApiKey.status().set ? 'Unlock the API key first (the Unlock button above).' : 'Add an Anthropic API key first (the Add API key button above), or switch to claude.ai.');
+    async function viaApi(text, caseObj, svc) {
+      const api = APIS[svc];
+      const K = api.key();
+      const P = CVApiProviders[api.provider];
+      const modelName = session.models[svc] || api.model;
+      if (!K.get()) throw new Error(K.status().set ? 'Unlock the API key first (the Unlock button above).' : `Add ${P.short === 'Gemini' ? 'a' : 'an'} ${P.short} API key first (the Add API key button above), or switch to claude.ai.`);
       const r = await CVOutbound.review({
-        channel: 'online-ai', destination: `api.anthropic.com · ${session.model}`, purpose: session.purpose, caseObj,
+        channel: 'online-ai', destination: `${P.host} · ${modelName}`, purpose: session.purpose, caseObj,
         parts: [{ label: 'Your message', text }], mode: 'redact', map: session.map, confirmText: 'Send',
       });
       if (!r) return false;
-      const turn = { service: 'online-ai', purpose: session.purpose, sent: r.parts[0].text, answer: null, model: session.model };
+      const turn = { service: svc, purpose: session.purpose, sent: r.parts[0].text, answer: null, model: modelName };
       session.turns.push(turn);
       draw();
-      const messages = [];
+      // The conversation so far with this service: [{ role: 'user'|'assistant', content }].
+      const history = [];
       for (const t of session.turns) {
-        if (t.service !== 'online-ai') continue;
-        messages.push({ role: 'user', content: t.sent });
-        if (t.answer != null && t !== turn) messages.push({ role: 'assistant', content: t.answer });
+        if (t.service !== svc) continue;
+        history.push({ role: 'user', content: t.sent });
+        if (t.answer != null && t !== turn) history.push({ role: 'assistant', content: t.answer });
       }
-      const res = await CVOutbound.send(r.ticket, API_URL, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-api-key': CVApiKey.get(),
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({ model: session.model, max_tokens: 4096, system: `${SYSTEM} The investigator's purpose: ${session.purpose.toLowerCase()}.`, messages }),
-      });
+      const system = `${SYSTEM} The investigator's purpose: ${session.purpose.toLowerCase()}.`;
+      const req = requestFor(api.provider, { key: K.get(), model: modelName, system, history });
+      const res = await CVOutbound.send(r.ticket, req.url, { method: 'POST', headers: req.headers, body: JSON.stringify(req.body) });
       let data = null;
       try { data = await res.json(); } catch { /* not JSON */ }
       if (!res.ok) {
         session.turns.pop();
-        const msg = (data && data.error && data.error.message) || `${res.status} ${res.statusText}`;
-        throw new Error(`The API answered with an error: ${msg}`);
+        const msg = (data && data.error && (data.error.message || data.error)) || `${res.status} ${res.statusText}`;
+        throw new Error(`${P.short} answered with an error: ${msg}${res.status === 429 ? ' (a free-tier limit: wait a minute, or try tomorrow)' : ''}`);
       }
-      turn.answer = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n\n') || '(empty answer)';
-      turn.model = data.model || session.model;
+      const out = answerOf(api.provider, data);
+      turn.answer = out.text || '(empty answer)';
+      turn.model = out.model || modelName;
       return true;
     }
 
@@ -292,10 +304,47 @@
 
   let redraw = () => {};
 
+  /** The HTTP request for one answer from each service. history: [{ role: 'user'|'assistant', content }]. */
+  function requestFor(provider, { key, model, system, history }) {
+    if (provider === 'gemini') {
+      return {
+        url: `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+        body: { systemInstruction: { parts: [{ text: system }] }, contents: history.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })) },
+      };
+    }
+    if (provider === 'openrouter') {
+      return {
+        url: 'https://openrouter.ai/api/v1/chat/completions',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
+        body: { model, messages: [{ role: 'system', content: system }, ...history] },
+      };
+    }
+    return {
+      url: API_URL,
+      headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: { model, max_tokens: 4096, system, messages: history },
+    };
+  }
+
+  /** The answer's text (and the model that wrote it) from each service's reply. */
+  function answerOf(provider, data) {
+    if (!data) return { text: '' };
+    if (provider === 'gemini') {
+      const c = (data.candidates || [])[0];
+      return { text: ((c && c.content && c.content.parts) || []).map((p) => p.text || '').join(''), model: data.modelVersion };
+    }
+    if (provider === 'openrouter') {
+      const c = (data.choices || [])[0];
+      return { text: (c && c.message && c.message.content) || '', model: data.model };
+    }
+    return { text: (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n\n'), model: data.model };
+  }
+
   function init(kit) {
     ui = kit;
     CVOutbound.onChange(() => redraw());
   }
 
-  root.CVOnlineUI = { init, render, reset, DEFAULT_MODEL };
+  root.CVOnlineUI = { init, render, reset, DEFAULT_MODEL, APIS, requestFor, answerOf };
 })(this);
