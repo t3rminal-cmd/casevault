@@ -119,7 +119,7 @@ Add dated **Events** (things that happened) and **Deadlines** (things that are d
 
 Every case has the same document folders, both in CaseVault and on the SSD (`cases\<case>\files\...`):
 
-> Affidavits · Arrest Report · Supplementary Report · Case Report · Deconfliction · Drug Exhibits · Email · Ops Plan · Subpoena Response · Subject Information · Recordings · Vehicle Information · Maps · Other
+> Affidavits · Arrest Report · Supplementary Report · Case Report · Deconfliction · Drug Exhibits · Other Exhibits · Email · Ops Plan · Subpoena Response · Subject Information · Recordings · Vehicle Information · Maps · Other
 
 ### Naming convention
 
