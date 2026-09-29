@@ -22,7 +22,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.9.1';
+  const APP_VERSION = '1.9.2';
   const SCHEMA = 1;
   const DATA_DIR = 'CaseVault-Data';
   const STATUSES = ['Open', 'Pending', 'Closed', 'Archived'];

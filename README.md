@@ -15,20 +15,22 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.9.1)
+## Features (v1.9.2)
 
 - Cases with number, client, status, tags, and opened/closed dates; search and filter
+- **Case status with a purpose**: *Pending* records what you're waiting on and a follow-up date (put on the timeline); **Close case…** records a disposition (cleared by arrest, exceptionally cleared with reason, unfounded, inactive, referred, other) after listing loose ends; **Reopen** keeps the history
+- **Arrest details** tab: arrestees, arrest facts and charges, saved to `arrest.json` and filling `{{arrest.*}}` placeholders for arrest reports
 - **Archive** a case (moved to `archive/` on the SSD after every file is copied and verified; opens read-only; restore any time) or **delete** it permanently (type the case number to confirm)
 - Collapsible case list (Ctrl+\)
 - Free-form notes (Markdown, with preview)
-- **Document folders in every case**: Affidavits, Arrest Report, Supplementary Report, Case Report, Deconfliction, Drug Exhibits, Email, Ops Plan, Subpoena Response, Subject Information, Recordings, Vehicle Information, Maps, Other
+- **Document folders in every case**: Affidavits, Arrest Report, Supplementary Report, Case Report, Deconfliction, Drug Exhibits, Other Exhibits, Email, Ops Plan, Subpoena Response, Subject Information, Recordings, Vehicle Information, Maps, Other
 - **Naming convention**: case folders `2026-<CaseNo>`, files `2026-<CaseNo> <Document type>.ext` (e.g. `2026-00123 Arrest Report.pdf`), with a type guess from the file name, verified moves and renames, and a one-click rename for older case folders
-- **Department mail** (Mail tab): recipients locked to your department's domains, attachment size and case-number checks, a PII scan with a warning (typed confirmation for SSNs, DOBs, IDs, card and bank numbers), then an Outlook draft (`.eml`) with the attachments, saved in the case's Email folder and logged
+- **Department mail** (Mail tab): recipients locked to your department's domains, attachment size and case-number checks, a PII scan with a warning (typed confirmation for SSNs, DOBs, IDs, card and bank numbers), then an Outlook draft (`.eml`) with the attachments, saved in the case's Email folder and logged; discard a draft, or delete a saved Outlook draft
 - **Online research & drafting (optional, off by default)**: Claude via your subscription (copy & paste into claude.ai) or the Anthropic API (optional key with Add/Replace/Test/Remove, kept for the session or saved on the SSD locked with a passphrase, and an in-app step-by-step guide); names and numbers replaced with placeholders before anything leaves, a review of the exact text, real values put back only on this PC, one reviewed request per send, auto-offline after 15 minutes, and an **outbound log** on the SSD
 - **PII scanner**: SSNs, DOBs, IDs, passports, card/bank numbers, phones, emails, addresses, plates, VINs, case numbers, names after titles or in `LAST, First` form, plus each case's client and number and your own watch list
 - **Memory indicator** in the header: app memory, the local AI model's GPU/RAM use, PC RAM and SSD free space (helper mode), and **Free AI memory**
 - Timeline of dated events and deadlines, with overdue/upcoming highlighting across all cases
-- File attachments copied onto the SSD, with in-app preview for PDFs, images, text, and media
+- File attachments copied onto the SSD, with in-app preview for PDFs, images, text, media and **Word (.docx)**
 - Autosave on every change with a **Saved to SSD** indicator; survives unplugging (changes wait and are written on reconnect)
 - Daily backups of the vault index, and a self-healing case index
 - **Offline Consistency Checker**: compares an affidavit against the case's reports, and the reports against each other
@@ -43,7 +45,7 @@ The app detects the browser and picks the mode by itself. The data format on the
   - an **AI suggestion** box under the cursor line (Tab accepts, Esc dismisses)
   - **Draft with AI** from the case details, timeline, notes and attached documents, never inventing facts and marking gaps as `[CONFIRM: ...]`
   - a checklist of placeholders
-  - agency templates with `{{placeholders}}`, including your own details (`{{affiant.name}}` …) from **My details**
+  - agency templates with `{{placeholders}}`, including your own details (`{{affiant.name}}` …) from **My details** and the arrest details; **import a Word form** as a template, with a clickable placeholder list in the editor
   - export to `.docx` (no library) or plain text
   - one-click consistency check of an affidavit draft
 
@@ -102,6 +104,8 @@ CaseVault-Data/
 | `js/selftest.js` | Self-test with built-in made-up documents |
 | `js/markdown.js` | Minimal, escaping Markdown previewer for notes |
 | `js/app.js` | User interface, autosave, connect/reconnect |
+| `js/closing.js`, `js/closing-ui.js` | Status rules, Pending follow-up, Close case (dispositions, loose ends), Reopen, the Arrest details tab and `{{arrest.*}}` / `{{closure.*}}` values |
+| `js/docxview.js` | Word (.docx) to a read-only preview, and to Markdown for template import |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Installable offline PWA |
 | `js/helper-fs.js` | Helper mode: wraps the helper's API in FileSystemHandle-shaped objects |
 | `js/checker/nlp.js` | Sentence splitting, similarity, BM25 retrieval, verbatim-quote finder |
