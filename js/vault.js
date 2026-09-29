@@ -23,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.13.0';
+  const APP_VERSION = '1.14.0';
   const SCHEMA = 1;
   const DATA_DIR = 'CaseVault-Data';
   const STATUSES = ['Open', 'Pending', 'Closed', 'Archived'];
@@ -190,6 +190,7 @@ const Vault = (() => {
       title: c.title || '',
       number: c.number || '',
       fileNumber: c.fileNumber || '',
+      agencyNumber: c.agencyNumber || '',
       client: c.client || '',
       status: c.status || 'Open',
       tags: Array.isArray(c.tags) ? c.tags : [],
@@ -319,6 +320,7 @@ const Vault = (() => {
       title: fields.title || 'Untitled case',
       number: fields.number || '',
       fileNumber: fields.fileNumber || '',
+      agencyNumber: fields.agencyNumber || '',
       client: fields.client || '',
       status: STATUSES.includes(fields.status) ? fields.status : 'Open',
       tags: fields.tags || [],

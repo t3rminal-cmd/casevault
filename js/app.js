@@ -99,7 +99,7 @@
   const DIALOG_SIZES = [
     ['panel', '.vault-panel'],
     ['full', '.preview, .doc-view, .lib-preview'],
-    ['wide', '.type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel'],
+    ['wide', '.type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form'],
   ];
 
   function openDialog(build) {
@@ -232,6 +232,10 @@
         el.className = 'save-status saved';
         el.textContent = 'Connected to SSD';
       }
+      // The header shows just the icon; the words are in its hover box.
+      el.title = `${el.textContent}${el.classList.contains('error') ? '' : ` · ${$('#vault-name').textContent || 'SSD'}`}`;
+      el.setAttribute('aria-label', el.textContent);
+      el.tabIndex = 0;
       el.prepend(I({ error: 'exclamation-triangle-fill', saving: 'arrow-repeat', saved: 'hdd-fill' }[el.className.split(' ')[1]] || 'hdd'));
     },
   };
@@ -429,7 +433,8 @@
     const sameVault = previousId === data.vaultId;
     state.connected = true;
     state.vaultId = data.vaultId;
-    $('#vault-name').textContent = MODE === 'helper' ? `${state.drive.replace(/[\\/]+$/, '')} ${dir.name}`.trim() : dir.name;
+    // Where the data is saved, e.g. W:\CaseVault-Data (helper mode knows the drive letter).
+    $('#vault-name').textContent = MODE === 'helper' && state.drive ? `${state.drive.replace(/[\\/]+$/, '')}\\${dir.name}` : dir.name;
     hideGate();
     setSidebar(!!(Vault.data.settings && Vault.data.settings.sidebarCollapsed), { save: false });
     Save.render();
@@ -480,7 +485,7 @@
    * ===================================================================== */
 
   const isArchivedEntry = (c) => c.location === 'archive';
-  const matchesSearch = (c, q) => !q || [c.title, c.fileNumber, c.number, c.client, ...(c.tags || [])].join(' ').toLowerCase().includes(q);
+  const matchesSearch = (c, q) => !q || [c.title, c.fileNumber, c.number, c.agencyNumber, c.client, ...(c.tags || [])].join(' ').toLowerCase().includes(q);
 
   // Cases in cases/ (the archive has its own section below the list).
   function filteredCases() {
@@ -493,18 +498,29 @@
       .sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
   }
 
+  // A case in the left list: [bell] [status] Title, then File · Case · Client. A red bell means a
+  // deadline is overdue or due within a week; the details are in the hover box.
+  const STATUS_DOT = { Open: 'folder2-open', Pending: 'hourglass-split', Closed: 'lock-fill', Archived: 'archive' };
   function caseItem(c) {
     const due = c.nextDeadline && !isArchivedEntry(c) ? dueLabel(c.nextDeadline.date) : null;
+    const alarm = due && (due.cls === 'overdue' || due.cls === 'soon');
+    const tip = [
+      `${c.title || 'Untitled case'} · ${c.status}`,
+      c.status === 'Pending' && c.pending ? `Waiting on ${c.pending.reason}${c.pending.followUp ? `, follow up ${fmtDate(c.pending.followUp)}` : ''}` : null,
+      due ? `${alarm ? 'Alarm: ' : 'Next deadline: '}${c.nextDeadline.title || 'Deadline'}, ${fmtDate(c.nextDeadline.date)}${c.nextDeadline.time ? ` ${c.nextDeadline.time}` : ''} (${due.text})` : null,
+    ].filter(Boolean).join('\n');
     return h('li', {},
       h('a', {
         href: `#/case/${encodeURIComponent(c.id)}`,
         class: `case-item ${c.id === state.caseId ? 'active' : ''}`,
         'aria-current': c.id === state.caseId ? 'page' : null,
+        title: tip,
       },
-      h('div', { class: 'case-item-top' }, h('span', { class: 'case-item-title' }, c.title || 'Untitled case'), statusPill(c.status)),
-      h('div', { class: 'case-item-meta muted' }, [c.fileNumber && `File ${c.fileNumber}`, c.number && `Case ${c.number}`, c.client].filter(Boolean).join(' · ') || '\u00a0'),
-      c.status === 'Pending' && c.pending ? h('div', { class: 'case-item-due', icon: 'hourglass-split' }, `Waiting on ${c.pending.reason}`) : null,
-      due && h('div', { class: `case-item-due ${due.cls}`, icon: 'calendar-event' }, `${c.nextDeadline.title || 'Deadline'}: ${due.text}`)));
+      h('div', { class: 'case-item-top' },
+        alarm ? h('span', { class: `case-bell ${due.cls}`, 'aria-label': `Deadline ${due.text}` }, I('bell-fill')) : null,
+        h('span', { class: `case-dot status-${String(c.status).toLowerCase()}`, 'aria-label': c.status }, I(STATUS_DOT[c.status] || 'folder')),
+        h('span', { class: 'case-item-title' }, c.title || 'Untitled case')),
+      h('div', { class: 'case-item-meta muted' }, [c.fileNumber && `File ${c.fileNumber}`, c.number && `Case ${c.number}`, c.client].filter(Boolean).join(' · ') || '\u00a0')));
   }
 
   function renderCaseList() {
@@ -586,8 +602,8 @@
     el.className = `net-status ${on ? 'on' : 'off'}`;
     el.replaceChildren(I(on ? 'globe2' : 'shield-lock-fill'), on ? `Online · ${CVOutbound.minutesLeft()} min` : 'Offline');
     el.title = on
-      ? `Online AI is on: CaseVault may reach ${CVOutbound.ALLOWED_HOSTS.join(', ')} with text you review. Click to manage or go offline.`
-      : 'CaseVault is offline: nothing leaves this computer. Click for online research & drafting.';
+      ? `Online (${CVOutbound.minutesLeft()} min left). Online AI is on: CaseVault may reach ${CVOutbound.ALLOWED_HOSTS.join(', ')} with text you review. Click to manage or go offline.`
+      : 'Offline: nothing leaves this computer. Click for online research & drafting.';
   }
   $('#net-status').addEventListener('click', () => { location.hash = '#/online'; });
 
@@ -657,7 +673,7 @@
         e.preventDefault();
         const fd = new FormData(form);
         close({
-          title: fd.get('title').trim(), fileNumber: fd.get('fileNumber').trim(), number: fd.get('number').trim(), client: fd.get('client').trim(),
+          title: fd.get('title').trim(), fileNumber: fd.get('fileNumber').trim(), number: fd.get('number').trim(), agencyNumber: fd.get('agencyNumber').trim(), client: fd.get('client'),
           status: fd.get('status'), opened: fd.get('opened'), tags: parseTags(fd.get('tags')),
         });
       } },
@@ -666,7 +682,8 @@
       field('File number', h('input', { name: 'fileNumber', maxlength: 100, list: 'file-numbers', title: 'The investigation file. Several cases can share one file number.' })),
       field('Case number', numberIn),
       fileList,
-      field('Client', h('input', { name: 'client', maxlength: 200 })),
+      field('Agency case number', h('input', { name: 'agencyNumber', maxlength: 100, title: 'Your agency\'s own internal number for this case.' })),
+      field('Client', clientSelect('', { name: 'client' })),
       field('Status', h('select', { name: 'status' }, Vault.STATUSES.map((s) => h('option', {}, s)))),
       field('Opened', openedIn),
       h('p', { class: 'muted small span-2' }, folderNote),
@@ -795,7 +812,7 @@
   }
 
   function caseSubtitle(c) {
-    return [c.fileNumber && `File ${c.fileNumber}`, c.number && `Case ${c.number}`, c.client, statusPill(c.status), c.dates.opened && `Opened ${fmtDate(c.dates.opened)}`]
+    return [c.fileNumber && `File ${c.fileNumber}`, c.number && `Case ${c.number}`, c.agencyNumber && `Agency ${c.agencyNumber}`, c.client, statusPill(c.status), c.dates.opened && `Opened ${fmtDate(c.dates.opened)}`]
       .filter(Boolean).flatMap((x, i) => (i ? [' · ', x] : [x]));
   }
 
@@ -846,7 +863,8 @@
         field('Title', bind(h('input', { value: c.title, maxlength: 200 }), (v) => { c.title = v; }), 'span-2'),
         field('File number', bind(h('input', { value: c.fileNumber || '', maxlength: 100, title: 'The investigation file. Several cases can share one file number.' }), (v) => { c.fileNumber = v; })),
         field('Case number', bind(h('input', { value: c.number, maxlength: 100 }), (v) => { c.number = v; })),
-        field('Client', bind(h('input', { value: c.client, maxlength: 200 }), (v) => { c.client = v; })),
+        field('Agency case number', bind(h('input', { value: c.agencyNumber || '', maxlength: 100, title: 'Your agency\'s own internal number for this case.' }), (v) => { c.agencyNumber = v; })),
+        field('Client', (() => { const sel = clientSelect(c.client); sel.addEventListener('change', () => { c.client = sel.value; save(); }); return sel; })()),
         h('label', { class: 'field' }, h('span', {}, 'Status'), statusSelect, statusNote),
         field('Opened', bind(h('input', { type: 'date', value: c.dates.opened || '' }), (v) => { c.dates.opened = v; })),
         field('Closed', bind(closedInput, (v) => { c.dates.closed = v; })),
@@ -854,6 +872,7 @@
         h('p', { class: 'muted span-2 small' },
           `Created ${c.dates.created ? fmtDateTime(Date.parse(c.dates.created)) : '—'} · Folder: ${archived ? 'archive' : 'cases'}\\${c.id}`
           + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),
+      suspectsSection(c, save),
       contactsSection(c, save),
       // Archive and delete side by side, so the gentler choice is always in view.
       h('section', { class: 'case-actions', 'data-ro-ok': 'true', 'aria-labelledby': 'case-actions-title' },
@@ -873,6 +892,54 @@
           !archived && Vault.conventionalId(c) ? h('button', { class: 'btn action-btn', type: 'button', icon: 'folder', title: `Renames this case's folder on the SSD to the <year>-<case no.> convention (${Vault.conventionalId(c)}). Every file is copied and checked first.`, onclick: () => renameCaseFolder(c) }, 'Rename folder') : null,
           !archived ? h('button', { class: 'btn action-btn', type: 'button', icon: 'archive', title: 'Keeps everything, read-only, in CaseVault-Data\\archive. It leaves the case list but can still be opened, searched and restored.', onclick: () => archiveCase(c) }, 'Archive case…') : null,
           h('button', { class: 'btn danger action-btn', type: 'button', icon: 'trash3', title: 'Permanently deletes the case from the SSD. There is no trash to get it back from.', onclick: () => deleteCase(c) }, 'Delete case…'))));
+  }
+
+  // Client: who the case is for. A value from before v1.14 that isn't one of these is kept as its
+  // own choice, so nothing is lost.
+  const CLIENTS = ['State', 'Federal', 'Other'];
+  function clientSelect(value, attrs = {}) {
+    const v = String(value || '');
+    const opts = ['', ...CLIENTS, ...(v && !CLIENTS.includes(v) ? [v] : [])];
+    return h('select', { title: 'Who the case is for: State, Federal or Other.', ...attrs }, opts.map((o) => h('option', { value: o, selected: o === v }, o || '—')));
+  }
+
+  /* Suspects on the Details tab: name, date of birth (the age is worked out), residence and role
+   * (Main, Secondary, Other). Kept in case.json as c.suspects; {{suspect.*}} fills templates with
+   * the main suspect and {{suspects}} lists them all. */
+  function suspectsSection(c, save) {
+    if (!Array.isArray(c.suspects)) c.suspects = [];
+    const rows = h('div', { class: 'suspect-rows' });
+    const draw = () => {
+      rows.replaceChildren(...(c.suspects.length ? c.suspects.map((s, i) => {
+        const who = `Suspect ${i + 1}`;
+        const input = (key, attrs) => { const el = h('input', { value: s[key] || '', autocomplete: 'off', ...attrs }); el.addEventListener('input', () => { s[key] = el.value.trim(); save(); }); return el; };
+        const age = h('output', { class: 'suspect-age', 'aria-label': `${who} age` });
+        const showAge = () => { const a = CVDraft.ageOn(s.dob); age.textContent = a == null ? '—' : String(a); };
+        const dob = input('dob', { type: 'date', 'aria-label': `${who} date of birth` });
+        dob.addEventListener('input', showAge);
+        showAge();
+        const role = h('select', { 'aria-label': `${who} role` }, CVDraft.SUSPECT_ROLES.map((r) => h('option', { value: r, selected: r === (s.role || 'Main') }, r)));
+        role.addEventListener('change', () => { s.role = role.value; save(); });
+        if (!s.role) s.role = 'Main';
+        return h('div', { class: 'suspect-row' },
+          field('Name', input('name', { maxlength: 120, 'aria-label': `${who} name` })),
+          field('DOB', dob),
+          h('div', { class: 'field' }, h('span', {}, 'Age'), age),
+          field('Residence', input('residence', { maxlength: 200, 'aria-label': `${who} residence` })),
+          field('Role', role),
+          h('button', { class: 'icon-btn danger-icon contact-remove', type: 'button', title: 'Remove this suspect', onclick: () => { c.suspects.splice(i, 1); draw(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Remove ${who}`)));
+      }) : [h('p', { class: 'muted small suspect-empty' }, 'No suspects yet.')]));
+    };
+    draw();
+    return h('section', { class: 'contacts suspects', 'aria-labelledby': 'suspects-title' },
+      h('h3', { id: 'suspects-title', icon: 'person-exclamation', title: 'The people this case is about. The age is worked out from the date of birth. The main suspect fills {{suspect.name}}, {{suspect.dob}}, {{suspect.age}} and so on in templates; {{suspects}} lists them all.' }, 'Suspects'),
+      rows,
+      h('div', { class: 'contact-add' }, h('button', { class: 'btn small', type: 'button', icon: 'person-plus', onclick: () => {
+        c.suspects.push({ name: '', dob: '', residence: '', role: c.suspects.some((x) => x.role === 'Main') ? 'Secondary' : 'Main' });
+        draw();
+        const last = rows.lastElementChild && rows.lastElementChild.querySelector('input');
+        if (last) last.focus();
+      } }, 'Add suspect')));
   }
 
   /* Contacts on the Details tab: the case officer, the prosecutor (ASA or AUSA) and anyone else
@@ -916,7 +983,7 @@
     return h('section', { class: 'contacts', 'aria-labelledby': 'contacts-title' },
       h('h3', { id: 'contacts-title', icon: 'people', title: 'Who to reach on this case. The case officer and prosecutor fill {{case.officer.name}}, {{case.prosecutor.email}} and so on in templates.' }, 'Contacts'),
       roles,
-      h('div', { class: 'contact-row' }, h('div', { class: 'field contact-role' }, h('span', {}, 'Role'), h('strong', { class: 'contact-fixed' }, 'Case officer')), ...person(k.officer, 'Case officer')),
+      h('div', { class: 'contact-row' }, h('div', { class: 'field contact-role' }, h('span', {}, 'Role'), h('strong', { class: 'contact-fixed' }, 'Case Officer')), ...person(k.officer, 'Case officer')),
       h('div', { class: 'contact-row' }, h('label', { class: 'field contact-role' }, h('span', {}, 'Role'), proTitle), ...person(k.prosecutor, 'Prosecutor')),
       others,
       h('div', { class: 'contact-add' }, add));
@@ -1183,6 +1250,9 @@
   const MIME = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp', mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', ogg: 'audio/ogg', mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime' };
   const extOf = (name) => (name.includes('.') ? name.split('.').pop().toLowerCase() : '');
 
+  // Folders whose sub-folders are showing (Recordings → Video, Audio), for this window.
+  const openFolders = new Set();
+
   // Files tab: the case's document folders on the left, the chosen folder's files on the right.
   // sub (from the address) is the folder being shown; '' = all folders.
   async function renderFiles(panel, c, token, sub) {
@@ -1249,7 +1319,7 @@
         class: `folder-item ${current === key ? 'active' : ''} ${child ? 'child' : ''}`, 'data-ro-ok': 'true', 'aria-current': current === key ? 'page' : null,
         title: top ? `${label}. Drag to reorder the folders (or Alt+↑/↓). Drop a file here to move it into this folder.` : null,
         draggable: top && !archived ? 'true' : null,
-      }, h('span', { class: 'folder-icon' }, I(FOLDER_ICONS[key] || 'folder')), h('span', { class: 'folder-name' }, label), h('span', { class: 'folder-count muted' }, n ? String(n) : ''));
+      }, h('span', { class: 'folder-name' }, label), h('span', { class: 'folder-count muted' }, n ? String(n) : ''), h('span', { class: 'folder-icon' }, I(FOLDER_ICONS[key] || 'folder')));
       // Drop a file onto a folder to move it there.
       if (key && key !== 'unsorted' && !archived) {
         a.addEventListener('dragover', (e) => { if (e.dataTransfer.types.includes('application/x-casevault-file') || e.dataTransfer.types.includes('application/x-casevault-folder')) { e.preventDefault(); a.classList.add('drop-target'); } });
@@ -1297,10 +1367,27 @@
 
     const nav = h('nav', { class: 'folder-nav', 'aria-label': 'Document folders' },
       folderBtn('', 'All documents', files.length),
-      ordered.filter(visible).map((f) => [
-        folderBtn(f, f, count(f) + CF.childrenOf(f).reduce((n, k) => n + count(k), 0), { top: f }),
-        CF.childrenOf(f).map((k) => folderBtn(k, CF.shortName(k), count(k), { child: true })),
-      ]),
+      ordered.filter(visible).map((f) => {
+        const kids = CF.childrenOf(f);
+        const btn = folderBtn(f, f, count(f) + kids.reduce((n, k) => n + count(k), 0), { top: f });
+        if (!kids.length) return btn;
+        // Sub-folders (Recordings: Video, Audio) fold away until you click the folder or its arrow.
+        if (current === f || kids.includes(current)) openFolders.add(f);
+        const open = openFolders.has(f);
+        const box = h('div', { class: 'folder-children', hidden: !open }, kids.map((k) => folderBtn(k, CF.shortName(k), count(k), { child: true })));
+        const toggle = h('button', { class: 'folder-toggle', type: 'button', 'data-ro-ok': 'true', 'aria-expanded': String(open), title: open ? `Hide ${kids.map(CF.shortName).join(' and ')}` : `Show ${kids.map(CF.shortName).join(' and ')}` },
+          I(open ? 'chevron-down' : 'chevron-right'), h('span', { class: 'sr-only' }, `${f}: sub-folders`));
+        toggle.addEventListener('click', (e) => {
+          e.preventDefault();
+          const now = box.hidden;
+          box.hidden = !now;
+          if (now) openFolders.add(f); else openFolders.delete(f);
+          toggle.setAttribute('aria-expanded', String(now));
+          toggle.replaceChildren(I(now ? 'chevron-down' : 'chevron-right'), h('span', { class: 'sr-only' }, `${f}: sub-folders`));
+        });
+        btn.classList.add('has-children');
+        return h('div', { class: 'folder-parent' }, h('div', { class: 'folder-parent-row' }, btn, toggle), box);
+      }),
       unsorted.length ? folderBtn('unsorted', 'Unsorted', unsorted.length) : null,
       archived ? null : h('button', { class: 'btn small ghost folder-reset', type: 'button', icon: 'list-check', title: 'Put the folders in your own order, with up and down buttons. You can also drag a folder in this list.', onclick: async () => {
         const order = await arrangeFoldersDialog(ordered.filter(visible));
@@ -1673,7 +1760,6 @@
    * ===================================================================== */
 
   async function showVaultPanel(section = null) {
-    if (section) setTimeout(() => { const el = dialogEl.querySelector(`.vault-content [data-section="${section}"]`); if (el) el.scrollIntoView({ block: 'start' }); }, 50);
     if (!state.connected) return;
     let backups = [];
     try { backups = await Vault.listBackups(); } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
@@ -1756,6 +1842,14 @@
       }, { root: scroller, rootMargin: '0px 0px -70% 0px' });
       sections.forEach((sec) => spy.observe(sec));
       nav.firstChild.classList.add('active');
+      // Open at one section (Menu → Library): scroll to it once the panel is on screen, and mark
+      // it in the list on the left.
+      if (section) setTimeout(() => {
+        const el = scroller.querySelector(`[data-section="${section}"]`);
+        if (!el) return;
+        el.scrollIntoView({ block: 'start' });
+        setTimeout(() => { for (const b of nav.children) b.classList.toggle('active', b.dataset.target === section); }, 200);
+      }, 60);
       return h('div', { class: 'vault-panel' },
         h('div', { class: 'vault-panel-head' }, h('span', { class: 'vault-badge' }, I('safe2')), h('div', {}, h('h2', {}, 'Vault'), h('p', { class: 'muted small explain' }, `${Vault.root.name} · ${v.cases.length} case${v.cases.length === 1 ? '' : 's'}`)),
           h('div', { class: 'spacer' }), h('button', { class: 'btn primary', type: 'button', icon: 'check2', onclick: () => close() }, 'Done')),
@@ -1794,7 +1888,7 @@
     await dialog;
   }
 
-  // "My details": the affiant profile that fills {{affiant.*}} in templates. Saved in vault.json.
+  // "My Profile": the affiant profile that fills {{affiant.*}} in templates. Saved in vault.json.
   function affiantSettings(v) {
     const a = v.settings.affiant || {};
     const LABELS = { name: 'Name', title: 'Title or rank', agency: 'Agency', address: 'Address', phone: 'Phone', email: 'Email' };
@@ -1803,7 +1897,7 @@
     const save = () => {
       const next = {};
       for (const k of CVDraft.AFFIANT_FIELDS) next[k] = inputs[k].value.trim();
-      Save.track('settings', () => Vault.updateSettings({ affiant: next })).catch(() => {});
+      return Save.track('settings', () => Vault.updateSettings({ affiant: next }));
     };
     const rows = CVDraft.AFFIANT_FIELDS.map((k) => {
       const id = `affiant-${k}`;
@@ -1811,13 +1905,17 @@
         ? h('textarea', { id, rows: 3, autocomplete: 'off', class: 'affiant-wide' })
         : h('input', { id, type: TYPES[k] || 'text', autocomplete: 'off' });
       inputs[k].value = a[k] || '';
-      inputs[k].addEventListener('change', save);
+      inputs[k].addEventListener('change', () => { save().catch(() => {}); });
       return h('div', { class: `field${k === 'address' ? ' affiant-address' : ''}`, title: `Fills {{affiant.${k}}} in templates.` }, h('label', { for: id }, LABELS[k]), inputs[k]);
     });
     return h('section', { 'data-section': 'affiant' },
-      h('h3', {}, 'My details'),
+      h('h3', {}, 'My Profile'),
       h('p', { class: 'muted small explain' }, 'Filled into templates wherever they say ', h('code', {}, '{{affiant.name}}'), ' and so on. Anything left empty becomes a [CONFIRM: ...] placeholder. Stored in vault.json on the SSD.'),
-      h('div', { class: 'affiant-grid' }, rows));
+      h('div', { class: 'affiant-grid' }, rows),
+      h('div', { class: 'row profile-actions' }, h('div', { class: 'spacer' }),
+        h('button', { class: 'btn primary', type: 'button', icon: 'save', title: 'Save your profile to vault.json on the SSD. Each box also saves when you leave it.', onclick: async () => {
+          try { await save(); toast('Profile saved to the SSD.', 'success'); } catch { /* reported by Save */ }
+        } }, 'Save changes')));
   }
 
   // Privacy screen settings, shown inside the Vault panel. The PIN form is inline because the app
@@ -1874,6 +1972,30 @@
   }
 
   $('#btn-vault').addEventListener('click', () => showVaultPanel());
+  $('#btn-library').addEventListener('click', () => showVaultPanel('library'));
+  $('#btn-options').addEventListener('click', () => CVOptions.open(window.CaseVaultUI));
+  $('#btn-contact-dev').addEventListener('click', () => CVOptions.contactDev(window.CaseVaultUI));
+
+  // The menu (top right): Reference, Library, Vault, Theme, Options, Contact Dev.
+  const menuBtn = $('#btn-menu');
+  const menu = $('#app-menu');
+  menuBtn.append(I('list'));
+  const setMenu = (open, focus = false) => {
+    menu.hidden = !open;
+    menuBtn.setAttribute('aria-expanded', String(open));
+    if (open && focus) menu.querySelector('.menu-item').focus();
+  };
+  menuBtn.addEventListener('click', () => setMenu(menu.hidden, true));
+  // Choosing an item closes the menu (the theme item stays open, so you can click through the themes).
+  menu.addEventListener('click', (e) => { const item = e.target.closest('.menu-item'); if (item && item.id !== 'btn-theme') setMenu(false); });
+  menu.addEventListener('keydown', (e) => {
+    const items = [...menu.querySelectorAll('.menu-item')];
+    const i = items.indexOf(document.activeElement);
+    if (e.key === 'Escape') { e.preventDefault(); setMenu(false); menuBtn.focus(); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+  });
+  document.addEventListener('pointerdown', (e) => { if (!menu.hidden && !e.target.closest('.menu-wrap')) setMenu(false); }, true);
   $('#btn-reference').addEventListener('click', () => { location.hash = '#/reference'; });
   $('#btn-chat').addEventListener('click', () => CVChatUI.toggle());
 
@@ -1881,7 +2003,7 @@
   function drawThemeButton() {
     const t = CVTheme.get();
     const btn = $('#btn-theme');
-    btn.replaceChildren(I(t === 'auto' ? 'circle-half' : t === 'dark' ? 'moon-stars-fill' : 'sun-fill'), h('span', { class: 'sr-only' }, CVTheme.LABELS[t]));
+    btn.replaceChildren(I(t === 'auto' ? 'circle-half' : t === 'dark' ? 'moon-stars-fill' : 'sun-fill'), h('span', {}, `Theme: ${{ auto: 'Automatic', light: 'Light', dark: 'Dark' }[t]}`));
     btn.title = `${CVTheme.LABELS[t]}. Click to change.`;
   }
   $('#btn-theme').addEventListener('click', () => { CVTheme.next(); toast(CVTheme.LABELS[CVTheme.get()], 'info', 1800); });

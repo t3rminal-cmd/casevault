@@ -138,6 +138,64 @@
 
   /* ---------------- page wiring (browser) ---------------- */
 
+  // Falling 1s and 0s in blue on white, like "the Matrix" but light. Stops when hidden; with
+  // "reduce motion" in Windows it draws one still frame.
+  function matrixRain(canvas, win) {
+    const ctx = canvas.getContext && canvas.getContext('2d');
+    let raf = 0;
+    let drops = [];
+    let size = 18;
+    let last = 0;
+    const still = () => !!(win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    function resize() {
+      const dpr = win.devicePixelRatio || 1;
+      canvas.width = Math.floor(win.innerWidth * dpr);
+      canvas.height = Math.floor(win.innerHeight * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      size = win.innerWidth < 600 ? 14 : 18;
+      const cols = Math.ceil(win.innerWidth / size);
+      drops = Array.from({ length: cols }, () => Math.floor(Math.random() * -40));
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, win.innerWidth, win.innerHeight);
+    }
+    function frame(t) {
+      raf = win.requestAnimationFrame(frame);
+      if (t - last < 55) return; // about 18 frames a second is enough, and light on the CPU
+      last = t;
+      step();
+    }
+    function step() {
+      // A translucent white wash leaves fading trails behind each falling digit.
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.fillRect(0, 0, win.innerWidth, win.innerHeight);
+      ctx.font = `${size}px ui-monospace, Consolas, "Courier New", monospace`;
+      for (let i = 0; i < drops.length; i++) {
+        const y = drops[i] * size;
+        if (y > 0) {
+          ctx.fillStyle = Math.random() < 0.08 ? '#93c5fd' : '#1d4ed8';
+          ctx.fillText(Math.random() < 0.5 ? '0' : '1', i * size, y);
+        }
+        if (y > win.innerHeight && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+      }
+    }
+    const onResize = () => resize();
+    return {
+      start() {
+        if (!ctx || raf) return;
+        resize();
+        win.addEventListener('resize', onResize);
+        if (still()) { for (let k = 0; k < 60; k++) step(); return; }
+        raf = win.requestAnimationFrame(frame);
+      },
+      stop() {
+        if (raf) win.cancelAnimationFrame(raf);
+        raf = 0;
+        win.removeEventListener('resize', onResize);
+      },
+    };
+  }
+
   let controller = null;
 
   function init({ flush, getPinRecord, getIdleMinutes, button }) {
@@ -155,9 +213,28 @@
     msg.className = 'privacy-msg';
     const hint = doc.createElement('p');
     hint.className = 'privacy-hint';
-    form.append(input, msg);
-    dlg.append(form, hint);
+    // The PIN box looks like a terminal prompt: "PIN> ••••" and a blinking blue block cursor. The
+    // real input sits on top of it, invisible, so typing, pasting and screen readers still work.
+    const line = doc.createElement('div');
+    line.className = 'privacy-prompt';
+    const prompt = doc.createElement('span');
+    prompt.className = 'privacy-ps1';
+    prompt.textContent = 'PIN>';
+    const dots = doc.createElement('span');
+    dots.className = 'privacy-dots';
+    const cursor = doc.createElement('span');
+    cursor.className = 'privacy-cursor';
+    cursor.setAttribute('aria-hidden', 'true');
+    line.append(prompt, dots, cursor, input);
+    const showDots = () => { dots.textContent = '•'.repeat(input.value.length); };
+    input.addEventListener('input', showDots);
+    form.append(line, msg);
+    const canvas = doc.createElement('canvas');
+    canvas.className = 'privacy-rain';
+    canvas.setAttribute('aria-hidden', 'true');
+    dlg.append(canvas, form, hint);
     doc.body.append(dlg);
+    const rain = matrixRain(canvas, root);
 
     let needsPin = false;
     const iconLink = () => doc.querySelector('link[rel~="icon"]');
@@ -166,13 +243,15 @@
       show(pin) {
         needsPin = pin;
         input.value = '';
+        dots.textContent = '';
         msg.textContent = '';
         form.hidden = !pin;
         hint.textContent = pin ? '' : 'Click anywhere to continue';
         if (!dlg.open) dlg.showModal(); // top layer: covers everything, including open dialogs
+        rain.start();
         if (pin) input.focus(); else dlg.focus();
       },
-      hide() { if (dlg.open) dlg.close(); },
+      hide() { rain.stop(); if (dlg.open) dlg.close(); },
       getTitle: () => doc.title,
       setTitle: (t) => { doc.title = t; },
       getIcon: () => (iconLink() ? iconLink().getAttribute('href') : null),
@@ -190,6 +269,7 @@
       const r = await controller.unlock(input.value);
       if (r.ok) return;
       input.value = '';
+      dots.textContent = '';
       msg.textContent = r.reason === 'wait' ? `Too many attempts. Try again in ${Math.ceil(r.waitMs / 1000)} s.` : 'Wrong PIN.';
       input.focus();
     };

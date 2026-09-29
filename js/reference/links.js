@@ -18,14 +18,11 @@
 
   // Built in. Reference links open CaseVault's own pages; the others open a web page in a new tab.
   const DEFAULTS = [
-    { id: 'ref-incident', tab: 'reference', name: 'Incident location codes', hash: '#/reference/incident', icon: 'geo-alt', note: 'Location codes by place type. Click a code to copy it.' },
-    { id: 'ref-ucr', tab: 'reference', name: 'Commonly used UCR', hash: '#/reference/ucr', icon: 'journal-text', note: 'UCR codes by category. Search by code or offense.' },
-    { id: 'ref-narcotics', tab: 'reference', name: 'Narcotic calculator', hash: '#/reference/narcotics', icon: 'calculator-fill', note: 'Street value calculator and value chart, HIDTA 2022.' },
-    { id: 'osint-maxmind', tab: 'osint', name: 'MaxMind IP lookup', url: 'https://www.maxmind.com/en/geoip-demo', icon: 'globe2', note: 'Where an IP address is: city, ISP and organisation.' },
-    { id: 'osint-numlookup', tab: 'osint', name: 'NumLookup', url: 'https://www.numlookup.com/', icon: 'telephone', note: 'Reverse phone number lookup: carrier and owner name.' },
-    { id: 'osint-google-images', tab: 'osint', name: 'Google Images', url: 'https://images.google.com/', icon: 'image', note: 'Reverse image search: upload a photo or paste its address.' },
-    { id: 'osint-blockchair', tab: 'osint', name: 'Blockchair', url: 'https://blockchair.com/', icon: 'currency-bitcoin', note: 'Explorer for many blockchains: Bitcoin, Ethereum, Litecoin and more.' },
-    { id: 'osint-fingerprint', tab: 'osint', name: 'Fingerprint', url: 'https://fingerprint.com/demo/', icon: 'fingerprint', note: 'Browser and device fingerprint demo.' },
+    { id: 'ref-incident', tab: 'reference', name: 'Location Codes', hash: '#/reference/incident', icon: 'geo-alt', note: 'Location codes by place type. Click a code to copy it.' },
+    { id: 'ref-ucr', tab: 'reference', name: 'Common UCR', hash: '#/reference/ucr', icon: 'journal-text', note: 'UCR codes by category. Search by code or offense.' },
+    { id: 'ref-narcotics', tab: 'reference', name: 'Narcotic Calculator', hash: '#/reference/narcotics', icon: 'calculator-fill', note: 'Street value calculator and value chart, HIDTA 2022.' },
+    { id: 'osint-maxmind', tab: 'osint', name: 'MaxMind IP', url: 'https://www.maxmind.com/en/geoip-demo', icon: 'globe2', note: 'Where an IP address is: city, ISP and organisation.' },
+    { id: 'osint-fingerprint', tab: 'osint', name: 'Fingerprint.io', url: 'https://fingerprint.com/demo/', icon: 'fingerprint', note: 'Browser and device fingerprint demo.' },
     { id: 'leo-accurint', tab: 'leo', name: 'Accurint', url: 'https://www.accurint.com/', icon: 'person-lines-fill', note: 'LexisNexis Accurint for law enforcement, with your account.' },
     { id: 'leo-kodex', tab: 'leo', name: 'Kodex Portal', url: 'https://www.kodexglobal.com/', icon: 'send', note: 'Legal process and emergency requests to online platforms, with your account. Change the address to your portal\'s login page if it differs.' },
     { id: 'leo-chicago-hidta', tab: 'leo', name: 'Chicago HIDTA', url: '', icon: 'building', note: 'Add your Chicago HIDTA portal\'s web address in Vault → Quick links.' },
@@ -63,7 +60,11 @@
     return out;
   }
 
-  const api = { TABS, DEFAULTS, cleanUrl, linksOf };
+  // Menu → Contact Dev: where "Open the bug report form" goes unless you set your own form in
+  // that dialog. It opens in a new browser tab; CaseVault sends nothing to it.
+  const BUG_REPORT_URL = 'https://github.com/t3rminal-cmd/casevault/issues/new';
+
+  const api = { TABS, DEFAULTS, cleanUrl, linksOf, BUG_REPORT_URL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVLinks = api;
 })(this);

@@ -13,9 +13,9 @@
   const LK = () => root.CVLinks;
 
   const SECTIONS = [
-    { key: 'narcotics', title: 'Narcotic calculator', icon: 'calculator-fill', blurb: 'Street value calculator and value chart, HIDTA 2022.' },
-    { key: 'incident', title: 'Incident location codes', icon: 'geo-alt', blurb: 'Location codes by place type. Click a code to copy it.' },
-    { key: 'ucr', title: 'Commonly used UCR', icon: 'journal-text', blurb: 'UCR codes by category. Search by code or offense.' },
+    { key: 'narcotics', title: 'Narcotic Calculator', icon: 'calculator-fill', blurb: 'Street value calculator and value chart, HIDTA 2022.' },
+    { key: 'incident', title: 'Location Codes', icon: 'geo-alt', blurb: 'Location codes by place type. Click a code to copy it.' },
+    { key: 'ucr', title: 'Common UCR', icon: 'journal-text', blurb: 'UCR codes by category. Search by code or offense.' },
   ];
 
   // This window only.

@@ -15,13 +15,19 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.13)
+## Features (v1.14)
 
+- **A clean header**: logo and where the data is saved on the left, status icons in the middle (offline/online, AI model, memory, saved to SSD; details on hover), Ask AI, Hide and a **menu** on the right (Reference, Library, Vault, Theme, Options, Contact Dev)
+- **Options**: zoom and brightness per PC, and **Dev Tools → Make it fictitious**, which swaps names, phone numbers, addresses and other personal details in a real template or report for fillers (John Doe, 555-0100…), with an optional local-AI pass, then saves it as a template or to the Library
+- **Contact Dev**: a bug report by email or web form, with the app version, that refuses to send case details
+- **Suspects** (name, DOB with the age worked out, residence, role) and an **agency case number** on the Details tab; client is State, Federal or Other; `{{suspect.*}}` in templates
+- A case list with a status icon, a **red bell** for overdue or near deadlines, and the numbers and client under the title
+- A **matrix-rain** privacy screen (blue 1s and 0s on white) with a terminal-style PIN prompt
 - **Contacts** on each case's Details tab: case officer, ASA/AUSA, and others (finance, asset forfeiture, narcotic team supervisor…), with email and phone; usable in templates
 - **Ask AI**: a floating chat with the AI on this computer, like claude.ai but offline, that stays open while you write drafts or notes (Insert puts an answer at your cursor); pick any installed model (including a less-filtered one, see docs/AI-SETUP.md) and optionally a case, whose details, timeline, notes and file passages go with each question; save the conversation to a case
 - **The LE Cyber-Docs look**: icons throughout (bundled Bootstrap Icons), the Poppins font, rounded cards, and **light / dark / automatic** themes with a switch in the header; a Vault settings panel with a section list
 - **Reference** (from LE Cyber-Docs): narcotic **value calculator** and **street value chart** (HIDTA 2022), **incident location codes** and **commonly used UCR** codes
-- **Quick links** at the bottom of the Overview: Reference, **OSINT** (MaxMind, NumLookup, Google Images, Blockchair, Fingerprint) and **LEO** (Accurint, Kodex, Chicago HIDTA, your own); hide any, edit addresses, add your own; they open in a new tab and CaseVault never contacts them
+- **Quick links** at the bottom of the Overview: Reference, **OSINT** (MaxMind IP, Fingerprint.io) and **LEO** (Accurint, Kodex, Chicago HIDTA, your own); hide any, edit addresses, add your own; they open in a new tab and CaseVault never contacts them
 - **Library for the AI** (Vault → Library): sample DEA-6/7/202 reports, warrants and directives the AI learns to write from (never their facts), and editable **writing behaviors** with **DEA-6 style** as the default
 - Hover boxes explain every button, and an ⓘ holds each longer explanation; file previews fill the window; the layout is centred and symmetric from a phone to 1920×1080 and up
 - Cases with a **file number** (shared by several cases) and a **case number**, client, status, tags, and opened/closed dates; search and filter
@@ -118,6 +124,7 @@ CaseVault-Data/
 | `js/library.js`, `js/library-ui.js` | The Library the AI learns from, and the writing behaviors (DEA-6 by default) |
 | `js/ai/chat.js`, `js/ai/chat-ui.js` | Ask AI: the chat's messages and case material, and the floating chat box |
 | `js/timefield.js` | Time boxes: type a time or pick it and press Set time |
+| `js/options.js` | Menu → Options (zoom, brightness, Dev Tools "Make it fictitious") and Contact Dev |
 | `js/format-bar.js` | The formatting bar over Notes and Drafts |
 | `js/tooltip.js` | Hover boxes for every button |
 | `js/closing.js`, `js/closing-ui.js` | Status rules, Pending follow-up, Close case (dispositions, loose ends), Reopen, the Arrest details tab and `{{arrest.*}}` / `{{closure.*}}` values |

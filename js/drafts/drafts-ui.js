@@ -56,7 +56,7 @@
       radio('blank', 'Blank'),
       radio('template', 'From a template', templates.length
         ? h('span', { class: 'block' }, tplSelect)
-        : h('span', { class: 'muted small block' }, 'No templates yet. ', h('button', { class: 'linkish', type: 'button', onclick: addStarters }, 'Add the generic starter templates'), ' or manage them under Vault → Templates.')),
+        : h('span', { class: 'muted small block' }, 'No templates yet. ', h('button', { class: 'linkish', type: 'button', onclick: addStarters }, 'Add the starter templates'), ' or manage them under Vault → Templates.')),
       radio('ai', 'Draft with AI', aiNote));
     drawStart();
 
@@ -697,8 +697,8 @@
         h('button', { class: 'btn small', type: 'button', onclick: () => edit('', '# New template\n\nCase No. {{case.number}}\n') }, 'New template'),
         h('button', { class: 'btn small', type: 'button', onclick: () => importInput.click() }, 'Import Word, .md or .txt…'),
         h('button', { class: 'btn small', type: 'button', onclick: async () => {
-          try { const added = await Save.track('templates', () => Vault.addStarterTemplates()); toast(added.length ? `Added ${added.length} generic starter template${added.length === 1 ? '' : 's'}.` : 'The starter templates are already there.', 'success'); draw(); } catch { /* reported */ }
-        } }, 'Add generic starter templates'),
+          try { const added = await Save.track('templates', () => Vault.addStarterTemplates()); toast(added.length ? `Added ${added.length} starter template${added.length === 1 ? '' : 's'}.` : 'The starter templates are already there.', 'success'); draw(); } catch { /* reported */ }
+        } }, 'Add starter templates'),
         importInput),
       editor);
   }
