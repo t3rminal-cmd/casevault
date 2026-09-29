@@ -23,6 +23,9 @@ calendar-event calendar-check flag card-checklist hash box-seam car-front map mi
 send paperclip question-circle lightbulb three-dots tools database fingerprint graph-up-arrow
 table bar-chart-line-fill cash-coin file-earmark-ruled clipboard2-data signpost-split
 box-arrow-left plug arrow-left-right collection bank2 building
+camera-video inbox type-bold type-italic type-underline type-h2 list-ul list-ol grip-vertical currency-bitcoin
+image person-lines-fill robot chat-left-text bookshelf link-45deg pin-angle eye-fill plus-square pencil-fill
+quote hr file-earmark-plus arrow-up arrow-down chevron-up
 `.trim().split(/\s+/);
 
 const dir = process.argv[2];

@@ -9,9 +9,14 @@ const { MemDirectoryHandle } = require('./helpers/mem-fs.js');
 
 const C = (number, opened = '2026-03-14') => ({ number, dates: { opened } });
 
-test('the fifteen document folders, in order', () => {
-  assert.deepStrictEqual(CF.FOLDERS, ['Affidavits', 'Arrest Report', 'Supplementary Report', 'Case Report', 'Deconfliction',
-    'Drug Exhibits', 'Other Exhibits', 'Email', 'Ops Plan', 'Subpoena Response', 'Subject Information', 'Recordings', 'Vehicle Information', 'Maps', 'Other']);
+test('the document folders, in order, with Recordings/Video and /Audio; Affidavits is legacy', () => {
+  assert.deepStrictEqual(CF.FOLDERS, ['Case Initiation', 'Affidavit Drafts', 'Affidavit Final', 'Warrant Drafts', 'Warrant Final', 'Warrants Signed',
+    'Arrest Report', 'Supplementary Report', 'Case Report', 'Deconfliction', 'Drug Exhibits', 'Other Exhibits', 'Email', 'Ops Plan',
+    'Subpoena Drafts', 'Subpoena Sent', 'Subpoena Response', 'Subject Information', 'Recordings', 'Recordings/Video', 'Recordings/Audio',
+    'Vehicle Information', 'Maps', 'Case Closing', 'Other']);
+  assert.ok(CF.isCategory('Affidavits') && !CF.FOLDERS.includes('Affidavits'));
+  assert.deepStrictEqual(CF.childrenOf('Recordings'), ['Recordings/Video', 'Recordings/Audio']);
+  assert.deepStrictEqual([CF.parentOf('Recordings/Audio'), CF.parentOf('Maps'), CF.shortName('Recordings/Video')], ['Recordings', null, 'Video']);
 });
 
 test('case prefix: <year opened>-<case number>', () => {
@@ -28,6 +33,9 @@ test('file names: prefix + document type (+ description) + extension', () => {
   assert.strictEqual(CF.fileName(C('00123'), 'Supplementary Report', 'x.docx', 'Det. Doe'), '2026-00123 Supplementary Report - Det. Doe.docx');
   assert.strictEqual(CF.fileName(C('00123'), 'Recordings', 'IMG_1.m4a'), '2026-00123 Recording.m4a');
   assert.strictEqual(CF.fileName(C('00123'), 'Affidavits', 'a.pdf'), '2026-00123 Affidavit.pdf');
+  assert.strictEqual(CF.fileName(C('00123'), 'Affidavit Drafts', 'a.docx'), '2026-00123 Affidavit Draft.docx');
+  assert.strictEqual(CF.fileName(C('00123'), 'Warrants Signed', 'w.pdf'), '2026-00123 Signed Warrant.pdf');
+  assert.strictEqual(CF.fileName(C('00123'), 'Recordings/Video', 'IMG_2.MOV'), '2026-00123 Video Recording.mov');
   assert.strictEqual(CF.fileName(C(''), 'Maps', 'area.png'), '2026-NOCASENO Map.png');
   assert.ok(CF.followsConvention(C('00123'), 'Arrest Report', '2026-00123 Arrest Report (2).pdf'));
   assert.ok(!CF.followsConvention(C('00123'), 'Arrest Report', 'scan.pdf'));
@@ -36,11 +44,14 @@ test('file names: prefix + document type (+ description) + extension', () => {
 
 test('document type is guessed from the original file name', () => {
   const cases = {
-    'PC Affidavit draft.docx': 'Affidavits', 'Arrest report - Doe.pdf': 'Arrest Report', 'Supp 2.pdf': 'Supplementary Report',
+    'PC Affidavit draft.docx': 'Affidavit Drafts', 'Affidavit signed.pdf': 'Affidavit Final', 'search warrant signed.pdf': 'Warrants Signed',
+    'warrant draft v2.docx': 'Warrant Drafts', 'Search Warrant.pdf': 'Warrant Final', 'subpoena draft.docx': 'Subpoena Drafts',
+    'Subpoena to Example Bank.pdf': 'Subpoena Sent', 'Case initiation memo.pdf': 'Case Initiation', 'case closing report.pdf': 'Case Closing',
+    'jail call 3.wav': 'Recordings/Audio', 'Arrest report - Doe.pdf': 'Arrest Report', 'Supp 2.pdf': 'Supplementary Report',
     'Supplemental Report.pdf': 'Supplementary Report', 'incident report.pdf': 'Case Report', 'deconfliction-results.pdf': 'Deconfliction',
     'Lab results exhibit 4.pdf': 'Drug Exhibits', 'FW message.eml': 'Email', 'Ops Plan v2.docx': 'Ops Plan',
-    'Subpoena return bank.pdf': 'Subpoena Response', 'subject photo.jpg': 'Subject Information', 'interview.mp3': 'Recordings',
-    'bodycam.mp4': 'Recordings', 'vehicle registration.pdf': 'Vehicle Information', 'area map.png': 'Maps', 'random.txt': 'Other',
+    'Subpoena return bank.pdf': 'Subpoena Response', 'subject photo.jpg': 'Subject Information', 'interview.mp3': 'Recordings/Audio',
+    'bodycam.mp4': 'Recordings/Video', 'interview notes recording': 'Recordings', 'vehicle registration.pdf': 'Vehicle Information', 'area map.png': 'Maps', 'random.txt': 'Other',
   };
   for (const [name, want] of Object.entries(cases)) assert.strictEqual(CF.guessFolder(name), want, name);
 });
@@ -48,6 +59,7 @@ test('document type is guessed from the original file name', () => {
 test('paths split into folder and file name; files from older versions are unsorted', () => {
   assert.deepStrictEqual(CF.splitPath('Arrest Report/2026-1 Arrest Report.pdf'), { folder: 'Arrest Report', base: '2026-1 Arrest Report.pdf' });
   assert.deepStrictEqual(CF.splitPath('old.pdf'), { folder: '', base: 'old.pdf' });
+  assert.deepStrictEqual(CF.splitPath('Recordings/Video/2026-1 Video Recording.mp4'), { folder: 'Recordings/Video', base: '2026-1 Video Recording.mp4' });
   assert.strictEqual(CF.joinPath('', 'old.pdf'), 'old.pdf');
 });
 
@@ -80,7 +92,9 @@ test('a new case is named 2026-<CaseNo>, with all fourteen document folders', as
   assert.match(n.id, /^\d{8}-[0-9a-z]{6}$/);
   const files = await (await (await dir.getDirectoryHandle('cases')).getDirectoryHandle('2026-00123')).getDirectoryHandle('files');
   const names = []; for await (const k of files.keys()) names.push(k);
-  assert.deepStrictEqual(names.sort(), [...CF.FOLDERS].sort());
+  assert.deepStrictEqual(names.sort(), CF.FOLDERS.filter((f) => !f.includes('/')).sort());
+  const rec = []; for await (const k of (await files.getDirectoryHandle('Recordings')).keys()) rec.push(k);
+  assert.deepStrictEqual(rec.sort(), ['Audio', 'Video']);
 });
 
 test('files are saved into their folder and named by the convention; moving renames them', async () => {
@@ -159,4 +173,17 @@ test('Other Exhibits: its own folder, named "Exhibit", guessed from evidence wor
   assert.strictEqual(CF.guessFolder('firearm trace.pdf'), 'Other Exhibits');
   assert.strictEqual(CF.guessFolder('drug exhibits log.xlsx'), 'Drug Exhibits');
   assert.strictEqual(CF.guessFolder('Lab results exhibit 4.pdf'), 'Drug Exhibits');
+});
+
+test('sub-folders: files in Recordings/Video are listed, moved and read back', async () => {
+  const { Vault } = await freshVault();
+  const c = await Vault.createCase({ title: 'R', number: '00888', opened: '2026-09-01' });
+  const v = await Vault.addFile(c.id, new File(['vid'], 'cam.mp4'), { folder: 'Recordings/Video' });
+  assert.strictEqual(v, 'Recordings/Video/2026-00888 Video Recording.mp4');
+  const a = await Vault.addFile(c.id, new File(['aud'], 'call.mp3'), { folder: 'Recordings' });
+  const moved = await Vault.moveFile(c.id, a, 'Recordings/Audio');
+  assert.strictEqual(moved, 'Recordings/Audio/2026-00888 Audio Recording.mp3');
+  const list = await Vault.listFiles(c.id);
+  assert.deepStrictEqual(list.map((f) => [f.folder, f.base]), [['Recordings/Video', '2026-00888 Video Recording.mp4'], ['Recordings/Audio', '2026-00888 Audio Recording.mp3']]);
+  assert.strictEqual(await (await Vault.readFile(c.id, v)).text(), 'vid');
 });

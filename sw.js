@@ -25,6 +25,7 @@ const APP_FILES = [
   './js/theme.js',
   './js/icons-data.js',
   './js/icons.js',
+  './js/tooltip.js',
   './js/fs.js',
   './js/helper-fs.js',
   './js/casefiles.js',

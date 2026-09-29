@@ -2,7 +2,7 @@
  *
  * Every case's files/ folder is split into the same document folders:
  *
- *   files/Affidavits, files/Arrest Report, files/Supplementary Report, ... files/Other
+ *   files/Case Initiation, files/Affidavit Drafts, ... files/Recordings/Video, ... files/Other
  *
  * The case folder is named <year>-<case number>, e.g. 2026-00123 (year of the Opened date), and
  * every file saved into a case is named after it and its document type:
@@ -14,9 +14,17 @@
 'use strict';
 
 (function (root) {
-  // folder: the sub-folder of files/ · label: the document type in the file name
+  // folder: the sub-folder of files/ · label: the document type in the file name.
+  // "Recordings/Video" is a sub-folder of Recordings. legacy: kept for files saved by older
+  // versions (shown only when it holds files, never offered for new files).
   const CATEGORIES = [
-    { folder: 'Affidavits', label: 'Affidavit' },
+    { folder: 'Case Initiation', label: 'Case Initiation' },
+    { folder: 'Affidavit Drafts', label: 'Affidavit Draft' },
+    { folder: 'Affidavit Final', label: 'Affidavit' },
+    { folder: 'Affidavits', label: 'Affidavit', legacy: true },
+    { folder: 'Warrant Drafts', label: 'Warrant Draft' },
+    { folder: 'Warrant Final', label: 'Warrant' },
+    { folder: 'Warrants Signed', label: 'Signed Warrant' },
     { folder: 'Arrest Report', label: 'Arrest Report' },
     { folder: 'Supplementary Report', label: 'Supplementary Report' },
     { folder: 'Case Report', label: 'Case Report' },
@@ -25,20 +33,34 @@
     { folder: 'Other Exhibits', label: 'Exhibit' },
     { folder: 'Email', label: 'Email' },
     { folder: 'Ops Plan', label: 'Ops Plan' },
+    { folder: 'Subpoena Drafts', label: 'Subpoena Draft' },
+    { folder: 'Subpoena Sent', label: 'Subpoena' },
     { folder: 'Subpoena Response', label: 'Subpoena Response' },
     { folder: 'Subject Information', label: 'Subject Information' },
     { folder: 'Recordings', label: 'Recording' },
+    { folder: 'Recordings/Video', label: 'Video Recording' },
+    { folder: 'Recordings/Audio', label: 'Audio Recording' },
     { folder: 'Vehicle Information', label: 'Vehicle Information' },
     { folder: 'Maps', label: 'Map' },
+    { folder: 'Case Closing', label: 'Case Closing' },
     { folder: 'Other', label: 'Other' },
   ];
-  const FOLDERS = CATEGORIES.map((c) => c.folder);
+  /** The folders for new files (and created in every new case). */
+  const FOLDERS = CATEGORIES.filter((c) => !c.legacy).map((c) => c.folder);
+  /** Every folder CaseVault reads, including the legacy ones. */
+  const ALL_FOLDERS = CATEGORIES.map((c) => c.folder);
   // Files from older versions sit directly in files/, outside every category.
   const UNSORTED = '';
   const REPORT_FOLDERS = new Set(['Arrest Report', 'Supplementary Report', 'Case Report']);
+  /** "Recordings/Video" -> "Recordings"; a top-level folder -> null. */
+  const parentOf = (folder) => { const i = String(folder).lastIndexOf('/'); return i < 0 ? null : folder.slice(0, i); };
+  /** The name shown in the folder list: "Video" for "Recordings/Video". */
+  const shortName = (folder) => String(folder).split('/').pop();
+  /** Sub-folders of a folder: "Recordings" -> ["Recordings/Video", "Recordings/Audio"]. */
+  const childrenOf = (folder) => ALL_FOLDERS.filter((f) => parentOf(f) === folder);
 
   const byFolder = (folder) => CATEGORIES.find((c) => c.folder === folder) || null;
-  const isCategory = (folder) => FOLDERS.includes(folder);
+  const isCategory = (folder) => ALL_FOLDERS.includes(folder);
 
   // Windows-safe piece of a file name (same rules as FS.safeName, without the length handling).
   function clean(s) {
@@ -103,11 +125,19 @@
 
   // Best guess of the document type from the original file name. Returns a folder, or 'Other'.
   const GUESSES = [
-    [/affidavit|affid\b|\bpc[ _-]?aff|probable[ _-]?cause|declaration/i, 'Affidavits'],
+    [/case[ _-]?(initiat|open)|initiation|opening[ _-]?(memo|report)/i, 'Case Initiation'],
+    [/case[ _-]?clos|closing[ _-]?(memo|report)/i, 'Case Closing'],
+    [/(affidavit|affid\b|\bpc[ _-]?aff|probable[ _-]?cause|declaration).*(draft|v\d|\bdft\b)|draft.*(affidavit|affid\b)/i, 'Affidavit Drafts'],
+    [/affidavit|affid\b|\bpc[ _-]?aff|probable[ _-]?cause|declaration/i, 'Affidavit Final'],
+    [/signed.*warrant|warrant.*signed|executed.*warrant|warrant.*(return|executed)/i, 'Warrants Signed'],
+    [/warrant.*(draft|v\d|\bdft\b)|draft.*warrant/i, 'Warrant Drafts'],
+    [/warrant/i, 'Warrant Final'],
     [/supp(lement(al|ary)?)?[ _-]?(rpt|report)?\b|\bsupp\b/i, 'Supplementary Report'],
     [/arrest/i, 'Arrest Report'],
     [/deconflict/i, 'Deconfliction'],
-    [/subpoena/i, 'Subpoena Response'],
+    [/subpoena.*(response|return|records|produc)|(response|return|records).*subpoena/i, 'Subpoena Response'],
+    [/subpoena.*draft|draft.*subpoena/i, 'Subpoena Drafts'],
+    [/subpoena/i, 'Subpoena Sent'],
     [/ops?[ _-]?plan|operations?[ _-]?plan|op[ _-]?order/i, 'Ops Plan'],
     [/drug|lab[ _-]?(report|result)|narcotic|cocaine|heroin|fentanyl|meth|marijuana|cannabis|controlled[ _-]?substance/i, 'Drug Exhibits'],
     [/exhibit|evidence|property|firearm|weapon|gun|knife|ammo|ammunition|latent|fingerprint|dna/i, 'Other Exhibits'],
@@ -115,7 +145,9 @@
     [/subject|suspect|criminal[ _-]?history|rap[ _-]?sheet|\bncic\b|\bdl\b|booking|mugshot|photo[ _-]?line/i, 'Subject Information'],
     [/\bmap\b|maps|\.kmz?$|\.gpx$|aerial|satellite/i, 'Maps'],
     [/\.(eml|msg)$|e-?mail/i, 'Email'],
-    [/\.(mp3|wav|m4a|wma|aac|ogg|flac|mp4|mov|avi|wmv|mkv|webm|3gp)$|recording|interview|audio|video|bodycam|bwc|jail[ _-]?call/i, 'Recordings'],
+    [/\.(mp4|mov|avi|wmv|mkv|webm|3gp|m4v)$|video|bodycam|\bbwc\b|dashcam|cctv/i, 'Recordings/Video'],
+    [/\.(mp3|wav|m4a|wma|aac|ogg|flac|amr)$|audio|jail[ _-]?call|voicemail/i, 'Recordings/Audio'],
+    [/recording|interview/i, 'Recordings'],
     [/case[ _-]?(report|rpt)|incident[ _-]?report|offense[ _-]?report|\bir\b|report/i, 'Case Report'],
   ];
 
@@ -128,7 +160,7 @@
   /** "Arrest Report/2026-00123 Arrest Report.pdf" -> { folder: 'Arrest Report', base: '2026-00123 Arrest Report.pdf' } */
   function splitPath(path) {
     const s = String(path || '');
-    const i = s.indexOf('/');
+    const i = s.lastIndexOf('/'); // folders can be "Recordings/Video"; file names never hold a slash
     return i < 0 ? { folder: UNSORTED, base: s } : { folder: s.slice(0, i), base: s.slice(i + 1) };
   }
   const joinPath = (folder, base) => (folder ? `${folder}/${base}` : base);
@@ -140,7 +172,7 @@
   }
 
   const api = {
-    CATEGORIES, FOLDERS, UNSORTED, REPORT_FOLDERS,
+    CATEGORIES, FOLDERS, ALL_FOLDERS, UNSORTED, REPORT_FOLDERS, parentOf, shortName, childrenOf,
     byFolder, isCategory, casePrefix, caseFolderName, fileName, followsConvention, guessFolder,
     splitPath, joinPath, prefixInName, clean, extOf,
   };

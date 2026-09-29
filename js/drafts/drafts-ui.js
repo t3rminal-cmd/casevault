@@ -233,7 +233,6 @@
       suggBox.hidden = false;
       const taRect = ta.getBoundingClientRect();
       const wrapRect = wrap.getBoundingClientRect();
-      const boxW = Math.min(suggBox.offsetWidth, wrapRect.width);
       // Vertical: window coordinates, limited to what is visible of both the editor and the window.
       const place = CVGhost.boxPlacement({
         caretTop: taRect.top + caret.top,
@@ -242,7 +241,9 @@
         limitTop: Math.max(0, taRect.top),
         limitBottom: Math.min(window.innerHeight, taRect.bottom),
       });
-      const left = Math.max(0, Math.min(taRect.left - wrapRect.left + caret.left - 12, wrapRect.width - boxW));
+      // Fixed size, lined up with the text's left edge: the box only moves down with the cursor
+      // line and never changes size while you type (v1.11).
+      const left = Math.max(0, taRect.left - wrapRect.left + (parseFloat(getComputedStyle(ta).paddingLeft) || 0) - 8);
       suggBox.style.top = `${Math.round(place.top - wrapRect.top)}px`;
       suggBox.style.left = `${Math.round(left)}px`;
       suggBox.classList.toggle('above', place.above);
@@ -369,7 +370,7 @@
       if (where === 'case') {
         try {
           // Filed by the case's naming convention: an affidavit draft becomes Affidavits\2026-00123 Affidavit - <title>.docx
-          const folder = { affidavit: 'Affidavits', summary: 'Case Report' }[meta.type] || 'Other';
+          const folder = { affidavit: 'Affidavit Drafts', subpoena: 'Subpoena Drafts', summary: 'Case Report', dea6: 'Case Report' }[meta.type] || 'Other';
           const description = folder === 'Other' || !/^(affidavit|case report)$/i.test((meta.title || '').trim()) ? (meta.title || '') : '';
           const name = await Save.track(`file:${c.id}:${docxName()}`, () => Vault.addFile(c.id, new File([bytes], docxName(), { type }), { folder, description }));
           // Remember exports so the draft's consistency check never compares the draft with its own copy.

@@ -300,7 +300,10 @@ const Vault = (() => {
 
   async function ensureCategoryFolders(dir) {
     const files = await FS.getDir(dir, 'files', true);
-    for (const folder of CVCaseFiles.FOLDERS) await FS.getDir(files, folder, true);
+    for (const folder of CVCaseFiles.FOLDERS) {
+      let dir = files;
+      for (const part of folder.split('/')) dir = await FS.getDir(dir, part, true);
+    }
     return files;
   }
 
@@ -663,7 +666,12 @@ const Vault = (() => {
       err.name = 'TypeError';
       throw err;
     }
-    return (await FS.getDir(files, folder, create && !isArchived(id))) || emptyDir;
+    let dir = files;
+    for (const part of folder.split('/')) {
+      dir = await FS.getDir(dir, part, create && !isArchived(id));
+      if (!dir) return emptyDir;
+    }
+    return dir;
   }
 
   async function fileInfo(e, folder) {
@@ -680,10 +688,16 @@ const Vault = (() => {
     for (const e of await FS.list(dir)) {
       if (e.kind === 'file') out.push(await fileInfo(e, CVCaseFiles.UNSORTED));
       else if (e.kind === 'directory' && CVCaseFiles.isCategory(e.name)) {
-        for (const f of await FS.list(e.handle)) if (f.kind === 'file' && !f.name.startsWith('.')) out.push(await fileInfo(f, e.name));
+        for (const f of await FS.list(e.handle)) {
+          if (f.kind === 'file' && !f.name.startsWith('.')) out.push(await fileInfo(f, e.name));
+          // Sub-folders such as Recordings/Video.
+          else if (f.kind === 'directory' && CVCaseFiles.isCategory(`${e.name}/${f.name}`)) {
+            for (const g of await FS.list(f.handle)) if (g.kind === 'file' && !g.name.startsWith('.')) out.push(await fileInfo(g, `${e.name}/${f.name}`));
+          }
+        }
       }
     }
-    const order = (f) => (f.folder ? CVCaseFiles.FOLDERS.indexOf(f.folder) : 99);
+    const order = (f) => (f.folder ? CVCaseFiles.ALL_FOLDERS.indexOf(f.folder) : 999);
     const stem = (f) => f.base.replace(/\.[^.]{1,10}$/, ''); // "X.pdf" before "X (2).pdf"
     return out.sort((a, b) => order(a) - order(b) || stem(a).localeCompare(stem(b), undefined, { numeric: true }) || a.base.localeCompare(b.base));
   }
