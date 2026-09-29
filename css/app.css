@@ -572,7 +572,8 @@ button.quote:hover { border-color: var(--accent); }
 /* ---------- privacy screen ---------- */
 
 .privacy-screen {
-  /* A plain, neutral screen, like an empty new tab. Deliberately no text that names the app or a case. */
+  /* Blue 1s and 0s falling on white (a canvas), with a terminal-style PIN prompt. No text that
+   * names the app or a case. The same in light and dark theme. */
   position: fixed;
   inset: 0;
   width: 100vw;
@@ -582,23 +583,29 @@ button.quote:hover { border-color: var(--accent); }
   margin: 0;
   padding: 0;
   border: 0;
-  background: #f1f3f4;
-  color: #5f6368;
+  background: #ffffff;
+  color: #1d4ed8;
   display: grid;
   place-items: center;
   outline: none;
+  font-family: ui-monospace, Consolas, "Courier New", monospace;
+  overflow: hidden;
 }
 .privacy-screen:not([open]) { display: none; }
-.privacy-screen::backdrop { background: #f1f3f4; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .privacy-screen, :root:not([data-theme="light"]) .privacy-screen::backdrop { background: #202124; color: #9aa0a6; }
-}
-:root[data-theme="dark"] .privacy-screen, :root[data-theme="dark"] .privacy-screen::backdrop { background: #202124; color: #9aa0a6; }
-.privacy-unlock { display: grid; justify-items: center; gap: .4rem; }
-.privacy-unlock input { width: 7.5rem; text-align: center; letter-spacing: .3em; font-size: 1.1rem; background: transparent; border-color: currentColor; color: inherit; opacity: .6; }
-.privacy-unlock input:focus { opacity: 1; }
-.privacy-msg { min-height: 1.2em; margin: 0; font-size: .85rem; }
-.privacy-hint { position: fixed; bottom: 1.5rem; left: 0; right: 0; text-align: center; font-size: .8rem; opacity: .5; margin: 0; }
+.privacy-screen::backdrop { background: #ffffff; }
+.privacy-rain { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+.privacy-unlock { position: relative; z-index: 1; display: grid; justify-items: start; gap: .4rem; padding: 1rem 1.4rem; min-width: 16rem; background: rgba(255, 255, 255, .92); border: 1px solid #1d4ed8; border-radius: 4px; box-shadow: 0 0 0 4px rgba(29, 78, 216, .08); }
+.privacy-unlock[hidden] { display: none; }
+.privacy-prompt { position: relative; display: flex; align-items: center; gap: .6rem; font-size: 1.25rem; color: #1d4ed8; min-height: 1.8rem; }
+.privacy-ps1 { font-weight: 700; }
+.privacy-dots { letter-spacing: .25em; }
+.privacy-cursor { display: inline-block; width: .65em; height: 1.2em; background: #1d4ed8; animation: cv-blink 1s steps(1) infinite; margin-left: -.35rem; }
+@keyframes cv-blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .privacy-cursor { animation: none; } }
+.privacy-unlock .privacy-prompt input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; border: 0; cursor: text; font-size: 16px; }
+.privacy-msg { min-height: 1.2em; margin: 0; font-size: .85rem; color: #b91c1c; }
+.privacy-hint { position: fixed; z-index: 1; bottom: 1.5rem; left: 50%; transform: translateX(-50%); margin: 0; padding: .3rem .8rem; font-size: .85rem; color: #1d4ed8; background: rgba(255, 255, 255, .9); border: 1px solid rgba(29, 78, 216, .35); border-radius: 4px; }
+.privacy-hint:empty { display: none; }
 .hint { font-size: .85rem; background: var(--accent-soft); border-radius: 6px; padding: .5rem .7rem; }
 kbd { font-family: var(--mono); font-size: .8em; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 .35em; background: var(--surface-2); }
 input.pin { width: 6.5em; letter-spacing: .2em; }
@@ -760,7 +767,7 @@ input.pin { width: 6.5em; letter-spacing: .2em; }
 .folder-item { display: grid; grid-template-columns: 1.4rem 1fr auto; align-items: center; gap: .3rem; padding: .32rem .5rem; border-radius: 6px; color: var(--text); text-decoration: none; font-size: .9rem; }
 .folder-item:hover { background: var(--surface-2); }
 .folder-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-.folder-item:first-child { border-bottom: 1px solid var(--border); border-radius: 6px 6px 0 0; margin-bottom: .2rem; }
+.folder-nav > .folder-item:first-child { border-bottom: 1px solid var(--border); border-radius: 6px 6px 0 0; margin-bottom: .2rem; }
 .folder-icon { font-size: .95rem; }
 .folder-count { font-size: .8rem; font-variant-numeric: tabular-nums; }
 .pill.warn-pill { background: var(--warn-soft); color: var(--warn); margin-left: .4rem; font-size: .7rem; }
@@ -1456,3 +1463,106 @@ body.chat-open .toasts { right: auto; left: 1rem; }
 .time-colon { font-weight: 700; }
 .time-pop-actions { display: flex; gap: .35rem; justify-content: flex-end; }
 .time-pop-actions .time-set { margin-left: auto; }
+
+/* ---------- v1.14 top bar: brand and data folder on the left, status icons in the middle,
+ * Ask AI, Hide and the menu on the right. ---------- */
+.topbar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 1rem; }
+.tb-left, .tb-right { display: flex; align-items: center; gap: .4rem; min-width: 0; }
+.tb-right { justify-content: flex-end; }
+.brand { gap: .6rem; min-width: 0; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.brand-name { font-size: 1.05rem; }
+.topbar .vault-name, .topbar .vault-name:empty { display: block; padding: 0; background: none; border-radius: 0; font-size: .72rem; font-weight: 500; color: var(--muted); letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 16rem; }
+.topbar .vault-name:empty { display: none; }
+.tb-status { display: flex; align-items: center; gap: .45rem; }
+/* Each status is a round icon; the words are in its hover box. */
+.tb-status .net-status, .tb-status .engine-status, .tb-status .mem-status, .tb-status .save-status {
+  font-size: 0; gap: 0; width: 2.1rem; height: 2.1rem; padding: 0; justify-content: center; border-radius: 50%; border: 1px solid transparent; font-weight: 400;
+}
+.tb-status .bi { width: 1.05rem; height: 1.05rem; }
+.tb-status .save-status:empty { display: none; }
+.tb-status .net-status.off { background: var(--ok-soft); color: var(--ok); }
+.tb-status .net-status.on { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
+.tb-status .engine-status.offline { background: var(--danger-soft); color: var(--danger); }
+.tb-status .save-status.error { font-size: .78rem; width: auto; padding: 0 .7rem; border-radius: 999px; gap: .35rem; }
+.tb-status .mem-status .mem-label, .tb-status .ai-activity-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tb-status .mem-pop, .tb-status .ai-activity-pop { left: 50%; right: auto; transform: translateX(-50%); }
+.tb-right #btn-chat, .tb-right #btn-privacy { white-space: nowrap; }
+.menu-wrap { position: relative; }
+.menu-btn { width: 2.3rem; height: 2.3rem; border: 1px solid var(--border); color: var(--text); background: var(--surface); }
+.menu-btn .bi { width: 1.3rem; height: 1.3rem; }
+.menu-btn[aria-expanded="true"] { background: var(--accent-soft); color: var(--accent); }
+.app-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 45; min-width: 14rem; display: grid; padding: .35rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg); }
+.app-menu[hidden] { display: none; }
+.menu-item { display: flex; align-items: center; gap: .7rem; width: 100%; padding: .6rem .8rem; border: 0; border-radius: var(--radius-sm); background: none; color: var(--text); font: inherit; font-size: .92rem; text-align: left; cursor: pointer; }
+.menu-item:hover, .menu-item:focus-visible { background: var(--surface-2); color: var(--accent); outline: none; }
+.menu-item .bi { width: 1.05rem; height: 1.05rem; color: var(--muted); flex-shrink: 0; }
+.menu-item:hover .bi { color: var(--accent); }
+.app-menu .theme-toggle { width: 100%; height: auto; border-radius: var(--radius-sm); border: 0; background: none; }
+@media (max-width: 1100px) { #btn-chat, #btn-privacy { font-size: 0; gap: 0; padding: .45em .6em; } #btn-chat .bi, #btn-privacy .bi { font-size: 1.05rem; } }
+@media (max-width: 820px) {
+  .topbar { grid-template-columns: minmax(0, 1fr) auto; }
+  .tb-status { grid-column: 1 / -1; grid-row: 2; justify-content: center; }
+  .topbar .vault-name { max-width: 10rem; }
+  .tb-status .mem-status:not([hidden]), .tb-status .net-status:not([hidden]), .tb-status .engine-status:not([hidden]) { display: inline-flex; }
+}
+
+/* v1.14: Options (Display, Dev Tools) and Contact Dev. */
+#cv-brightness { position: fixed; inset: 0; z-index: 2147483000; pointer-events: none; backdrop-filter: brightness(var(--cv-brightness, 1)); -webkit-backdrop-filter: brightness(var(--cv-brightness, 1)); }
+#cv-brightness[hidden] { display: none; }
+html.bright-adjusted dialog[open] { filter: brightness(var(--cv-brightness, 1)); }
+.options-form { display: grid; gap: .8rem; }
+.opt-head { display: flex; align-items: center; gap: .6rem; }
+.opt-head h2 { margin: 0; }
+.opt-tabs { display: flex; gap: .3rem; border-bottom: 1px solid var(--border); }
+.opt-tab { display: inline-flex; align-items: center; gap: .45rem; padding: .55rem 1rem; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); font: inherit; cursor: pointer; }
+.opt-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.opt-panel { display: grid; gap: .8rem; }
+.opt-panel h3 { display: flex; align-items: center; gap: .5rem; margin: .2rem 0 0; }
+.opt-row { display: grid; grid-template-columns: 7rem auto minmax(8rem, 1fr) auto 3.5rem auto; align-items: center; gap: .5rem; }
+.opt-row input[type="range"] { width: 100%; padding: 0; accent-color: var(--accent); }
+.opt-label { font-weight: 600; }
+.opt-value { font-variant-numeric: tabular-nums; text-align: right; }
+.dev-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.dev-col { display: grid; gap: .45rem; align-content: start; min-width: 0; }
+.dev-col-head { display: flex; align-items: center; gap: .5rem; min-height: 2rem; }
+.dev-src, .dev-out { min-height: 14rem; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: .85rem; }
+.dev-actions, .dev-save { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.dev-save input[type="text"] { width: 16rem; }
+.dev-save select { width: auto; }
+.dev-report { min-height: 1.2rem; }
+.contact-form { display: grid; gap: .8rem; }
+.contact-form h2 { margin: 0; }
+.contact-where summary { cursor: pointer; color: var(--muted); font-size: .88rem; margin-bottom: .5rem; }
+@media (max-width: 820px) { .dev-cols { grid-template-columns: 1fr; } .opt-row { grid-template-columns: 1fr auto auto; } .opt-row input[type="range"] { grid-column: 1 / -1; grid-row: 2; } }
+
+/* v1.14: case list: [bell] [status] title, then File · Case · Client. */
+.case-item .case-item-top { justify-content: flex-start; gap: .45rem; }
+.case-item .case-item-title { flex: 1; min-width: 0; }
+.case-dot { display: inline-grid; place-items: center; width: 1.45rem; height: 1.45rem; border-radius: 50%; flex-shrink: 0; }
+.case-dot .bi { width: .8rem; height: .8rem; }
+.case-bell { display: inline-flex; color: var(--danger); flex-shrink: 0; animation: cv-ring 2.4s ease-in-out infinite; transform-origin: 50% 10%; }
+.case-bell .bi { width: .95rem; height: .95rem; }
+@keyframes cv-ring { 0%, 86%, 100% { transform: rotate(0); } 89% { transform: rotate(14deg); } 93% { transform: rotate(-12deg); } 97% { transform: rotate(6deg); } }
+@media (prefers-reduced-motion: reduce) { .case-bell { animation: none; } }
+.case-item .case-item-meta { padding-left: 1.9rem; }
+
+/* v1.14: folder list: name, count, then the icon on the right; sub-folders fold away. */
+.folder-item { grid-template-columns: minmax(0, 1fr) auto 1.4rem; }
+.folder-item .folder-icon { justify-self: end; }
+.folder-parent-row { display: flex; align-items: center; gap: .1rem; }
+.folder-parent-row .folder-item { flex: 1; min-width: 0; }
+.folder-toggle { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--muted); cursor: pointer; flex-shrink: 0; }
+.folder-toggle:hover { background: var(--surface-2); color: var(--text); }
+.folder-toggle .bi { width: .8rem; height: .8rem; }
+.folder-children[hidden] { display: none; }
+.folder-item.child { padding-left: 1.4rem; }
+@media (max-width: 820px) { .folder-item { grid-template-columns: auto auto auto; } }
+
+/* v1.14: suspects on the Details tab (same card as Contacts). */
+.suspect-row { display: grid; grid-template-columns: minmax(0, 1.5fr) 10.5rem 3.5rem minmax(0, 1.7fr) 8.5rem 2.1rem; gap: .5rem .8rem; align-items: end; padding: .55rem 0; border-top: 1px solid var(--border); }
+.suspect-rows > .suspect-row:first-child { border-top: 0; }
+.suspect-row .field { margin: 0; min-width: 0; }
+.suspect-row input, .suspect-row select { width: 100%; }
+.suspect-age { display: flex; align-items: center; min-height: 2.35rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+@media (max-width: 900px) { .suspect-row { grid-template-columns: 1fr 1fr; } .suspect-row .contact-remove { justify-self: end; grid-column: 2; } }

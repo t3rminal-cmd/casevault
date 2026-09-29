@@ -27,8 +27,8 @@
 
   // Which document a sample is an example of (matches the draft's document type).
   const DOC_TYPES = [
-    ['any', 'Any document'], ['dea6', 'DEA-6 Report of Investigation'], ['dea7', 'DEA-7 Drug evidence'], ['dea202', 'DEA-202 Personal history'],
-    ['affidavit', 'Affidavit'], ['warrant', 'Warrant'], ['summary', 'Case summary'], ['subpoena', 'Subpoena'], ['memo', 'Memo'], ['complaint', 'Criminal complaint'],
+    ['any', 'Any Document'], ['dea6', 'DEA 6 - Report of Investigation'], ['dea7', 'DEA 7 - Drug Evidence'], ['dea202', 'DEA 202 - Personal History'],
+    ['affidavit', 'Affidavit'], ['warrant', 'Warrant'], ['summary', 'Case Summary'], ['subpoena', 'Subpoena'], ['memo', 'Memo'], ['complaint', 'Criminal Complaint'],
   ];
 
   /** Best guess of what a sample file is, from its name. */
@@ -65,7 +65,7 @@
   const BUILTIN_BEHAVIORS = [
     {
       id: 'dea6',
-      name: 'DEA-6 style Report of Investigation',
+      name: 'DEA 6 - Report of Investigation Style',
       prompt: [
         'Write in the style of a DEA-6 Report of Investigation.',
         '- Third person, past tense, factual and objective. No opinions, speculation or conclusions the facts do not support.',
@@ -79,7 +79,7 @@
     },
     {
       id: 'narrative',
-      name: 'Plain narrative police report',
+      name: 'Plain Narrative Police Report',
       prompt: [
         'Write a plain narrative police report in the first person ("I"), past tense, in time order.',
         '- Short paragraphs, each starting with the time where known.',
@@ -89,7 +89,7 @@
     },
     {
       id: 'legal',
-      name: 'Affidavit / formal legal',
+      name: 'Affidavit - Formal Legal',
       prompt: [
         'Write formal, sworn-document language in the first person of the affiant.',
         '- Numbered paragraphs; first the affiant\'s training and experience, then the facts in time order, then why they establish probable cause.',
@@ -99,7 +99,7 @@
     },
     {
       id: 'brief',
-      name: 'Brief summary',
+      name: 'Brief Summary',
       prompt: 'Write briefly: a short overview paragraph, then bullet points with the key facts, dates and open questions. No filler.',
     },
   ];

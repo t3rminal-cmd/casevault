@@ -38,7 +38,7 @@ async function roundTrip(Vault, rootHandle) {
   assert.deepStrictEqual((await Vault.addStarterTemplates()).length, 4);
   assert.deepStrictEqual((await Vault.addStarterTemplates()).length, 0, 'never overwrites');
   const templates = await Vault.listTemplates();
-  assert.deepStrictEqual(templates.map((t) => t.title), ['Affidavit (generic example)', 'Arrest report (generic example)', 'Case summary (generic example)', 'Subpoena (generic example)']);
+  assert.deepStrictEqual(templates.map((t) => t.title), ['Affidavit', 'Arrest Report', 'Case Summary', 'Subpoena']);
   await Vault.saveTemplate('agency-affidavit.md', '# Agency affidavit\n\nCase {{case.number}}');
   assert.strictEqual(await Vault.readTemplate('agency-affidavit.md'), '# Agency affidavit\n\nCase {{case.number}}');
 
@@ -236,4 +236,22 @@ test('contacts on the Details tab fill {{case.officer.*}} and {{case.prosecutor.
   assert.strictEqual(out, 'Det. Alex Sample 555-0100 / AUSA Jordan Example jordan@usao.example');
   assert.ok(D.placeholderGroups().some((g) => g.title === 'Contacts' && g.keys.includes('case.prosecutor.email')));
   assert.match(D.fillTemplate('{{case.officer.email}}', D.templateContext({}, new Date())), /CONFIRM/, 'empty contact asks you to confirm');
+});
+
+test('suspects fill {{suspect.*}} with the main suspect, {{suspects}} lists them; age from DOB', () => {
+  const now = new Date(2026, 8, 29);
+  assert.strictEqual(D.ageOn('1990-09-30', now), 35);
+  assert.strictEqual(D.ageOn('1990-09-29', now), 36);
+  assert.strictEqual(D.ageOn('', now), null);
+  const c = { agencyNumber: 'AG-26-0077', suspects: [{ name: 'Sam Example', dob: '1995-01-15', residence: '100 Test Lane, Anytown', role: 'Secondary' }, { name: 'Pat Placeholder', dob: '1988-12-01', residence: '', role: 'Main' }, { name: '', role: 'Other' }] };
+  const ctx = D.templateContext(c, now);
+  assert.strictEqual(D.fillTemplate('{{suspect.name}} ({{suspect.role}}), DOB {{suspect.dob}}, age {{suspect.age}}. Agency no. {{case.agencyNumber}}', ctx), 'Pat Placeholder (Main), DOB 12/01/1988, age 37. Agency no. AG-26-0077');
+  assert.strictEqual(ctx.suspects, 'Sam Example, DOB 01/15/1995, age 31, 100 Test Lane, Anytown (Secondary)\nPat Placeholder, DOB 12/01/1988, age 37 (Main)');
+  assert.ok(D.placeholderGroups().some((g) => g.title === 'Suspects'));
+});
+
+test('template titles drop the old "(generic example)" suffix', () => {
+  assert.strictEqual(D.templateTitle('# Affidavit (generic example)\n\ntext', 'generic-affidavit.md'), 'Affidavit');
+  assert.strictEqual(D.templateTitle('# My warrant\n', 'x.md'), 'My warrant');
+  assert.strictEqual(D.DOC_TYPES.dea202.label, 'DEA 202 - Personal History');
 });

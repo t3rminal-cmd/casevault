@@ -105,6 +105,8 @@
     const facts = [
       `Title: ${c.title || '(none)'}`, `File number: ${c.fileNumber || '(none)'}`, `Case number: ${c.number || '(none)'}`, `Client: ${c.client || '(none)'}`,
       `Status: ${c.status || '(none)'}`, `Opened: ${d.opened || '(none)'}`, c.tags && c.tags.length ? `Tags: ${c.tags.join(', ')}` : null,
+      c.agencyNumber ? `Agency case number: ${c.agencyNumber}` : null,
+      ...(Array.isArray(c.suspects) ? c.suspects : []).filter((x) => x && x.name).map((x) => `Suspect (${x.role || 'Main'}): ${[x.name, x.dob ? `DOB ${x.dob}` : '', x.residence].filter(Boolean).join(', ')}`),
     ].filter(Boolean).join('\n');
     const events = (timeline.events || []).map((e) => `- ${e.date}${e.time ? ` ${e.time}` : ''} [${e.kind === 'deadline' ? 'deadline' : 'event'}${e.done ? ', done' : ''}] ${e.title}${e.note ? ` (${e.note.replace(/\s+/g, ' ')})` : ''}`).join('\n');
     // Room for the case material: the context window, less the answer (~1/3 of it), the rules,

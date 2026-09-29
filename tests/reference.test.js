@@ -55,7 +55,7 @@ test('Library, behavior and reference text reach the AI in their places, within 
   const order = ['## Directives to follow', '## Writing examples', '## Reference material'].map((hd) => user.content.indexOf(hd));
   assert.ok(order.every((x) => x > 0) && order[0] < order[1] && order[1] < order[2], 'directives, then examples, then references');
   assert.match(user.content, /### DEA-6 sample\nDETAILS/);
-  assert.match(user.content, /Write a first draft of: DEA-6 Report of Investigation\./);
+  assert.match(user.content, /Write a first draft of: DEA 6 - Report of Investigation\./);
   const huge = CP.draftMessages({ examples: [{ title: 'A', text: 'x'.repeat(90000) }, { title: 'B', text: 'y'.repeat(90000) }], numCtx: 4096 })[1].content;
   assert.ok(huge.length < 12000, `library text is capped (${huge.length})`);
   assert.ok(huge.includes('### A') && huge.includes('### B'), 'both examples get a share');
@@ -66,8 +66,8 @@ test('Library, behavior and reference text reach the AI in their places, within 
 test('quick links: tabs, hiding, edits, custom links, and only web addresses', () => {
   const LK = require('../js/reference/links.js');
   const all = LK.linksOf({});
-  assert.deepStrictEqual(all.filter((l) => l.tab === 'reference').map((l) => l.name), ['Incident location codes', 'Commonly used UCR', 'Narcotic calculator']);
-  assert.deepStrictEqual(all.filter((l) => l.tab === 'osint').map((l) => l.name), ['MaxMind IP lookup', 'NumLookup', 'Google Images', 'Blockchair', 'Fingerprint']);
+  assert.deepStrictEqual(all.filter((l) => l.tab === 'reference').map((l) => l.name), ['Location Codes', 'Common UCR', 'Narcotic Calculator']);
+  assert.deepStrictEqual(all.filter((l) => l.tab === 'osint').map((l) => l.name), ['MaxMind IP', 'Fingerprint.io']);
   assert.deepStrictEqual(all.filter((l) => l.tab === 'leo').map((l) => l.name), ['Accurint', 'Kodex Portal', 'Chicago HIDTA']);
   for (const l of all) if (l.url) assert.match(l.url, /^https:\/\//, l.name);
   const s = LK.linksOf({ hidden: ['osint-fingerprint'], edits: { 'leo-chicago-hidta': { url: 'portal.example.org/login' } }, custom: [{ id: 'c1', tab: 'leo', name: 'My portal', url: 'https://example.org' }, { id: 'c2', tab: 'reference', name: 'x', url: 'https://example.org' }] });

@@ -69,26 +69,39 @@ If the helper window was closed while Firefox was open, CaseVault shows **"The C
 
 ## Look and theme
 
-The header has, from left to right: the vault folder, the **Offline** / **AI** / **Saved to SSD** indicators, **Reference**, **Hide** (privacy screen), the **theme button**, and **Vault**.
+The header has three parts:
 
-- **Theme button** (half circle, sun or moon): switches between *automatic* (follows Windows' light or dark setting), *light* and *dark*. Each PC remembers its own choice in the browser; it's a display preference, not case data.
+- **Left:** the CaseVault logo and, under it, where your data is being saved (for example `W:\CaseVault-Data` in Firefox, or `CaseVault-Data` in Chrome and Edge, which don't tell CaseVault the drive letter). Click it for the Overview.
+- **Middle:** status icons. Point at one for the details.
+  - **Shield or globe:** green shield means offline (nothing leaves the computer). A red globe means online AI is on, and CaseVault may send reviewed text to the internet. Click it for online research.
+  - **Chip:** the AI engine. Green means it's running, and pointing at it shows the model, for example *AI: Quick · qwen2.5:7b*. Red means it isn't running. Click it for AI settings.
+  - Moving bars show while the AI is working, and a **memory** icon turns amber or red when memory runs short.
+  - **Drive:** green means everything is saved to the SSD, amber means saving, and red with words means something isn't saved (reconnect the SSD).
+- **Right:** **Ask AI**, **Hide** (privacy screen) and the **menu** (☰). The menu holds:
+  - **Reference**;
+  - **Library**, which opens the Vault at the Library, where you add files the AI learns from;
+  - **Vault**;
+  - **Theme**, which switches between automatic, light and dark each time you click it (the menu stays open while you choose);
+  - **Options** and **Contact Dev** (see below).
+
+- **Theme:** *automatic* follows Windows' light or dark setting. Each PC remembers its own choice in the browser; it's a display preference, not case data.
 - Icons mark every tab, button and document folder, and each file in a case shows an icon for its type (PDF, Word, Excel, picture, audio, video, email).
 - **Point at a button** (or reach it with Tab) to see what it does in a hover box. Buttons show just an icon and a short name; the explanation is in the hover box.
-- Labels have no brackets, and the longer explanations aren't printed on the page: an **ⓘ** next to a heading, label or box holds them. Point at it (or Tab to it) to read it. In the Vault, pointing at a section's heading shows what that section is for, and pointing at a box in **My details** shows which `{{affiant.…}}` placeholder it fills.
+- Labels have no brackets, and the longer explanations aren't printed on the page: an **ⓘ** next to a heading, label or box holds them. Point at it (or Tab to it) to read it. In the Vault, pointing at a section's heading shows what that section is for, and pointing at a box in **My Profile** shows which `{{affiant.…}}` placeholder it fills.
 - **Opening a file** (the eye button) shows it in a window that fills almost the whole screen, so wide Word tables, spreadsheets and PDFs aren't cut off.
 - **Ask AI** in the header opens a floating chat with the AI on this computer that stays open while you work (see *Ask AI*).
 - The page is centred and uses the width of the screen, from a phone up to 1920×1080 and larger. Case actions are same-size buttons in one row.
 - The **Overview** shows your case counts, then, each under a line: **Upcoming deadlines**, **Recently updated**, and **Quick links** (see below).
 - On a narrow window the header buttons shrink to their icons.
 - **Hide the case list** is the button at the top of the list (or Ctrl+\\). The list shrinks to a thin strip with the same button to bring it back. On a phone-width window the list hides completely and the button moves to the header.
-- **Vault** opens the settings. The list on its left (This vault, Backups, Privacy screen, My details, Templates, Library, AI writing behavior, Quick links, Online features, Always hide, Department mail, Outbound log, Maintenance) jumps to each section, and follows along as you scroll. **Done** is at the top right.
+- **Vault** opens the settings. The list on its left (This vault, Backups, Privacy screen, My Profile, Templates, Library, AI writing behavior, Quick links, Online features, Always hide, Department mail, Outbound log, Maintenance) jumps to each section, and follows along as you scroll. **Done** is at the top right.
 
 ### Quick links
 
 At the bottom of the Overview, in three tabs:
 
-- **Reference:** Incident location codes, Commonly used UCR and the Narcotic calculator (CaseVault's own pages, see *Reference*).
-- **OSINT:** MaxMind (IP lookup), NumLookup (phone), Google Images (reverse image search), Blockchair (blockchain explorer) and Fingerprint.
+- **Reference:** Location Codes, Common UCR and the Narcotic Calculator (CaseVault's own pages, see *Reference*).
+- **OSINT:** MaxMind IP (where an IP address is) and Fingerprint.io (browser and device fingerprint).
 - **LEO:** Accurint, Kodex Portal and Chicago HIDTA, plus any you add.
 
 OSINT and LEO links open the website **in a new browser tab**, outside CaseVault. CaseVault never contacts those sites itself and sends them nothing (not even which page you came from), so CaseVault stays offline: the **Offline** badge doesn't change when you click one. The website itself needs the PC's internet connection, like any site you open in the browser. Don't paste case details into outside websites unless your policy allows it.
@@ -98,11 +111,12 @@ OSINT and LEO links open the website **in a new browser tab**, outside CaseVault
 
 ## Cases
 
-- **New case** asks for a title (required), the **file number**, the **case number**, client, status, opened date, and tags. One file number can hold several cases: the File number box offers the file numbers you already use. The case folder and file names use the case number.
+- **New case** asks for a title (required), the **file number**, the **case number**, the **agency case number** (your agency's own internal number), the client (**State**, **Federal** or **Other**), status, opened date, and tags. A client typed in before v1.14 is kept as its own choice in the list. One file number can hold several cases: the File number box offers the file numbers you already use. The case folder and file names use the case number.
 - The case list and the case's header show both, for example *File F-2026-01 · Case 00123*, and the search box finds either. Templates can use `{{case.fileNumber}}` and `{{case.number}}`.
-- The **left list** shows open and pending cases, most recently changed first. Use the search box (title, number, client, or tag) and the filter to find others.
+- The **left list** shows open and pending cases, most recently changed first. Each case shows its status icon (blue folder: open, amber hourglass: pending, green lock: closed) and title, with the file number, case number and client under it. A **red bell** in front means a deadline on its Timeline is overdue or due within a week. Point at a case to see the deadline, and for a Pending case what it's waiting on. Use the search box (title, any of the numbers, client, or tag) and the filter to find others.
 - **Details** tab: edit any field. A short note under **Status** says what the status means and, for a Pending case, what you're waiting on.
-- **Contacts** (on the Details tab, under the case fields): the **case officer**, the **prosecutor** (choose **ASA** or **AUSA**), each with name, email and phone, and **Add contact** for anyone else on the case: Finance, Asset Forfeiture, the Narcotic Team Supervisor and so on (pick a role from the list or type your own). The bin button removes one. They save with the case on the SSD, go to **Ask AI** with the case, and templates can use `{{case.officer.name}}`, `{{case.prosecutor.title}}`, `{{case.prosecutor.email}}` and so on.
+- **Suspects** (on the Details tab): **Add suspect** for each person the case is about: name, date of birth (the **age** is worked out for you), residence, and role (**Main**, **Secondary** or **Other**). The first one is Main, later ones Secondary. They save with the case, go to **Ask AI** and **Draft with AI** with the case, and templates can use `{{suspect.name}}`, `{{suspect.dob}}`, `{{suspect.age}}`, `{{suspect.residence}}` and `{{suspect.role}}` (the main suspect) and `{{suspects}}` (all of them, one per line).
+- **Contacts** (on the Details tab, under Suspects): the **Case Officer**, the **prosecutor** (choose **ASA** or **AUSA**), each with name, email and phone, and **Add contact** for anyone else on the case: Finance, Asset Forfeiture, the Narcotic Team Supervisor and so on (pick a role from the list or type your own). The bin button removes one. They save with the case on the SSD, go to **Ask AI** with the case, and templates can use `{{case.officer.name}}`, `{{case.prosecutor.title}}`, `{{case.prosecutor.email}}` and so on.
 - **Case actions** (at the bottom of Details) has **Close case…** (or **Reopen case**), **Add arrest details**, **Archive case…** and **Delete case…**.
 
 ### Open, Pending, Closed, Archived: which one?
@@ -199,6 +213,7 @@ Folders that are no longer used (**Affidavits** from before v1.11; **Warrants Si
 ### Arranging folders and files
 
 - **Folders:** click **Arrange folders** under the folder list. Use the up and down arrows (or drag a folder in that list), then **Save order**. **Standard order** puts them back. You can also drag a folder in the list itself, or select it and press **Alt+↑ / Alt+↓**. The order is the same in every case; Video and Audio stay under Recordings.
+- **Video and Audio** are folded away under **Recordings** until you click Recordings or the arrow next to it. Each folder's icon is at the right end of its row, after the file count.
 - **Move a file:** drag it from the table onto a folder on the left. It's renamed by that folder's convention, like **Move / rename**.
 - **Sort:** click a column heading (Name, Type, Size, Added) to sort by it; click again to reverse.
 - **Your own order:** in a folder, click **Custom** and drag the rows into the order you want. It's kept for that folder in the case (`file-order.json`).
@@ -314,7 +329,7 @@ The text read from each document is kept on the SSD (`checks\text-cache`), so re
 - money amounts
 - counts (*three shots* vs *two shots*)
 
-Names spelled with two letters swapped (*Sampel / Sample*) are flagged too. `00123` and `2026-00123` count as the same case number. Your own details from **My details** and today's date (a template's signature block and *Prepared …* line) are never reported as "not found in the reports".
+Names spelled with two letters swapped (*Sampel / Sample*) are flagged too. `00123` and `2026-00123` count as the same case number. Your own details from **My Profile** and today's date (a template's signature block and *Prepared …* line) are never reported as "not found in the reports".
 
 **XFA forms** are read field by field: each filled-in field becomes one line such as `Reporting officer: Officer Alex Sample`, using the form's own captions (or the field name when there's no caption). A repeated section, such as a timeline table, gives one line per row: `Timeline row 2: Date=03/14/2026; Type=Interview; Narrative=...`. A flag from a form points at *page 1* and the field or row, for example `Report.pdf · page 1 · Timeline row 2`. **Open original** lists the form's fields with that one highlighted.
 
@@ -358,9 +373,9 @@ To hide CaseVault instantly, for example when someone walks up to your desk, do 
 - press **Esc twice** quickly (within half a second);
 - click **Hide** at the top right.
 
-A plain grey screen covers the whole app, with no case names or data on it. The browser tab's title changes to **New Tab** and its icon goes blank. Audio and video pause, any open file preview closes, and any unsaved edits are written to the SSD first.
+A white screen with blue 1s and 0s raining down covers the whole app, with no case names or data on it. The browser tab's title changes to **New Tab** and its icon goes blank. Audio and video pause, any open file preview closes, and any unsaved edits are written to the SSD first. If Windows is set to reduce animations, the rain stands still.
 
-**To come back:** click anywhere. If you set a PIN, type it and press Enter (it also unlocks by itself once you've typed 6 digits). After 5 wrong PINs you have to wait 30 seconds.
+**To come back:** click anywhere. If you set a PIN, a terminal-style prompt shows `PIN>` with a blinking blue cursor. Type the PIN (each digit shows as a dot) and press Enter; it also unlocks by itself once you've typed 6 digits. After 5 wrong PINs you have to wait 30 seconds.
 
 **Settings** (in **Vault → Privacy screen**):
 
@@ -439,6 +454,29 @@ The same steps are shown inside CaseVault: **Research & drafting (online)** → 
 ### Outbound log
 
 **Vault → Outbound log** lists every online AI request and mail hand-off of the last two months: when, where, why, what kinds of details were found, and how many were hidden. Never the text itself. The logs are in `CaseVault-Data\logs\outbound-YYYY-MM.json`.
+
+## Options
+
+**Menu → Options** has two tabs:
+
+- **Display:** **Zoom** (70–160 %) makes everything bigger or smaller, and **Brightness** (50–130 %) darkens or lightens CaseVault, for example in a dark room. Use the slider or the − and + buttons; **Reset** goes back to 100 %. They're kept in the browser on this PC, like the theme, so each PC has its own.
+- **Dev Tools → Make it fictitious:** turns a real template, report or reference into a fictitious one you can keep as a template or give the AI to learn from.
+  1. Paste the text, or click **Open a file…** (Word, PDF, text). Only its text is used; the file isn't changed.
+  2. Optionally, under **Other names to replace**, type names the rules might not recognise, such as nicknames.
+  3. Click **Replace with fillers**. Names become John Doe, Jane Doe, Richard Roe and so on. The same person always gets the same filler, and it's written the same way, for example *DOE, Jane* or *JOHN DOE*. Phone numbers become (555) 555-01xx, addresses 100 Main Street, Anytown, and dates of birth, case numbers, emails, plates, VINs and ID numbers get fillers too. `{{placeholders}}` and `[CONFIRM: …]` stay as they are. The list under the buttons shows what was replaced.
+  4. **Also check with local AI** has the AI on this computer look for anything the rules missed. Then the rules run over its version once more.
+  5. Read it through and edit the result if needed, then **Copy** it, **Save as template** (Vault → Templates), or **Add to Library** in the folder you pick.
+
+  Everything happens on this computer. Detection is a safety net, not a guarantee, so always read the result before you save it. **Ask AI** can do a one-off version of this too ("rewrite this with fictitious names"), but Dev Tools is quicker and saves the result directly.
+
+## Contact Dev
+
+**Menu → Contact Dev** writes a bug report or feature request.
+
+- Choose the kind, give it a title and describe what happened. **Include the app version, browser and screen size** adds those details, which contain no case data.
+- **Email it** opens a new email to the developer in your email program, filled in. You check it and press Send yourself. Put the developer's address under **Where reports go** once; it's saved in `vault.json`.
+- **Open bug form** copies the report and opens the bug report form in a new browser tab; paste it there. Put your own form's address (for example a Freeform form) under **Where reports go**; empty, it opens the CaseVault issue page on GitHub.
+- CaseVault refuses to send a report that contains a phone number, email address, date of birth or similar. Never put case details in a report.
 
 ## Self-test
 
@@ -569,7 +607,7 @@ A template is your document format (an affidavit, an arrest report, a subpoena�
 1. **Import your agency's Word form** (easiest): **Import Word, .md or .txt…** and pick the `.docx`. CaseVault turns it into text: headings, bold/italic, lists and tables are kept; fonts, logos and exact spacing aren't (the draft exports to Word with CaseVault's plain layout). Check the text in the editor, put placeholders where case details go, and **Save template**.
    *Tip:* type the placeholders in Word before you import, for example `{{case.number}}` or `«case.number»`: both come through as `{{case.number}}`.
 2. **New template**: paste or type the text and add placeholders.
-3. **Add generic starter templates**: an affidavit, a subpoena, a case summary and an arrest report. They're **generic examples, not legal forms**; use them as a starting point and replace them with your agency's approved formats.
+3. **Add starter templates**: Affidavit, Subpoena, Case Summary and Arrest Report. They're **examples, not legal forms**; use them as a starting point and replace them with your agency's approved formats.
 
 There's no required layout. Plain text works; to format it, `# ` at the start of a line makes a heading (the first heading is the template's name), `**bold**`, `*italic*`, `- ` a bullet, `1. ` a numbered line. **Edit / Delete** change or remove a template. Old `.doc` files: open them in Word and *Save As* `.docx` first.
 
@@ -581,7 +619,7 @@ There's no required layout. Plain text works; to format it, `# ` at the start of
 | `{{case.opened}}`, `{{case.closed}}` | The case's dates |
 | `{{case.officer.name}}`, `{{case.officer.email}}`, `{{case.officer.phone}}` | The case officer, from **Contacts** on the Details tab |
 | `{{case.prosecutor.title}}` (ASA or AUSA), `{{case.prosecutor.name}}`, `{{case.prosecutor.email}}`, `{{case.prosecutor.phone}}` | The prosecutor, from **Contacts** |
-| `{{affiant.name}}`, `{{affiant.title}}`, `{{affiant.agency}}` | Your details from **Vault → My details** |
+| `{{affiant.name}}`, `{{affiant.title}}`, `{{affiant.agency}}` | Your details from **Vault → My Profile** |
 | `{{affiant.address}}` | Your address, on as many lines as you typed |
 | `{{affiant.phone}}`, `{{affiant.email}}` | Your phone number and email |
 | `{{today}}` / `{{today.iso}}` | Today, as *September 28, 2026* / *2026-09-28* |
@@ -594,7 +632,7 @@ There's no required layout. Plain text works; to format it, `# ` at the start of
 
 A placeholder with no value (for example a case without a client) becomes `[CONFIRM: case.client]`, so nothing missing slips through.
 
-**My details.** Fill in your name, title, agency, address, phone and email once in **Vault → My details**. Changes save to `vault.json` on the SSD as soon as you leave a box. They're used for new drafts from then on. Drafts you already made keep their text. Leave a box empty and templates show `[CONFIRM: affiant.phone]` (and so on) instead. The starter affidavit uses these placeholders; starter templates added before v1.8 don't, so add them to your own copy if you like.
+**My Profile.** Fill in your name, title, agency, address, phone and email once in **Vault → My Profile**. Changes save to `vault.json` on the SSD as soon as you leave a box, and **Save changes** saves them all at once and confirms it. They're used for new drafts from then on. Drafts you already made keep their text. Leave a box empty and templates show `[CONFIRM: affiant.phone]` (and so on) instead. The starter affidavit uses these placeholders; starter templates added before v1.8 don't, so add them to your own copy if you like.
 
 ## Backups
 

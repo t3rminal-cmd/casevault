@@ -35,7 +35,7 @@ test('writing behaviors: DEA-6 by default, built-ins can be edited, custom ones 
   assert.match(L.behaviorById({}, 'dea6').prompt, /INDEXING/);
   const s = { aiBehaviors: [{ id: 'dea6', name: 'DEA-6 (ours)', prompt: 'Our way.' }, { id: 'custom-1', name: 'Mine', prompt: 'My way.' }], aiBehaviorDefault: 'custom-1' };
   const list = L.behaviorsOf(s);
-  assert.deepStrictEqual(list.map((x) => [x.id, x.name, x.builtin]), [['dea6', 'DEA-6 (ours)', true], ['narrative', 'Plain narrative police report', true], ['legal', 'Affidavit / formal legal', true], ['brief', 'Brief summary', true], ['custom-1', 'Mine', false]]);
+  assert.deepStrictEqual(list.map((x) => [x.id, x.name, x.builtin]), [['dea6', 'DEA-6 (ours)', true], ['narrative', 'Plain Narrative Police Report', true], ['legal', 'Affidavit - Formal Legal', true], ['brief', 'Brief Summary', true], ['custom-1', 'Mine', false]]);
   assert.strictEqual(L.behaviorById(s, L.defaultBehaviorId(s)).prompt, 'My way.');
   assert.strictEqual(L.behaviorById(s, 'gone').id, 'dea6', 'an unknown id falls back');
 });

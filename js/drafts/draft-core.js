@@ -16,7 +16,7 @@
 
   const DOC_TYPES = {
     summary: {
-      label: 'Case summary',
+      label: 'Case Summary',
       guide: 'A case summary: an overview paragraph, the parties involved, a dated chronology of key events, the evidence and documents, and open questions.',
     },
     affidavit: {
@@ -32,19 +32,19 @@
       guide: 'An internal memo with a To / From / Date / Re header, then purpose, relevant facts, and recommended next steps.',
     },
     dea6: {
-      label: 'DEA-6 Report of Investigation',
+      label: 'DEA 6 - Report of Investigation',
       guide: 'A DEA-6 style Report of Investigation: header lines (File No., File Title, G-DEP Identifier, Program Code, By, At, Date Prepared), SYNOPSIS, DETAILS in numbered paragraphs in time order, and INDEXING of every person, business, vehicle and telephone number mentioned.',
     },
     dea7: {
-      label: 'DEA-7 drug evidence',
+      label: 'DEA 7 - Drug Evidence',
       guide: 'A DEA-7 style report of drug property collected, purchased or seized: for each exhibit its number, description, packaging, gross weight, how and when it was obtained, where, by whom, the chain of custody, and the laboratory it was submitted to.',
     },
     dea202: {
-      label: 'DEA-202 personal history',
+      label: 'DEA 202 - Personal History',
       guide: 'A DEA-202 style personal history: the subject\'s name and aliases, date and place of birth, identifying numbers, physical description, addresses, telephone numbers, vehicles, employment, associates, criminal history and remarks. Only facts from the material; [CONFIRM: ...] for the rest.',
     },
     complaint: {
-      label: 'Criminal complaint',
+      label: 'Criminal Complaint',
       guide: 'A criminal complaint that follows the reference complaint form\'s layout and statutory wording: the caption, the defendant, the offense charged with its statute citation, the date and place, the substance and its weight, and the complainant\'s signature and verification. Use [CONFIRM: ...] for anything not in the case material.',
     },
     other: { label: 'Other', guide: 'A clear, well-structured document.' },
@@ -97,6 +97,18 @@
   const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
   const AFFIANT_FIELDS = ['name', 'title', 'agency', 'address', 'phone', 'email'];
+  const SUSPECT_ROLES = ['Main', 'Secondary', 'Other'];
+
+  /** Age in whole years on `now` from a "YYYY-MM-DD" date of birth; null if there is none. */
+  function ageOn(dob, now = new Date()) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dob || ''));
+    if (!m) return null;
+    const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+    let age = now.getFullYear() - y;
+    if (now.getMonth() + 1 < mo || (now.getMonth() + 1 === mo && now.getDate() < d)) age--;
+    return age >= 0 && age < 130 ? age : null;
+  }
+  const usDate = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || '')); return m ? `${m[2]}/${m[3]}/${m[1]}` : String(iso || ''); };
 
   /**
    * Values available to {{placeholders}} for one case. `affiant` is the "My details" profile from
@@ -109,7 +121,7 @@
     const d = c.dates || {};
     const a = affiant || {};
     const ctx = {
-      'case.title': c.title, 'case.number': c.number, 'case.fileNumber': c.fileNumber, 'case.client': c.client, 'case.status': c.status,
+      'case.title': c.title, 'case.number': c.number, 'case.fileNumber': c.fileNumber, 'case.agencyNumber': c.agencyNumber, 'case.client': c.client, 'case.status': c.status,
       'case.tags': (c.tags || []).join(', '), 'case.opened': d.opened, 'case.closed': d.closed,
       today: longDate(now), 'today.iso': isoDate(now),
     };
@@ -119,6 +131,15 @@
       for (const f of ['name', 'email', 'phone']) ctx[`case.${who}.${f}`] = String((obj && obj[f]) || '').trim();
     }
     ctx['case.prosecutor.title'] = String((k.prosecutor && k.prosecutor.title) || '').trim();
+    // Suspects from the Details tab: {{suspect.*}} is the main suspect (or the first one).
+    const sus = (Array.isArray(c.suspects) ? c.suspects : []).filter((x) => x && String(x.name || '').trim());
+    const main = sus.find((x) => x.role === 'Main') || sus[0] || {};
+    const age = ageOn(main.dob, now);
+    Object.assign(ctx, {
+      'suspect.name': String(main.name || '').trim(), 'suspect.dob': usDate(main.dob), 'suspect.age': age == null ? '' : String(age),
+      'suspect.residence': String(main.residence || '').trim(), 'suspect.role': String(main.role || '').trim(),
+      suspects: sus.map((x) => { const a = ageOn(x.dob, now); return [x.name.trim(), x.dob ? `DOB ${usDate(x.dob)}${a == null ? '' : `, age ${a}`}` : '', x.residence ? String(x.residence).trim() : '', x.role ? `(${x.role})` : ''].filter(Boolean).join(', ').replace(/, \(/, ' ('); }).join('\n'),
+    });
     for (const k of AFFIANT_FIELDS) {
       ctx[`affiant.${k}`] = k === 'address' ? String(a[k] || '').replace(/\r\n?/g, '\n').trim() : String(a[k] || '').trim();
     }
@@ -132,7 +153,8 @@
   function placeholderGroups(arrestKeys = []) {
     const g = (title, keys) => ({ title, keys });
     return [
-      g('Case', ['case.fileNumber', 'case.number', 'case.title', 'case.client', 'case.status', 'case.opened', 'case.closed', 'case.tags']),
+      g('Case', ['case.fileNumber', 'case.number', 'case.agencyNumber', 'case.title', 'case.client', 'case.status', 'case.opened', 'case.closed', 'case.tags']),
+      g('Suspects', ['suspect.name', 'suspect.dob', 'suspect.age', 'suspect.residence', 'suspect.role', 'suspects']),
       g('Contacts', ['case.officer.name', 'case.officer.email', 'case.officer.phone', 'case.prosecutor.title', 'case.prosecutor.name', 'case.prosecutor.email', 'case.prosecutor.phone']),
       g('Date', ['today', 'today.iso']),
       g('You', AFFIANT_FIELDS.map((k) => `affiant.${k}`)),
@@ -162,14 +184,15 @@
 
   function templateTitle(text, fileName) {
     const m = /^#\s+(.+)$/m.exec(String(text || ''));
-    return (m ? m[1] : String(fileName || '').replace(/\.md$/i, '')).trim();
+    // Starter templates from before v1.14 were titled "Affidavit (generic example)" and so on.
+    return (m ? m[1] : String(fileName || '').replace(/\.md$/i, '')).replace(/\s*\(generic example\)\s*$/i, '').trim();
   }
 
   const GENERIC_NOTE = '> **Generic example, not a legal form.** Replace this template with your agency\'s approved format before use. Delete this line in your own copy.';
 
   // Shipped with the app; copied into CaseVault-Data/templates/ when the user asks for them.
   const STARTER_TEMPLATES = {
-    'generic-affidavit.md': `# Affidavit (generic example)
+    'generic-affidavit.md': `# Affidavit
 
 ${GENERIC_NOTE}
 
@@ -203,7 +226,7 @@ Sworn to and subscribed before me on {{confirm: date}}.
 ______________________________
 {{confirm: judge or notary name and title}}
 `,
-    'generic-subpoena.md': `# Subpoena (generic example)
+    'generic-subpoena.md': `# Subpoena
 
 ${GENERIC_NOTE}
 
@@ -225,7 +248,7 @@ YOU ARE COMMANDED to {{confirm: appear and testify / produce the following recor
 
 Issued on {{today}} by {{confirm: issuing attorney or clerk, with contact details}}.
 `,
-    'generic-arrest-report.md': `# Arrest report (generic example)
+    'generic-arrest-report.md': `# Arrest Report
 
 ${GENERIC_NOTE}
 
@@ -266,7 +289,7 @@ ${GENERIC_NOTE}
 ______________________________
 {{affiant.name}}, {{affiant.title}}, {{confirm: badge number}}
 `,
-    'generic-case-summary.md': `# Case summary (generic example)
+    'generic-case-summary.md': `# Case Summary
 
 ${GENERIC_NOTE}
 
@@ -324,7 +347,7 @@ ${GENERIC_NOTE}
 
   const api = {
     DOC_TYPES, STARTER_TEMPLATES, parseDraft, serializeDraft, slugify, extractPlaceholders,
-    AFFIANT_FIELDS, placeholderGroups, templateContext, fillTemplate, templateTitle, stripMarkdown,
+    AFFIANT_FIELDS, SUSPECT_ROLES, ageOn, placeholderGroups, templateContext, fillTemplate, templateTitle, stripMarkdown,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVDraft = api;

@@ -122,6 +122,9 @@
       'rules-only': 'AI review is switched off. Checks use rules only. Click to change.',
       checking: 'Looking for the local AI engine…',
     }[st];
+    // The header shows just the icon; the model's name is in the hover box.
+    el.title = `${text}. ${el.title}`;
+    el.setAttribute('aria-label', text);
   }
 
   async function showEngineDialog() {
