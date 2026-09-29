@@ -124,6 +124,7 @@
       const lead = t.match(/^\s*/)[0];
       const trail = t.match(/\s*$/)[0];
       let core = t.trim();
+      if (r.u) core = `++${core}++`;
       if (r.b && r.i) core = `***${core}***`;
       else if (r.b) core = `**${core}**`;
       else if (r.i) core = `*${core}*`;
@@ -137,7 +138,13 @@
       if (b.type === 'break') { out.push('', '---', ''); prevList = false; continue; }
       if (b.type === 'table') {
         out.push('');
-        for (const row of b.rows) out.push(row.map((cell) => cell.map((x) => (x.runs ? md(x.runs) : '')).join(' ').trim()).join(' | '));
+        // A Markdown table: | a | b |, then |---|---| under the first row.
+        const cols = Math.max(1, ...b.rows.map((r) => r.length));
+        b.rows.forEach((row, k) => {
+          const cellsText = Array.from({ length: cols }, (_, j) => (row[j] || []).map((x) => (x.runs ? md(x.runs) : '')).join(' ').trim().replace(/\|/g, '\\|').replace(/\s*\n\s*/g, ' '));
+          out.push(`| ${cellsText.join(' | ')} |`);
+          if (k === 0) out.push(`|${' --- |'.repeat(cols)}`);
+        });
         out.push('');
         prevList = false;
         continue;

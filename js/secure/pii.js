@@ -261,9 +261,10 @@
       push(caseObj.client);
       for (const p of caseObj.people || []) push(p); // arrestees (js/closing.js)
       push(caseObj.number, 'casenum');
+      push(caseObj.fileNumber, 'casenum');
       if (caseObj.id && /\d/.test(caseObj.id)) push(caseObj.id, 'casenum');
     }
-    for (const c of caseIndex || []) { push(c.number, 'casenum'); push(c.client); }
+    for (const c of caseIndex || []) { push(c.number, 'casenum'); push(c.fileNumber, 'casenum'); push(c.client); }
     if (affiant) { push(affiant.name); push(affiant.phone, 'phone'); push(affiant.email, 'email'); push(affiant.address, 'address'); }
     for (const w of watchlist || []) push(w);
     // Longest first, so "Maria Lopez-Diaz" is matched before "Maria".

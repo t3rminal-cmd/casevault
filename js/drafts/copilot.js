@@ -76,7 +76,9 @@
     'Use ONLY facts that appear in the CASE MATERIAL below. Never invent names, dates, times, places, numbers, badge numbers, courts, charges or quotes.',
     'Wherever a needed fact is missing or uncertain, write a placeholder in exactly this form: [CONFIRM: what is needed]. For example [CONFIRM: affiant badge number] or [CONFIRM: court name].',
     'When you state a fact from a report, keep its wording and numbers exactly as in the material.',
-    'Reference material (a complaint form, the street value chart, code lists) is only for statutory wording, layout, street values and codes: never treat it as facts about this case.',
+    'Reference material (the street value chart, code lists) is only for wording, street values and codes: never treat it as facts about this case.',
+    'Writing examples only show HOW to write (structure, headings, tone, phrasing). Their names, dates, places, numbers and events belong to other cases and must never appear in this draft.',
+    'Directives are rules to follow. Where the draft relies on one, you may cite it by its title.',
     'Write in Markdown: # headings, short paragraphs, numbered paragraphs where the document type expects them.',
     'Output only the document itself, with no introduction or closing remarks.',
   ].join('\n');
@@ -91,34 +93,43 @@
   /**
    * Build the chat messages for a first draft. All inputs are plain data (easy to test):
    * { type, template, instructions, caseObj, timeline, notes, passages: [{ docName, page, sheet, row, text }],
-   *   references: [{ title, text }] } — references are forms and reference lists to follow (a complaint
-   *   form, the street value chart, code lists): wording and format, never facts of the case.
+   *   references: [{ title, text }], examples: [{ title, text }], directives: [{ title, text }], behavior }
+   *   references are lists to follow (the value chart, code lists); examples are Library samples to
+   *   write like (never their facts); directives are Library rules; behavior is the writing
+   *   instruction prompt (DEA-6 style by default, js/library.js).
    */
-  function draftMessages({ type = 'other', template = '', instructions = '', caseObj = {}, timeline = { events: [] }, notes = '', passages = [], references = [], numCtx = 8192 }) {
+  function draftMessages({ type = 'other', template = '', instructions = '', caseObj = {}, timeline = { events: [] }, notes = '', passages = [], references = [], examples = [], directives = [], behavior = '', numCtx = 8192 }) {
     const t = D.DOC_TYPES[type] || D.DOC_TYPES.other;
     const c = caseObj || {};
     const d = c.dates || {};
     const facts = [
-      `Title: ${c.title || '(none)'}`, `Case number: ${c.number || '(none)'}`, `Client: ${c.client || '(none)'}`,
+      `Title: ${c.title || '(none)'}`, `File number: ${c.fileNumber || '(none)'}`, `Case number: ${c.number || '(none)'}`, `Client: ${c.client || '(none)'}`,
       `Status: ${c.status || '(none)'}`, `Opened: ${d.opened || '(none)'}`, c.tags && c.tags.length ? `Tags: ${c.tags.join(', ')}` : null,
     ].filter(Boolean).join('\n');
     const events = (timeline.events || []).map((e) => `- ${e.date}${e.time ? ` ${e.time}` : ''} [${e.kind === 'deadline' ? 'deadline' : 'event'}${e.done ? ', done' : ''}] ${e.title}${e.note ? ` (${e.note.replace(/\s+/g, ' ')})` : ''}`).join('\n');
     // Room for the case material: the context window, less the answer (~1/3 of it), the rules,
     // the template and the other material. Passages (best first) are dropped when they don't fit.
     const reserve = Math.round(numCtx / 3);
-    // Reference material gets at most a quarter of the window, forms first.
-    let refBudget = Math.floor((numCtx / 4) * 3.5);
-    const refs = [];
-    for (const r of references || []) {
-      const text = String(r.text || '').trim();
-      if (!text) continue;
-      const block = `### ${r.title}\n${text.length > refBudget ? `${text.slice(0, Math.max(0, refBudget))} …[shortened]` : text}`;
-      if (refBudget < 200) break;
-      refBudget -= block.length;
-      refs.push(block);
-    }
-    const refText = refs.join('\n\n');
-    const fixed = AI.tokensOf(refText) + AI.tokensOf(DRAFT_RULES) + AI.tokensOf(template) + AI.tokensOf(instructions) + AI.tokensOf(facts) + AI.tokensOf(events)
+    // Library and reference material share at most a third of the window: directives first, then
+    // examples (each shortened to fit), then the reference lists.
+    let refBudget = Math.floor((numCtx / 3) * 3.5);
+    const take = (list) => {
+      const out = [];
+      const items = (list || []).filter((r) => String(r.text || '').trim());
+      items.forEach((r, i) => {
+        if (refBudget < 200) return;
+        const text = String(r.text).trim();
+        const share = Math.floor(refBudget / (items.length - i));
+        const block = `### ${r.title}\n${text.length > share ? `${text.slice(0, Math.max(0, share - 40))} …[shortened]` : text}`;
+        refBudget -= block.length;
+        out.push(block);
+      });
+      return out.join('\n\n');
+    };
+    const dirText = take(directives);
+    const exText = take(examples);
+    const refText = take(references);
+    const fixed = AI.tokensOf(dirText) + AI.tokensOf(exText) + AI.tokensOf(refText) + AI.tokensOf(behavior) + AI.tokensOf(DRAFT_RULES) + AI.tokensOf(template) + AI.tokensOf(instructions) + AI.tokensOf(facts) + AI.tokensOf(events)
       + AI.tokensOf(clip(notes, notesChars(numCtx))) + 200;
     let budget = Math.max(1200, Math.floor((numCtx - reserve - fixed) * 3.5));
     const docs = [];
@@ -134,7 +145,9 @@
       `## Timeline\n${events || '(no timeline entries)'}`,
       `## Notes\n${clip(notes, notesChars(numCtx)) || '(no notes)'}`,
       `## Passages from attached documents\n${docs.join('\n\n') || '(no documents)'}`,
-      refText ? `## Reference material (forms and lists to follow for wording, statutes and codes; NOT facts of this case)\n${refText}` : null,
+      dirText ? `## Directives to follow (rules; cite them where relevant)\n${dirText}` : null,
+      exText ? `## Writing examples (copy their structure, headings, tone and phrasing; NEVER their facts, names, dates or numbers)\n${exText}` : null,
+      refText ? `## Reference material (lists to follow for wording, values and codes; NOT facts of this case)\n${refText}` : null,
     ].filter(Boolean).join('\n\n');
     const task = [
       `Write a first draft of: ${t.label}.`,
@@ -143,7 +156,7 @@
       instructions ? `Extra instructions from the user: ${instructions}` : '',
     ].filter(Boolean).join('\n\n');
     return [
-      { role: 'system', content: DRAFT_RULES },
+      { role: 'system', content: behavior ? `${DRAFT_RULES}\n\nHOW TO WRITE\n${behavior}` : DRAFT_RULES },
       { role: 'user', content: `CASE MATERIAL\n\n${material}\n\n---\n\nTASK\n\n${task}` },
     ];
   }
