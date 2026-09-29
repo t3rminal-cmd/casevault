@@ -20,12 +20,12 @@
     });
     idle.addEventListener('change', () => save({ online: { ...CVOutbound.onlineSettings(), idleMinutes: Number(idle.value) } }));
     return h('section', { 'data-section': 'online' },
-      h('h3', {}, 'Online features (research & drafting AI)'),
+      h('h3', { title: 'Research & drafting AI' }, 'Online features'),
       h('p', { class: 'muted small' }, 'Off by default. When allowed, the ', h('strong', {}, 'Online'), ' button in the header lets you go online for a while to ask Claude research and drafting questions. Personal details are replaced with placeholders and you see exactly what is sent. CaseVault only ever connects to ',
         h('code', {}, CVOutbound.ALLOWED_HOSTS.join(', ')), '.'),
       h('label', { class: 'check-row' }, allowed, h('span', {}, 'Allow going online')),
       h('div', { class: 'row' }, h('label', { class: 'inline' }, 'Go offline again after ', idle, ' without use')),
-      h('h4', {}, 'Anthropic API key (optional)'),
+      h('h4', { title: 'Optional' }, 'Anthropic API key'),
       h('p', { class: 'muted small' }, 'Only needed to get answers inside CaseVault. With your Claude subscription (claude.ai, copy & paste) no key is needed.'),
       CVApiKey.card({ compact: false }),
       h('p', { class: 'hint' }, 'Check your agency\'s policy on cloud AI before turning this on.'));
@@ -41,7 +41,7 @@
       save({ piiWatchlist: items }, `${items.length} term${items.length === 1 ? '' : 's'} on the watch list.`);
     });
     return h('section', { 'data-section': 'pii' },
-      h('h3', {}, 'Always hide (PII watch list)'),
+      h('h3', { title: 'PII watch list' }, 'Always hide'),
       h('p', { class: 'muted small' }, 'Besides the patterns CaseVault finds by itself (names after a title, SSNs, dates of birth, phones, addresses, plates, VINs, case numbers…), these words are always hidden from online AI and flagged in mail. Each case\'s client and case number, and your own details, are included automatically.'),
       ta);
   }
@@ -85,7 +85,7 @@
       h('p', { class: 'muted small' }, 'Mail from a case\'s Mail tab can only go to these domains. ', h('code', {}, 'agency.gov'), ' allows exactly @agency.gov; ', h('code', {}, '*.agency.gov'), ' also allows its sub-domains.'),
       ui.field('Allowed mail domains', domains),
       status,
-      ui.field('Address book (one per line)', book),
+      ui.field('Address book', book, '', 'One address per line.'),
       h('div', { class: 'row' },
         h('label', { class: 'inline' }, 'Subject marking ', marking),
         h('label', { class: 'check-row' }, requireMarking, h('span', {}, 'Required on every email')),

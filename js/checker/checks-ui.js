@@ -208,7 +208,7 @@
     CVWebLLM.available().then((a) => {
       if (!a.ok) { box.replaceChildren(h('p', { class: 'muted small' }, a.reason)); return; }
       const current = (Vault.data.settings.webllmModel) || (Engine.detected && Engine.detected.webllm && Engine.detected.webllm.model) || '';
-      const select = h('select', { 'aria-label': 'In-browser model' }, a.models.map((m) => h('option', { value: m.id, selected: m.id === current }, `${m.id} (${(m.bytes / 1e9).toFixed(1)} GB)`)));
+      const select = h('select', { 'aria-label': 'In-browser model' }, a.models.map((m) => h('option', { value: m.id, selected: m.id === current }, `${m.id} · ${(m.bytes / 1e9).toFixed(1)} GB`)));
       select.addEventListener('change', async () => {
         try {
           await Save.track('settings', () => Vault.updateSettings({ webllmModel: select.value }));
@@ -223,7 +223,7 @@
         CVWebLLM.lastError ? h('p', { class: 'error-text small' }, CVWebLLM.lastError.message) : null].filter(Boolean));
     });
     return h('section', {},
-      h('h3', {}, 'In-browser AI (fallback)'),
+      h('h3', { title: 'Used when Ollama is not running.' }, 'In-browser AI'),
       h('label', { class: 'check-row' }, allowed, h('span', {}, 'Use the in-browser AI when Ollama isn\'t running')),
       h('p', { class: 'muted small' }, 'Runs a small model (models in W:\\webllm) on this PC\'s graphics chip with WebGPU. Slower and less capable than Ollama, but needs nothing installed. Only available when CaseVault is opened through Start-CaseVault.bat.'),
       box);
@@ -300,7 +300,7 @@
     // ---- new check form
     const guess = files.find((f) => /affidavit|affid|declaration|probable cause/i.test(f.name)) || null;
     const affSelect = h('select', { 'aria-label': 'Document to check' },
-      h('option', { value: '' }, '(none: only compare the reports with each other)'),
+      h('option', { value: '' }, 'None: compare the reports with each other'),
       files.map((f) => h('option', { value: f.name, selected: guess && f.name === guess.name }, f.name)));
     const reportList = h('div', { class: 'check-reports' });
     const aiToggle = h('input', { type: 'checkbox' });
@@ -348,7 +348,7 @@
     const form = files.length
       ? h('div', { class: 'card' },
         h('h2', {}, 'New check'),
-        h('label', { class: 'field' }, h('span', {}, 'Document to check (affidavit or draft)'), affSelect),
+        h('label', { class: 'field', title: 'An affidavit or a draft.' }, h('span', {}, 'Document to check'), affSelect),
         h('div', { class: 'field' }, h('span', {}, 'Compare against'), reportList),
         h('label', { class: 'check-row' }, aiToggle, h('span', {}, 'Include AI review', aiLine)),
         h('p', { class: 'muted small' }, 'The rule-based checks (dates, times, names, numbers, addresses, plates, phone numbers, amounts, counts) always run. Reports are also cross-checked against each other.'),
@@ -672,7 +672,7 @@
 
   function flagCard(c, data, f, save, onChange) {
     const { h } = ui;
-    const note = h('textarea', { rows: 2, class: 'flag-note', placeholder: 'Explain how this was resolved (saved with the check)', 'aria-label': 'Note' });
+    const note = h('textarea', { rows: 2, class: 'flag-note', placeholder: 'Explain how this was resolved. It is saved with the check.', 'aria-label': 'Note' });
     note.value = f.note || '';
     note.hidden = f.status !== 'explained' && !f.note;
     note.addEventListener('input', () => { f.note = note.value; save(); });
@@ -732,7 +732,7 @@
       let lastPage = null;
       const body = h('div', { class: 'doc-view' });
       for (const p of doc.paragraphs) {
-        const section = p.sheet != null ? `Sheet: ${p.sheet}` : p.field != null ? 'Form fields (XFA)' : p.page ? `Page ${p.page}` : null;
+        const section = p.sheet != null ? `Sheet: ${p.sheet}` : p.field != null ? 'Form fields' : p.page ? `Page ${p.page}` : null;
         if (section && section !== lastPage) { body.append(h('div', { class: 'doc-page' }, section)); lastPage = section; }
         const isTarget = p.index === loc.paragraph;
         let content = [p.text];

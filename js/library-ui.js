@@ -125,14 +125,14 @@
       const pre = h('pre', { class: 'lib-text' }, 'Reading…');
       const d = ui.openDialog((close) => h('div', { class: 'lib-preview' },
         h('div', { class: 'preview-head' }, h('h2', {}, it.name), h('div', { class: 'spacer' }), h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Close')),
-        h('p', { class: 'muted small' }, 'This is the text Draft with AI reads from this file (the first part, if it is long).'), pre));
+        h('p', { class: 'muted small' }, 'This is the text Draft with AI reads from this file, or its first part if it is long.'), pre));
       try { const t = await textOf(it.path); pre.textContent = t.trim() ? t : '(No text found. A scanned PDF needs OCR: open it once in a case, or save it as text.)'; } catch (err) { pre.textContent = `Could not read it: ${err.message}`; }
       await d;
     }
 
     draw();
     return h('section', { 'data-section': 'library' },
-      h('h3', {}, 'Library (for the AI)'),
+      h('h3', {}, 'Library'),
       h('p', { class: 'muted small' }, 'Sample reports and warrants the AI learns to write from (DEA-6, DEA-7, DEA-202…), and directives it follows. Draft with AI uses examples of the document type you are writing, and your "always use" directives. Examples teach the format and wording only: their names and facts are never used. Stored in CaseVault-Data\\library on the SSD; only the AI on this computer reads them.'),
       h('div', { class: 'row lib-add' }, h('span', { class: 'small' }, 'Add to'), target,
         h('button', { class: 'btn small', type: 'button', icon: 'upload', onclick: () => input.click() }, 'Add files…'),
@@ -151,7 +151,7 @@
     function draw(selectedId) {
       const list = L().behaviorsOf(settings());
       const def = L().defaultBehaviorId(settings());
-      const pick = h('select', { 'aria-label': 'Behavior' }, list.map((b) => h('option', { value: b.id, selected: b.id === (selectedId || def) }, `${b.name}${b.id === def ? ' (default)' : ''}`)));
+      const pick = h('select', { 'aria-label': 'Behavior' }, list.map((b) => h('option', { value: b.id, selected: b.id === (selectedId || def) }, `${b.name}${b.id === def ? ' · default' : ''}`)));
       const name = h('input', { maxlength: 80, 'aria-label': 'Name' });
       const prompt = h('textarea', { rows: 9, class: 'behavior-prompt', 'aria-label': 'Instruction prompt', spellcheck: 'true' });
       const load = () => { const b = list.find((x) => x.id === pick.value); name.value = b.name; prompt.value = b.prompt; restoreBtn.hidden = !b.builtin; delBtn.hidden = !!b.builtin; };
@@ -172,9 +172,9 @@
             const id = `custom-${Date.now().toString(36)}`;
             const saved = [...(settings().aiBehaviors || []), { id, name: 'My behavior', prompt: current().prompt }];
             try { await saveAll(saved); draw(id); } catch { /* reported */ }
-          } }, 'New (copy of this)')),
+          } }, 'New')),
         ui.field('Name', name),
-        ui.field('Instruction prompt (how the AI writes)', prompt),
+        ui.field('Instruction prompt', prompt, '', 'How the AI writes.'),
         h('div', { class: 'row' },
           h('button', { class: 'btn small', type: 'button', icon: 'check2', title: 'Draft with AI starts with this behavior selected.', onclick: async () => {
             try { await saveAll(settings().aiBehaviors || [], pick.value); toast(`${current().name} is the default.`, 'success'); draw(pick.value); } catch { /* reported */ }

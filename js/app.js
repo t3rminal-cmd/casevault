@@ -657,7 +657,7 @@
       field('Status', h('select', { name: 'status' }, Vault.STATUSES.map((s) => h('option', {}, s)))),
       field('Opened', openedIn),
       h('p', { class: 'muted small span-2' }, folderNote),
-      field('Tags (comma separated)', h('input', { name: 'tags', maxlength: 300 }), 'span-2'),
+      field('Tags', h('input', { name: 'tags', maxlength: 300 }), 'span-2', 'Separate tags with commas.'),
       h('div', { class: 'dialog-actions span-2' },
         h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
         h('button', { class: 'btn primary', type: 'submit' }, 'Create case')));
@@ -671,8 +671,9 @@
     } catch { /* reported by Save */ }
   }
 
-  function field(label, input, cls = '') {
-    return h('label', { class: `field ${cls}` }, h('span', {}, label), input);
+  /** A labelled box. tip: the explanation, shown in the hover box (no brackets in labels). */
+  function field(label, input, cls = '', tip = '') {
+    return h('label', { class: `field ${cls}`, title: tip || null }, h('span', {}, label), input);
   }
 
   $('#btn-new-case').addEventListener('click', newCase);
@@ -836,7 +837,7 @@
         h('label', { class: 'field' }, h('span', {}, 'Status'), statusSelect, statusNote),
         field('Opened', bind(h('input', { type: 'date', value: c.dates.opened || '' }), (v) => { c.dates.opened = v; })),
         field('Closed', bind(closedInput, (v) => { c.dates.closed = v; })),
-        field('Tags (comma separated)', bind(h('input', { value: c.tags.join(', '), maxlength: 300 }), (v) => { c.tags = parseTags(v); }), 'span-2'),
+        field('Tags', bind(h('input', { value: c.tags.join(', '), maxlength: 300 }), (v) => { c.tags = parseTags(v); }), 'span-2', 'Separate tags with commas.'),
         h('p', { class: 'muted span-2 small' },
           `Created ${c.dates.created ? fmtDateTime(Date.parse(c.dates.created)) : '—'} · Folder: ${archived ? 'archive' : 'cases'}\\${c.id}`
           + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),
@@ -850,7 +851,7 @@
             : null,
           !archived ? (c.status === 'Closed'
             ? h('button', { class: 'btn action-btn', type: 'button', icon: 'unlock', title: 'Back to Open, for new information. The closing is kept in the case\'s history.', onclick: () => CVClosingUI.reopenCase(c) }, 'Reopen case')
-            : h('button', { class: 'btn primary action-btn', type: 'button', icon: 'lock-fill', title: 'When the investigation is finished: choose how it ended (arrest, exceptionally cleared, unfounded…). Lists loose ends first.', onclick: () => CVClosingUI.closeCaseDialog(c) }, 'Close case…')) : null,
+            : h('button', { class: 'btn primary action-btn', type: 'button', icon: 'lock-fill', title: 'When the investigation is finished: choose how it ended, such as arrest, exceptionally cleared or unfounded. Lists loose ends first.', onclick: () => CVClosingUI.closeCaseDialog(c) }, 'Close case…')) : null,
           !archived && !CVClosingUI.hasArrestTab(c) ? h('button', { class: 'btn action-btn', type: 'button', icon: 'person-vcard', title: 'Arrestee, arrest and charges, for the arrest report. Adds an Arrest details tab.', onclick: async () => {
             c.arrest = true;
             try { await Save.track(`case:${c.id}`, () => Vault.saveCase(structuredClone(c))); go(c.id, 'arrest'); } catch { /* reported */ }
@@ -1029,7 +1030,7 @@
       time: h('input', { type: 'time' }),
       kind: h('select', {}, h('option', { value: 'event' }, 'Event'), h('option', { value: 'deadline' }, 'Deadline')),
       title: h('input', { required: true, maxlength: 200, placeholder: 'What happened / what is due' }),
-      note: h('textarea', { rows: 2, maxlength: 4000, placeholder: 'Details (optional)' }),
+      note: h('textarea', { rows: 2, maxlength: 4000, placeholder: 'Details, optional' }),
     };
     const submit = h('button', { class: 'btn primary', type: 'submit' }, 'Add to timeline');
     const cancel = h('button', { class: 'btn', type: 'button', hidden: true }, 'Cancel');
@@ -1239,7 +1240,7 @@
         folderBtn(f, f, count(f) + CF.childrenOf(f).reduce((n, k) => n + count(k), 0), { top: f }),
         CF.childrenOf(f).map((k) => folderBtn(k, CF.shortName(k), count(k), { child: true })),
       ]),
-      unsorted.length ? folderBtn('unsorted', 'Unsorted (older files)', unsorted.length) : null,
+      unsorted.length ? folderBtn('unsorted', 'Unsorted', unsorted.length) : null,
       archived ? null : h('button', { class: 'btn small ghost folder-reset', type: 'button', icon: 'arrow-counterclockwise', title: 'Put the folders back in the standard order.', hidden: !saved.length, onclick: async () => { await saveFolderOrder(null); showCase(c.id, 'files', current || null); } }, 'Standard order'));
 
     // ---- file table: Name, Type, Size, Added. Click a heading to sort; "Custom" is your own
@@ -1395,7 +1396,7 @@
         h('h2', {}, f.folder ? 'Move or rename' : 'File this document'),
         h('p', { class: 'muted small' }, f.base),
         field('Document folder', folder),
-        field('Description (optional)', desc),
+        field('Description', desc, '', 'Optional: a few words added to the file name.'),
         h('label', { class: 'check-row' }, keep, h('span', {}, 'Keep the current file name')),
         h('p', {}, 'New name: ', result),
         h('div', { class: 'dialog-actions' },
@@ -1471,7 +1472,7 @@
           const fields = await CVExtract.readXfaFields(data);
           if (!fields.xfa) return body.replaceWith(pdfFrame());
           const view = h('div', { class: 'xfa-view' });
-          const note = h('p', { class: 'muted small' }, 'XFA form (Adobe LiveCycle), shown read-only.');
+          const note = h('p', { class: 'muted small' }, 'XFA form, shown read-only.');
           const showFields = () => CVExtract.renderXfa(view, data, fields, at && at.field, { fieldsOnly: true });
           const showForm = () => CVExtract.renderXfa(view, data, fields, at && at.field);
           const toggle = h('button', { class: 'btn small ghost', type: 'button', onclick: () => {
@@ -1554,8 +1555,8 @@
         h('h3', {}, 'This vault'),
         h('div', { class: 'vault-facts' },
           [['folder2-open', 'Folder', Vault.root.name], ['collection', 'Cases', String(v.cases.length)], ['calendar-event', 'Created', v.created ? fmtDateTime(Date.parse(v.created)) : '—'],
-            ['shield-check', 'App version', Vault.APP_VERSION], [MODE === 'direct' ? 'usb-drive' : 'plug', 'Mode', MODE === 'direct' ? 'Direct (browser opens the SSD)' : 'Helper (CaseVault helper on 127.0.0.1)']]
-            .map(([ic, k, val]) => h('div', { class: 'fact' }, h('span', { class: 'fact-icon' }, I(ic)), h('span', {}, h('span', { class: 'small muted block' }, k), h('strong', {}, val))))),
+            ['shield-check', 'App version', Vault.APP_VERSION], [MODE === 'direct' ? 'usb-drive' : 'plug', 'Mode', MODE === 'direct' ? 'Direct' : 'Helper', MODE === 'direct' ? 'The browser opens the SSD itself.' : 'The CaseVault helper on 127.0.0.1 opens the SSD.']]
+            .map(([ic, k, val, tip]) => h('div', { class: 'fact', title: tip || null }, h('span', { class: 'fact-icon' }, I(ic)), h('span', {}, h('span', { class: 'small muted block' }, k), h('strong', {}, val))))),
         h('p', { class: 'muted small' }, 'Vault ID ', h('span', { class: 'mono' }, v.vaultId || '—')));
       const backupsSec = h('section', { 'data-section': 'backups' },
         h('h3', {}, 'Backups'),
@@ -1601,6 +1602,15 @@
         sec.classList.add('vault-card');
         const title = sec.querySelector('h3');
         if (title && !title.querySelector('svg')) title.prepend(I(SECTION_ICONS[key] || 'gear'));
+        // The section's explanation goes into a hover box on its heading (an ⓘ marks it).
+        const intro = title && title.nextElementSibling;
+        if (intro && intro.matches('p.muted')) {
+          title.dataset.tip = [title.dataset.tip || title.getAttribute('title'), intro.textContent.trim()].filter(Boolean).join('\n');
+          title.removeAttribute('title');
+          title.append(I('info-circle', { cls: 'tip-icon' }));
+          title.tabIndex = 0;
+          intro.remove();
+        }
         scroller.append(sec);
         nav.append(h('button', { type: 'button', class: 'vault-nav-item', 'data-target': key, onclick: () => sec.scrollIntoView({ block: 'start', behavior: 'smooth' }) },
           I(SECTION_ICONS[key] || 'gear'), h('span', {}, title ? title.textContent.replace(/\s*\(.*\)$/, '') : key)));
@@ -1628,7 +1638,7 @@
     const list = h('ol', { class: 'selftest-list' });
     const summary = h('p', { class: 'muted' }, 'Running. This takes up to a minute; the AI test can take longer the first time.');
     const copy = h('button', { class: 'btn', type: 'button', disabled: true, onclick: async () => {
-      try { await navigator.clipboard.writeText(CVSelfTest.report(results, env)); toast('Report copied (no case data in it).', 'success'); } catch { toast('Could not copy.', 'error'); }
+      try { await navigator.clipboard.writeText(CVSelfTest.report(results, env)); toast('Report copied. It holds no case data.', 'success'); } catch { toast('Could not copy.', 'error'); }
     } }, 'Copy report');
     const draw = (r) => {
       results = r;
@@ -1668,10 +1678,10 @@
         : h('input', { id, type: TYPES[k] || 'text', autocomplete: 'off' });
       inputs[k].value = a[k] || '';
       inputs[k].addEventListener('change', save);
-      return h('div', { class: 'field' }, h('label', { for: id }, LABELS[k], ' ', h('code', { class: 'small muted' }, `{{affiant.${k}}}`)), inputs[k]);
+      return h('div', { class: 'field', title: `Fills {{affiant.${k}}} in templates.` }, h('label', { for: id }, LABELS[k]), inputs[k]);
     });
     return h('section', { 'data-section': 'affiant' },
-      h('h3', {}, 'My details (for templates)'),
+      h('h3', {}, 'My details'),
       h('p', { class: 'muted small' }, 'Filled into templates wherever they say ', h('code', {}, '{{affiant.name}}'), ' and so on. Anything left empty becomes a [CONFIRM: ...] placeholder. Stored in vault.json on the SSD.'),
       h('div', { class: 'affiant-grid' }, rows));
   }
@@ -1681,7 +1691,7 @@
   function privacySettings(v) {
     const status = h('span', {});
     const form = h('div', { class: 'row', hidden: true });
-    const pin1 = h('input', { type: 'password', inputmode: 'numeric', maxlength: 6, class: 'narrow pin', placeholder: 'PIN', 'aria-label': 'New PIN (4 to 6 digits)', autocomplete: 'off' });
+    const pin1 = h('input', { type: 'password', inputmode: 'numeric', maxlength: 6, class: 'narrow pin', placeholder: 'PIN', 'aria-label': 'New PIN, 4 to 6 digits', autocomplete: 'off' });
     const pin2 = h('input', { type: 'password', inputmode: 'numeric', maxlength: 6, class: 'narrow pin', placeholder: 'Repeat', 'aria-label': 'Repeat the PIN', autocomplete: 'off' });
     const setBtn = h('button', { class: 'btn', type: 'button' });
     const removeBtn = h('button', { class: 'btn', type: 'button' }, 'Remove PIN');
@@ -1700,7 +1710,7 @@
         await Save.track('settings', () => Vault.updateSettings({ privacyPin: record }));
         form.hidden = true;
         draw();
-        toast('Privacy screen PIN saved (only a salted hash is stored).', 'success');
+        toast('Privacy screen PIN saved. Only a salted hash is stored.', 'success');
       } catch { /* reported by Save */ }
     };
     setBtn.addEventListener('click', () => { form.hidden = !form.hidden; if (!form.hidden) pin1.focus(); });

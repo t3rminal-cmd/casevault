@@ -81,25 +81,25 @@
         if (back !== payload) return fail('The test file read back differently. The drive may be failing.');
         return ok(`A test file was written to ${Vault.root.name}, read back identically, and deleted.`);
       }],
-      ['Word (.docx) reader', async () => {
+      ['Word .docx reader', async () => {
         const bytes = root.CVDocx.buildDocx(`# Test\n\n${MINI_CASE.report}`, { title: 'Self-test' });
         const d = await root.CVExtract.extract(new File([bytes], 'selftest.docx'), 'selftest.docx');
         return /2140 hours/.test(textOf(d)) ? ok('A Word file made in memory was read correctly.') : fail('The Word text did not come back.');
       }],
-      ['PDF reader (pdf.js)', async () => {
+      ['PDF reader', async () => {
         const d = await root.CVExtract.extract(new File([buildPdf({ text: 'Officer Alex Sample responded at 2140 hours.' })], 'selftest.pdf'), 'selftest.pdf');
         return /2140 hours/.test(textOf(d)) ? ok('A text PDF was read.') : fail(`No text came back${d.warnings && d.warnings.length ? `: ${d.warnings[0]}` : '.'}`);
       }],
-      ['XFA form reader (LiveCycle)', async () => {
+      ['XFA form reader', async () => {
         const f = await root.CVExtract.readXfaFields(buildPdf({ text: 'Please wait...', xfa: XFA }));
         const t = f.paragraphs.map((p) => p.text).join(' | ');
         return f.xfa && /Case number: 2026-00123/.test(t) && /Reporting officer: Officer Alex Sample/.test(t) ? ok(`Form fields read: ${t}`) : fail(`Form fields not read (${t || 'none'}).`);
       }],
-      ['Spreadsheet reader (CSV)', async () => {
+      ['Spreadsheet reader', async () => {
         const d = await root.CVExtract.extract(new File(['Item,Value\n2,"$2,540"\n'], 'selftest.csv'), 'selftest.csv');
         return /2,540/.test(textOf(d)) ? ok(`Rows read: ${textOf(d)}`) : fail('The CSV rows did not come back.');
       }],
-      ['OCR (scanned pages and photos)', async (progress) => {
+      ['OCR for scanned pages and photos', async (progress) => {
         const canvas = root.document.createElement('canvas');
         canvas.width = 900; canvas.height = 160;
         const g = canvas.getContext('2d');
@@ -141,12 +141,12 @@
         const hw = root.CVHardware ? ` ${root.CVHardware.explain(root.CVHardware.state)}` : '';
         return ok(`Checks here use ${choice.model} (${Engine.setting() === 'auto' ? 'Auto' : 'chosen on this PC'}).${hw}`);
       }],
-      ['Passage search model (nomic-embed-text)', async () => {
+      ['Passage search model', async () => {
         const d = Engine.detected || {};
         if (d.status !== 'connected' || d.engine === 'webllm') return warn('Only checked when Ollama is running.');
         return d.embed ? ok(`${d.embed} is installed.`) : warn('Not installed. Click "AI:" in the header for the one-line install.');
       }],
-      ['AI answers (short live test)', async (progress) => {
+      ['AI answers, short live test', async (progress) => {
         const d = Engine.detected || {};
         const choice = Engine.choice();
         if (d.status !== 'connected' || !choice) return warn('Skipped: no AI engine.');

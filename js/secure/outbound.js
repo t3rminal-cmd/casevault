@@ -22,8 +22,8 @@
   const ALLOWED_HOSTS = ['api.anthropic.com'];
   const TICKET_MS = 5 * 60 * 1000;
   const CHANNELS = {
-    'online-ai': { label: 'Online AI (Anthropic API)', network: true },
-    'claude-web': { label: 'claude.ai (copy and paste)', network: false },
+    'online-ai': { label: 'Online AI · Anthropic API', network: true },
+    'claude-web': { label: 'claude.ai · copy and paste', network: false },
     mail: { label: 'Department mail', network: false },
   };
 
@@ -186,7 +186,7 @@
               const critical = a.findings && P().hasCritical(a.findings);
               return h('li', { class: `pii-row ${critical ? 'lvl-critical' : a.findings && a.findings.length ? 'lvl-high' : ''}` },
                 h('span', { class: 'pii-type' }, a.name),
-                h('span', { class: 'pii-ctx small' }, !a.findings ? 'Not scanned (no readable text: check it yourself)'
+                h('span', { class: 'pii-ctx small' }, !a.findings ? 'Not scanned: no readable text, check it yourself'
                   : !a.findings.length ? 'No personal details found'
                     : Object.entries(counts).map(([t, n]) => `${n} × ${P().TYPES[t].label}`).join(' · ')));
             }))));

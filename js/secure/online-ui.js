@@ -88,12 +88,12 @@
 
       // --- settings row ---
       const service = h('select', { 'aria-label': 'Service' },
-        h('option', { value: 'claude-web', selected: session.service === 'claude-web' }, 'claude.ai: my Claude subscription (copy & paste)'),
-        h('option', { value: 'online-ai', selected: session.service === 'online-ai' }, 'Anthropic API: answers here (API key)'));
+        h('option', { value: 'claude-web', selected: session.service === 'claude-web' }, 'claude.ai: my Claude subscription, copy & paste'),
+        h('option', { value: 'online-ai', selected: session.service === 'online-ai' }, 'Anthropic API: answers here, with an API key'));
       service.addEventListener('change', () => { session.service = service.value; draw(); });
       const purpose = h('select', { 'aria-label': 'Purpose' }, ['Research', 'Drafting'].map((p) => h('option', { selected: session.purpose === p }, p)));
       purpose.addEventListener('change', () => { session.purpose = purpose.value; });
-      const caseSel = h('select', { 'aria-label': 'Case' }, h('option', { value: '' }, '(no case: general research)'),
+      const caseSel = h('select', { 'aria-label': 'Case' }, h('option', { value: '' }, 'No case: general research'),
         cases.map((c) => h('option', { value: c.id, selected: c.id === session.caseId }, `${c.title || 'Untitled'}${c.number ? ` · ${c.number}` : ''}`)));
       caseSel.addEventListener('change', () => { session.caseId = caseSel.value; draw(); });
 
@@ -158,19 +158,19 @@
       });
 
       page.replaceChildren(...[
-        h('h1', {}, 'Research & drafting (online)'),
+        h('h1', { title: 'Online' }, 'Research & drafting online'),
         status,
         h('div', { class: 'online-settings row' },
           h('label', { class: 'field' }, h('span', {}, 'Service'), service),
           h('label', { class: 'field' }, h('span', {}, 'Purpose'), purpose),
-          h('label', { class: 'field grow' }, h('span', {}, 'Case (for its names and drafts)'), caseSel)),
+          h('label', { class: 'field grow' }, h('span', { title: 'For its names and drafts.' }, 'Case'), caseSel)),
         apiBox,
         h('div', { class: 'row' }, h('h2', {}, 'Conversation'), h('div', { class: 'spacer' }),
           session.turns.length ? h('label', { class: 'check-row small' }, (() => {
             const cb = h('input', { type: 'checkbox', checked: session.showReal });
             cb.addEventListener('change', () => { session.showReal = cb.checked; draw(); });
             return cb;
-          })(), h('span', {}, 'Show real names (on this computer only)')) : null,
+          })(), h('span', { title: 'Only on this computer.' }, 'Show real names')) : null,
           session.turns.length ? h('button', { class: 'btn small', type: 'button', onclick: () => { reset(); draw(); } }, 'Clear conversation') : null),
         convo,
         h('div', { class: 'online-compose' }, ta,

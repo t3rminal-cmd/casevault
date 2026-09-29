@@ -31,6 +31,10 @@
 
   function place(el) {
     const b = box();
+    // Inside an open dialog (the Vault panel…) the box must live in that dialog: a modal dialog
+    // sits in the browser's top layer, above anything else on the page.
+    const host = el.closest('dialog[open]') || doc.body;
+    if (b.parentNode !== host) host.append(b);
     const r = el.getBoundingClientRect();
     b.style.left = '0px';
     b.style.top = '0px';
@@ -79,7 +83,9 @@
   doc.addEventListener('focusin', (e) => { const el = target(e); if (el && e.target.matches(':focus-visible')) show(el, 150); });
   doc.addEventListener('focusout', hide);
   doc.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current) hide(); }, true);
-  doc.addEventListener('scroll', hide, true);
+  // Scrolling hides a box that is showing (it would be in the wrong place); one about to show is
+  // placed where its element is by then.
+  doc.addEventListener('scroll', () => { if (tip && !tip.hidden) hide(); }, true);
   doc.addEventListener('pointerdown', hide, true);
 
   root.CVTooltip = { hide };

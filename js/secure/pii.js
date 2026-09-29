@@ -30,7 +30,7 @@
     email: { label: 'Email address', tag: 'EMAIL', level: 'high', locked: true },
     address: { label: 'Street address', tag: 'ADDRESS', level: 'high', locked: true },
     plate: { label: 'Licence plate', tag: 'PLATE', level: 'high', locked: true },
-    vin: { label: 'Vehicle identification number (VIN)', tag: 'VIN', level: 'high', locked: true },
+    vin: { label: 'Vehicle identification number', tag: 'VIN', level: 'high', locked: true },
     ip: { label: 'IP address', tag: 'IP', level: 'medium', locked: true },
     person: { label: 'Possible person name', tag: 'NAME', level: 'medium', locked: false },
   };

@@ -320,7 +320,7 @@
     const exportMenu = h('details', { class: 'menu' },
       h('summary', { class: 'btn small' }, 'Export ▾'),
       h('div', { class: 'menu-items' },
-        h('button', { type: 'button', onclick: () => exportDocx('case') }, 'Save .docx to case files (SSD)'),
+        h('button', { type: 'button', onclick: () => exportDocx('case') }, 'Save .docx to case files'),
         h('button', { 'data-ro-ok': 'true', type: 'button', onclick: () => exportDocx('download') }, 'Save .docx to this computer…'),
         h('button', { 'data-ro-ok': 'true', type: 'button', onclick: copyPlain }, 'Copy as plain text')));
     // Drafts save by themselves; Save (or Ctrl+S) writes now and says so.
@@ -434,7 +434,7 @@
       const behaviors = CVLibrary.behaviorsOf(settings);
       const opts = await ui.openDialog((close) => {
         const type = h('select', {}, Object.entries(CVDraft.DOC_TYPES).map(([k, t]) => h('option', { value: k, selected: k === meta.type }, t.label)));
-        const tpl = h('select', {}, h('option', { value: '' }, '(none: use the standard structure)'),
+        const tpl = h('select', {}, h('option', { value: '' }, 'None: the standard structure'),
           templates.map((t) => h('option', { value: t.file, selected: t.file === meta.template }, t.title)));
         const useTimeline = h('input', { type: 'checkbox', checked: true });
         const useNotes = h('input', { type: 'checkbox', checked: true });
@@ -481,7 +481,7 @@
             docBoxes.map((b) => h('label', { class: 'check-row' }, b, h('span', {}, b.value))),
             docs.length ? null : h('p', { class: 'muted small' }, 'No attached documents to draw on.'))),
         ui.field('Writing behavior', behavior),
-        h('div', { class: 'field' }, h('span', {}, 'Library (how to write; never facts)'), libBox),
+        h('div', { class: 'field' }, h('span', { title: 'How to write, never facts: names and events in the examples belong to other cases.' }, 'Library'), libBox),
         h('div', { class: 'field' }, h('span', {}, 'Reference'),
           h('div', { class: 'check-reports' },
             h('label', { class: 'check-row' }, useValues, h('span', {}, 'Narcotics street values')),
@@ -612,7 +612,7 @@
       area.dispatchEvent(new Event('input', { bubbles: true }));
     };
     return h('details', { class: 'placeholder-help' },
-      h('summary', {}, 'Placeholders (click one to insert it at the cursor)'),
+      h('summary', { title: 'Click one to insert it at the cursor.' }, 'Placeholders'),
       h('p', { class: 'muted small' }, 'When a draft is made, each placeholder is replaced with the case\'s value. Anything empty or unknown becomes [CONFIRM: …] so nothing slips through. Upper/lower case does not matter.'),
       CVDraft.placeholderGroups(arrestKeys).map((grp) => h('div', { class: 'ph-group' },
         h('span', { class: 'ph-title small' }, grp.title),

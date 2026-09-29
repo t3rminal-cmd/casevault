@@ -74,6 +74,7 @@ The header has, from left to right: the vault folder, the **Offline** / **AI** /
 - **Theme button** (half circle, sun or moon): switches between *automatic* (follows Windows' light or dark setting), *light* and *dark*. Each PC remembers its own choice in the browser; it's a display preference, not case data.
 - Icons mark every tab, button and document folder, and each file in a case shows an icon for its type (PDF, Word, Excel, picture, audio, video, email).
 - **Point at a button** (or reach it with Tab) to see what it does in a hover box. Buttons show just an icon and a short name; the explanation is in the hover box.
+- Labels have no brackets: extra detail (for example *Separate tags with commas* on Tags) is in the hover box. In the Vault, an ⓘ after a heading means pointing at the heading shows what that section is for, and pointing at a box in **My details** shows which `{{affiant.…}}` placeholder it fills.
 - The page is centred and uses the width of the screen, from a phone up to 1920×1080 and larger. Case actions are same-size buttons in one row.
 - The **Overview** shows your case counts, then, each under a line: **Upcoming deadlines**, **Recently updated**, and **Quick links** (see below).
 - On a narrow window the header buttons shrink to their icons.
@@ -84,10 +85,10 @@ The header has, from left to right: the vault folder, the **Offline** / **AI** /
 At the bottom of the Overview, in three tabs:
 
 - **Reference:** Incident location codes, Commonly used UCR and the Narcotic calculator (CaseVault's own pages, see *Reference*).
-- **OSINT:** MaxMind (IP lookup), NumLookup (phone), Google Images (reverse image search), mempool.space, Blockchair and Blockchain.com Explorer (blockchain explorers), and Fingerprint.
+- **OSINT:** MaxMind (IP lookup), NumLookup (phone), Google Images (reverse image search), Blockchair (blockchain explorer) and Fingerprint.
 - **LEO:** Accurint, Kodex Portal and Chicago HIDTA, plus any you add.
 
-OSINT and LEO links open the website **in a new browser tab**, outside CaseVault. CaseVault never contacts those sites itself and sends them nothing (not even which page you came from), so it still works offline. Don't paste case details into outside websites unless your policy allows it.
+OSINT and LEO links open the website **in a new browser tab**, outside CaseVault. CaseVault never contacts those sites itself and sends them nothing (not even which page you came from), so CaseVault stays offline: the **Offline** badge doesn't change when you click one. The website itself needs the PC's internet connection, like any site you open in the browser. Don't paste case details into outside websites unless your policy allows it.
 
 - **Show / hide** lets you hide the buttons you don't use (click the eye on each), and bring them back.
 - **Edit links** (or **Vault → Quick links**) changes a link's name or web address, and adds your own, for example your agency's portals. Chicago HIDTA has no address until you add your portal's. Changes save when you leave the box, in `vault.json` on the SSD.
@@ -391,7 +392,7 @@ CaseVault is offline by default. If your agency allows it, you can ask Claude re
 
 Phone numbers are found with or without the area code (`555-0142`), and plates with or without the word "plate" (`TST-1284`). When details overlap, for example your own surname inside a street address or an email, the whole address or email is hidden, not just the name (v1.9.1).
 
-Detection is a safety net, not a guarantee. Always read the text before you send it, and add names CaseVault should always hide to **Vault → Always hide (PII watch list)**: subjects, informants, nicknames, street names.
+Detection is a safety net, not a guarantee. Always read the text before you send it, and add names CaseVault should always hide to **Vault → Always hide**: subjects, informants, nicknames, street names.
 
 Only `api.anthropic.com` can ever be reached (the page's security policy blocks every other address), only with text you reviewed, and each review allows one request. Case files are never sent automatically.
 
@@ -520,7 +521,7 @@ Read an AI draft as a starting point. It can still misstate things, so check eve
 - Each directive has **Always use**: ticked directives go with every Draft with AI.
 - The eye button shows the text the AI reads from the file. Move a file between parts with its list, or delete it.
 - Only the AI on this computer reads the Library; it's never sent online. Long files are shortened to fit the AI's window, so short, typical samples work best (two or three good DEA-6s beat twenty).
-- Examples may contain real names from closed cases: they stay on the encrypted SSD like everything else.
+- **Real forms with PII are fine.** Library files stay on the encrypted SSD, and only the AI on this computer (Ollama at 127.0.0.1, or the in-browser engine) reads them. They're never sent online: the online research page doesn't use the Library. The one thing to watch is the output: the AI is told never to copy names or facts from examples, but a small model can slip, so read every draft for names that belong to another case. If you'd rather not rely on that, black out or replace names in the samples first (*SUBJECT 1*, *SA EXAMPLE*); the AI learns the format just as well.
 
 ### AI writing behavior
 
@@ -559,7 +560,7 @@ There's no required layout. Plain text works; to format it, `# ` at the start of
 |---|---|
 | `{{case.title}}`, `{{case.number}}`, `{{case.client}}`, `{{case.status}}`, `{{case.tags}}` | The case's details |
 | `{{case.opened}}`, `{{case.closed}}` | The case's dates |
-| `{{affiant.name}}`, `{{affiant.title}}`, `{{affiant.agency}}` | Your details from **Vault → My details (for templates)** |
+| `{{affiant.name}}`, `{{affiant.title}}`, `{{affiant.agency}}` | Your details from **Vault → My details** |
 | `{{affiant.address}}` | Your address, on as many lines as you typed |
 | `{{affiant.phone}}`, `{{affiant.email}}` | Your phone number and email |
 | `{{today}}` / `{{today.iso}}` | Today, as *September 28, 2026* / *2026-09-28* |
@@ -572,7 +573,7 @@ There's no required layout. Plain text works; to format it, `# ` at the start of
 
 A placeholder with no value (for example a case without a client) becomes `[CONFIRM: case.client]`, so nothing missing slips through.
 
-**My details.** Fill in your name, title, agency, address, phone and email once in **Vault → My details (for templates)**. Changes save to `vault.json` on the SSD as soon as you leave a box. They're used for new drafts from then on. Drafts you already made keep their text. Leave a box empty and templates show `[CONFIRM: affiant.phone]` (and so on) instead. The starter affidavit uses these placeholders; starter templates added before v1.8 don't, so add them to your own copy if you like.
+**My details.** Fill in your name, title, agency, address, phone and email once in **Vault → My details**. Changes save to `vault.json` on the SSD as soon as you leave a box. They're used for new drafts from then on. Drafts you already made keep their text. Leave a box empty and templates show `[CONFIRM: affiant.phone]` (and so on) instead. The starter affidavit uses these placeholders; starter templates added before v1.8 don't, so add them to your own copy if you like.
 
 ## Backups
 
