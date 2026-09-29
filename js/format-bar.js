@@ -3,6 +3,9 @@
  * understand (**bold**, *italic*, ++underline++, # heading, - item, 1. item, | a | b |), so the
  * text stays plain on the SSD. Ctrl+B, Ctrl+I and Ctrl+U work in the text too.
  *
+ * Tab indents (a tab character; with several lines selected, each line) and Shift+Tab takes one
+ * indent off, as in Word. To move on to the next button with the keyboard, press Esc, then Tab.
+ *
  * The text edits (wrap, prefixLines, tableMarkdown) are plain functions the tests run under Node.
  */
 'use strict';
@@ -89,6 +92,28 @@
     ta.setSelectionRange(r.start, r.end);
   }
 
+  /** Tab / Shift+Tab: -> { text, start, end }. One line: insert a tab (or remove the line's first
+   * indent); several lines selected: indent or outdent each of them. */
+  function indent(text, start, end, out = false) {
+    const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+    const multi = text.slice(start, end).includes('\n');
+    if (!out && !multi) return { text: text.slice(0, start) + '\t' + text.slice(end), start: start + 1, end: start + 1 };
+    const endLine = end > start && text[end - 1] === '\n' ? end - 1 : end;
+    const block = text.slice(lineStart, endLine);
+    let first = 0; let total = 0;
+    const lines = block.split('\n').map((l, i) => {
+      if (!out) { if (i === 0) first = 1; total += 1; return `\t${l}`; }
+      const m = /^(\t| {1,4})/.exec(l);
+      const n = m ? m[1].length : 0;
+      if (i === 0) first = -n;
+      total -= n;
+      return l.slice(n);
+    });
+    const next = text.slice(0, lineStart) + lines.join('\n') + text.slice(endLine);
+    const s = multi ? lineStart : Math.max(lineStart, start + first);
+    return { text: next, start: s, end: multi ? endLine + total : s + (end - start) };
+  }
+
   function attach(ta, { h, icon }) {
     const act = (fn) => () => { if (ta.readOnly || ta.disabled) return; apply(ta, fn(ta.value, ta.selectionStart, ta.selectionEnd)); };
     const bold = act((t, s, e) => wrap(t, s, e, '**'));
@@ -111,6 +136,15 @@
     const tableBtn = btn('table', 'Insert a table', '', () => { grid.hidden = !grid.hidden; gridLabel.textContent = 'Table'; });
     root.document.addEventListener('pointerdown', (e) => { if (!grid.hidden && !grid.contains(e.target) && !tableBtn.contains(e.target)) grid.hidden = true; });
 
+    // Tab indents. Esc first lets the next Tab leave the box (for keyboard users).
+    let leaving = false;
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { leaving = true; return; }
+      if (e.key !== 'Tab') { leaving = false; return; }
+      if (leaving || e.defaultPrevented || e.ctrlKey || e.altKey || e.metaKey || ta.readOnly || ta.disabled) { leaving = false; return; }
+      e.preventDefault();
+      apply(ta, indent(ta.value, ta.selectionStart, ta.selectionEnd, e.shiftKey));
+    });
     ta.addEventListener('keydown', (e) => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
       const k = e.key.toLowerCase();
@@ -129,7 +163,7 @@
       h('span', { class: 'fmt-table' }, tableBtn, grid));
   }
 
-  const api = { wrap, prefixLines, tableMarkdown, insertTable, attach };
+  const api = { wrap, prefixLines, tableMarkdown, insertTable, indent, attach };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVFormatBar = api;
 })(this);

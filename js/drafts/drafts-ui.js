@@ -22,11 +22,11 @@
   async function render(panel, c, token, sub) {
     if (sub) return renderEditor(panel, c, token, decodeURIComponent(sub));
     const { h, state, fmtDateTime, toast, go, Save, confirmDialog } = ui;
-    const [drafts, templates] = await Promise.all([Vault.listDrafts(c.id), Vault.listTemplates()]);
+    const [drafts, templates, notesText] = await Promise.all([Vault.listDrafts(c.id), Vault.listTemplates(), Vault.getNotes(c.id).catch(() => '')]);
     if (token !== state.renderToken) return;
     Engine().refresh().then(() => { if (token === state.renderToken) drawStart(); });
 
-    const title = h('input', { maxlength: 150, placeholder: 'e.g. Affidavit for search warrant', 'aria-label': 'Draft title' });
+    const title = h('input', { maxlength: 150, placeholder: 'e.g. Affidavit for search warrant', 'aria-label': 'Report title' });
     const type = h('select', { 'aria-label': 'Document type' }, Object.entries(CVDraft.DOC_TYPES).map(([k, t]) => h('option', { value: k }, t.label)));
     const tplSelect = h('select', { 'aria-label': 'Template' }, templates.map((t) => h('option', { value: t.file }, t.title)));
     // Picking a template suggests the matching document type (affidavit, subpoena, ...).
@@ -68,7 +68,7 @@
       } catch { /* reported by Save */ }
     }
 
-    const create = h('button', { class: 'btn primary', type: 'button' }, 'Create draft');
+    const create = h('button', { class: 'btn primary', type: 'button' }, 'Create report');
     create.addEventListener('click', async () => {
       const name = title.value.trim() || `${CVDraft.DOC_TYPES[type.value].label} ${CVFormat.dateText(Vault.localDay())}`;
       const start = Object.values(radios).find((r) => r.checked).value;
@@ -84,34 +84,39 @@
         const meta = { title: name, type: type.value, ai: false, created: new Date().toISOString(), ...(start === 'template' ? { template: tplSelect.value } : {}) };
         await Save.track(`draft:${c.id}:${slug}`, () => Vault.saveDraft(c.id, slug, meta, body));
         if (start === 'ai') pendingGenerate = { caseId: c.id, slug };
-        go(c.id, 'drafts', slug);
+        go(c.id, 'reports', slug);
       } catch { /* reported by Save */ }
     });
 
-    const list = drafts.length
-      ? h('table', { class: 'files drafts-table' },
-        h('thead', {}, h('tr', {}, h('th', {}, 'Draft'), h('th', {}, 'Type'), h('th', {}, 'Updated'), h('th', {}, ''))),
-        h('tbody', {}, drafts.map((d) => h('tr', {},
-          h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/drafts/${encodeURIComponent(d.slug)}` }, d.title), d.ai ? h('span', { class: 'layer-badge ai-badge' }, 'AI') : null),
-          h('td', { class: 'muted' }, (CVDraft.DOC_TYPES[d.type] || CVDraft.DOC_TYPES.other).label),
-          h('td', { class: 'muted' }, d.updated ? fmtDateTime(Date.parse(d.updated)) : ''),
-          h('td', { class: 'actions' }, h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
-            if (!(await confirmDialog({ title: `Delete "${d.title}"?`, message: 'The draft is permanently deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
-            try { await Save.track(`draft-del:${c.id}:${d.slug}`, () => Vault.deleteDraft(c.id, d.slug)); ui.refresh(); } catch { /* reported */ }
-          } }, 'Delete'))))))
-      : h('p', { class: 'muted' }, 'No drafts yet.');
+    // Reports: the case notes first (always there), then every draft.
+    const words = (notesText.match(/\S+/g) || []).length;
+    const notesRow = h('tr', { class: 'notes-row' },
+      h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/.notes` }, ui.icon('journal-text'), ' Case notes')),
+      h('td', { class: 'muted' }, 'Notes'),
+      h('td', { class: 'muted' }, words ? `${words} word${words === 1 ? '' : 's'}` : 'Empty'),
+      h('td', {}));
+    const list = h('table', { class: 'files drafts-table' },
+      h('thead', {}, h('tr', {}, h('th', {}, 'Report'), h('th', {}, 'Type'), h('th', {}, 'Updated'), h('th', {}, ''))),
+      h('tbody', {}, notesRow, drafts.map((d) => h('tr', {},
+        h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/${encodeURIComponent(d.slug)}` }, d.title), d.ai ? h('span', { class: 'layer-badge ai-badge' }, 'AI') : null),
+        h('td', { class: 'muted' }, (CVDraft.DOC_TYPES[d.type] || CVDraft.DOC_TYPES.other).label),
+        h('td', { class: 'muted' }, d.updated ? fmtDateTime(Date.parse(d.updated)) : ''),
+        h('td', { class: 'actions' }, h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
+          if (!(await confirmDialog({ title: `Delete "${d.title}"?`, message: 'The report is permanently deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
+          try { await Save.track(`draft-del:${c.id}:${d.slug}`, () => Vault.deleteDraft(c.id, d.slug)); ui.refresh(); } catch { /* reported */ }
+        } }, 'Delete'))))));
 
     const archived = Vault.isArchived(c.id);
     panel.replaceChildren(
       // An archived case is read-only: its drafts can be read and exported, not added to.
       ...(archived ? [] : [h('div', { class: 'card' },
-        h('h2', {}, 'New draft'),
+        h('h2', {}, 'New report'),
         h('div', { class: 'form-grid' }, ui.field('Title', title), ui.field('Type', type)),
         h('div', { class: 'field' }, h('span', {}, 'Start from'), startBox),
         h('div', { class: 'form-actions' }, create))]),
-      h('h2', { class: 'section-title' }, 'Drafts'),
+      h('h2', { class: 'section-title' }, 'Reports'),
       list,
-      h('p', { class: 'muted small explain' }, `Saved on the SSD in ${archived ? 'archive' : 'cases'}\\${c.id}\\drafts as Markdown files. Templates live in CaseVault-Data\\templates (Vault → Templates).`));
+      h('p', { class: 'muted small explain' }, `Your case notes and every report, draft or AI draft for this case. Saved on the SSD in ${archived ? 'archive' : 'cases'}\\${c.id}: notes.md and the drafts folder, as Markdown files. Templates live in CaseVault-Data\\templates (Vault → Templates).`));
   }
 
   /* =====================================================================
@@ -122,7 +127,7 @@
     const { h, state, toast, go, Save, confirmDialog } = ui;
     const draft = await Vault.readDraft(c.id, slug);
     if (token !== state.renderToken) return;
-    const back = h('a', { href: `#/case/${encodeURIComponent(c.id)}/drafts`, class: 'back-link' }, '← All drafts');
+    const back = h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports`, class: 'back-link' }, '← All reports');
     if (!draft) { panel.replaceChildren(back, h('p', { class: 'error-text' }, 'This draft no longer exists.')); return; }
     const meta = draft.meta;
     const saveKey = `draft:${c.id}:${slug}`;
@@ -272,14 +277,17 @@
     ta.addEventListener('keyup', (e) => { if (/^(Arrow|Home|End|Page)/.test(e.key)) tellGhost(); });
     ta.addEventListener('scroll', () => { if (ghost.ghost) placeSuggestion(); });
     ta.addEventListener('blur', () => ghost.stop());
+    // Runs before the formatting bar's Tab-to-indent (capture): when a suggestion is showing,
+    // Tab takes it; otherwise Tab indents.
     ta.addEventListener('keydown', (e) => {
       if (e.key !== 'Tab' && e.key !== 'Escape') return;
       if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
       const r = ghost.key(e.key);
       if (!r) return;
       e.preventDefault();
+      e.stopImmediatePropagation();
       acceptSuggestion(r);
-    });
+    }, true);
 
     // ---- [CONFIRM: ...] checklist
     const confirmList = h('ol', { class: 'confirm-list' });
@@ -333,7 +341,7 @@
       if (!(await confirmDialog({ title: `Delete "${meta.title}"?`, message: 'The draft is permanently deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
       const t = Save.timers.get(saveKey);
       if (t) { clearTimeout(t.timer); Save.timers.delete(saveKey); }
-      try { await Save.track(`draft-del:${c.id}:${slug}`, () => Vault.deleteDraft(c.id, slug)); go(c.id, 'drafts'); } catch { /* reported */ }
+      try { await Save.track(`draft-del:${c.id}:${slug}`, () => Vault.deleteDraft(c.id, slug)); go(c.id, 'reports'); } catch { /* reported */ }
     } }, 'Delete');
 
     const genStatus = h('div', { class: 'gen-status', hidden: true });

@@ -163,7 +163,9 @@
       r.code ? '<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/>' : '',
       r.confirm ? '<w:highlight w:val="yellow"/>' : '', extra,
     ].join('');
-    return `<w:r>${props ? `<w:rPr>${props}</w:rPr>` : ''}<w:t xml:space="preserve">${xmlEscape(r.t)}</w:t></w:r>`;
+    // A tab typed in the draft becomes a Word tab stop.
+    const t = xmlEscape(r.t).split('\t').join('</w:t><w:tab/><w:t xml:space="preserve">');
+    return `<w:r>${props ? `<w:rPr>${props}</w:rPr>` : ''}<w:t xml:space="preserve">${t}</w:t></w:r>`;
   }
 
   function paragraphXml(lines, pPr = '', extraRun = '') {

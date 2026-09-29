@@ -29,7 +29,8 @@ const Markdown = (() => {
     let para = [];
 
     const flushPara = () => {
-      if (para.length) out.push('<p>' + para.map(inline).join('<br>') + '</p>');
+      // A tab at the start of a line indents it (Tab in Notes and Drafts).
+      if (para.length) out.push('<p>' + para.map((l) => inline(l.replace(/^\t+/, (t) => '\u2003\u2003'.repeat(t.length)))).join('<br>') + '</p>');
       para = [];
     };
     const closeList = () => {

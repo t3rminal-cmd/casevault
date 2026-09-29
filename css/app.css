@@ -1644,3 +1644,10 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 .tb-status .mem-icon i:nth-child(3) { animation-delay: .4s; }
 @keyframes cv-bars { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.45); } }
 @media (prefers-reduced-motion: reduce) { .tb-status .mem-icon i { animation: none; } }
+
+/* v1.17: Reports (notes + drafts). */
+.notes-head { display: flex; align-items: center; gap: 1rem; margin-bottom: .6rem; }
+.notes-head h2 { margin: 0; display: flex; align-items: center; gap: .5rem; font-size: 1.15rem; }
+.drafts-table .notes-row td { background: var(--surface-2); font-weight: 600; }
+.drafts-table .notes-row a { display: inline-flex; align-items: center; gap: .4rem; }
+.notes-editor, .draft-editor, .notes-editor:focus { tab-size: 4; -moz-tab-size: 4; }

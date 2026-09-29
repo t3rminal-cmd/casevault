@@ -724,7 +724,8 @@
    * Case view
    * ===================================================================== */
 
-  const TABS = [['details', 'Details'], ['timeline', 'Timeline'], ['drafts', 'Drafts'], ['files', 'Files'], ['mail', 'Mail'], ['notes', 'Notes'], ['checks', 'Checks']];
+  // Reports (v1.17) holds the case notes and every draft in one list.
+  const TABS = [['details', 'Details'], ['timeline', 'Timeline'], ['reports', 'Reports'], ['files', 'Files'], ['mail', 'Mail'], ['checks', 'Checks']];
   // The Arrest details tab appears once a case has arrest details, or is closed "by arrest".
   const FOLDER_ICONS = {
     '': 'collection', unsorted: 'folder', 'Case Overview': 'journal-richtext', 'Case Initiation': 'flag', 'Affidavit Drafts': 'pencil-square', 'Affidavit Final': 'file-earmark-ruled', Affidavits: 'file-earmark-ruled',
@@ -755,7 +756,9 @@
     if (k === 'other') return ext || 'File';
     return k === 'pdf' ? 'PDF' : `${TYPE_LABELS[k]}${ext && !['PDF', 'DOCX'].includes(ext) ? ` (${ext})` : ''}`;
   }
-  const TAB_ICONS = { details: 'info-circle', arrest: 'person-vcard', notes: 'journal-text', timeline: 'clock-history', files: 'files', mail: 'envelope', drafts: 'pencil-square', checks: 'clipboard2-check' };
+  // The case notes' place in Reports (a draft's name never starts with a dot).
+  const NOTES_SUB = '.notes';
+  const TAB_ICONS = { details: 'info-circle', arrest: 'person-vcard', timeline: 'clock-history', files: 'files', mail: 'envelope', reports: 'journal-text', checks: 'clipboard2-check' };
   const tabsFor = (c) => (CVClosingUI.hasArrestTab(c) ? [TABS[0], ['arrest', 'Arrest details'], ...TABS.slice(1)] : TABS);
 
   async function showCase(id, tab, sub = null) {
@@ -775,6 +778,8 @@
     }
     if (token !== state.renderToken) return;
     const c = state.caseObj;
+    // Old addresses: #/case/<id>/notes and #/case/<id>/drafts[/<draft>] now live under Reports.
+    if (tab === 'notes') { tab = 'reports'; sub = NOTES_SUB; } else if (tab === 'drafts') tab = 'reports';
     const tabs = tabsFor(c);
     if (!tabs.some(([t]) => t === tab)) tab = 'details';
     state.caseId = id;
@@ -801,7 +806,7 @@
     // the tab redraws. (vault.js refuses the writes too.)
     if (archived) new MutationObserver(() => applyReadOnly(panel)).observe(panel, { childList: true, subtree: true });
 
-    const renderers = { details: renderDetails, arrest: (...a) => CVClosingUI.renderArrest(...a), notes: renderNotes, timeline: renderTimeline, files: renderFiles, mail: (...a) => CVMailUI.render(...a), drafts: (...a) => CVDraftsUI.render(...a), checks: (...a) => CVChecks.render(...a) };
+    const renderers = { details: renderDetails, arrest: (...a) => CVClosingUI.renderArrest(...a), reports: (panel, cc, tk, s) => (s === NOTES_SUB ? renderNotes(panel, cc, tk) : CVDraftsUI.render(panel, cc, tk, s)), timeline: renderTimeline, files: renderFiles, mail: (...a) => CVMailUI.render(...a), checks: (...a) => CVChecks.render(...a) };
     try {
       await renderers[tab](panel, c, token, sub);
     } catch (err) {
@@ -1119,6 +1124,8 @@
   async function renderNotes(panel, c, token) {
     const text = await Vault.getNotes(c.id);
     if (token !== state.renderToken) return;
+    // The case notes are opened from Reports (v1.17).
+    const back = h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports`, class: 'back-link' }, '← All reports');
     const ta = h('textarea', { class: 'notes-editor', spellcheck: 'true', 'aria-label': 'Case notes', placeholder: 'Write notes here. Markdown works: # Heading, **bold**, - list items.' });
     ta.value = text;
     const preview = h('div', { class: 'notes-preview', hidden: true });
@@ -1162,6 +1169,7 @@
     });
 
     panel.replaceChildren(
+      h('div', { class: 'notes-head' }, back, h('h2', { icon: 'journal-text' }, 'Case notes')),
       h('div', { class: 'toolbar' }, h('div', { class: 'segmented' }, btnEdit, btnPreview), fmtBar, h('div', { class: 'spacer' }), counter, status, btnSave),
       ta, preview);
   }
