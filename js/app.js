@@ -126,6 +126,8 @@
       // replaced by the next, e.g. Vault → Run self-test) finds the dialog open again: ignore it.
       dialogEl.onclose = () => { if (dialogEl.open) return; if (!done) { done = true; resolve(undefined); } };
       dialogEl.append(build(close));
+      // Every box has an X at the top right that closes it without doing anything, like Esc.
+      dialogEl.append(h('button', { class: 'icon-btn dialog-x', type: 'button', title: 'Close (Esc)', onclick: () => close(undefined) }, I('x-lg'), h('span', { class: 'sr-only' }, 'Close')));
       // The dialog's size comes from what it shows (set here, not with CSS :has(), which older
       // Firefox versions don't know and would leave file previews 620px wide and clipped).
       const kind = DIALOG_SIZES.find(([, sel]) => dialogEl.querySelector(sel));
@@ -507,15 +509,16 @@
       .sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
   }
 
-  // A case in the left list: [bell] [Open] Title, then file | case | client. A red bell means a
+  // A case in the left list: [Open] Title [bell], then file | case | client. A red bell means a
   // deadline is overdue or due within a week; the details are in the hover box.
   function caseItem(c) {
     const due = c.nextDeadline && !isArchivedEntry(c) ? dueLabel(c.nextDeadline.date) : null;
-    const alarm = due && (due.cls === 'overdue' || due.cls === 'soon');
+    // Any open deadline on the case's Timeline rings the red bell (right of the title).
+    const alarm = !!due;
     const tip = [
       `${c.title || 'Untitled case'} · ${c.status}`,
       c.status === 'Pending' && c.pending ? `Waiting on ${c.pending.reason}${c.pending.followUp ? `, follow up ${fmtDate(c.pending.followUp)}` : ''}` : null,
-      due ? `${alarm ? 'Alarm: ' : 'Next deadline: '}${c.nextDeadline.title || 'Deadline'}, ${fmtDate(c.nextDeadline.date)}${c.nextDeadline.time ? ` ${c.nextDeadline.time}` : ''} (${due.text})` : null,
+      due ? `${due.cls === 'overdue' || due.cls === 'soon' ? 'Alarm: ' : 'Next deadline: '}${c.nextDeadline.title || 'Deadline'}, ${fmtDate(c.nextDeadline.date)}${c.nextDeadline.time ? ` ${c.nextDeadline.time}` : ''} (${due.text})` : null,
     ].filter(Boolean).join('\n');
     return h('li', {},
       h('a', {
@@ -525,9 +528,9 @@
         title: tip,
       },
       h('div', { class: 'case-item-top' },
-        alarm ? h('span', { class: `case-bell ${due.cls}`, 'aria-label': `Deadline ${due.text}` }, I('bell-fill')) : null,
         h('span', { class: `case-status status-${String(c.status).toLowerCase()}` }, c.status),
-        h('span', { class: 'case-item-title' }, c.title || 'Untitled case')),
+        h('span', { class: 'case-item-title' }, c.title || 'Untitled case'),
+        alarm ? h('span', { class: `case-bell ${due.cls}`, 'aria-label': `Deadline ${due.text}` }, I('bell-fill')) : null),
       // Just the numbers: file number | case number | client, e.g. "100 | JH123456 | State".
       h('div', { class: 'case-item-meta muted' }, [c.fileNumber, c.number, c.client].filter(Boolean).join(' | ') || '\u00a0')));
   }
@@ -721,7 +724,7 @@
    * Case view
    * ===================================================================== */
 
-  const TABS = [['details', 'Details'], ['notes', 'Notes'], ['timeline', 'Timeline'], ['files', 'Files'], ['mail', 'Mail'], ['drafts', 'Drafts'], ['checks', 'Checks']];
+  const TABS = [['details', 'Details'], ['timeline', 'Timeline'], ['drafts', 'Drafts'], ['files', 'Files'], ['mail', 'Mail'], ['notes', 'Notes'], ['checks', 'Checks']];
   // The Arrest details tab appears once a case has arrest details, or is closed "by arrest".
   const FOLDER_ICONS = {
     '': 'collection', unsorted: 'folder', 'Case Overview': 'journal-richtext', 'Case Initiation': 'flag', 'Affidavit Drafts': 'pencil-square', 'Affidavit Final': 'file-earmark-ruled', Affidavits: 'file-earmark-ruled',
@@ -1832,6 +1835,9 @@
       const sections = [info, backupsSec, privacySettings(v), affiantSettings(v), CVDraftsUI.templateSettings(), CVLibraryUI.librarySection(), CVLibraryUI.behaviorSection(), CVReferenceUI.linksSection(),
         CVSecureSettings.onlineSection(), CVSecureSettings.watchSection(), CVSecureSettings.mailSection(), CVSecureSettings.logSection(), maintenance];
       const scroller = h('div', { class: 'vault-content' });
+      // Scroll only the sections' own box. scrollIntoView would also scroll the panel itself,
+      // which pushed the Done button off the top.
+      const scrollToSection = (sec, smooth = false) => scroller.scrollTo({ top: sec.offsetTop - 8, behavior: smooth ? 'smooth' : 'auto' });
       const nav = h('nav', { class: 'vault-nav', 'aria-label': 'Vault settings' });
       sections.forEach((sec, i) => {
         const key = sec.dataset.section || `s${i}`;
@@ -1849,7 +1855,7 @@
           intro.remove();
         }
         scroller.append(sec);
-        nav.append(h('button', { type: 'button', class: 'vault-nav-item', 'data-target': key, onclick: () => sec.scrollIntoView({ block: 'start', behavior: 'smooth' }) },
+        nav.append(h('button', { type: 'button', class: 'vault-nav-item', 'data-target': key, onclick: () => scrollToSection(sec, true) },
           I(SECTION_ICONS[key] || 'gear'), h('span', {}, title ? title.textContent.replace(/\s*\(.*\)$/, '') : key)));
       });
       const spy = new IntersectionObserver((entries) => {
@@ -1864,7 +1870,7 @@
       if (section) setTimeout(() => {
         const el = scroller.querySelector(`[data-section="${section}"]`);
         if (!el) return;
-        el.scrollIntoView({ block: 'start' });
+        scrollToSection(el);
         setTimeout(() => { for (const b of nav.children) b.classList.toggle('active', b.dataset.target === section); }, 200);
       }, 60);
       return h('div', { class: 'vault-panel' },
@@ -2003,7 +2009,7 @@
   // The menu (top right): Reference, Library, Vault, Theme, Options, Contact Dev.
   const menuBtn = $('#btn-menu');
   const menu = $('#app-menu');
-  menuBtn.append(I('list'));
+  menuBtn.append(I('three-dots-vertical'));
   const setMenu = (open, focus = false) => {
     menu.hidden = !open;
     menuBtn.setAttribute('aria-expanded', String(open));

@@ -15,7 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.15)
+## Features (v1.16)
+
+- Case tabs in working order (Details, Timeline, Drafts, Files, Mail, Notes, Checks); a red bell on the right of any case with an open deadline; an X to close every box; blue chat bubble for Ask AI and a ⋮ menu
 
 - **One way to write numbers**: dates `12.01.2026` (typed or picked from a calendar), phones `123.456.7890`, SSNs `123.45.6789`
 - **Free online AI options**: Google Gemini (free tier) and OpenRouter (free models) beside the Anthropic API, each with its own key, step-by-step guide and an honest note on what "free" means for privacy

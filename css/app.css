@@ -1625,3 +1625,22 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 .models-table th, .models-table td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .models-table code { font-size: .78rem; word-break: break-all; }
 .online-api .model-input { width: min(26rem, 100%); }
+
+/* v1.16 */
+/* The selected case: grey only, no blue bar. */
+.case-item.active, .case-item.active:hover { box-shadow: none; border-color: transparent; background: var(--surface-2); }
+.case-bell { margin-left: auto; }
+/* The Vault's sections scroll inside their own box. */
+.vault-content { position: relative; }
+/* The X at the top right of every box. */
+.dialog > .dialog-x { position: absolute; top: .55rem; right: .55rem; z-index: 3; width: 2rem; height: 2rem; }
+.dialog > .dialog-x:hover { background: var(--danger-soft); color: var(--danger); }
+.vault-panel-head, .opt-head, .preview-head { padding-right: 2.6rem; }
+.dialog > form > h2:first-child, .dialog > div > h2:first-child { padding-right: 2.2rem; }
+/* Header: blue chat bubble for Ask AI; the memory bars move. */
+#btn-chat.tb-square .bi { color: var(--accent); }
+.tb-status .mem-icon i { transform-origin: bottom; animation: cv-bars 1.4s ease-in-out infinite; }
+.tb-status .mem-icon i:nth-child(2) { animation-delay: .2s; }
+.tb-status .mem-icon i:nth-child(3) { animation-delay: .4s; }
+@keyframes cv-bars { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.45); } }
+@media (prefers-reduced-motion: reduce) { .tb-status .mem-icon i { animation: none; } }
