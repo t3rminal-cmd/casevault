@@ -428,13 +428,10 @@
     async function openGenerate() {
       await Engine().refresh();
       if (!aiReady()) return toast('The local AI engine is not connected. Start Start-CaseVault.bat on the CV-AI drive, then try again.', 'error', 8000);
-      const [files, templates, forms, arrest] = await Promise.all([Vault.listFiles(c.id), Vault.listTemplates(),
-        CVReferenceUI.importedComplaints().catch(() => []), Vault.readCaseJSON(c.id, 'arrest.json').catch(() => null)]);
+      const [files, templates, library] = await Promise.all([Vault.listFiles(c.id), Vault.listTemplates(), CVLibraryUI.items().catch(() => [])]);
       const docs = files.filter((f) => CVExtract.kindOf(f.name));
-      // A complaint form to follow: the one this draft was started from, else one matching the charges.
-      const charges = ((arrest && arrest.arrestees) || []).flatMap((a) => a.charges || []);
-      const suggested = CVReference.suggestComplaints(charges).map((x) => x.id);
-      const preset = meta.reference || (forms.find((f) => f.form && suggested.includes(f.form.id)) || {}).path || '';
+      const settings = Vault.data.settings;
+      const behaviors = CVLibrary.behaviorsOf(settings);
       const opts = await ui.openDialog((close) => {
         const type = h('select', {}, Object.entries(CVDraft.DOC_TYPES).map(([k, t]) => h('option', { value: k, selected: k === meta.type }, t.label)));
         const tpl = h('select', {}, h('option', { value: '' }, '(none: use the standard structure)'),
@@ -443,8 +440,26 @@
         const useNotes = h('input', { type: 'checkbox', checked: true });
         const docBoxes = docs.map((f) => h('input', { type: 'checkbox', value: f.name, checked: true }));
         const instr = h('textarea', { rows: 3, placeholder: 'Optional, e.g. "Focus on the events of March 14" or "Formal tone, third person".' });
-        const form = h('select', {}, h('option', { value: '' }, forms.length ? '(none)' : '(no complaint forms on the SSD: Reference → Narcotics)'),
-          forms.map((f) => h('option', { value: f.path, selected: f.path === preset }, `${f.name}${f.form && suggested.includes(f.form.id) ? ' (matches the charges)' : ''}`)));
+        const behavior = h('select', {}, behaviors.map((b) => h('option', { value: b.id, selected: b.id === (meta.behavior || CVLibrary.defaultBehaviorId(settings)) }, b.name)));
+        // Library: examples of the chosen document type are ticked, and the "always use" directives.
+        const libBox = h('div', { class: 'check-reports lib-pick' });
+        const libChecks = [];
+        const drawLibrary = () => {
+          const pick = CVLibrary.pickForDraft(library, type.value);
+          const on = new Set([...pick.examples, ...pick.directives]);
+          libChecks.length = 0;
+          const group = (label, list) => (list.length ? [h('span', { class: 'small muted lib-pick-head' }, label), list.map((it) => {
+            const box = h('input', { type: 'checkbox', value: it.path, checked: on.has(it.path) });
+            libChecks.push(box);
+            return h('label', { class: 'check-row', title: it.path }, box, h('span', {}, it.name, it.docType && it.docType !== 'any' ? h('span', { class: 'muted small' }, ` · ${(CVLibrary.DOC_TYPES.find((d) => d[0] === it.docType) || [])[1] || ''}`) : null));
+          })] : []);
+          const ex = library.filter((i) => (CVLibrary.category(i.category) || {}).role === 'example');
+          const dir = library.filter((i) => i.category === 'directives');
+          libBox.replaceChildren(...(library.length ? [...group('Examples to write like', ex), ...group('Directives to follow', dir)]
+            : [h('p', { class: 'muted small' }, 'The Library is empty. Add sample reports (DEA-6, DEA-7, DEA-202), warrants and directives in Vault → Library.')]));
+        };
+        type.addEventListener('change', drawLibrary);
+        drawLibrary();
         const useValues = h('input', { type: 'checkbox', checked: /drug|narcotic|cocaine|heroin|fentanyl|meth|cannabis/i.test(`${c.title} ${(c.tags || []).join(' ')}`) });
         const useCodes = h('input', { type: 'checkbox' });
         const replace = h('input', { type: 'radio', name: 'gen-mode', value: 'replace', checked: !ta.value.trim() });
@@ -452,7 +467,7 @@
         return h('form', { class: 'gen-form', onsubmit: (e) => {
           e.preventDefault();
           close({ type: type.value, template: tpl.value, timeline: useTimeline.checked, notes: useNotes.checked, docs: docBoxes.filter((b) => b.checked).map((b) => b.value), instructions: instr.value.trim(), mode: replace.checked ? 'replace' : 'append',
-            reference: form.value, values: useValues.checked, codes: useCodes.checked });
+            behavior: behavior.value, library: libChecks.filter((b) => b.checked).map((b) => b.value), values: useValues.checked, codes: useCodes.checked });
         } },
         h('h2', {}, 'Draft with AI'),
         h('p', { class: 'muted small' }, `Uses ${CVChecks.profileLabel(Engine().choice())} on this computer. The AI is told to use only this case's material and to write [CONFIRM: ...] for anything missing.`),
@@ -465,9 +480,10 @@
             h('label', { class: 'check-row' }, useNotes, h('span', {}, 'Notes')),
             docBoxes.map((b) => h('label', { class: 'check-row' }, b, h('span', {}, b.value))),
             docs.length ? null : h('p', { class: 'muted small' }, 'No attached documents to draw on.'))),
-        h('div', { class: 'field' }, h('span', {}, 'Reference (for wording, statutes and codes; not facts)'),
+        ui.field('Writing behavior', behavior),
+        h('div', { class: 'field' }, h('span', {}, 'Library (how to write; never facts)'), libBox),
+        h('div', { class: 'field' }, h('span', {}, 'Reference'),
           h('div', { class: 'check-reports' },
-            h('label', { class: 'field' }, h('span', { class: 'small' }, 'Complaint form to follow'), form),
             h('label', { class: 'check-row' }, useValues, h('span', {}, 'Narcotics street values')),
             h('label', { class: 'check-row' }, useCodes, h('span', {}, 'Incident location and UCR codes')))),
         ui.field('Instructions', instr),
@@ -527,20 +543,18 @@
           const passages = hits.map((p) => ({ ...p, docName: docs[p.doc].name }));
           const template = opts.template ? CVDraft.fillTemplate(await Vault.readTemplate(opts.template), CVDraft.templateContext(caseObj, new Date(), Vault.data.settings.affiant, await CVClosingUI.templateExtra(caseObj))) : '';
           const references = [];
-          if (opts.reference) {
-            msg.textContent = 'Reading the complaint form…';
-            const formText = await CVReferenceUI.complaintText(opts.reference).catch(() => '');
-            const f = CVReference.complaintByFileName(opts.reference);
-            if (formText) references.push({ title: `Complaint form: ${f ? f.name : opts.reference.split('/').pop()}`, text: formText });
-            else toast('The complaint form could not be read; drafting without it.', 'error', 6000);
-          }
+          const libItems = await CVLibraryUI.items().catch(() => []);
+          const chosen = libItems.filter((i) => opts.library.includes(i.path));
+          const examples = await CVLibraryUI.texts(chosen.filter((i) => i.category !== 'directives').map((i) => i.path), (n) => { msg.textContent = `Reading ${n} from the Library…`; });
+          const directives = await CVLibraryUI.texts(chosen.filter((i) => i.category === 'directives').map((i) => i.path), (n) => { msg.textContent = `Reading ${n} from the Library…`; });
+          const behaviorPrompt = CVLibrary.behaviorById(Vault.data.settings, opts.behavior).prompt;
           if (opts.values) references.push({ title: 'Narcotics street values', text: CVReference.narcoticsText() });
           if (opts.codes) references.push({ title: 'Incident location codes', text: CVReference.locationCodesText() }, { title: 'UCR codes', text: CVReference.ucrText() });
-          const messages = CVCopilot.draftMessages({ type: opts.type, template, instructions: opts.instructions, caseObj, timeline, notes, passages, references, numCtx });
+          const messages = CVCopilot.draftMessages({ type: opts.type, template, instructions: opts.instructions, caseObj, timeline, notes, passages, references, examples, directives, behavior: behaviorPrompt, numCtx });
 
           Object.assign(meta, {
-            ai: true, type: opts.type, ...(opts.template ? { template: opts.template } : {}), ...(opts.reference ? { reference: opts.reference } : {}),
-            generated: { model: choice.model, at: new Date().toISOString(), sources: ['case details', opts.timeline && 'timeline', opts.notes && 'notes', ...opts.docs, ...references.map((r) => `reference: ${r.title}`)].filter(Boolean) },
+            ai: true, type: opts.type, ...(opts.template ? { template: opts.template } : {}), behavior: opts.behavior,
+            generated: { model: choice.model, at: new Date().toISOString(), sources: ['case details', opts.timeline && 'timeline', opts.notes && 'notes', ...opts.docs, ...examples.map((r) => `example: ${r.title}`), ...directives.map((r) => `directive: ${r.title}`), ...references.map((r) => `reference: ${r.title}`)].filter(Boolean) },
           });
           banner.hidden = false;
           typeSelect.value = meta.type;

@@ -1210,7 +1210,7 @@ table.sided td { width: 4.5rem; text-align: center; }
   padding: .45rem .65rem; border-radius: .55rem;
   background: var(--text); color: var(--surface);
   font-size: .8rem; line-height: 1.4; font-weight: 400; letter-spacing: 0;
-  box-shadow: var(--shadow-lg); pointer-events: none; white-space: normal;
+  box-shadow: var(--shadow-lg); pointer-events: none; white-space: pre-line;
 }
 .cv-tip[hidden] { display: none; }
 
@@ -1285,3 +1285,48 @@ tr.drop-after td { box-shadow: inset 0 -2px 0 var(--accent); }
 .fmt-cell.on { background: var(--accent-soft); border-color: var(--accent); }
 .note-save-status { display: inline-block; min-width: 8.5rem; text-align: right; }
 .toolbar { flex-wrap: wrap; row-gap: .5rem; }
+
+/* Quick links (bottom of the Overview): tabs, same-size tiles, show/hide */
+.quick-links-box { display: grid; gap: .8rem; }
+.ql-head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.ql-tabs .btn { min-width: 7rem; }
+.ql-note { display: flex; align-items: center; gap: .4rem; margin: 0; }
+.quick-links { grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: .8rem; }
+.quick-link { position: relative; min-height: 4.2rem; padding: .8rem 1rem; gap: .8rem; font: inherit; text-align: left; cursor: pointer; }
+.quick-link.needs-url { border-style: dashed; color: var(--muted); background: var(--surface); }
+.ql-icon { width: 2.6rem; height: 2.6rem; font-size: 1.2rem; }
+.ql-name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ql-ext { color: var(--muted); font-size: .85rem; }
+.ql-osint { background: var(--ok-soft); color: var(--ok); }
+.ql-leo { background: var(--warn-soft); color: var(--warn); }
+.ql-reference { background: var(--accent-soft); color: var(--accent); }
+.ql-edit-wrap { position: relative; }
+.ql-edit-wrap > .quick-link { width: 100%; height: 100%; }
+.ql-edit-wrap.is-hidden > .quick-link { opacity: .45; border-style: dashed; }
+.ql-toggle { position: absolute; top: -.5rem; right: -.5rem; display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--text); box-shadow: var(--shadow); cursor: pointer; }
+.ql-toggle:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Vault → Quick links */
+.links-group h4, .lib-group h4 { display: flex; align-items: center; gap: .45rem; margin: 1rem 0 .4rem; font-size: .9rem; }
+.links-group h4 .bi, .lib-group h4 .bi { color: var(--accent); }
+.links-rows, .lib-rows { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: .75rem; overflow: hidden; }
+.links-row, .lib-row { display: grid; align-items: center; gap: .5rem; padding: .4rem .6rem; }
+.links-row { grid-template-columns: 1.5rem minmax(8rem, 1fr) minmax(10rem, 2fr) auto 2rem; }
+.links-row + .links-row, .lib-row + .lib-row { border-top: 1px solid var(--border); }
+.links-icon { color: var(--muted); display: grid; place-items: center; }
+.links-add { display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(10rem, 2fr) auto; gap: .5rem; margin-top: .5rem; }
+@media (max-width: 760px) { .links-row { grid-template-columns: 1.5rem 1fr auto 2rem; } .links-row input:nth-of-type(2) { grid-column: 2 / -1; grid-row: 2; } .links-add { grid-template-columns: 1fr; } }
+
+/* Vault → Library and AI writing behavior */
+.lib-add { margin: .4rem 0; }
+.lib-add select { width: auto; }
+.lib-row { grid-template-columns: minmax(0, 1fr) 13rem 10rem 2rem 2rem; font-size: .9rem; }
+.lib-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lib-empty { margin: 0; padding: .4rem .2rem; }
+.lib-preview { display: flex; flex-direction: column; gap: .5rem; max-height: 80vh; }
+.lib-text { white-space: pre-wrap; overflow: auto; max-height: 60vh; background: var(--bg); border: 1px solid var(--border); border-radius: .6rem; padding: .8rem; font-size: .85rem; }
+.dialog:has(.lib-preview) { width: min(900px, 96vw); }
+.behavior-prompt { font-family: var(--mono); font-size: .85rem; line-height: 1.45; }
+.lib-pick { max-height: 14rem; overflow-y: auto; }
+.lib-pick-head { display: block; margin: .3rem 0 .1rem; font-weight: 600; }
+@media (max-width: 760px) { .lib-row { grid-template-columns: 1fr 2rem 2rem; } .lib-row select, .lib-row label { grid-column: 1 / -1; } }

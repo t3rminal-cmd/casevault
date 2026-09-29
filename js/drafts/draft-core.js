@@ -31,6 +31,18 @@
       label: 'Memo',
       guide: 'An internal memo with a To / From / Date / Re header, then purpose, relevant facts, and recommended next steps.',
     },
+    dea6: {
+      label: 'DEA-6 Report of Investigation',
+      guide: 'A DEA-6 style Report of Investigation: header lines (File No., File Title, G-DEP Identifier, Program Code, By, At, Date Prepared), SYNOPSIS, DETAILS in numbered paragraphs in time order, and INDEXING of every person, business, vehicle and telephone number mentioned.',
+    },
+    dea7: {
+      label: 'DEA-7 drug evidence',
+      guide: 'A DEA-7 style report of drug property collected, purchased or seized: for each exhibit its number, description, packaging, gross weight, how and when it was obtained, where, by whom, the chain of custody, and the laboratory it was submitted to.',
+    },
+    dea202: {
+      label: 'DEA-202 personal history',
+      guide: 'A DEA-202 style personal history: the subject\'s name and aliases, date and place of birth, identifying numbers, physical description, addresses, telephone numbers, vehicles, employment, associates, criminal history and remarks. Only facts from the material; [CONFIRM: ...] for the rest.',
+    },
     complaint: {
       label: 'Criminal complaint',
       guide: 'A criminal complaint that follows the reference complaint form\'s layout and statutory wording: the caption, the defendant, the offense charged with its statute citation, the date and place, the substance and its weight, and the complainant\'s signature and verification. Use [CONFIRM: ...] for anything not in the case material.',

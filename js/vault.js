@@ -12,7 +12,7 @@
  *     drafts/, checks/    drafts and consistency checks
  *   archive/<case-id>/    archived cases (same layout, read-only in the app)
  *   templates/            document templates
- *   reference/            reference documents you import (complaints/possession, /delivery, /other…)
+ *   library/              samples and directives the AI learns from (Report examples, Warrant examples, Directives, Other)
  *   backups/              dated snapshots of vault.json
  *   logs/                 outbound-YYYY-MM.json: everything that left this computer (never its content)
  *   secrets/              optional online AI key (only if the user ticks "Remember on SSD")
@@ -979,52 +979,91 @@ const Vault = (() => {
     return added;
   }
 
-  /* ---------- reference library (CaseVault-Data/reference/...) ---------- */
-  // Agency reference documents (the narcotic complaint forms…), imported by the user onto the SSD.
-  // Paths are relative to reference/, e.g. "complaints/possession/POSS_402-C_Cocaine_00-15grms.pdf".
+  /* ---------- Library (CaseVault-Data/library/<category>/...) ---------- */
+  // Sample reports, warrants and directives the AI learns from (js/library.js). Paths are relative
+  // to library/, e.g. "Report examples/DEA-6 sample.pdf". library.json keeps each file's settings
+  // (category, document type, "always use"); .cache/ keeps the text read from each file.
 
-  const refParts = (path) => {
+  const libParts = (path) => {
     const parts = String(path || '').split(/[\\/]/).filter(Boolean);
-    if (!parts.length || parts.some((p) => p === '.' || p === '..')) throw new Error(`Not a reference path: ${path}`);
+    if (!parts.length || parts.some((p) => p === '.' || p === '..' || p.startsWith('.'))) throw new Error(`Not a library path: ${path}`);
     return parts;
   };
 
-  async function referenceDir(parts, create) {
-    let dir = await FS.getDir(root, 'reference', create);
+  async function libraryDir(parts = [], create = false) {
+    let dir = await FS.getDir(root, 'library', create);
     for (const p of parts) { if (!dir) return null; dir = await FS.getDir(dir, p, create); }
     return dir;
   }
 
-  /** Files under reference/<sub>, one level of sub-folders deep: [{ path, name, size, modified }]. */
-  async function listReference(sub) {
-    const base = await referenceDir(refParts(sub), false);
+  /** Every file in the library's category folders: [{ path, folder, name, size, modified }]. */
+  async function listLibrary() {
+    const base = await libraryDir([], false);
     if (!base) return [];
     const out = [];
-    const walk = async (dir, prefix, depth) => {
-      for (const e of await FS.list(dir)) {
-        if (e.kind === 'directory' && depth < 2) await walk(e.handle, `${prefix}${e.name}/`, depth + 1);
-        else if (e.kind === 'file') { const f = await e.handle.getFile(); out.push({ path: `${sub}/${prefix}${e.name}`, name: e.name, size: f.size, modified: f.lastModified }); }
+    for (const d of await FS.list(base)) {
+      if (d.kind !== 'directory' || d.name.startsWith('.')) continue;
+      for (const e of await FS.list(d.handle)) {
+        if (e.kind !== 'file' || e.name.startsWith('.')) continue;
+        const f = e.handle.meta ? { size: e.handle.meta.size, lastModified: e.handle.meta.mtime } : await e.handle.getFile();
+        out.push({ path: `${d.name}/${e.name}`, folder: d.name, name: e.name, size: f.size, modified: f.lastModified });
       }
-    };
-    await walk(base, '', 0);
-    return out.sort((a, b) => a.path.localeCompare(b.path));
+    }
+    return out.sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }));
   }
 
-  async function readReferenceFile(path) {
-    const parts = refParts(path);
-    const dir = await referenceDir(parts.slice(0, -1), false);
+  async function readLibraryFile(path) {
+    const parts = libParts(path);
+    const dir = await libraryDir(parts.slice(0, -1), false);
     return dir ? FS.getFile(dir, parts[parts.length - 1]) : null;
   }
 
-  function saveReferenceFile(path, data) {
-    const parts = refParts(path);
-    return serial(`reference:${path}`, async () => FS.writeData(await referenceDir(parts.slice(0, -1), true), FS.safeName(parts[parts.length - 1]), data));
+  /** Save a file into a library folder under a free name; returns its path. */
+  function saveLibraryFile(folder, name, data) {
+    return serial(`library:${folder}`, async () => {
+      const dir = await libraryDir(libParts(folder), true);
+      const free = await FS.uniqueName(dir, FS.safeName(name));
+      await FS.writeData(dir, free, data);
+      return `${folder}/${free}`;
+    });
   }
 
-  async function deleteReferenceFile(path) {
-    const parts = refParts(path);
-    const dir = await referenceDir(parts.slice(0, -1), false);
+  async function deleteLibraryFile(path) {
+    const parts = libParts(path);
+    const dir = await libraryDir(parts.slice(0, -1), false);
     if (dir) await FS.remove(dir, parts[parts.length - 1]);
+  }
+
+  async function moveLibraryFile(path, toFolder) {
+    const file = await readLibraryFile(path);
+    if (!file) throw Object.assign(new Error('That library file is gone.'), { name: 'NotFoundError' });
+    const to = await saveLibraryFile(toFolder, libParts(path).pop(), file);
+    await deleteLibraryFile(path);
+    return to;
+  }
+
+  async function readLibraryMeta() {
+    const dir = await libraryDir([], false);
+    const meta = dir ? await FS.readJSON(dir, 'library.json').catch(() => null) : null;
+    return meta && typeof meta === 'object' && meta.items ? meta : { schema: 1, items: {} };
+  }
+
+  function writeLibraryMeta(meta) {
+    return serial('library-meta', async () => FS.writeJSON(await libraryDir([], true), 'library.json', meta));
+  }
+
+  async function readLibraryText(path, size, modified) {
+    const dir = await libraryDir(['.cache'], false);
+    if (!dir) return null;
+    try { const c = await FS.readJSON(dir, cacheKey(path.replace(/\//g, '__'), size, modified)); return c && typeof c.text === 'string' ? c.text : null; } catch (err) {
+      if (FS.isDisconnectError(err)) throw err;
+      return null;
+    }
+  }
+
+  async function writeLibraryText(path, size, modified, text) {
+    const dir = await libraryDir(['.cache'], true);
+    await FS.writeJSON(dir, cacheKey(path.replace(/\//g, '__'), size, modified), { path, size, modified, text });
   }
 
   /* ---------- settings ---------- */
@@ -1050,6 +1089,6 @@ const Vault = (() => {
     listChecks, newCheckName, readCheck, saveCheck, deleteCheck, readTextCache, writeTextCache,
     listDrafts, readDraft, newDraftSlug, saveDraft, deleteDraft,
     listTemplates, readTemplate, saveTemplate, deleteTemplate, addStarterTemplates,
-    listReference, readReferenceFile, saveReferenceFile, deleteReferenceFile,
+    listLibrary, readLibraryFile, saveLibraryFile, deleteLibraryFile, moveLibraryFile, readLibraryMeta, writeLibraryMeta, readLibraryText, writeLibraryText,
   };
 })();

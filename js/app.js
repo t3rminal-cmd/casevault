@@ -598,9 +598,7 @@
         ...Vault.STATUSES.map((s) => h('div', { class: `stat stat-${s.toLowerCase()}` },
           h('span', { class: 'stat-icon' }, I(STATUS_ICONS[s])),
           h('div', {}, h('div', { class: 'stat-num' }, count(s)), h('div', { class: 'stat-label' }, s))))),
-      h('h2', { class: 'section-title', icon: 'lightning-charge' }, 'Quick reference'),
-      CVReferenceUI.quickLinks(),
-      h('h2', { class: 'section-title', icon: 'calendar-event' }, 'Upcoming deadlines'),
+      h('div', { class: 'dash-section' }, h('h2', { class: 'section-title', icon: 'calendar-event' }, 'Upcoming deadlines'),
       deadlines.length
         ? h('ul', { class: 'plain-list' }, deadlines.map((c) => {
           const due = dueLabel(c.nextDeadline.date);
@@ -609,14 +607,15 @@
             h('span', {}, h('strong', {}, c.nextDeadline.title || 'Deadline'), ' — ', c.title),
             h('span', { class: `due ${due.cls}` }, due.text)));
         }))
-        : h('p', { class: 'muted' }, 'No open deadlines. Add them from a case\'s Timeline tab.'),
-      h('h2', { class: 'section-title', icon: 'clock-history' }, 'Recently updated'),
+        : h('p', { class: 'muted' }, 'No open deadlines. Add them from a case\'s Timeline tab.')),
+      h('div', { class: 'dash-section' }, h('h2', { class: 'section-title', icon: 'clock-history' }, 'Recently updated'),
       recent.length
         ? h('ul', { class: 'plain-list' }, recent.map((c) => h('li', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}`, class: 'row-link' },
           h('span', {}, h('strong', {}, c.title || 'Untitled case'), c.number ? ` · ${c.number}` : ''),
           statusPill(c.status),
           h('span', { class: 'muted' }, c.updated ? fmtDateTime(Date.parse(c.updated)) : '')))))
-        : h('p', { class: 'muted' }, 'Create your first case with "New case".')));
+        : h('p', { class: 'muted' }, 'Create your first case with "New case".')),
+      h('div', { class: 'dash-section' }, h('h2', { class: 'section-title', icon: 'lightning-charge' }, 'Quick links'), CVReferenceUI.quickLinks())));
   }
 
   /* =====================================================================
@@ -1568,10 +1567,6 @@
           h('button', { class: 'btn', type: 'button', icon: 'save', onclick: async () => {
             try { const name = await Save.track('backup', () => Vault.backupNow()); toast(`Backup saved: ${name}`, 'success'); close(); } catch { /* reported */ }
           } }, 'Back up now')));
-      const referenceSec = h('section', { 'data-section': 'reference' },
-        h('h3', {}, 'Reference library'),
-        h('p', { class: 'muted small' }, 'Narcotics values, complaint forms, the DUI guide and code lists. The complaint PDFs are imported once onto the SSD (CaseVault-Data\\reference) and can be used by Draft with AI.'),
-        h('div', { class: 'row' }, h('button', { class: 'btn', type: 'button', icon: 'book', onclick: () => { close(); location.hash = '#/reference/narcotics'; } }, 'Open Reference')));
       const maintenance = h('section', { 'data-section': 'maintenance' },
         h('h3', {}, 'Maintenance'),
         h('div', { class: 'row wrap' },
@@ -1595,8 +1590,8 @@
           } }, 'Disconnect')));
 
       // Each section is a card; the list on the left jumps to it and follows the scrolling.
-      const SECTION_ICONS = { vault: 'safe2', backups: 'save', privacy: 'eye-slash', affiant: 'person-badge', templates: 'file-earmark-ruled', reference: 'book', online: 'globe2', pii: 'fingerprint', mail: 'envelope-at', log: 'list-check', maintenance: 'tools' };
-      const sections = [info, backupsSec, privacySettings(v), affiantSettings(v), CVDraftsUI.templateSettings(), referenceSec,
+      const SECTION_ICONS = { vault: 'safe2', backups: 'save', privacy: 'eye-slash', affiant: 'person-badge', templates: 'file-earmark-ruled', library: 'bookshelf', behavior: 'robot', links: 'link-45deg', online: 'globe2', pii: 'fingerprint', mail: 'envelope-at', log: 'list-check', maintenance: 'tools' };
+      const sections = [info, backupsSec, privacySettings(v), affiantSettings(v), CVDraftsUI.templateSettings(), CVLibraryUI.librarySection(), CVLibraryUI.behaviorSection(), CVReferenceUI.linksSection(),
         CVSecureSettings.onlineSection(), CVSecureSettings.watchSection(), CVSecureSettings.mailSection(), CVSecureSettings.logSection(), maintenance];
       const scroller = h('div', { class: 'vault-content' });
       const nav = h('nav', { class: 'vault-nav', 'aria-label': 'Vault settings' });
@@ -1828,6 +1823,7 @@
   CVDraftsUI.init(window.CaseVaultUI);
   CVClosingUI.init(window.CaseVaultUI);
   CVReferenceUI.init(window.CaseVaultUI);
+  CVLibraryUI.init(window.CaseVaultUI);
 
   // Privacy screen: Ctrl+Shift+H, Esc twice, or the "Hide" button. See js/privacy.js.
   CVPrivacy.init({

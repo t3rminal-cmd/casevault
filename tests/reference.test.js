@@ -1,4 +1,4 @@
-// Reference data and logic (js/reference/): values, complaint forms, SFST, DUI flow, codes, AI text.
+// Reference data and logic (js/reference/): values, codes, the AI's reference text, and quick links.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
@@ -21,54 +21,6 @@ test('street values: the calculator, estimates and verify marks', () => {
   assert.ok(chart.find((g) => g.category === 'Heroin').rows[0].cells.pound.estimate);
 });
 
-test('complaint forms: list, file names, weights and charges', () => {
-  const all = R.complaintList();
-  assert.strictEqual(all.length, 55);
-  assert.strictEqual(new Set(all.map((c) => c.file)).size, all.length);
-  for (const c of all) assert.match(c.file, /^(possession|delivery|other)\/[\w.+-]+\.pdf$/, c.file);
-  assert.strictEqual(R.complaintByFileName('C:\\Downloads\\poss_402-c_heroin_00-15grms.PDF').cite, '570/402(c)');
-  assert.strictEqual(R.complaintByFileName('nope.pdf'), null);
-  assert.deepStrictEqual(R.findComplaints({ drugKey: 'cocaine', grams: 20, kind: 'possession' }).map((c) => c.cite), ['570/402(a)(2)(A)']);
-  assert.deepStrictEqual(R.findComplaints({ drugKey: 'cocaine', grams: 100, kind: 'possession' }).map((c) => c.range), ['100-400 g']);
-  assert.deepStrictEqual(R.findComplaints({ drugKey: 'heroin', grams: 0.5, kind: 'delivery' }).map((c) => c.cite), ['570/401(d)(i)']);
-  assert.strictEqual(R.gramsOf('2 oz'), 56.699);
-  assert.strictEqual(R.gramsOf('1.5 kg'), 1500);
-  assert.strictEqual(R.drugKeyOf('Possession of crack cocaine'), 'cocaine');
-  assert.strictEqual(R.drugKeyOf('PWID methamphetamine'), 'methamphetamine');
-  const s = R.suggestComplaints([
-    { statute: '720 ILCS 570/402(c)', description: 'Possession of a controlled substance (heroin)' },
-    { statute: '', description: 'Delivery of cocaine, 3.2 g' },
-    { statute: 'TEST 9.99', description: 'Resisting' },
-  ]);
-  assert.deepStrictEqual(s.map((c) => c.file), ['possession/POSS_402-C_Heroin_00-15grms.pdf', 'delivery/DELV_401-C-2_Cocaine_01-15grms.pdf']);
-});
-
-test('SFST: clues add up against the decision points', () => {
-  const st = { hgn: { clues: { '0-left': true, '0-right': true, '1-left': true, '2-right': true } }, wat: { clues: { 1: true } }, ols: { cantPerform: true } };
-  const sc = R.sfstScores(st);
-  assert.deepStrictEqual(sc.map((x) => [x.key, x.clues, x.over]), [['hgn', 4, true], ['wat', 1, false], ['ols', 0, false]]);
-  assert.strictEqual(sc[2].text, 'Could not perform the test.');
-  const md = R.sfstMarkdown({ ...st, alternate: { 'Alphabet test': 'Fail' }, pbt: '0.112' }, { officer: 'Officer Alex Sample', date: '2026-09-29' });
-  assert.match(md, /- \*\*Officer:\*\* Officer Alex Sample/);
-  assert.match(md, /- Lack of smooth pursuit: left \[x\], right \[x\]/);
-  assert.match(md, /\*\*Score:\*\* 4 of 6 clues; decision point 4: at or above the decision point\./);
-  assert.match(md, /- \[x\] Starts too soon/);
-  assert.match(md, /- Alphabet test: Fail\n- PBT result: 0\.112/);
-});
-
-test('DUI flow: the answers choose the path', () => {
-  assert.deepStrictEqual(R.duiPath({}), ['p1', 'p2', 'p3']);
-  assert.deepStrictEqual(R.duiPath({ pc: 'No' }), ['p1', 'p2', 'p3', 'end-release']);
-  assert.deepStrictEqual(R.duiPath({ pc: 'Yes', submits: 'No' }), ['p1', 'p2', 'p3', 'p4', 'p5', 'p8']);
-  assert.deepStrictEqual(R.duiPath({ pc: 'Yes', submits: 'Yes', bac: '0.08 or above' }), ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p8']);
-  assert.deepStrictEqual(R.duiPath({ pc: 'Yes', submits: 'Yes', bac: 'Under 0.08' }), ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8']);
-  const md = R.duiMarkdown({ stopTime: '23:05', pc: 'No' }, { caseNo: 'TEST-1' });
-  assert.match(md, /- \*\*RD \/ Case #:\*\* TEST-1/);
-  assert.match(md, /- Time of stop: 23:05/);
-  assert.match(md, /\*\*No probable cause: issue a citation, post bond, or release\.\*\*/);
-  assert.doesNotMatch(md, /Phase IV/);
-});
-
 test('codes: search by code or words, and category filter', () => {
   const hand = R.searchCodes(RD.UCR_CODES, 'agg handgun').flatMap((g) => g.codes.map((c) => c[0]));
   assert.ok(hand.includes('051A') && hand.includes('041A'));
@@ -81,21 +33,49 @@ test('codes: search by code or words, and category filter', () => {
   }
 });
 
-test('reference material goes to the AI as wording, not facts, and fits the window', () => {
-  const refs = [{ title: 'Complaint form: Possession', text: 'IN THE CIRCUIT COURT OF COOK COUNTY ... 720 ILCS 570/402(c)' }, { title: 'Narcotics street values', text: R.narcoticsText() }];
-  const [sys, user] = CP.draftMessages({ type: 'complaint', caseObj: { title: 'Made-up case' }, references: refs, numCtx: 8192 });
-  assert.match(sys.content, /never treat it as facts about this case/);
-  assert.match(user.content, /## Reference material \(forms and lists to follow for wording, statutes and codes; NOT facts of this case\)\n### Complaint form: Possession\nIN THE CIRCUIT COURT/);
-  assert.match(user.content, /Write a first draft of: Criminal complaint\./);
-  assert.match(R.narcoticsText(), /- Cocaine \(Powder\): \$125\.00\/gram, \$1,200\.00\/ounce/);
-  const huge = CP.draftMessages({ references: [{ title: 'Big', text: 'x'.repeat(100000) }], numCtx: 4096 })[1].content;
-  assert.ok(huge.length < 12000, `references are capped (${huge.length})`);
-  assert.doesNotMatch(CP.draftMessages({})[1].content, /Reference material/);
-});
-
 test('reference data has no phone numbers or people (public repo)', () => {
   const src = require('fs').readFileSync(require.resolve('../js/reference/ref-data.js'), 'utf8');
   // Phone numbers like 555-0142 or (312) 555-0142 (weight ranges such as 500-2000 g are fine).
   assert.doesNotMatch(src.replace(/\b\d+-\d+ ?g(rms)?\b/gi, ''), /\b\d{3}[-.]\d{4}\b|\(\d{3}\)\s*\d{3}/);
   assert.doesNotMatch(src, /\bPAX\b/);
+});
+
+test('Library, behavior and reference text reach the AI in their places, within the window', () => {
+  const [sys, user] = CP.draftMessages({
+    type: 'dea6', caseObj: { title: 'Made-up case', fileNumber: 'F-1', number: '00123' },
+    behavior: 'Write in the style of a DEA-6 Report of Investigation.',
+    examples: [{ title: 'DEA-6 sample', text: 'DETAILS\n1. On January 2, 2020, SA EXAMPLE met Pat SAMPLE.' }],
+    directives: [{ title: 'Directive 12', text: 'Evidence must be sealed within 24 hours.' }],
+    references: [{ title: 'Narcotics street values', text: R.narcoticsText() }],
+    numCtx: 8192,
+  });
+  assert.match(sys.content, /HOW TO WRITE\nWrite in the style of a DEA-6 Report of Investigation\./);
+  assert.match(sys.content, /Their names, dates, places, numbers and events belong to other cases/);
+  assert.match(user.content, /File number: F-1\nCase number: 00123/);
+  const order = ['## Directives to follow', '## Writing examples', '## Reference material'].map((hd) => user.content.indexOf(hd));
+  assert.ok(order.every((x) => x > 0) && order[0] < order[1] && order[1] < order[2], 'directives, then examples, then references');
+  assert.match(user.content, /### DEA-6 sample\nDETAILS/);
+  assert.match(user.content, /Write a first draft of: DEA-6 Report of Investigation\./);
+  const huge = CP.draftMessages({ examples: [{ title: 'A', text: 'x'.repeat(90000) }, { title: 'B', text: 'y'.repeat(90000) }], numCtx: 4096 })[1].content;
+  assert.ok(huge.length < 12000, `library text is capped (${huge.length})`);
+  assert.ok(huge.includes('### A') && huge.includes('### B'), 'both examples get a share');
+  assert.doesNotMatch(CP.draftMessages({})[1].content, /Writing examples|Directives to follow|Reference material/);
+  assert.doesNotMatch(CP.draftMessages({})[0].content, /HOW TO WRITE/);
+});
+
+test('quick links: tabs, hiding, edits, custom links, and only web addresses', () => {
+  const LK = require('../js/reference/links.js');
+  const all = LK.linksOf({});
+  assert.deepStrictEqual(all.filter((l) => l.tab === 'reference').map((l) => l.name), ['Incident location codes', 'Commonly used UCR', 'Narcotic calculator']);
+  assert.ok(all.filter((l) => l.tab === 'osint').length >= 7);
+  assert.deepStrictEqual(all.filter((l) => l.tab === 'leo').map((l) => l.name), ['Accurint', 'Kodex Portal', 'Chicago HIDTA']);
+  for (const l of all) if (l.url) assert.match(l.url, /^https:\/\//, l.name);
+  const s = LK.linksOf({ hidden: ['osint-fingerprint'], edits: { 'leo-chicago-hidta': { url: 'portal.example.org/login' } }, custom: [{ id: 'c1', tab: 'leo', name: 'My portal', url: 'https://example.org' }, { id: 'c2', tab: 'reference', name: 'x', url: 'https://example.org' }] });
+  assert.ok(s.find((l) => l.id === 'osint-fingerprint').hidden);
+  assert.strictEqual(s.find((l) => l.id === 'leo-chicago-hidta').url, 'https://portal.example.org/login');
+  assert.deepStrictEqual(s.filter((l) => l.custom).map((l) => [l.tab, l.name]), [['leo', 'My portal']], 'custom links only in OSINT and LEO');
+  assert.strictEqual(LK.cleanUrl('javascript:alert(1)'), null);
+  assert.strictEqual(LK.cleanUrl('file:///C:/x'), null);
+  assert.strictEqual(LK.cleanUrl(''), '');
+  assert.strictEqual(LK.cleanUrl('http://example.org'), 'http://example.org/');
 });
