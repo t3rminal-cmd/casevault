@@ -77,13 +77,15 @@ The header has three parts:
   - **Robot:** the AI engine. Blue means it's running, and pointing at it shows the model, for example *AI: Quick · qwen2.5:7b*. Red means it isn't running. Click it for AI settings.
   - Moving bars show while the AI is working, and a **memory** icon turns amber or red when memory runs short.
   - **Drive:** green means everything is saved to the SSD, amber means saving, and red with words means something isn't saved (reconnect the SSD).
-- **Right:** three square buttons: **Ask AI** (the robot), **Hide** (the crossed-out eye, privacy screen) and the **menu** (☰). Point at one for its name. The menu holds:
+- **Right:** three square buttons: **Ask AI** (the blue chat bubble), **Hide** (the crossed-out eye, privacy screen) and the **menu** (⋮, three dots). Point at one for its name. The menu holds:
   - **Reference**;
   - **Library**, which opens the Vault at the Library, where you add files the AI learns from;
   - **Vault**;
   - **Theme**, which switches between automatic, light and dark each time you click it (the menu stays open while you choose);
   - **Options** and **Contact Dev** (see below).
 
+- Every box that opens over the page (the Vault, Options, New case, a file preview…) has an **X** at the top right to close it without changing anything, like Esc.
+- The case tabs are, in order: **Details**, **Timeline**, **Drafts**, **Files**, **Mail**, **Notes**, **Checks** (with **Arrest details** after Details once you add them).
 - **Theme:** *automatic* follows Windows' light or dark setting. Each PC remembers its own choice in the browser; it's a display preference, not case data.
 - Icons mark every tab, button and document folder, and each file in a case shows an icon for its type (PDF, Word, Excel, picture, audio, video, email).
 - **Point at a button** (or reach it with Tab) to see what it does in a hover box. Buttons show just an icon and a short name; the explanation is in the hover box.
@@ -114,7 +116,7 @@ OSINT and LEO links open the website **in a new browser tab**, outside CaseVault
 
 - **New case** asks for a title (required), the **file number**, the **case number**, the **agency case number** (your agency's own internal number), the client (**State**, **Federal** or **Other**), status, opened date, and tags. A client typed in before v1.14 is kept as its own choice in the list. One file number can hold several cases: the File number box offers the file numbers you already use. The case folder and file names use the case number.
 - The case list and the case's header show both, for example *File F-2026-01 · Case 00123*, and the search box finds either. Templates can use `{{case.fileNumber}}` and `{{case.number}}`.
-- The **left list** shows open and pending cases, most recently changed first. Each case shows its status in words (**Open**, **Pending**, **Closed** or **Archived**) and its title, with just the numbers under it: file number | case number | client, for example `100 | JH123456 | State`. A **red bell** in front means a deadline on its Timeline is overdue or due within a week. Point at a case to see the deadline, and for a Pending case what it's waiting on. Use the search box (title, any of the numbers, client, or tag) and the filter to find others.
+- The **left list** shows open and pending cases, most recently changed first. Each case shows its status in words (**Open**, **Pending**, **Closed** or **Archived**) and its title, with just the numbers under it: file number | case number | client, for example `100 | JH123456 | State`. A **red bell** at the right means the case has an open deadline on its Timeline (it gently rings when the deadline is overdue or due within a week). The selected case is shown in grey. Point at a case to see the deadline, and for a Pending case what it's waiting on. Use the search box (title, any of the numbers, client, or tag) and the filter to find others.
 - **Make the list wider or narrower:** drag its right edge (or click the edge and use ← →). Double-click the edge to reset it. Each PC remembers its own width.
 - **Details** tab: edit any field. A short note under **Status** says what the status means and, for a Pending case, what you're waiting on.
 - **Suspects** (on the Details tab): **Add suspect** for each person the case is about: name, date of birth (the **age** is worked out for you), residence, and role (**Main**, **Secondary** or **Other**). The first one is Main, later ones Secondary. They save with the case, go to **Ask AI** and **Draft with AI** with the case, and templates can use `{{suspect.name}}`, `{{suspect.dob}}`, `{{suspect.age}}`, `{{suspect.residence}}` and `{{suspect.role}}` (the main suspect) and `{{suspects}}` (all of them, one per line).
