@@ -108,7 +108,7 @@
     el.hidden = false;
     el.className = `engine-status ${st}`;
     const text = {
-      connected: `AI: Connected (${profileLabel(Engine.choice())})`,
+      connected: `AI: ${profileLabel(Engine.choice())}`,
       offline: 'AI: Offline',
       'rules-only': 'AI: Rules-only',
       checking: 'AI: checking…',

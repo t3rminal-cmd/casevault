@@ -290,7 +290,7 @@ The **Checks** tab compares an affidavit draft (or any document) against the rep
 1. Attach the affidavit and the reports on the **Files** tab. PDF (including scanned PDFs and XFA forms), Word (`.docx`), Excel (`.xlsx`, `.xls`), CSV, TXT, and photos (PNG/JPG) can be checked. Old `.doc` files must be saved as `.docx` or PDF first. To check a draft you're writing in CaseVault, use **Run consistency check** in the Drafts tab instead.
 2. Open **Checks**. Under **Document to check**, pick the affidavit. (Choose *none* to only compare the reports with each other.)
 3. Tick the reports to compare against. All of them are ticked by default.
-4. **Include AI review** is available when the header shows **AI: Connected**. Without it, the rule-based checks still run.
+4. **Include AI review** is available when the header shows the AI model, such as **AI: Quick · qwen2.5:7b**. Without it, the rule-based checks still run.
 5. Click **Run check**. A window shows each step: reading each document (scanned pages go through OCR), the rule checks, then the AI review statement by statement, with the time spent on the current statement and an estimate of the time left. **Cancel** stops the check. If the AI review was already under way, what it found so far is saved.
 
 The text read from each document is kept on the SSD (`checks\text-cache`), so re-running a check is quick. OCR only runs again if the file changes, or when a newer CaseVault reads that kind of file better (v1.8 re-reads PDFs once, for XFA forms).
@@ -473,7 +473,7 @@ Give it a title and a type (Case summary, Affidavit, Subpoena, Memo, Other), the
 
 - **Blank.**
 - **From a template.** Your agency's formats, stored in `CaseVault-Data\templates\` (see *Templates* below). Case details such as the case number are filled in for you.
-- **Draft with AI.** Writes a first draft from this case's material (needs **AI: Connected** in the header).
+- **Draft with AI.** Writes a first draft from this case's material (needs the AI model in the header, not **AI: Offline**).
 
 The editor understands simple Markdown (`#` headings, `**bold**`, `1.` numbered paragraphs, `-` bullets). **Preview** shows it formatted.
 
@@ -623,7 +623,7 @@ To make a PC forget the vault folder, open **Vault → Disconnect**.
 | *Reading PDFs needs the installed app or the helper* | You opened `index.html` straight from the SSD. Use the installed app or the launcher address instead. |
 | Ctrl + Shift + H does nothing | Click in the CaseVault page first (the shortcut only works while CaseVault is the active tab), or use Esc Esc or the **Hide** button. |
 | I forgot the privacy-screen PIN | Reload the page (F5). The screen is gone, and you'll be asked to reconnect in Chrome/Edge. Then set a new PIN under Vault → Privacy screen. |
-| No grey AI suggestions appear | The header must show **AI: Connected**, and **AI suggestions** must be ticked. Suggestions only appear when the cursor is at the end of a line. |
+| No grey AI suggestions appear | The header must show the AI model (not **AI: Offline**), and **AI suggestions** must be ticked. Suggestions only appear when the cursor is at the end of a line. |
 | *Draft with AI* is greyed out | Start `W:\Start-CaseVault.bat` so the AI engine runs, then click the AI pill → **Check again**. |
 | A check says a file was *Skipped* | It couldn't be read (damaged, password-protected, or an unsupported type). Save it as PDF or DOCX and attach it again. |
 | *Drive not connected* | Plug in the SSD, unlock V: with the BitLocker password, then click **Reconnect**. |
@@ -635,7 +635,7 @@ To make a PC forget the vault folder, open **Vault → Disconnect**.
 
 ## When Ollama isn't running
 
-If Ollama isn't running, CaseVault can use a small **in-browser AI model** instead, if one is on the SSD and CaseVault was opened through `W:\Start-CaseVault.bat`. The header then shows **AI: Connected (In-browser · …)**. The first AI request loads the model from the SSD, with a progress message, which can take a minute. See [AI-SETUP.md](AI-SETUP.md), section 8.
+If Ollama isn't running, CaseVault can use a small **in-browser AI model** instead, if one is on the SSD and CaseVault was opened through `W:\Start-CaseVault.bat`. The header then shows **AI: In-browser · …**. The first AI request loads the model from the SSD, with a progress message, which can take a minute. See [AI-SETUP.md](AI-SETUP.md), section 8.
 
 Without Ollama or an in-browser model, the consistency checker uses its rule-based layer only, and Draft with AI and suggestions are unavailable.
 

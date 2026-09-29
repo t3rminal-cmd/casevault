@@ -1362,7 +1362,7 @@ tr.drop-after td { box-shadow: inset 0 -2px 0 var(--accent); }
 .inline { flex-wrap: nowrap; white-space: nowrap; }
 .inline > input:not([type="checkbox"]):not([type="radio"]), .inline > select { width: auto; flex: 0 0 auto; }
 input.narrow-wide { width: 9rem; }
-.vault-card .row { flex-wrap: wrap; row-gap: .5rem; }
+.vault-card .row { flex-wrap: wrap; row-gap: .5rem; column-gap: 1.2rem; }
 .vault-card .field + .row, .vault-card .row + .field { margin-top: .7rem; }
 .vault-card .field { margin-top: .5rem; min-width: 0; }
 .vault-card .row > .field { flex: 1 1 16rem; margin-top: 0; }

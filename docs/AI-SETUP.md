@@ -147,7 +147,7 @@ Because the model lives on W:, you do this **once**, and both the Beelink and th
 
 ### Choosing a profile
 
-The header shows the engine status: **AI: Connected (Quick · qwen2.5:7b)**, **AI: Offline**, or **AI: Rules-only**. Click it to:
+The header shows the engine status: **AI: Quick · qwen2.5:7b**, **AI: Offline**, or **AI: Rules-only**. Click it to:
 
 - see which models were found;
 - pick **Auto**, **Quick**, **Thorough**, **Light**, or **Rules-only**;
@@ -268,7 +268,7 @@ If Ollama isn't running (or isn't installed on a PC), CaseVault can still do AI 
 
 ### How it's used
 
-- CaseVault always prefers **Ollama**. When Ollama isn't reachable and a model is in `W:\webllm`, the header shows **AI: Connected (In-browser · Qwen2.5-1.5B-Instruct)**.
+- CaseVault always prefers **Ollama**. When Ollama isn't reachable and a model is in `W:\webllm`, the header shows **AI: In-browser · Qwen2.5-1.5B-Instruct**.
 - The model loads from the SSD on the first AI request (a check, a suggestion, or Draft with AI). A progress message shows while it loads, which takes up to a minute or two. It then stays in graphics memory until you close the tab.
 - Click the **AI:** pill → **In-browser AI (fallback)** to switch it off, pick another installed model, or unload it.
 - Retrieval uses keyword search (no embedding model in the browser), and the model's context is shorter (4,096 tokens), so very long drafts use fewer report passages.
