@@ -19,7 +19,7 @@
 (function (root) {
   const STATUS_HELP = {
     Open: 'Open: you are actively working this case.',
-    Pending: 'Pending: waiting on someone else (lab, warrant, prosecutor, records…). Set what you\'re waiting on and when to follow up.',
+    Pending: 'Pending: waiting on someone else, such as the lab, a warrant, the prosecutor or records. Set what you\'re waiting on and when to follow up.',
     Closed: 'Closed: the investigation is finished, with a disposition. Use "Close case…" to close it.',
     Archived: 'Archived: closed and moved to the archive, read-only.',
   };
@@ -56,9 +56,9 @@
     { key: 'type', label: 'Type of arrest', type: 'select', options: ['', 'On-view', 'Warrant', 'Summons / citation', 'Turned self in', 'Other'] },
     { key: 'warrantNumber', label: 'Warrant number' },
     { key: 'arrestingOfficer', label: 'Arresting officer' }, { key: 'assistingOfficers', label: 'Assisting officers' },
-    { key: 'miranda', label: 'Miranda', type: 'select', options: ['', 'Given and waived', 'Given, rights invoked', 'Not given (no questioning)', 'Not given'] },
+    { key: 'miranda', label: 'Miranda', type: 'select', options: ['', 'Given and waived', 'Given, rights invoked', 'Not given, no questioning', 'Not given'] },
     { key: 'mirandaTime', label: 'Miranda time', type: 'time' },
-    { key: 'bookingNumber', label: 'Booking number' }, { key: 'facility', label: 'Booked into (facility)' }, { key: 'bond', label: 'Bond' },
+    { key: 'bookingNumber', label: 'Booking number' }, { key: 'facility', label: 'Booked into facility' }, { key: 'bond', label: 'Bond' },
   ];
   const CHARGE_FIELDS = [
     { key: 'statute', label: 'Statute / code' }, { key: 'description', label: 'Charge' },

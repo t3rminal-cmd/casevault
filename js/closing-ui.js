@@ -239,7 +239,7 @@
       return h('form', { onsubmit: (e) => { e.preventDefault(); close({ reason: reason.value, detail: detail.value.trim(), followUp: follow.value, addDeadline: addDeadline.checked }); } },
         h('h2', {}, 'Set the case to Pending'),
         h('p', { class: 'muted small' }, 'Pending means you\'re waiting on someone else and can\'t move the case forward yourself. Set it back to Open when you can work it again.'),
-        h('div', { class: 'form-grid' }, ui.field('Waiting on', reason), ui.field('Details (optional)', detail), ui.field('Follow up by', follow), h('div')),
+        h('div', { class: 'form-grid' }, ui.field('Waiting on', reason), ui.field('Details', detail), ui.field('Follow up by', follow), h('div')),
         h('label', { class: 'check-row' }, addDeadline, h('span', {}, 'Add the follow-up date to the timeline as a deadline, so it shows in the case list and the Overview')),
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Set to Pending')));
     });

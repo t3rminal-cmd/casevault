@@ -128,8 +128,8 @@
     return [
       g('Case', ['case.fileNumber', 'case.number', 'case.title', 'case.client', 'case.status', 'case.opened', 'case.closed', 'case.tags']),
       g('Date', ['today', 'today.iso']),
-      g('You (Vault → My details)', AFFIANT_FIELDS.map((k) => `affiant.${k}`)),
-      g('Arrest details (first arrestee; arrest.2.name for the second…)', ['arrest.name', 'arrest.dob', 'arrest.description', 'arrest.charges', 'arrest.names', 'arrest.count',
+      g('You', AFFIANT_FIELDS.map((k) => `affiant.${k}`)),
+      g('Arrest details', ['arrest.name', 'arrest.dob', 'arrest.description', 'arrest.charges', 'arrest.names', 'arrest.count',
         ...arrestKeys.filter((k) => !['dob'].includes(k)).map((k) => `arrest.${k}`), 'arrest.property', 'arrest.notes']
         .filter((k, i, all) => all.indexOf(k) === i)),
       g('Closing', ['closure.disposition', 'closure.reason', 'closure.date', 'closure.note']),

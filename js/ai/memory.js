@@ -47,7 +47,7 @@
         lines.push(`AI model ${m.name}: ${fmt(m.size_vram || 0)} on the GPU${m.size - (m.size_vram || 0) > 0 ? `, ${fmt(m.size - (m.size_vram || 0))} in RAM` : ''} (${gpuPct}% GPU)`);
       }
     } else if (r.models) {
-      lines.push('Local AI: no model loaded (0 GB)');
+      lines.push('Local AI: no model loaded');
     }
     if (r.webllm) { bits.push('AI in-browser'); lines.push(`In-browser AI model loaded: ${r.webllm}`); }
 

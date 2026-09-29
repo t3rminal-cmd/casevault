@@ -79,7 +79,7 @@
       h('li', {}, h('strong', {}, 'Sign in or create an account. '), 'Use your email, Google or single sign-on. Your Claude Pro login can be used, but API use is billed on its own: a Pro subscription does not include API credit. If your agency has an organisation account, ask its administrator to invite you instead.'),
       h('li', {}, h('strong', {}, 'Add credit. '), 'Go to ', link(CONSOLE_BILLING, 'Settings → Billing'),
         ', add a payment method and buy credit (the minimum is small, about $5). Until there is credit, every request is refused. You only pay for what you use.'),
-      h('li', {}, h('strong', {}, 'Set a spending limit (recommended). '), 'In ', link(CONSOLE_LIMITS, 'Settings → Limits'),
+      h('li', {}, h('strong', { title: 'Recommended' }, 'Set a spending limit. '), 'In ', link(CONSOLE_LIMITS, 'Settings → Limits'),
         ', set a monthly limit and an email alert, so a mistake can never cost more than you chose. Leave auto-reload off unless you need it.'),
       h('li', {}, h('strong', {}, 'Create the key. '), 'Go to ', link(CONSOLE_KEYS, 'Settings → API keys'),
         ' and click ', h('strong', {}, 'Create Key'), '. Name it after the PC, for example ', h('code', {}, 'CaseVault - Beelink'), ' or ', h('code', {}, 'CaseVault - L14'),
@@ -119,7 +119,7 @@
       const wSession = where('session', 'This session only', 'Safest. You paste it again each time you open CaseVault.', true);
       const wLocked = where('locked', 'Save on the SSD, locked with a passphrase', 'Encrypted in CaseVault-Data\\secrets. You type the passphrase once per session.');
       const wPlain = where('plain', 'Save on the SSD without a passphrase', 'Protected only by BitLocker on the CASEVAULT drive. Anyone who can open the unlocked drive can use it.');
-      const pass1 = h('input', { type: 'password', autocomplete: 'new-password', placeholder: 'Passphrase (8+ characters)' });
+      const pass1 = h('input', { type: 'password', autocomplete: 'new-password', placeholder: 'Passphrase', title: 'At least 8 characters.' });
       const pass2 = h('input', { type: 'password', autocomplete: 'new-password', placeholder: 'Repeat the passphrase' });
       const passRow = h('div', { class: 'row pass-row', hidden: true }, pass1, pass2);
       const billing = h('input', { type: 'checkbox' });

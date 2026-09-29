@@ -19,7 +19,7 @@ The app detects the browser and picks the mode by itself. The data format on the
 
 - **The LE Cyber-Docs look**: icons throughout (bundled Bootstrap Icons), the Poppins font, rounded cards, and **light / dark / automatic** themes with a switch in the header; a Vault settings panel with a section list
 - **Reference** (from LE Cyber-Docs): narcotic **value calculator** and **street value chart** (HIDTA 2022), **incident location codes** and **commonly used UCR** codes
-- **Quick links** at the bottom of the Overview: Reference, **OSINT** (MaxMind, NumLookup, Google Images, blockchain explorers, Fingerprint) and **LEO** (Accurint, Kodex, Chicago HIDTA, your own); hide any, edit addresses, add your own; they open in a new tab and CaseVault never contacts them
+- **Quick links** at the bottom of the Overview: Reference, **OSINT** (MaxMind, NumLookup, Google Images, Blockchair, Fingerprint) and **LEO** (Accurint, Kodex, Chicago HIDTA, your own); hide any, edit addresses, add your own; they open in a new tab and CaseVault never contacts them
 - **Library for the AI** (Vault → Library): sample DEA-6/7/202 reports, warrants and directives the AI learns to write from (never their facts), and editable **writing behaviors** with **DEA-6 style** as the default
 - Hover boxes explain every button; the layout is centred and symmetric from a phone to 1920×1080 and up
 - Cases with a **file number** (shared by several cases) and a **case number**, client, status, tags, and opened/closed dates; search and filter

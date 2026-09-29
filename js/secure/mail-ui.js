@@ -80,7 +80,7 @@
       groups.get(k).push(f);
     }
     const attachList = h('div', { class: 'attach-list' }, files.length ? [...groups.entries()].map(([folder, list]) => h('details', { open: list.some((f) => d.attach.has(f.name)) || groups.size <= 3 },
-      h('summary', {}, `${folder} (${list.length})`),
+      h('summary', {}, folder, h('span', { class: 'count-pill' }, String(list.length))),
       list.map((f) => {
         const cb = h('input', { type: 'checkbox', checked: d.attach.has(f.name) });
         cb.addEventListener('change', () => { if (cb.checked) d.attach.add(f.name); else d.attach.delete(f.name); updateSize(); });
@@ -102,7 +102,7 @@
       toast('Draft discarded.');
     } }, 'Discard draft');
     const outlookBtn = h('button', { class: 'btn primary', type: 'button' }, 'Check & create Outlook draft');
-    const mailtoBtn = h('button', { class: 'btn', type: 'button' }, 'Check & open in mail app (text only)');
+    const mailtoBtn = h('button', { class: 'btn', type: 'button', title: 'Text only: the subject and message go to your mail app, without attachments.' }, 'Check & open in mail app');
     outlookBtn.addEventListener('click', () => go('eml'));
     mailtoBtn.addEventListener('click', () => go('mailto'));
 

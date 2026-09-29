@@ -13,7 +13,7 @@
   const LK = () => root.CVLinks;
 
   const SECTIONS = [
-    { key: 'narcotics', title: 'Narcotic calculator', icon: 'calculator-fill', blurb: 'Street value calculator and value chart (HIDTA 2022).' },
+    { key: 'narcotics', title: 'Narcotic calculator', icon: 'calculator-fill', blurb: 'Street value calculator and value chart, HIDTA 2022.' },
     { key: 'incident', title: 'Incident location codes', icon: 'geo-alt', blurb: 'Location codes by place type. Click a code to copy it.' },
     { key: 'ucr', title: 'Commonly used UCR', icon: 'journal-text', blurb: 'UCR codes by category. Search by code or offense.' },
   ];
@@ -57,7 +57,8 @@
       const inTab = all.filter((l) => l.tab === tab);
       const shown = editing ? inTab : inTab.filter((l) => !l.hidden);
       const hiddenCount = inTab.filter((l) => l.hidden).length;
-      wrap.replaceChildren(
+      // (replaceChildren would write a null out as the text "null", so empty parts are dropped.)
+      wrap.replaceChildren(...[
         h('div', { class: 'ql-head' },
           h('div', { class: 'segmented ql-tabs', role: 'tablist', 'aria-label': 'Quick links' }, LK().TABS.map((t) => h('button', {
             type: 'button', role: 'tab', class: `btn small ${t.key === tab ? 'active' : ''}`, 'aria-selected': String(t.key === tab), icon: t.icon,
@@ -69,7 +70,7 @@
           h('button', { type: 'button', class: 'btn small ghost', icon: 'pencil', title: 'Change addresses and add your own links (Vault → Quick links)', onclick: () => ui.showVaultPanel('links') }, 'Edit links')),
         tab !== 'reference' ? h('p', { class: 'muted small ql-note' }, ui.icon('info-circle'), ' These open outside CaseVault, in a new browser tab. Never paste case details into outside websites unless your policy allows it.') : null,
         shown.length ? h('div', { class: 'quick-links' }, shown.map((l) => linkTile(l, { editing, redraw: draw })))
-          : h('p', { class: 'muted small' }, inTab.length ? 'All the links here are hidden. Click Show / hide to bring them back.' : 'No links here yet. Add one in Vault → Quick links.'));
+          : h('p', { class: 'muted small' }, inTab.length ? 'All the links here are hidden. Click Show / hide to bring them back.' : 'No links here yet. Add one in Vault → Quick links.')].filter(Boolean));
     };
     draw();
     return wrap;
@@ -208,7 +209,7 @@
   function codeBrowser(list, placeholder, what) {
     const { h } = ui;
     const q = h('input', { type: 'search', placeholder, 'aria-label': placeholder });
-    const cat = h('select', { 'aria-label': 'Category' }, h('option', { value: 'all' }, 'All categories'), list.map((g) => h('option', { value: g.key }, `${g.title} (${g.codes.length})`)));
+    const cat = h('select', { 'aria-label': 'Category' }, h('option', { value: 'all' }, 'All categories'), list.map((g) => h('option', { value: g.key }, `${g.title} · ${g.codes.length}`)));
     const out = h('div', { class: 'code-groups' });
     const draw = () => {
       const groups = K().searchCodes(list, q.value, cat.value);

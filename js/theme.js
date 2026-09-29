@@ -33,5 +33,5 @@
   if (root.matchMedia) root.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (get() === 'auto') apply('auto'); });
 
   apply();
-  root.CVTheme = { get, set, next, effective, onChange, LABELS: { auto: 'Theme: automatic (follows Windows)', light: 'Theme: light', dark: 'Theme: dark' } };
+  root.CVTheme = { get, set, next, effective, onChange, LABELS: { auto: 'Theme: automatic, follows Windows', light: 'Theme: light', dark: 'Theme: dark' } };
 })(this);

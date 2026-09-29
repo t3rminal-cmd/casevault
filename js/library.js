@@ -65,7 +65,7 @@
   const BUILTIN_BEHAVIORS = [
     {
       id: 'dea6',
-      name: 'DEA-6 style (Report of Investigation)',
+      name: 'DEA-6 style Report of Investigation',
       prompt: [
         'Write in the style of a DEA-6 Report of Investigation.',
         '- Third person, past tense, factual and objective. No opinions, speculation or conclusions the facts do not support.',
