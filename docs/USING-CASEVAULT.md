@@ -74,10 +74,10 @@ The header has three parts:
 - **Left:** the CaseVault logo and, under it, where your data is being saved (for example `W:\CaseVault-Data` in Firefox, or `CaseVault-Data` in Chrome and Edge, which don't tell CaseVault the drive letter). Click it for the Overview.
 - **Middle:** status icons. Point at one for the details.
   - **Shield or globe:** green shield means offline (nothing leaves the computer). A red globe means online AI is on, and CaseVault may send reviewed text to the internet. Click it for online research.
-  - **Chip:** the AI engine. Green means it's running, and pointing at it shows the model, for example *AI: Quick · qwen2.5:7b*. Red means it isn't running. Click it for AI settings.
+  - **Robot:** the AI engine. Blue means it's running, and pointing at it shows the model, for example *AI: Quick · qwen2.5:7b*. Red means it isn't running. Click it for AI settings.
   - Moving bars show while the AI is working, and a **memory** icon turns amber or red when memory runs short.
   - **Drive:** green means everything is saved to the SSD, amber means saving, and red with words means something isn't saved (reconnect the SSD).
-- **Right:** **Ask AI**, **Hide** (privacy screen) and the **menu** (☰). The menu holds:
+- **Right:** three square buttons: **Ask AI** (the robot), **Hide** (the crossed-out eye, privacy screen) and the **menu** (☰). Point at one for its name. The menu holds:
   - **Reference**;
   - **Library**, which opens the Vault at the Library, where you add files the AI learns from;
   - **Vault**;
@@ -107,16 +107,19 @@ At the bottom of the Overview, in three tabs:
 OSINT and LEO links open the website **in a new browser tab**, outside CaseVault. CaseVault never contacts those sites itself and sends them nothing (not even which page you came from), so CaseVault stays offline: the **Offline** badge doesn't change when you click one. The website itself needs the PC's internet connection, like any site you open in the browser. Don't paste case details into outside websites unless your policy allows it.
 
 - **Show / hide** lets you hide the buttons you don't use (click the eye on each), and bring them back.
-- **Edit links** (or **Vault → Quick links**) changes a link's name or web address, and adds your own, for example your agency's portals. Chicago HIDTA has no address until you add your portal's. Changes save when you leave the box, in `vault.json` on the SSD.
+- Quick links sit in a slim strip at the bottom of the Overview: small buttons in rows, so they take little room.
+- **Edit links** (or **Vault → Quick links**, which also has a **Save changes** button) changes a link's name or web address, and adds your own, for example your agency's portals. Chicago HIDTA has no address until you add your portal's. Changes save when you leave the box, in `vault.json` on the SSD.
 
 ## Cases
 
 - **New case** asks for a title (required), the **file number**, the **case number**, the **agency case number** (your agency's own internal number), the client (**State**, **Federal** or **Other**), status, opened date, and tags. A client typed in before v1.14 is kept as its own choice in the list. One file number can hold several cases: the File number box offers the file numbers you already use. The case folder and file names use the case number.
 - The case list and the case's header show both, for example *File F-2026-01 · Case 00123*, and the search box finds either. Templates can use `{{case.fileNumber}}` and `{{case.number}}`.
-- The **left list** shows open and pending cases, most recently changed first. Each case shows its status icon (blue folder: open, amber hourglass: pending, green lock: closed) and title, with the file number, case number and client under it. A **red bell** in front means a deadline on its Timeline is overdue or due within a week. Point at a case to see the deadline, and for a Pending case what it's waiting on. Use the search box (title, any of the numbers, client, or tag) and the filter to find others.
+- The **left list** shows open and pending cases, most recently changed first. Each case shows its status in words (**Open**, **Pending**, **Closed** or **Archived**) and its title, with just the numbers under it: file number | case number | client, for example `100 | JH123456 | State`. A **red bell** in front means a deadline on its Timeline is overdue or due within a week. Point at a case to see the deadline, and for a Pending case what it's waiting on. Use the search box (title, any of the numbers, client, or tag) and the filter to find others.
+- **Make the list wider or narrower:** drag its right edge (or click the edge and use ← →). Double-click the edge to reset it. Each PC remembers its own width.
 - **Details** tab: edit any field. A short note under **Status** says what the status means and, for a Pending case, what you're waiting on.
 - **Suspects** (on the Details tab): **Add suspect** for each person the case is about: name, date of birth (the **age** is worked out for you), residence, and role (**Main**, **Secondary** or **Other**). The first one is Main, later ones Secondary. They save with the case, go to **Ask AI** and **Draft with AI** with the case, and templates can use `{{suspect.name}}`, `{{suspect.dob}}`, `{{suspect.age}}`, `{{suspect.residence}}` and `{{suspect.role}}` (the main suspect) and `{{suspects}}` (all of them, one per line).
-- **Contacts** (on the Details tab, under Suspects): the **Case Officer**, the **prosecutor** (choose **ASA** or **AUSA**), each with name, email and phone, and **Add contact** for anyone else on the case: Finance, Asset Forfeiture, the Narcotic Team Supervisor and so on (pick a role from the list or type your own). The bin button removes one. They save with the case on the SSD, go to **Ask AI** with the case, and templates can use `{{case.officer.name}}`, `{{case.prosecutor.title}}`, `{{case.prosecutor.email}}` and so on.
+- **Save changes** at the bottom of the Details tab saves the case to the SSD now and confirms it. Changes also save by themselves a moment after you type.
+- **Contacts** (on the Details tab, under Suspects): the **Case Officer**, the **prosecutor** (choose **ASA** or **AUSA**), each with name, email and phone, and **Add contact** for anyone else on the case: the Team Supervisor, a Team Member, Finance, Asset Forfeiture and so on (pick a role from the list or type your own). The bin button removes one. They save with the case on the SSD, go to **Ask AI** with the case, and templates can use `{{case.officer.name}}`, `{{case.prosecutor.title}}`, `{{case.prosecutor.email}}` and so on.
 - **Case actions** (at the bottom of Details) has **Close case…** (or **Reopen case**), **Add arrest details**, **Archive case…** and **Delete case…**.
 
 ### Open, Pending, Closed, Archived: which one?
@@ -194,6 +197,12 @@ Notes save on their own as you type. The **Save** button next to Preview writes 
 
 Add dated **Events** (things that happened) and **Deadlines** (things that are due), with an optional time and note.
 
+- **Dates, phone numbers and SSNs** are written the same way everywhere:
+  - **Dates:** `12.01.2026` (month.day.year). Type it as `12012026`, `12/1/26` or `12.01.2026` (the dots go in by themselves), or click the calendar button.
+  - **Phone numbers:** `123.456.7890`. Type the digits, or paste one in any format, and it's tidied when you leave the box.
+  - **SSNs:** `123.45.6789` (for example on the Arrest details tab).
+
+  Dates in templates are filled in the same way (`{{suspect.dob}}`, `{{arrest.date}}`).
 - **Time:** type it (`0930`, `9:30`, `9:30 pm` and `21:30` all work; it becomes `09:30` or `21:30` when you leave the box), or click the **clock** button, pick the hour and minute, and press **Set time**. **Now** fills in the current time, **Clear** empties it, and Esc closes the picker without changing anything. The arrest and Miranda times on the Arrest details tab work the same way.
 
 - Entries are always sorted by date.
@@ -206,9 +215,9 @@ Add dated **Events** (things that happened) and **Deadlines** (things that are d
 
 Every case has the same document folders, both in CaseVault and on the SSD (`cases\<case>\files\...`):
 
-> Case Overview · Case Initiation · Affidavit Drafts · Affidavit Final · Warrant Drafts · Warrant Final · Arrest Report · Supplementary Report · Case Report · Deconfliction · Drug Exhibits · Other Exhibits · Email · Ops Plan · Subpoena Drafts · Subpoena Response · Subject Information · Recordings (with **Video** and **Audio** sub-folders) · Vehicle Information · Maps · Case Closing · Other
+> Case Overview · Case Initiation · Warrant Drafts · Warrant Final · Arrest Report · Supplementary Report · Case Report · Deconfliction · Drug Exhibits · Other Exhibits · Email · Ops Plan · Subpoena Drafts · Subpoena Response · Subject Information · Recordings (with **Video** and **Audio** sub-folders) · Vehicle Information · Maps · Case Closing · Other
 
-Folders that are no longer used (**Affidavits** from before v1.11; **Warrants Signed** and **Subpoena Sent** from before v1.13) still show, and work, while they hold files. Open one and click **Move them to Warrant Final** (or Affidavit Final, or Subpoena Response) to move its files into the folder that replaced it; each file is renamed by that folder's convention. New files never go to them.
+Affidavits are kept with their warrants, in **Warrant Drafts** and **Warrant Final**. Folders that are no longer used (**Affidavits** from before v1.11; **Warrants Signed** and **Subpoena Sent** from before v1.13; **Affidavit Drafts** and **Affidavit Final** from before v1.15) still show, and work, while they hold files. Open one and click **Move them to Warrant Final** (or Warrant Drafts, or Subpoena Response) to move its files into the folder that replaced it. Affidavits keep their names; other files are renamed by that folder's convention. New files never go to them.
 
 ### Arranging folders and files
 
@@ -228,7 +237,7 @@ The table has one row per file with clear lines: **Name** (with the folder under
 
 ### Adding files
 
-Pick a folder on the left and drop files onto the box (or click **choose files**). With **All documents** selected, CaseVault asks the document type for each file, with a guess from its name (for example `supp 2.pdf` → Supplementary Report, `search warrant signed.pdf` → Warrant Final, `case overview.docx` → Case Overview, `interview.mp3` → Recordings › Audio, `bodycam.mp4` → Recordings › Video), and shows the name it will be saved under. Files are **copied**; your originals aren't changed.
+Pick a folder on the left and drop files onto the box (or click **choose files**). With **All documents** selected, CaseVault asks the document type for each file, with a guess from its name (for example `supp 2.pdf` → Supplementary Report, `search warrant signed.pdf` → Warrant Final, `PC affidavit draft.docx` → Warrant Drafts, `case overview.docx` → Case Overview, `interview.mp3` → Recordings › Audio, `bodycam.mp4` → Recordings › Video), and shows the name it will be saved under. Files are **copied**; your originals aren't changed.
 
 - **Open** previews PDFs, images, text, audio, and video right inside CaseVault. Excel and CSV files open as tables (see below).
 - **Word files (.docx)** open inside CaseVault as a readable, read-only page: headings, bold/italic/underline, numbered and bulleted lists and tables are kept; fonts, spacing and pictures aren't. Open the file in Word for the exact layout. Old **.doc** files can't be shown: open them in Word and *Save As* .docx.
@@ -237,7 +246,7 @@ Pick a folder on the left and drop files onto the box (or click **choose files**
 - A small **name** badge marks a file that doesn't follow the convention.
 - **Delete** permanently removes the file from the SSD after you confirm.
 - Files added with CaseVault 1.8 or earlier sit in **Unsorted**. Use **File it…** on each to put it in its folder with a conventional name.
-- Drafts exported to the case (**Export → Save to case files**) are filed too: affidavits in Affidavit Drafts, subpoenas in Subpoena Drafts, summaries and DEA-6 reports in Case Report, others in Other.
+- Drafts exported to the case (**Export → Save to case files**) are filed too: affidavits in Warrant Drafts (named *… Warrant Draft - Affidavit …*), subpoenas in Subpoena Drafts, summaries and DEA-6 reports in Case Report, others in Other.
 
 ### Excel and CSV files
 
@@ -380,7 +389,7 @@ A white screen with blue 1s and 0s raining down covers the whole app, with no ca
 **Settings** (in **Vault → Privacy screen**):
 
 - **Set PIN / Change PIN / Remove PIN.** 4 to 6 digits. It's stored in `vault.json` on the SSD as a salted SHA-256 hash, never the PIN itself, so it goes with the SSD to every PC.
-- **Hide automatically after** 1 to 30 minutes without mouse or keyboard activity. Off by default.
+- **Hide automatically after** 1 to 30 minutes without mouse or keyboard activity. **15 minutes** unless you choose another time or Off.
 
 > The privacy screen only hides what's on the screen. It isn't encryption, and anyone at the PC could close the browser tab. **For real security when you leave, press Windows key + L to lock the PC.**
 
@@ -420,7 +429,9 @@ CaseVault is offline by default. If your agency allows it, you can ask Claude re
 **Services:**
 
 - **claude.ai (my Claude subscription)**: a Claude Pro/Max subscription can't be connected to other apps, so CaseVault does it the safe manual way. It hides the details, copies the result, and opens claude.ai in a new tab. Paste it there, then paste Claude's answer back into CaseVault, which puts the real names back on this computer.
-- **Anthropic API** (optional): answers appear inside CaseVault. Needs an API key, **billed separately** from a subscription. See *Setting up the API key* below.
+- **Anthropic API** (optional): Claude's answers appear inside CaseVault. Needs an API key, **billed separately** from a subscription. See *Setting up the API key* below.
+- **Google Gemini** (optional, **free tier**): Gemini's answers appear inside CaseVault. Needs a free API key from Google AI Studio. See *Free API keys: Gemini and OpenRouter* below.
+- **OpenRouter** (optional, **free models**): one key for many AI models, including free ones (names ending in `:free`). See below.
 
 **What happens to your text:** every message goes through the same review screen. Names, SSNs, dates of birth, IDs, phone numbers, emails, addresses, plates, VINs, case numbers and card/bank numbers are replaced with placeholders like `[NAME_1]` and `[PHONE_1]`. Those can't be un-ticked. Possible names found by pattern can be un-ticked (for example a court's name). **Hide this too** adds anything the scan missed. The box *Exactly what will be sent* shows the final text. The same person keeps the same placeholder for the whole conversation, and answers are shown with the real values put back (untick *Show real names* to see what Claude saw). **Save to case as draft** keeps an answer in the case's Drafts, marked AI-assisted.
 
@@ -428,7 +439,7 @@ Phone numbers are found with or without the area code (`555-0142`), and plates w
 
 Detection is a safety net, not a guarantee. Always read the text before you send it, and add names CaseVault should always hide to **Vault → Always hide**: subjects, informants, nicknames, street names.
 
-Only `api.anthropic.com` can ever be reached (the page's security policy blocks every other address), only with text you reviewed, and each review allows one request. Case files are never sent automatically.
+Only `api.anthropic.com`, `generativelanguage.googleapis.com` (Gemini) and `openrouter.ai` can ever be reached (the page's security policy blocks every other address), only with text you reviewed, and each review allows one request. Case files are never sent automatically.
 
 ### Setting up the API key (optional)
 
@@ -450,6 +461,34 @@ The same steps are shown inside CaseVault: **Research & drafting (online)** → 
 9. **To stop using it**, click **Remove API key…**. This removes it from CaseVault and deletes it from the SSD. Then **revoke** it in the Console: **Settings → API keys**, open the key's menu, choose Delete. Revoking takes effect immediately everywhere. Do it straight away if the SSD or a PC is lost.
 
 **Replace…** swaps in a new key (for example after revoking the old one). The key is only ever sent to `api.anthropic.com`, in the request header. It is never written to vault.json, the browser's storage or the outbound log. CaseVault forgets it from memory when the SSD is unplugged or another vault is opened.
+
+### Free API keys: Gemini and OpenRouter (optional)
+
+Both work like the Anthropic key: **Add API key…**, where to keep it (session, locked with a passphrase, or plain on the SSD), **Test key**, **Remove API key…**. They're in **Vault → Online features → API keys**, and on the online page when you pick that service. Each card has **How to get … API key, step by step**, with links that open in a new tab.
+
+> **What "free" costs.** On Gemini's free tier, Google may use what you send to improve its products, and human reviewers may read it. Free OpenRouter models are run by other companies, and some log or train on what you send. CaseVault hides names and numbers before anything goes, but only send what your agency's policy allows. For case work, prefer the local AI (Ask AI) or a paid API.
+
+**Google Gemini (free tier):**
+
+1. Open [aistudio.google.com](https://aistudio.google.com/) and sign in with a Google account your agency allows. Accept the Gemini API terms, and read the free-tier part.
+2. Go to **Get API key** → **Create API key**. If it asks for a Google Cloud project, let it create one. Name it after the PC, for example `CaseVault - L14`.
+3. Copy the key. It starts with `AIza` and is 39 characters long.
+4. In CaseVault, click **Add API key…** on the Gemini card, paste it, tick that you understand the free-tier terms, and click **Save key**.
+5. Go online and click **Test key**. It lists the Gemini models. Flash models (for example `gemini-2.5-flash`, the default) have the most free use. Pick one in the **Model** box on the online page.
+6. The free tier has limits per minute and per day. When you reach one, CaseVault shows the error: wait a minute, or try tomorrow.
+7. To stop, click **Remove API key…**, then delete the key in AI Studio under **API keys**.
+
+**OpenRouter (free models):**
+
+1. Open [openrouter.ai](https://openrouter.ai/) and sign in with Google, GitHub or an email address.
+2. Recommended: in **Settings → Privacy**, turn off providers that may train on your data. Fewer free models are then available, but those left don't keep what you send for training.
+3. Go to **Settings → Keys → Create Key**. Name it after the PC, and set a **credit limit** (0 if you only want free models).
+4. Copy the key. It starts with `sk-or-v1-`, and OpenRouter shows it only once.
+5. Add it on the OpenRouter card in CaseVault, tick the box, and click **Save key**.
+6. Go online and click **Test key**. It lists the free models (names ending in `:free`). Type or pick one in the **Model** box. The default is `meta-llama/llama-3.3-70b-instruct:free`. Free models have a daily limit, higher once your account has bought some credit.
+7. To stop, click **Remove API key…**, then delete the key in **Settings → Keys**.
+
+Model names change over time. If one stops working, click **List models** on the online page and pick another.
 
 ### Outbound log
 
@@ -515,7 +554,7 @@ The **Drafts** tab is where you write documents for the case: affidavits, subpoe
 Give it a title and a type (Case summary, Affidavit, Subpoena, Memo, Other), then choose how to start:
 
 - **Blank.**
-- **From a template.** Your agency's formats, stored in `CaseVault-Data\templates\` (see *Templates* below). Case details such as the case number are filled in for you.
+- **Template.** Your agency's formats, stored in `CaseVault-Data\templates\` (see *Templates* below). Case details such as the case number are filled in for you.
 - **Draft with AI.** Writes a first draft from this case's material (needs the AI model in the header, not **AI: Offline**).
 
 The editor understands simple Markdown (`#` headings, `**bold**`, `1.` numbered paragraphs, `-` bullets). **Preview** shows it formatted.

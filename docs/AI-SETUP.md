@@ -175,12 +175,22 @@ Mainstream models (Qwen, Llama, Gemma) sometimes refuse or hedge on law-enforcem
 | Beelink | `dolphin-mistral` (7B) | ~4.1 GB | Older, also fits the GPU |
 | L14 (CPU only) | `dolphin-phi` (2.7B) | ~1.6 GB | Small enough for the processor; weaker answers |
 
-```bat
-W:\ollama\ollama.exe pull dolphin3
-W:\ollama\ollama.exe list
-```
+**Step by step (dolphin3 as the example).** The same steps, with a **Copy** button for each command, are in CaseVault. Click the robot in the middle of the header, then open **Add another AI model**.
 
-Then in CaseVault: **Ask AI** → **Model** → `dolphin3:latest`. Your choice is remembered in the vault.
+1. Start `W:\Start-CaseVault.bat` and leave its window open (the AI engine must be running). The PC must be online for the download.
+2. Press **Windows key + R**, type `cmd` and press **Enter**.
+3. Paste the command and press **Enter**. Use your drive letter if it isn't W:.
+
+   ```bat
+   W:\ollama\ollama.exe pull dolphin3
+   ```
+
+   On the L14, use `dolphin-phi` instead. The download takes a few minutes. Wait for **success**. The model is saved in `W:\models`, so it downloads only once and is there on both PCs.
+4. Check it's there: `W:\ollama\ollama.exe list`.
+5. In CaseVault, click the robot in the header, then **Check again**. The model now shows under *Installed models*, and the table marks it **✓ Installed**.
+6. Click **Ask AI**, open **Model**, pick `dolphin3:latest` and ask away. Your choice is remembered in the vault.
+
+To remove a model later: `W:\ollama\ollama.exe rm dolphin3`.
 
 Model names on ollama.com change over time: if a `pull` says *file does not exist*, search **ollama.com/library** (or ollama.com/search for "abliterated") and use the name shown there, in a 7–8B size for the Beelink.
 

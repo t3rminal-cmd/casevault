@@ -108,7 +108,7 @@
     if (now.getMonth() + 1 < mo || (now.getMonth() + 1 === mo && now.getDate() < d)) age--;
     return age >= 0 && age < 130 ? age : null;
   }
-  const usDate = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || '')); return m ? `${m[2]}/${m[3]}/${m[1]}` : String(iso || ''); };
+  const usDate = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || '')); return m ? `${m[2]}.${m[3]}.${m[1]}` : String(iso || ''); }; // MM.DD.YYYY
 
   /**
    * Values available to {{placeholders}} for one case. `affiant` is the "My details" profile from

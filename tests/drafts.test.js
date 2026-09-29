@@ -103,7 +103,7 @@ test('old vaults (before drafts) still open and gain drafts only on first use', 
   await w.write(JSON.stringify({ app: 'CaseVault', appVersion: '1.0.0', schema: 1, vaultId: 'old', settings: { backupsToKeep: 30, aiProfile: 'rules-only' }, cases: [] }));
   await w.close();
   const v = await Vault.load(data);
-  assert.strictEqual(v.settings.privacyIdleMinutes, 0, 'new settings get defaults');
+  assert.strictEqual(v.settings.privacyIdleMinutes, 15, 'new settings get defaults');
   assert.strictEqual(v.settings.privacyPin, null);
   assert.ok(!data.children.has('templates'), 'nothing is added until used');
   Vault.close();
@@ -245,8 +245,8 @@ test('suspects fill {{suspect.*}} with the main suspect, {{suspects}} lists them
   assert.strictEqual(D.ageOn('', now), null);
   const c = { agencyNumber: 'AG-26-0077', suspects: [{ name: 'Sam Example', dob: '1995-01-15', residence: '100 Test Lane, Anytown', role: 'Secondary' }, { name: 'Pat Placeholder', dob: '1988-12-01', residence: '', role: 'Main' }, { name: '', role: 'Other' }] };
   const ctx = D.templateContext(c, now);
-  assert.strictEqual(D.fillTemplate('{{suspect.name}} ({{suspect.role}}), DOB {{suspect.dob}}, age {{suspect.age}}. Agency no. {{case.agencyNumber}}', ctx), 'Pat Placeholder (Main), DOB 12/01/1988, age 37. Agency no. AG-26-0077');
-  assert.strictEqual(ctx.suspects, 'Sam Example, DOB 01/15/1995, age 31, 100 Test Lane, Anytown (Secondary)\nPat Placeholder, DOB 12/01/1988, age 37 (Main)');
+  assert.strictEqual(D.fillTemplate('{{suspect.name}} ({{suspect.role}}), DOB {{suspect.dob}}, age {{suspect.age}}. Agency no. {{case.agencyNumber}}', ctx), 'Pat Placeholder (Main), DOB 12.01.1988, age 37. Agency no. AG-26-0077');
+  assert.strictEqual(ctx.suspects, 'Sam Example, DOB 01.15.1995, age 31, 100 Test Lane, Anytown (Secondary)\nPat Placeholder, DOB 12.01.1988, age 37 (Main)');
   assert.ok(D.placeholderGroups().some((g) => g.title === 'Suspects'));
 });
 

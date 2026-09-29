@@ -21,13 +21,14 @@
     idle.addEventListener('change', () => save({ online: { ...CVOutbound.onlineSettings(), idleMinutes: Number(idle.value) } }));
     return h('section', { 'data-section': 'online' },
       h('h3', { title: 'Research & drafting AI' }, 'Online features'),
-      h('p', { class: 'muted small explain' }, 'Off by default. When allowed, the ', h('strong', {}, 'Online'), ' button in the header lets you go online for a while to ask Claude research and drafting questions. Personal details are replaced with placeholders and you see exactly what is sent. CaseVault only ever connects to ',
+      h('p', { class: 'muted small explain' }, 'Off by default. When allowed, the ', h('strong', {}, 'Online'), ' button in the header lets you go online for a while to ask Claude, Gemini or an OpenRouter model research and drafting questions. Personal details are replaced with placeholders and you see exactly what is sent. CaseVault only ever connects to ',
         h('code', {}, CVOutbound.ALLOWED_HOSTS.join(', ')), '.'),
       h('label', { class: 'check-row' }, allowed, h('span', {}, 'Allow going online')),
       h('div', { class: 'row' }, h('label', { class: 'inline' }, 'Go offline again after ', idle, ' without use')),
-      h('h4', { title: 'Optional' }, 'Anthropic API key'),
-      h('p', { class: 'muted small explain' }, 'Only needed to get answers inside CaseVault. With your Claude subscription (claude.ai, copy & paste) no key is needed.'),
+      h('h4', { title: 'Optional. Only needed to get answers inside CaseVault. With your Claude subscription (claude.ai, copy & paste) no key is needed. Gemini and OpenRouter have free tiers; read what they do with what you send.' }, 'API keys'),
       CVApiKey.card({ compact: false }),
+      CVApiKeys.gemini.card({ compact: false }),
+      CVApiKeys.openrouter.card({ compact: false }),
       h('p', { class: 'hint' }, 'Check your agency\'s policy on cloud AI before turning this on.'));
   }
 

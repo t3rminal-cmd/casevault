@@ -16,6 +16,7 @@
     const svg = doc.createElementNS(NS, 'svg');
     svg.setAttribute('viewBox', '0 0 16 16');
     svg.setAttribute('class', `bi${cls ? ` ${cls}` : ''}`);
+    svg.dataset.icon = name;
     svg.setAttribute('fill', 'currentColor');
     svg.setAttribute('focusable', 'false');
     if (size) { svg.setAttribute('width', size); svg.setAttribute('height', size); }

@@ -12,6 +12,14 @@
 
   // h('div', {class: 'x', onclick: fn}, 'text', childNode, [more])
   function h(tag, attrs = {}, ...kids) {
+    // Every date box in CaseVault is typed as MM.DD.YYYY (js/formats.js), with a calendar button.
+    if (tag === 'input' && attrs && attrs.type === 'date' && window.CVFormat) {
+      const { class: cls, ...rest } = attrs;
+      const box = CVFormat.dateField(rest);
+      if (cls) box.classList.add(...String(cls).split(/\s+/).filter(Boolean));
+      for (const [k, v] of Object.entries(rest)) if (k.startsWith('on') && typeof v === 'function') box.addEventListener(k.slice(2), v);
+      return box;
+    }
     const el = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs || {})) {
       if (v == null || v === false) continue;
@@ -36,7 +44,8 @@
     if (!s) return '';
     const d = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(s + 'T00:00:00') : new Date(s);
     if (isNaN(d)) return s;
-    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    // MM.DD.YYYY everywhere in CaseVault (js/formats.js), like the date boxes.
+    return `${pad(d.getMonth() + 1)}.${pad(d.getDate())}.${d.getFullYear()}`;
   }
 
   function fmtDateTime(ms) {
@@ -44,11 +53,11 @@
     return `${fmtDate(Vault.localDay(d))} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
-  // Short date for tables: "28 Sep 22:48" this year, "28 Sep 2025" before.
+  // Short date for tables: "09.28 22:48" this year, "09.28.2025" before.
   function fmtShortDateTime(ms) {
     const d = new Date(ms);
-    const day = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-    return d.getFullYear() === new Date().getFullYear() ? `${day} ${pad(d.getHours())}:${pad(d.getMinutes())}` : `${day} ${d.getFullYear()}`;
+    const day = `${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
+    return d.getFullYear() === new Date().getFullYear() ? `${day} ${pad(d.getHours())}:${pad(d.getMinutes())}` : `${day}.${d.getFullYear()}`;
   }
 
   function fmtSize(n) {
@@ -498,9 +507,8 @@
       .sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
   }
 
-  // A case in the left list: [bell] [status] Title, then File · Case · Client. A red bell means a
+  // A case in the left list: [bell] [Open] Title, then file | case | client. A red bell means a
   // deadline is overdue or due within a week; the details are in the hover box.
-  const STATUS_DOT = { Open: 'folder2-open', Pending: 'hourglass-split', Closed: 'lock-fill', Archived: 'archive' };
   function caseItem(c) {
     const due = c.nextDeadline && !isArchivedEntry(c) ? dueLabel(c.nextDeadline.date) : null;
     const alarm = due && (due.cls === 'overdue' || due.cls === 'soon');
@@ -518,9 +526,10 @@
       },
       h('div', { class: 'case-item-top' },
         alarm ? h('span', { class: `case-bell ${due.cls}`, 'aria-label': `Deadline ${due.text}` }, I('bell-fill')) : null,
-        h('span', { class: `case-dot status-${String(c.status).toLowerCase()}`, 'aria-label': c.status }, I(STATUS_DOT[c.status] || 'folder')),
+        h('span', { class: `case-status status-${String(c.status).toLowerCase()}` }, c.status),
         h('span', { class: 'case-item-title' }, c.title || 'Untitled case')),
-      h('div', { class: 'case-item-meta muted' }, [c.fileNumber && `File ${c.fileNumber}`, c.number && `Case ${c.number}`, c.client].filter(Boolean).join(' · ') || '\u00a0')));
+      // Just the numbers: file number | case number | client, e.g. "100 | JH123456 | State".
+      h('div', { class: 'case-item-meta muted' }, [c.fileNumber, c.number, c.client].filter(Boolean).join(' | ') || '\u00a0')));
   }
 
   function renderCaseList() {
@@ -644,7 +653,7 @@
           statusPill(c.status),
           h('span', { class: 'muted' }, c.updated ? fmtDateTime(Date.parse(c.updated)) : '')))))
         : h('p', { class: 'muted' }, 'Create your first case with "New case".')),
-      h('div', { class: 'dash-section' }, h('h2', { class: 'section-title', icon: 'lightning-charge' }, 'Quick links'), CVReferenceUI.quickLinks())));
+      h('div', { class: 'dash-section dash-quick' }, h('h2', { class: 'section-title', icon: 'lightning-charge' }, 'Quick links'), CVReferenceUI.quickLinks())));
   }
 
   /* =====================================================================
@@ -874,6 +883,14 @@
           + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),
       suspectsSection(c, save),
       contactsSection(c, save),
+      // Everything saves by itself as you type; the button saves now and says so.
+      archived ? null : h('div', { class: 'details-save' },
+        h('button', { class: 'btn primary', type: 'button', icon: 'save', title: 'Save this case to the SSD now. Changes also save by themselves a moment after you type.', onclick: async () => {
+          save();
+          await Save.flushAll();
+          if (Save.failed.size) toast('Not saved: reconnect the SSD.', 'error');
+          else toast('Case saved to the SSD.', 'success', 2500);
+        } }, 'Save changes')),
       // Archive and delete side by side, so the gentler choice is always in view.
       h('section', { class: 'case-actions', 'data-ro-ok': 'true', 'aria-labelledby': 'case-actions-title' },
         h('h3', { id: 'case-actions-title', icon: 'sliders' }, 'Case actions'),
@@ -945,7 +962,7 @@
   /* Contacts on the Details tab: the case officer, the prosecutor (ASA or AUSA) and anyone else
    * the case needs (finance, asset forfeiture, the narcotic team supervisor…). Kept in case.json
    * as c.contacts; {{case.officer.*}} and {{case.prosecutor.*}} fill templates. */
-  const CONTACT_ROLES = ['Finance', 'Asset Forfeiture', 'Narcotic Team Supervisor', 'Task Force Officer', 'Analyst', 'Lab', 'Victim Advocate'];
+  const CONTACT_ROLES = ['Team Supervisor', 'Team Member', 'Finance', 'Asset Forfeiture', 'Task Force Officer', 'Analyst', 'Lab', 'Victim Advocate'];
   function contactsSection(c, save) {
     const k = c.contacts = Object.assign({ officer: {}, prosecutor: {}, others: [] }, c.contacts || {});
     k.officer = k.officer || {}; k.prosecutor = k.prosecutor || {}; k.others = Array.isArray(k.others) ? k.others : [];
@@ -973,7 +990,7 @@
         h('button', { class: 'icon-btn danger-icon contact-remove', type: 'button', title: 'Remove this contact', onclick: () => { k.others.splice(i, 1); drawOthers(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Remove contact ${i + 1}`)))));
     };
     drawOthers();
-    const add = h('button', { class: 'btn small', type: 'button', icon: 'person-plus', title: 'Add someone else on the case: finance, asset forfeiture, the narcotic team supervisor…', onclick: () => {
+    const add = h('button', { class: 'btn small', type: 'button', icon: 'person-plus', title: 'Add someone else on the case: the team supervisor, a team member, finance, asset forfeiture…', onclick: () => {
       k.others.push({ role: '', name: '', email: '', phone: '' });
       drawOthers();
       const last = others.lastElementChild && others.lastElementChild.querySelector('input');
@@ -1402,10 +1419,10 @@
     const mergeNote = legacy && legacy.mergeInto && shown.length && !archived
       ? h('p', { class: 'hint merge-hint' }, `${current} is no longer used; ${legacy.mergeInto} replaces it. `,
         h('button', { class: 'btn small', type: 'button', icon: 'arrow-left-right', onclick: async () => {
-          if (!(await confirmDialog({ title: `Move ${shown.length} file${shown.length === 1 ? '' : 's'} to ${legacy.mergeInto}?`, message: `Each file is renamed by the convention for ${legacy.mergeInto}.`, confirmText: 'Move' }))) return;
+          if (!(await confirmDialog({ title: `Move ${shown.length} file${shown.length === 1 ? '' : 's'} to ${legacy.mergeInto}?`, message: legacy.keepName ? 'The files keep their names.' : `Each file is renamed by the convention for ${legacy.mergeInto}.`, confirmText: 'Move' }))) return;
           let moved = 0;
           for (const f of shown) {
-            try { await Save.track(`file-move:${c.id}:${f.name}`, () => Vault.moveFile(c.id, f.name, legacy.mergeInto, {})); moved++; } catch { break; }
+            try { await Save.track(`file-move:${c.id}:${f.name}`, () => Vault.moveFile(c.id, f.name, legacy.mergeInto, { keepName: !!legacy.keepName })); moved++; } catch { break; }
           }
           if (moved) toast(`Moved ${moved} file${moved === 1 ? '' : 's'} to ${legacy.mergeInto}.`, 'success', 5000);
           location.hash = `#/case/${encodeURIComponent(c.id)}/files/${encodeURIComponent(legacy.mergeInto)}`;
@@ -1918,6 +1935,13 @@
         } }, 'Save changes')));
   }
 
+  // The privacy screen hides CaseVault after 15 minutes alone, unless you chose another time
+  // (or Off) in Vault → Privacy screen. Vaults from before v1.15 said 0 without anyone choosing it.
+  function idleMinutes() {
+    const s = (Vault.data && Vault.data.settings) || {};
+    return s.privacyIdleSet ? Number(s.privacyIdleMinutes) || 0 : 15;
+  }
+
   // Privacy screen settings, shown inside the Vault panel. The PIN form is inline because the app
   // has a single dialog element.
   function privacySettings(v) {
@@ -1956,9 +1980,9 @@
 
     const idle = h('select', { 'aria-label': 'Hide automatically after' },
       [[0, 'Off'], [1, '1 minute'], [2, '2 minutes'], [5, '5 minutes'], [10, '10 minutes'], [15, '15 minutes'], [30, '30 minutes']]
-        .map(([m, label]) => h('option', { value: m, selected: Number(v.settings.privacyIdleMinutes || 0) === m }, label)));
+        .map(([m, label]) => h('option', { value: m, selected: idleMinutes() === m }, label)));
     idle.addEventListener('change', () => {
-      Save.track('settings', () => Vault.updateSettings({ privacyIdleMinutes: Number(idle.value) })).catch(() => {});
+      Save.track('settings', () => Vault.updateSettings({ privacyIdleMinutes: Number(idle.value), privacyIdleSet: true })).catch(() => {});
     });
     draw();
     return h('section', { 'data-section': 'privacy' },
@@ -2049,6 +2073,41 @@
       Save.track('settings', () => Vault.updateSettings({ sidebarCollapsed: collapsed })).catch(() => {});
     }
   }
+  // Drag the case list's right edge to make it wider or narrower (or focus it and use ← →).
+  // Double-click puts it back. The width is kept in this browser, like the theme.
+  (function sidebarResizer() {
+    const side = $('#sidebar');
+    const KEY = 'casevault-sidebar-width';
+    const MIN = 200; const MAX = 520; const DEF = 300;
+    const setW = (w, keep = true) => {
+      const px = Math.round(Math.min(MAX, Math.max(MIN, w)));
+      document.documentElement.style.setProperty('--sidebar-w', `${px}px`);
+      grip.setAttribute('aria-valuenow', String(px));
+      if (keep) { try { if (px === DEF) localStorage.removeItem(KEY); else localStorage.setItem(KEY, String(px)); } catch { /* this session only */ } }
+    };
+    const grip = h('div', { class: 'sidebar-resizer', role: 'separator', 'aria-orientation': 'vertical', 'aria-label': 'Case list width', 'aria-valuemin': MIN, 'aria-valuemax': MAX, tabindex: 0, title: 'Drag to make the case list wider or narrower. Double-click to reset.' });
+    side.append(grip);
+    let saved = DEF;
+    try { saved = Number(localStorage.getItem(KEY)) || DEF; } catch { /* default */ }
+    setW(saved, false);
+    grip.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      grip.setPointerCapture(e.pointerId);
+      const left = side.getBoundingClientRect().left;
+      document.body.classList.add('resizing-sidebar');
+      const move = (ev) => setW(ev.clientX - left, false);
+      const up = (ev) => { setW(ev.clientX - left); grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); document.body.classList.remove('resizing-sidebar'); };
+      grip.addEventListener('pointermove', move);
+      grip.addEventListener('pointerup', up);
+    });
+    grip.addEventListener('dblclick', () => setW(DEF));
+    grip.addEventListener('keydown', (e) => {
+      const cur = side.getBoundingClientRect().width;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); setW(cur - 20); } else if (e.key === 'ArrowRight') { e.preventDefault(); setW(cur + 20); }
+    });
+  })();
+
   $('#btn-sidebar-collapse').addEventListener('click', () => setSidebar(!document.body.classList.contains('sidebar-collapsed'), { focus: true }));
   $('#btn-sidebar-expand').addEventListener('click', () => setSidebar(false, { focus: true }));
   $('#btn-rail-new').addEventListener('click', () => $('#btn-new-case').click());
@@ -2098,7 +2157,7 @@
   CVPrivacy.init({
     flush: () => Save.flushAll(),
     getPinRecord: () => (Vault.data && Vault.data.settings.privacyPin) || null,
-    getIdleMinutes: () => (Vault.data && Vault.data.settings.privacyIdleMinutes) || 0,
+    getIdleMinutes: idleMinutes,
     button: $('#btn-privacy'),
   });
 

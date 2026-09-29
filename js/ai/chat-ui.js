@@ -68,7 +68,7 @@
     const newBtn = iconBtn('plus-lg', 'New chat. The current conversation is cleared unless you saved it.', () => { if (ctrl) ctrl.abort(); mem.turns = []; mem.casePicked = false; followOpenCase(); draw(); input.focus(); });
     const saveBtn = iconBtn('save', 'Save the conversation to a case as a draft, on the SSD.', () => saveToCase());
     const closeBtn = iconBtn('x-lg', 'Close. The conversation is kept until you start a new chat or close CaseVault.', () => toggle(false));
-    const title = h('div', { class: 'chat-float-title' }, ui.icon('chat-left-text'), h('strong', {}, 'Ask AI'));
+    const title = h('div', { class: 'chat-float-title' }, ui.icon('robot'), h('strong', {}, 'Ask AI'));
     const head = h('div', { class: 'chat-float-head', title: 'Drag to move' }, title, h('div', { class: 'spacer' }), newBtn, saveBtn, sizeBtn, minBtn, closeBtn);
     const box = h('section', { class: 'chat-float', id: 'chat-float', role: 'dialog', 'aria-label': 'Ask AI', hidden: true },
       head,
@@ -176,7 +176,7 @@
   function empty() {
     const { h } = ui;
     return h('div', { class: 'chat-empty' },
-      h('span', { class: 'chat-empty-icon' }, ui.icon('chat-left-text')),
+      h('span', { class: 'chat-empty-icon' }, ui.icon('robot')),
       h('h2', {}, 'Ask the AI on this computer'),
       h('p', { class: 'muted small' }, 'Nothing leaves this PC. Keep working while it answers.'),
       h('div', { class: 'chat-starters' }, ['Summarize this case so far', 'What is still missing for the affidavit?', 'Make a timeline table of the key events', 'Explain possession vs. possession with intent'].map((q) =>
@@ -253,7 +253,7 @@
     if (!mem.turns.some((t) => t.content)) return ui.toast('Nothing to save yet.', 'error');
     const id = els.caseSel.value || (await pickCaseId(activeCases()));
     if (!id) return;
-    const title = `Ask AI ${new Date().toLocaleDateString()}`;
+    const title = `Ask AI ${CVFormat.dateText(Vault.localDay())}`;
     try {
       const slug = await Vault.newDraftSlug(id, title);
       await ui.Save.track(`draft:${id}:${slug}`, () => Vault.saveDraft(id, slug, { title, type: 'other', ai: true, created: new Date().toISOString() }, CVChat.transcript(mem.turns.filter((t) => t.content), { title, model: els.modelSel.value })));

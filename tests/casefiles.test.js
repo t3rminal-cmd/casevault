@@ -10,11 +10,11 @@ const { MemDirectoryHandle } = require('./helpers/mem-fs.js');
 const C = (number, opened = '2026-03-14') => ({ number, dates: { opened } });
 
 test('the document folders, in order, with Recordings/Video and /Audio; Affidavits, Warrants Signed and Subpoena Sent are legacy', () => {
-  assert.deepStrictEqual(CF.FOLDERS, ['Case Overview', 'Case Initiation', 'Affidavit Drafts', 'Affidavit Final', 'Warrant Drafts', 'Warrant Final',
+  assert.deepStrictEqual(CF.FOLDERS, ['Case Overview', 'Case Initiation', 'Warrant Drafts', 'Warrant Final',
     'Arrest Report', 'Supplementary Report', 'Case Report', 'Deconfliction', 'Drug Exhibits', 'Other Exhibits', 'Email', 'Ops Plan',
     'Subpoena Drafts', 'Subpoena Response', 'Subject Information', 'Recordings', 'Recordings/Video', 'Recordings/Audio',
     'Vehicle Information', 'Maps', 'Case Closing', 'Other']);
-  for (const [old, into] of [['Affidavits', 'Affidavit Final'], ['Warrants Signed', 'Warrant Final'], ['Subpoena Sent', 'Subpoena Response']]) {
+  for (const [old, into] of [['Affidavits', 'Warrant Final'], ['Affidavit Drafts', 'Warrant Drafts'], ['Affidavit Final', 'Warrant Final'], ['Warrants Signed', 'Warrant Final'], ['Subpoena Sent', 'Subpoena Response']]) {
     assert.ok(CF.isCategory(old) && !CF.FOLDERS.includes(old), `${old} is still read`);
     assert.strictEqual(CF.byFolder(old).mergeInto, into);
   }
@@ -47,7 +47,7 @@ test('file names: prefix + document type (+ description) + extension', () => {
 
 test('document type is guessed from the original file name', () => {
   const cases = {
-    'PC Affidavit draft.docx': 'Affidavit Drafts', 'Affidavit signed.pdf': 'Affidavit Final', 'search warrant signed.pdf': 'Warrant Final',
+    'PC Affidavit draft.docx': 'Warrant Drafts', 'Affidavit signed.pdf': 'Warrant Final', 'search warrant signed.pdf': 'Warrant Final',
     'warrant draft v2.docx': 'Warrant Drafts', 'Search Warrant.pdf': 'Warrant Final', 'subpoena draft.docx': 'Subpoena Drafts',
     'Subpoena to Example Bank.pdf': 'Subpoena Response', 'Case overview.docx': 'Case Overview', 'synopsis.pdf': 'Case Overview', 'Case initiation memo.pdf': 'Case Initiation', 'case closing report.pdf': 'Case Closing',
     'jail call 3.wav': 'Recordings/Audio', 'Arrest report - Doe.pdf': 'Arrest Report', 'Supp 2.pdf': 'Supplementary Report',

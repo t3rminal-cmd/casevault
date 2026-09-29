@@ -113,7 +113,8 @@
       'rules-only': 'AI: Rules-only',
       checking: 'AI: checking…',
     }[st];
-    el.replaceChildren(CVIcons.icon(st === 'connected' ? 'cpu' : st === 'checking' ? 'arrow-repeat' : 'exclamation-circle'), text);
+    // Every AI icon in CaseVault is the same robot: blue when the AI is running, red when it isn't.
+    el.replaceChildren(CVIcons.icon('robot'), text);
     el.title = {
       connected: Engine.inBrowser()
         ? 'Ollama is not running, so CaseVault uses the in-browser AI model on this PC\'s graphics chip. Click for AI settings.'
@@ -166,6 +167,7 @@
         d.status === 'connected' && d.engine !== 'webllm' && h('p', { class: 'muted small' },
           `Installed models: ${d.models.map((m) => m.name).join(', ') || 'none'}.`),
         d.status === 'connected' && d.engine !== 'webllm' && embedStatus(d),
+        moreModels(d),
         h('h3', {}, 'Profile on this PC'),
         h('p', { class: 'muted small explain' }, 'Remembered by this PC\'s browser, not on the SSD, so the Beelink and the L14 can each use the model that suits them.'),
         h('div', { class: 'radio-list' }, radios),
@@ -175,6 +177,36 @@
           h('button', { class: 'btn', type: 'button', onclick: async () => { close(); await Engine.refresh(); showEngineDialog(); } }, 'Check again'),
           h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done')));
     });
+  }
+
+  // Another model for Ask AI, for example an uncensored (less-filtered) one such as dolphin3.
+  const EXTRA_MODELS = [
+    { name: 'dolphin3', size: '4.9 GB', fits: 'Beelink (graphics card, 6 GB)', note: 'Uncensored (less filtered) 8B model. Refuses less; not more accurate.' },
+    { name: 'dolphin-mistral', size: '4.1 GB', fits: 'Beelink (graphics card, 6 GB)', note: 'Uncensored, older and a little faster.' },
+    { name: 'dolphin-phi', size: '1.6 GB', fits: 'L14 (no graphics card)', note: 'Small uncensored model that runs on the processor. Weaker answers.' },
+  ];
+  function moreModels(d) {
+    const { h, toast } = ui;
+    const installed = new Set(((d && d.models) || []).map((m) => String(m.name).replace(/:latest$/, '')));
+    const copy = async (cmd) => { try { await navigator.clipboard.writeText(cmd); toast('Command copied. Paste it in the command window.', 'success'); } catch { toast('Select the command and press Ctrl+C.', 'error'); } };
+    return h('details', { class: 'more-models' },
+      h('summary', {}, 'Add another AI model, for example an uncensored one (dolphin3)'),
+      h('ol', { class: 'small' },
+        h('li', {}, 'Leave the Start-CaseVault.bat window open (the AI engine must be running) and make sure this PC is online for the download.'),
+        h('li', {}, 'Press Windows key + R, type ', h('code', {}, 'cmd'), ' and press Enter.'),
+        h('li', {}, 'Copy the command for the model you want, paste it (right-click) and press Enter. Use your drive letter if it isn\'t W:. Wait for "success"; the model is saved in W:\\models, so it downloads once.'),
+        h('li', {}, 'Come back here and click ', h('strong', {}, 'Check again'), '. Then pick it in ', h('strong', {}, 'Ask AI → Model'), '. After the download it works offline like the others.')),
+      h('table', { class: 'models-table small' },
+        h('thead', {}, h('tr', {}, h('th', {}, 'Model'), h('th', {}, 'Size'), h('th', {}, 'For'), h('th', {}, ''), h('th', {}, ''))),
+        h('tbody', {}, EXTRA_MODELS.map((m) => {
+          const cmd = `W:\\ollama\\ollama.exe pull ${m.name}`;
+          return h('tr', {},
+            h('td', { title: m.note }, h('strong', {}, m.name)),
+            h('td', {}, m.size), h('td', {}, m.fits),
+            h('td', {}, installed.has(m.name) ? h('span', { class: 'ok-text' }, '✓ Installed') : h('code', {}, cmd)),
+            h('td', {}, installed.has(m.name) ? null : h('button', { class: 'btn small', type: 'button', onclick: () => copy(cmd) }, 'Copy')));
+        }))),
+      h('p', { class: 'muted small' }, 'Uncensored models refuse less, but they aren\'t more knowledgeable and are more likely to go along with a wrong premise. Keep the Qwen models for Checks and Draft with AI; use these in Ask AI. If a name isn\'t found, search ollama.com for "dolphin" and pick a 7–8B size. Follow your agency\'s policy on AI tools. More in docs/AI-SETUP.md.'));
   }
 
   // Passage search (embedding model): which report passages the AI reads for each statement.

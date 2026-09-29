@@ -43,11 +43,11 @@
   // The fields of an arrest report. type: text (default), date, time, select, textarea.
   const ARRESTEE_FIELDS = [
     { key: 'lastName', label: 'Last name' }, { key: 'firstName', label: 'First name' }, { key: 'middleName', label: 'Middle name' },
-    { key: 'dob', label: 'Date of birth', type: 'date' },
+    { key: 'dob', label: 'Date of birth', type: 'date' }, { key: 'ssn', label: 'SSN', format: 'ssn' },
     { key: 'sex', label: 'Sex', type: 'select', options: ['', 'Male', 'Female', 'Other', 'Unknown'] },
     { key: 'race', label: 'Race / ethnicity' }, { key: 'height', label: 'Height' }, { key: 'weight', label: 'Weight' },
     { key: 'hair', label: 'Hair' }, { key: 'eyes', label: 'Eyes' },
-    { key: 'address', label: 'Address', type: 'textarea' }, { key: 'phone', label: 'Phone' },
+    { key: 'address', label: 'Address', type: 'textarea' }, { key: 'phone', label: 'Phone', type: 'tel' },
     { key: 'idNumber', label: 'DL / ID number and state' },
   ];
   const ARREST_FIELDS = [
@@ -83,7 +83,7 @@
     }).join('\n');
   }
 
-  const US = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(clean(iso)); return m ? `${m[2]}/${m[3]}/${m[1]}` : clean(iso); };
+  const US = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(clean(iso)); return m ? `${m[2]}.${m[3]}.${m[1]}` : clean(iso); }; // MM.DD.YYYY, as everywhere in CaseVault
 
   /** {{arrest.*}} values: the first arrestee as arrest.x, every arrestee as arrest.N.x. */
   function arrestContext(arrest) {
