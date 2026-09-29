@@ -71,9 +71,42 @@ If the helper window was closed while Firefox was open, CaseVault shows **"The C
 
 - **+ New case** asks for a title (required), case/file number, client, status, opened date, and tags.
 - The **left list** shows open and pending cases, most recently changed first. Use the search box (title, number, client, or tag) and the filter to find others.
-- **Details** tab: edit any field. Setting the status to *Closed* fills in the closed date for you.
-- **Status** values: *Open*, *Pending*, *Closed*, *Archived*. Choosing *Archived* asks **"Move this case to the archive?"** (see below).
-- **Case actions** (at the bottom of Details) has **Archive case…** and **Delete case…** side by side.
+- **Details** tab: edit any field. A short note under **Status** says what the status means and, for a Pending case, what you're waiting on.
+- **Case actions** (at the bottom of Details) has **Close case…** (or **Reopen case**), **Add arrest details**, **Archive case…** and **Delete case…**.
+
+### Open, Pending, Closed, Archived: which one?
+
+CaseVault doesn't guess the status from the files; you set it, and it asks the questions that go with it.
+
+| Status | Use it when | What CaseVault does |
+|---|---|---|
+| **Open** | You are actively working the case: interviews, reports, warrants to write. A new case starts here. | Nothing extra. |
+| **Pending** | The next step is **someone else's**: lab results, a warrant signature, prosecutor/DA review, a subpoena or records return, a suspect not yet located, another agency, a court date. | Asks **what you're waiting on** and a **follow-up date** (two weeks by default), and can put *Follow up: …* on the timeline as a deadline, so the case comes back to you. The case list shows *⏳ Waiting on …*. Setting it back to Open clears this. |
+| **Closed** | The investigation is **finished** and has an outcome (see *Close a case* below). | Asks for the disposition, date and a closing note, and lists loose ends first. |
+| **Archived** | Closed and you want it **out of the way**. | Moves it to `archive\`, read-only (see *Archive a case*). |
+
+A rule of thumb: *Is the next step mine?* → Open. *Am I waiting on someone?* → Pending. *Is it done?* → Closed. *Done and not needed day to day?* → Archived.
+
+### Close a case
+
+Choose **Close case…** under Case actions (or set the status to *Closed*). CaseVault asks for:
+
+- **Disposition**: *Cleared by arrest*, *Exceptionally cleared* (with the reason: death of the offender, prosecution declined, victim refused to cooperate, extradition denied, juvenile/no custody, other), *Unfounded*, *Inactive / no further leads*, *Referred to another agency*, or *Other*. Use your agency's own definitions where they differ.
+- **Closed date** (today by default) and a **closing note**.
+- **Before you close** lists loose ends: open deadlines on the timeline, open consistency check flags, and `[CONFIRM: …]` left in drafts. They're reminders; they don't stop you closing.
+
+Choosing *Cleared by arrest* opens the **Arrest details** tab so you can fill it in. **Reopen case** sets the status back to Open; the closing is kept in the case history, and the arrest details stay.
+
+### Arrest details
+
+The **Arrest details** tab (after Details) appears once you choose **Add arrest details** or close a case by arrest. It holds what goes on an arrest report, for one or more arrestees:
+
+- **Arrestee**: name, date of birth, sex, race, height, weight, hair, eyes, address, phone, DL/ID number.
+- **Arrest**: date, time, location, type (on-view, warrant, summons, turned self in), warrant number, arresting and assisting officers, Miranda and its time, booking number, facility, bond.
+- **Charges**: statute/code, charge, level (felony, misdemeanor…), degree/class, counts. **+ Add charge** for more.
+- **Property** and **notes**.
+
+It saves on its own as you type (and with the **Save** button) to `arrest.json` in the case folder. **Start an arrest report draft** makes a new draft from your arrest report template with all of this filled in (see *Templates*). Arrestees' names are added to the names the privacy scan always hides from online AI and flags in mail.
 
 ### Archive a case
 
@@ -105,6 +138,8 @@ The **Notes** tab is a large free-form page, saved as `notes.md` in the case fol
 ---            (a divider line)
 ```
 
+Notes save on their own as you type. The **Save** button next to Preview writes them straight away, and the text beside it shows *✓ Saved 14:02* once they're on the SSD.
+
 ## Timeline
 
 Add dated **Events** (things that happened) and **Deadlines** (things that are due), with an optional time and note.
@@ -119,7 +154,7 @@ Add dated **Events** (things that happened) and **Deadlines** (things that are d
 
 Every case has the same document folders, both in CaseVault and on the SSD (`cases\<case>\files\...`):
 
-> Affidavits · Arrest Report · Supplementary Report · Case Report · Deconfliction · Drug Exhibits · Email · Ops Plan · Subpoena Response · Subject Information · Recordings · Vehicle Information · Maps · Other
+> Affidavits · Arrest Report · Supplementary Report · Case Report · Deconfliction · Drug Exhibits · Other Exhibits · Email · Ops Plan · Subpoena Response · Subject Information · Recordings · Vehicle Information · Maps · Other
 
 ### Naming convention
 
@@ -132,7 +167,8 @@ Every case has the same document folders, both in CaseVault and on the SSD (`cas
 Pick a folder on the left and drop files onto the box (or click **choose files**). With **All documents** selected, CaseVault asks the document type for each file, with a guess from its name (for example `supp 2.pdf` → Supplementary Report, `interview.mp3` → Recordings), and shows the name it will be saved under. Files are **copied**; your originals aren't changed.
 
 - **Open** previews PDFs, images, text, audio, and video right inside CaseVault. Excel and CSV files open as tables (see below).
-- Other types (Word, and so on) can't be previewed. CaseVault shows you where the file is on the SSD, so you can open it from File Explorer.
+- **Word files (.docx)** open inside CaseVault as a readable, read-only page: headings, bold/italic/underline, numbered and bulleted lists and tables are kept; fonts, spacing and pictures aren't. Open the file in Word for the exact layout. Old **.doc** files can't be shown: open them in Word and *Save As* .docx.
+- Other types can't be previewed. CaseVault shows you where the file is on the SSD, so you can open it from File Explorer.
 - **Move / rename** moves a file to another folder, or renames it by the convention (the copy is checked before the original is removed).
 - A small **name** badge marks a file that doesn't follow the convention.
 - **Delete** permanently removes the file from the SSD after you confirm.
@@ -161,7 +197,7 @@ Some agency forms are *XFA* PDFs, made with Adobe LiveCycle Designer. In Chrome,
 
 ## Saving
 
-There's no Save button. **Every change is written to the SSD automatically**, within about a second. The indicator at the top right shows:
+**Every change is written to the SSD automatically**, within about a second. Notes, Drafts and Arrest details also have a **Save** button if you want to be sure. The indicator at the top right shows:
 
 | Indicator | Meaning |
 |---|---|
@@ -277,6 +313,9 @@ Then:
 - **Check & open in mail app (text only)** hands subject and message to your default mail app with a `mailto:` link. No attachments.
 
 Every hand-off is listed under **Mail prepared from this case** (saved in `mail-log.json` in the case folder) and in the outbound log.
+
+- **Discard draft** clears the message you're writing (after asking, if you typed anything).
+- **Delete draft** next to an Outlook draft in the list deletes its `.eml` file from the Email folder. The line stays in the list as *Draft deleted*, so the record of what was prepared is kept. Mail already sent from Outlook isn't affected.
 
 ## Online research & drafting (optional)
 
@@ -420,12 +459,18 @@ The Word file keeps headings, paragraphs, bold and italic, bullet and numbered l
 
 ### Templates
 
-Manage templates in **Vault → Templates**:
+A template is your document format (an affidavit, an arrest report, a subpoena…) with **placeholders** where the case details go. Manage them in **Vault → Templates**. Each one is a Markdown file in `CaseVault-Data\templates\` on the SSD.
 
-- **Add generic starter templates** adds an affidavit, a subpoena and a case summary. They're **generic examples, not legal forms**. Replace them with your agency's approved formats.
-- **New template** or **Import .md…** to add your own, and **Edit / Delete** to change them. Each template is a Markdown file in `CaseVault-Data\templates\` on the SSD.
+**Adding a template: three ways**
 
-Placeholders you can use in a template:
+1. **Import your agency's Word form** (easiest): **Import Word, .md or .txt…** and pick the `.docx`. CaseVault turns it into text: headings, bold/italic, lists and tables are kept; fonts, logos and exact spacing aren't (the draft exports to Word with CaseVault's plain layout). Check the text in the editor, put placeholders where case details go, and **Save template**.
+   *Tip:* type the placeholders in Word before you import, for example `{{case.number}}` or `«case.number»`: both come through as `{{case.number}}`.
+2. **New template**: paste or type the text and add placeholders.
+3. **Add generic starter templates**: an affidavit, a subpoena, a case summary and an arrest report. They're **generic examples, not legal forms**; use them as a starting point and replace them with your agency's approved formats.
+
+There's no required layout. Plain text works; to format it, `# ` at the start of a line makes a heading (the first heading is the template's name), `**bold**`, `*italic*`, `- ` a bullet, `1. ` a numbered line. **Edit / Delete** change or remove a template. Old `.doc` files: open them in Word and *Save As* `.docx` first.
+
+**Placeholders.** Under the editor, **Placeholders** lists every one; click one to put it at the cursor. Upper and lower case don't matter.
 
 | Placeholder | Becomes |
 |---|---|
@@ -435,6 +480,11 @@ Placeholders you can use in a template:
 | `{{affiant.address}}` | Your address, on as many lines as you typed |
 | `{{affiant.phone}}`, `{{affiant.email}}` | Your phone number and email |
 | `{{today}}` / `{{today.iso}}` | Today, as *September 28, 2026* / *2026-09-28* |
+| `{{arrest.name}}`, `{{arrest.dob}}`, `{{arrest.description}}` | The first arrestee from **Arrest details**: full name, date of birth (MM/DD/YYYY), and "sex, race, height, weight, hair, eyes" |
+| `{{arrest.charges}}` | The charges, one numbered line each: *1. statute — charge (level, degree; 2 counts)* |
+| `{{arrest.date}}`, `{{arrest.time}}`, `{{arrest.location}}`, `{{arrest.bookingNumber}}`, `{{arrest.facility}}`, `{{arrest.miranda}}`… | Any arrest detail by its name (the editor's list has them all) |
+| `{{arrest.2.name}}`, `{{arrest.2.charges}}`… | The second arrestee (and so on); `{{arrest.names}}` lists them all |
+| `{{closure.disposition}}`, `{{closure.reason}}`, `{{closure.date}}`, `{{closure.note}}` | How the case was closed |
 | `{{confirm: badge number}}` | `[CONFIRM: badge number]` |
 
 A placeholder with no value (for example a case without a client) becomes `[CONFIRM: case.client]`, so nothing missing slips through.

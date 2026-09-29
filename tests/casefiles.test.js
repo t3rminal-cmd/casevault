@@ -9,9 +9,9 @@ const { MemDirectoryHandle } = require('./helpers/mem-fs.js');
 
 const C = (number, opened = '2026-03-14') => ({ number, dates: { opened } });
 
-test('the fourteen document folders, in order', () => {
+test('the fifteen document folders, in order', () => {
   assert.deepStrictEqual(CF.FOLDERS, ['Affidavits', 'Arrest Report', 'Supplementary Report', 'Case Report', 'Deconfliction',
-    'Drug Exhibits', 'Email', 'Ops Plan', 'Subpoena Response', 'Subject Information', 'Recordings', 'Vehicle Information', 'Maps', 'Other']);
+    'Drug Exhibits', 'Other Exhibits', 'Email', 'Ops Plan', 'Subpoena Response', 'Subject Information', 'Recordings', 'Vehicle Information', 'Maps', 'Other']);
 });
 
 test('case prefix: <year opened>-<case number>', () => {
@@ -151,4 +151,12 @@ test('a description that starts with the document type is not repeated (v1.9.1)'
   assert.strictEqual(CF.fileName(c, 'Affidavits', 'x.docx', 'Affidavit'), '2026-00123 Affidavit.docx');
   assert.strictEqual(CF.fileName(c, 'Case Report', 'x.docx', 'Case report summary'), '2026-00123 Case Report - summary.docx');
   assert.strictEqual(CF.fileName(c, 'Supplementary Report', 'x.pdf', 'Det. Doe'), '2026-00123 Supplementary Report - Det. Doe.pdf');
+});
+
+test('Other Exhibits: its own folder, named "Exhibit", guessed from evidence words (v1.9.2)', () => {
+  assert.strictEqual(CF.fileName(C('00123'), 'Other Exhibits', 'knife.jpg', 'kitchen knife'), '2026-00123 Exhibit - kitchen knife.jpg');
+  assert.strictEqual(CF.guessFolder('evidence photo 3.jpg'), 'Other Exhibits');
+  assert.strictEqual(CF.guessFolder('firearm trace.pdf'), 'Other Exhibits');
+  assert.strictEqual(CF.guessFolder('drug exhibits log.xlsx'), 'Drug Exhibits');
+  assert.strictEqual(CF.guessFolder('Lab results exhibit 4.pdf'), 'Drug Exhibits');
 });

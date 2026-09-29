@@ -426,5 +426,5 @@
   // (e.g. XFA forms that v1.7 read as "Please wait...").
   const VERSION = 2;
 
-  root.CVExtract = { VERSION, extract, kindOf, supportMessage, paragraphsFromText, shutdown, readXfaFields, renderXfa };
+  root.CVExtract = { VERSION, extract, kindOf, supportMessage, paragraphsFromText, shutdown, readXfaFields, renderXfa, unzipEntry };
 })(this);

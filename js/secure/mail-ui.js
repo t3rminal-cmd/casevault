@@ -36,7 +36,7 @@
         h('h2', {}, 'Set up department mail first'),
         h('p', {}, 'For safety, CaseVault only prepares mail for your department\'s own addresses. Add your department\'s mail domain (for example ', h('code', {}, 'agency.gov'), ') and, if you like, an address book.'),
         h('button', { class: 'btn primary', type: 'button', onclick: () => ui.showVaultPanel('mail') }, 'Open mail settings…')),
-      historyView(history));
+      historyView(c, history, files));
       return;
     }
 
@@ -93,6 +93,14 @@
       subject: subject.value.trim(), body: body.value, attach: files.filter((f) => d.attach.has(f.name)),
     });
 
+    // Throw away what's typed (it's only in this window until an Outlook draft is created).
+    const discardBtn = h('button', { class: 'btn ghost', type: 'button', onclick: async () => {
+      const typed = to.value.trim() || cc.value.trim() || body.value.replace(st.footer || '\u0000', '').trim() || d.attach.size;
+      if (typed && !(await ui.confirmDialog({ title: 'Discard this draft?', message: 'The recipients, subject, message and ticked attachments are cleared. Nothing has been saved or sent yet.', confirmText: 'Discard' }))) return;
+      drafts.delete(c.id);
+      ui.refresh();
+      toast('Draft discarded.');
+    } }, 'Discard draft');
     const outlookBtn = h('button', { class: 'btn primary', type: 'button' }, 'Check & create Outlook draft');
     const mailtoBtn = h('button', { class: 'btn', type: 'button' }, 'Check & open in mail app (text only)');
     outlookBtn.addEventListener('click', () => go('eml'));
@@ -123,26 +131,55 @@
           ui.field('To', to), ui.field('Cc', cc), recipNote,
           ui.field('Subject', subject),
           ui.field('Message', body),
-          h('div', { class: 'row' }, outlookBtn, mailtoBtn),
+          h('div', { class: 'row' }, outlookBtn, mailtoBtn, h('div', { class: 'spacer' }), discardBtn),
           h('p', { class: 'muted small' }, 'CaseVault never sends mail itself. It checks the message, saves it in this case\'s Email folder and opens it in Outlook, where you press Send. Only addresses in ',
             h('strong', {}, st.domains.join(', ')), ' are allowed.')),
         h('aside', { class: 'mail-attach' }, h('h3', {}, 'Attach from this case'), sizeNote, attachList)),
-      historyView(history));
+      historyView(c, history, files));
   }
 
-  function historyView(history) {
-    const { h, fmtDateTime } = ui;
+  // The list of mail prepared from this case. An Outlook draft (.eml in the Email folder) can be
+  // deleted here; its line stays, marked deleted, so the record of what was prepared remains.
+  function historyView(c, history, files) {
+    const { h, fmtDateTime, toast } = ui;
+    const exists = new Set((files || []).map((f) => f.name));
+    const readOnly = V().isArchived(c.id);
+    const action = (e, i) => {
+      if (e.method !== 'eml' || !e.file) return h('span', { class: 'muted small' }, '—');
+      if (e.deleted || !exists.has(e.file)) return h('span', { class: 'muted small' }, e.deleted ? `Draft deleted ${fmtDateTime(Date.parse(e.deleted))}` : 'Draft file no longer in the case');
+      if (readOnly) return h('span', { class: 'muted small' }, CVCaseFiles.splitPath(e.file).base);
+      return h('button', { class: 'btn small ghost danger-text', type: 'button', onclick: async () => {
+        const ok = await ui.confirmDialog({
+          title: 'Delete this Outlook draft?',
+          message: `"${CVCaseFiles.splitPath(e.file).base}" is deleted from the case's Email folder. If you already sent it from Outlook, the sent email is not affected. This list keeps a line saying it was deleted.`,
+          confirmText: 'Delete draft', danger: true,
+        });
+        if (!ok) return;
+        try {
+          await ui.Save.track(`mail-del:${c.id}`, async () => {
+            await V().deleteFile(c.id, e.file);
+            const cur = (await V().readCaseJSON(c.id, 'mail-log.json').catch(() => null)) || { sent: [] };
+            if (Array.isArray(cur.sent) && cur.sent[i] && cur.sent[i].at === e.at) cur.sent[i].deleted = new Date().toISOString();
+            await V().writeCaseJSON(c.id, 'mail-log.json', cur);
+          });
+          toast('Outlook draft deleted.');
+          ui.refresh();
+        } catch { /* reported by Save */ }
+      } }, 'Delete draft');
+    };
+    const rows = history.map((e, i) => ({ e, i })).reverse();
     return h('section', { class: 'mail-history' },
       h('h3', {}, 'Mail prepared from this case'),
       history.length
         ? h('table', { class: 'files' },
-          h('thead', {}, h('tr', {}, h('th', {}, 'When'), h('th', {}, 'To'), h('th', {}, 'Subject'), h('th', {}, 'Attachments'), h('th', {}, 'How'))),
-          h('tbody', {}, [...history].reverse().map((e) => h('tr', {},
+          h('thead', {}, h('tr', {}, h('th', {}, 'When'), h('th', {}, 'To'), h('th', {}, 'Subject'), h('th', {}, 'Attachments'), h('th', {}, 'How'), h('th', {}, ''))),
+          h('tbody', {}, rows.map(({ e, i }) => h('tr', { class: e.deleted ? 'muted' : null },
             h('td', { class: 'muted' }, fmtDateTime(Date.parse(e.at))),
             h('td', { class: 'small' }, [...(e.to || []), ...(e.cc || []).map((x) => `cc ${x}`)].join(', ')),
             h('td', {}, e.subject),
             h('td', { class: 'small' }, (e.attachments || []).map((a) => a.split('/').pop()).join(', ') || '—'),
-            h('td', { class: 'small muted' }, e.method === 'eml' ? 'Outlook draft' : 'Mail app')))))
+            h('td', { class: 'small muted' }, e.method === 'eml' ? 'Outlook draft' : 'Mail app'),
+            h('td', { class: 'actions' }, action(e, i))))))
         : h('p', { class: 'muted small' }, 'Nothing yet.'));
   }
 

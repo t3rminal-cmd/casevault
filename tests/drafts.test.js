@@ -35,10 +35,10 @@ async function roundTrip(Vault, rootHandle) {
   assert.deepStrictEqual(list.map((d) => [d.slug, d.title, d.ai]), [[slug, 'Affidavit -- search warrant', true]]);
 
   // Templates
-  assert.deepStrictEqual((await Vault.addStarterTemplates()).length, 3);
+  assert.deepStrictEqual((await Vault.addStarterTemplates()).length, 4);
   assert.deepStrictEqual((await Vault.addStarterTemplates()).length, 0, 'never overwrites');
   const templates = await Vault.listTemplates();
-  assert.deepStrictEqual(templates.map((t) => t.title), ['Affidavit (generic example)', 'Case summary (generic example)', 'Subpoena (generic example)']);
+  assert.deepStrictEqual(templates.map((t) => t.title), ['Affidavit (generic example)', 'Arrest report (generic example)', 'Case summary (generic example)', 'Subpoena (generic example)']);
   await Vault.saveTemplate('agency-affidavit.md', '# Agency affidavit\n\nCase {{case.number}}');
   assert.strictEqual(await Vault.readTemplate('agency-affidavit.md'), '# Agency affidavit\n\nCase {{case.number}}');
 
@@ -216,4 +216,16 @@ test('.docx export: a valid zip with word/document.xml, headings, runs and lists
       assert.strictEqual(out, 'ok 7');
     } finally { fs.rmSync(tmp, { force: true }); }
   }
+});
+
+test('every listed placeholder has a value source', () => {
+  const C = require('../js/closing.js');
+  const keys = [...C.ARRESTEE_FIELDS, ...C.ARREST_FIELDS].map((f) => f.key);
+  const groups = D.placeholderGroups(keys);
+  const ctx = D.templateContext({}, new Date(2026, 8, 29), null, { ...C.arrestContext(C.emptyArrest()), ...C.closureContext(null) });
+  for (const k of groups.flatMap((g) => g.keys)) {
+    if (k.startsWith('confirm:')) continue;
+    assert.ok(Object.prototype.hasOwnProperty.call(ctx, k), k);
+  }
+  assert.strictEqual(new Set(groups.flatMap((g) => g.keys)).size, groups.flatMap((g) => g.keys).length);
 });
