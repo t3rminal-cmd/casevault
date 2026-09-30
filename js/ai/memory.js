@@ -69,9 +69,23 @@
     return { text: bits.length ? bits.join(' · ') : 'Memory', level, lines };
   }
 
+  /**
+   * The pop-up's four lines (v1.27): Drive, Vault, Model, RAM. r = { drive, vaultBytes, diskTotal,
+   * model, ramTotal, deviceMemory }. A line whose value isn't known is left out.
+   */
+  function compact(r) {
+    const rows = [];
+    if (r.drive) rows.push(['Drive', String(r.drive).replace(/[:\\/]+$/, '')]);
+    if (r.vaultBytes != null) rows.push(['Vault', r.diskTotal ? `${fmt(r.vaultBytes)} of ${fmt(r.diskTotal)}` : fmt(r.vaultBytes)]);
+    rows.push(['Model', r.model || 'none selected']);
+    if (r.ramTotal) rows.push(['RAM', fmt(r.ramTotal)]);
+    else if (r.deviceMemory) rows.push(['RAM', `${r.deviceMemory} GB or more`]);
+    return rows;
+  }
+
   /* ---------- in the page ---------- */
 
-  function mount(el, { isHelper = () => false, engineConnected = () => false } = {}) {
+  function mount(el, { isHelper = () => false, engineConnected = () => false, drive = () => '', model = () => '', vaultBytes = async () => null } = {}) {
     if (!el) return;
     let sys = null;
     let sysAt = 0;
@@ -107,7 +121,10 @@
       tick();
     });
     const popText = document.createElement('span');
+    popText.className = 'mem-rows';
     pop.append(popText, free);
+    let vaultSize = null;
+    let vaultAt = 0;
     el.replaceChildren(bar, label, pop);
     el.tabIndex = 0;
 
@@ -144,18 +161,22 @@
       const s = summarize({ heap, models, webllm, sys, deviceMemory: navigator.deviceMemory || null });
       label.textContent = s.text;
       el.className = `mem-status ${s.level}`;
-      popText.textContent = [...s.lines, 'Updated every few seconds.'].join('\n');
+      if (Date.now() - vaultAt > 120000) { vaultAt = Date.now(); vaultBytes().then((n) => { vaultSize = n; tick(); }).catch(() => {}); }
+      const rows = compact({ drive: drive(), vaultBytes: vaultSize, diskTotal: sys && sys.diskTotal, model: model() || (models && models[0] && models[0].name) || webllm, ramTotal: sys && sys.ramTotal, deviceMemory: navigator.deviceMemory || null });
+      popText.replaceChildren(...rows.flatMap(([k, v]) => { const a = document.createElement('span'); a.className = 'mem-k'; a.textContent = `${k}:`; const b = document.createElement('span'); b.className = 'mem-v'; b.textContent = v; return [a, b]; }));
       free.hidden = !(models && models.length);
       el.setAttribute('aria-label', `Memory: ${s.lines.join('. ')}`);
     }
 
     setInterval(tick, 5000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+    // A model picked in Ask AI (or the AI profile) shows here straight away.
+    document.addEventListener('cv-model-changed', () => tick());
     tick();
     return { tick };
   }
 
-  const api = { summarize, mount, fmt };
+  const api = { summarize, compact, mount, fmt };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVMemory = api;
 })(this);

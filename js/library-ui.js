@@ -90,7 +90,7 @@
       box.replaceChildren(...L().CATEGORIES.map((cat) => {
         const rows = list.filter((i) => i.category === cat.key);
         return h('div', { class: 'lib-group' },
-          h('h4', { title: cat.hint }, ui.icon(cat.icon), cat.label, h('span', { class: 'muted small' }, ` ${rows.length}`)),
+          h('h4', { title: cat.hint }, cat.label, h('span', { class: 'muted small' }, ` ${rows.length}`)),
           rows.length ? h('ul', { class: 'lib-rows' }, rows.map((it) => row(it, cat))) : h('p', { class: 'muted small lib-empty' }, cat.hint));
       }));
     }
@@ -111,7 +111,7 @@
         } catch { /* reported */ }
       });
       return h('li', { class: 'lib-row' },
-        h('span', { class: 'lib-name', title: it.name }, it.name),
+        h('span', { class: 'lib-name', title: it.name }, it.name.replace(/\.(md|txt)$/i, '')), // v1.27: no .md
         cat.role === 'example' ? type : h('label', { class: 'check-row small', title: 'Send this directive with every Draft with AI.' }, always, h('span', {}, 'Always use')),
         move,
         h('button', { class: 'icon-btn', type: 'button', title: 'Show the text the AI reads', onclick: () => showText(it) }, ui.icon('eye'), h('span', { class: 'sr-only' }, `Show ${it.name}`)),
@@ -135,8 +135,8 @@
       h('h3', {}, 'Library'),
       h('p', { class: 'muted small explain' }, 'Sample reports and warrants the AI learns to write from (DEA-6, DEA-7, DEA-202…), and directives it follows. Draft with AI uses examples of the document type you are writing, and your "always use" directives. Examples teach the format and wording only: their names and facts are never used. Stored in CaseVault-Data\\library on the SSD; only the AI on this computer reads them.'),
       h('div', { class: 'row lib-add' }, h('span', { class: 'small' }, 'Add to'), target,
-        h('button', { class: 'btn small', type: 'button', icon: 'upload', onclick: () => input.click() }, 'Add files…'),
-        h('button', { class: 'btn small', type: 'button', icon: 'folder2-open', onclick: () => folderInput.click() }, 'Add a folder…'), input, folderInput),
+        h('button', { class: 'btn small', type: 'button', onclick: () => input.click() }, 'Add files…'),
+        h('button', { class: 'btn small', type: 'button', onclick: () => folderInput.click() }, 'Add a folder…'), input, folderInput),
       box);
   }
 

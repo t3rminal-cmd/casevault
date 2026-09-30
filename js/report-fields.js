@@ -131,7 +131,7 @@
   const NARCOTIC_UNITS = ['', 'gram', 'ounce', 'pound', 'kilogram', 'pill', 'mL'];
   const LISTS = {
     narcotics: { title: 'Narcotics Recovered', item: 'Narcotic', fields: [['drug', 'Narcotics Type Recovered', 'narcotic'], ['amount', 'Total Weight', 'text'], ['unit', 'Unit', 'select', NARCOTIC_UNITS], ['price', 'Purchase Price', 'money'], ['value', 'Street Value', 'money']] },
-    victimsList: { title: 'Victims', item: 'Victim', fields: [['name', 'Name', 'victim'], ...PERSON.slice(1)] },
+    victimsList: { title: 'Victims', item: 'Victim', fields: [['name', 'Name', 'victim'], ['officer', 'Officer Name', 'text'], ...PERSON.slice(1)] },
     offendersList: { title: 'Offenders', item: 'Offender', fields: PERSON },
     charges: { title: 'Charges', item: 'Charge', fields: [['statute', 'Statute', 'charge'], ['description', 'Statute Description', 'chargeWide']] },
     gangs: { title: 'Gang Affiliations', item: 'Gang', fields: [['name', 'Gang', 'gang'], ['faction', 'Faction / Set', 'text']] },
@@ -244,9 +244,20 @@
   /** The label of a field for an entry: an unknown offender's age, height and weight are ranges. */
   const labelFor = (it, k, label) => (it && it.unknown && ['age', 'height', 'weight'].includes(k) ? `${label} Range` : label);
 
+  // v1.27: a victim that is the State of Illinois has only an officer's name; everyone else has no
+  // officer box. isStateVictim is also used by the screen and the PDF.
+  const STATE_VICTIM = 'State of Illinois';
+  const isStateVictim = (list, it) => list === 'victimsList' && String((it && it.name) || '').trim().toLowerCase() === STATE_VICTIM.toLowerCase();
+  /** The fields an entry uses. */
+  function fieldsFor(list, it) {
+    const all = LISTS[list].fields;
+    if (list !== 'victimsList') return all;
+    return isStateVictim(list, it) ? all.filter(([k]) => k === 'name' || k === 'officer') : all.filter(([k]) => k !== 'officer');
+  }
+
   /** One list entry as text: "DOE, John, DOB 01.02.1990, 5'10\", 180 lbs, Black hair…" */
   function itemLine(list, it) {
-    return LISTS[list].fields.map(([k, label, kind]) => {
+    return fieldsFor(list, it).map(([k, label, kind]) => {
       if (list === 'narcotics' && k === 'unit') return ''; // shown with the amount
       const v = valueText(list, it, k, kind);
       if (!v) return '';
@@ -360,7 +371,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, exhibitLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, exhibitLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

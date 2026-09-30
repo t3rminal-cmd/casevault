@@ -15,7 +15,15 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.26)
+## Features (v1.27)
+
+- **Operations:** the Details tab shows the Title or Operation Name, Status, Opened and Closed at the top with a folder tile for each case number; a shared **Case Overview** (Suspects, Contacts, Deconfliction) below a line, the same in every case of the operation; **Close Operation** or close each case number on its own
+- **One Timeline per operation:** the events of all its case numbers together, each marked with its case number
+- **Remove Arrest Details**; **Close Case** and **Archive Case** without the dots; Ask AI's Clear is a fire icon
+- Files table: Name (`2024-JH123456 | name`), Document, File (`.docx`), Size, Added (`09.30 08.57`)
+- The memory box shows Drive, Vault, Model (follows Ask AI) and RAM; LEO Partners gains **Other**; **State of Illinois** victims get an Officer Name only; chicagopolice.org added to mail domains; no icons in Report Fields and the Library; no `.md` on template and library names; more room at the bottom of every page
+
+## Earlier (v1.26)
 
 - **Searchable lists** you can also type into: IUCR code (from Common UCR), location code (Type of Location fills in), charges (the Illinois statutes from LE Cyber-Docs, also in Reference → Charges), gangs, victim, hair and eye color
 - People get age (from the DOB), gender, gender identity, race, complexion and veteran; police personnel get Unit and a Role list; Notifications is a list (date, person notified, notified by); five Officer's Report lines can be left out; exhibit photos are labeled 1a, 1b…
