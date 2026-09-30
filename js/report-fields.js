@@ -211,7 +211,7 @@
     }).filter(Boolean).join(', ');
   }
 
-  // The Offender fields a suspect's More Info holds (Details → Suspects, v1.23): all but the three
+  // Offender fields copied from a suspect's saved details, if any (v1.23 kept them on the suspect): all but the three
   // on the suspect's own row (name, date of birth, age).
   const SUSPECT_INFO = PERSON.filter(([k]) => !['name', 'dob', 'age'].includes(k));
   const nameKey = (n) => String(n || '').trim().replace(/\s+/g, ' ').toLowerCase();
