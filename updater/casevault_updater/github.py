@@ -12,7 +12,7 @@ import socket
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from typing import Callable, Dict, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from . import __version__
 from .errors import BadResponse, NoInternet, NotFound, RateLimited, ServerError
@@ -47,6 +47,14 @@ class Commit:
     @property
     def short(self) -> str:
         return self.sha[:7]
+
+
+@dataclass(frozen=True)
+class TreeEntry:
+    path: str   # e.g. "js/vault.js" (always "/" separators)
+    sha: str    # the Git blob id: sha1(b"blob <size>\\0" + contents)
+    size: int
+    mode: str = "100644"
 
 
 class GitHub:
@@ -92,6 +100,23 @@ class GitHub:
         if not isinstance(sha, str) or len(sha) != 40:
             raise BadResponse("a malformed commit id")
         return Commit(sha=sha, date=date, message=message)
+
+    def tree(self, sha: str) -> List["TreeEntry"]:
+        """Every file in the repository at a commit: path, Git blob id and size (one request)."""
+        data = self._json(f"{API}/repos/{self.owner}/{self.repo}/git/trees/{sha}?recursive=1", f"the file list at {sha[:7]}")
+        if not isinstance(data, dict) or not isinstance(data.get("tree"), list):
+            raise BadResponse("no file list in the reply")
+        if data.get("truncated"):
+            raise BadResponse("the file list was cut short by GitHub")
+        out = []
+        for e in data["tree"]:
+            if not isinstance(e, dict) or e.get("type") != "blob":
+                continue  # folders and submodules
+            path, blob, size = e.get("path"), e.get("sha"), e.get("size")
+            if not isinstance(path, str) or not isinstance(blob, str) or len(blob) != 40 or not isinstance(size, int):
+                raise BadResponse("a malformed entry in the file list")
+            out.append(TreeEntry(path, blob, size, e.get("mode", "100644")))
+        return out
 
     def raw_file(self, sha: str, path: str) -> bytes:
         """One file's contents at a commit."""

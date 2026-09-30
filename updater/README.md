@@ -4,9 +4,10 @@ A small updater that sits on the SSD with CaseVault (in `CaseVault-App\updater\`
 copy up to date from GitHub (`t3rminal-cmd/casevault`, branch `main`) when you ask it to. It never
 runs on its own, and it never touches `CaseVault-Data`.
 
-> **Status: step 1 of 4.** The version check works. It changes nothing yet.
-> Next: the list of changed files and the download (step 2), applying with backup and rollback,
-> including the W: tools (step 3), then the window with the Check for Updates button and progress bar (step 4).
+> **Status: step 2 of 4.** The version check, the list of changed files, and the verified download
+> into a staging folder work. CaseVault itself is still never changed.
+> Next: applying with backup and rollback, including the W: tools (step 3), then the window with the
+> Check for Updates button and progress bar (step 4).
 
 ## What it does when you check
 
@@ -38,6 +39,23 @@ Double-click `Check-For-Updates.bat`, or from a command prompt in this folder:
     python -m casevault_updater check --json    # for scripts
 
 Exit code 0 means up to date, 10 means an update is available (or it can't tell yet), 2 means an error.
+
+## Which files, and the download
+
+    python -m casevault_updater plan --list      # the files that differ (changes nothing)
+    python -m casevault_updater download         # fetch them into .update-staging (CaseVault untouched)
+
+The plan fingerprints every file on the SSD the way Git does (the "blob id") and compares it with the
+fingerprints GitHub lists for the newest commit (one request). Only files that differ are fetched, so an
+update is usually a few hundred KB. `tools/` in the repository goes to the CV-AI drive (found by its
+`Start-CaseVault.bat` and `casevault-helper` folder); `.github/`, `tests/`, `scripts/` and `updater/`
+go nowhere. A file is removed only when the previously recorded version had it and the new one
+doesn't, so a copy without `version.json` never loses a file.
+
+Each downloaded file is fingerprinted again as it arrives; a damaged one is fetched again (three
+tries), then the download stops with nothing changed. Space for the files plus a backup is checked
+first. A download that was interrupted picks up where it stopped. When everything is in,
+`.update-staging\<commit>\manifest.json` lists what the install step will do.
 
 ## What goes online
 
