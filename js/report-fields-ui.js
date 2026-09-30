@@ -42,11 +42,15 @@
       Save.schedule(key, () => Vault.writeCaseJSON(c.id, FILE, snapshot), delay);
     };
 
-    // Code lists from the Reference pages, to pick from while typing.
-    const R = root.CVRefData || { UCR_CODES: [], LOCATION_CODES: [] };
-    const ucrList = h('datalist', { id: 'rf-ucr' }, R.UCR_CODES.flatMap((g) => g.codes.map(([code, desc]) => h('option', { value: `${code} ${desc}` }))));
-    const locList = h('datalist', { id: 'rf-loc' }, R.LOCATION_CODES.flatMap((g) => g.codes.map(([code, desc]) => h('option', { value: `${code} ${desc}` }))));
 
+    // Searchable lists (v1.22): UCR codes and location codes from the Reference pages, and the
+    // charges; the pick-lists (victim, gang, hair, eyes). All can still be typed over.
+    const RD = root.CVRefData || { UCR_CODES: [], LOCATION_CODES: [], CHARGES: [] };
+    const UCR_ITEMS = RD.UCR_CODES.flatMap((g) => g.codes.map(([code, desc]) => ({ value: `${code} ${desc}`, label: `${code} ${desc}`, hint: g.title, group: g.title })));
+    const LOC_ITEMS = RD.LOCATION_CODES.flatMap((g) => g.codes.map(([code, desc]) => ({ value: code, label: `${code} ${desc}`, hint: g.title, desc })));
+    const CHARGE_ITEMS = (RD.CHARGES || []).flatMap((g) => g.codes.map(([statute, desc]) => ({ value: statute, label: `${statute} ${desc}`, hint: g.title, statute, desc })));
+    const pickItems = (list) => list.map((v) => ({ value: v, label: v }));
+    const els = {}; // the Report Fields inputs by key, for fields filled from a pick
     const input = (key, label, kind, opts) => {
       let el;
       if (kind === 'select' || kind === 'yesno') {
@@ -65,14 +69,38 @@
         el = CVTimeField.create({ label, value: data[key] || '' });
         el.addEventListener('input', () => { data[key] = el.value; save(); });
       } else {
-        el = h('input', { type: kind === 'date' ? 'date' : kind === 'number' ? 'number' : 'text', min: kind === 'number' ? 0 : null, autocomplete: 'off', list: kind === 'ucr' ? 'rf-ucr' : kind === 'location' ? 'rf-loc' : null, value: data[key] || '' });
+        el = h('input', { type: kind === 'date' ? 'date' : kind === 'number' ? 'number' : 'text', min: kind === 'number' ? 0 : null, autocomplete: 'off', value: data[key] || '' });
         el.addEventListener('input', () => { data[key] = el.value; save(); });
       }
-      return ui.field(label, el, kind === 'textarea' || kind === 'line' ? 'span-all rf-line' : '');
+      els[key] = el;
+      const setField = (k, v) => { data[k] = v; if (els[k]) els[k].value = v; };
+      // The input keeps its own listeners; a searchable list wraps it (box), not replaces it.
+      let box = el;
+      if (kind === 'ucr') {
+        // From Common UCR; an empty Offense Classification takes the UCR group (Narcotics…).
+        box = CVCombo.attach(el, { items: () => UCR_ITEMS, onPick: (it) => { if (key === 'ucr' && !String(data.offense || '').trim()) setField('offense', it.group); save(); } });
+      } else if (kind === 'location') {
+        // From Location Codes; Type of Location fills in from the code picked.
+        box = CVCombo.attach(el, { items: () => LOC_ITEMS, onPick: (it) => { setField('locationType', it.desc); save(); } });
+      }
+      // Officer's Report lines that may not apply get their own tick box (v1.22).
+      if (kind === 'line' && F().OPTIONAL_LINES.includes(key)) {
+        const on = !F().isHidden(data, key);
+        const cb = h('input', { type: 'checkbox', checked: on, 'aria-label': `Include ${label}`, title: 'Untick if this line doesn\'t apply' });
+        const row = ui.field(label, box, `span-all rf-line rf-optional${on ? '' : ' rf-line-off'}`);
+        row.prepend(cb);
+        cb.addEventListener('change', () => {
+          data.hidden = data.hidden.filter((x) => x !== key);
+          if (!cb.checked) data.hidden.push(key);
+          row.classList.toggle('rf-line-off', !cb.checked);
+          save();
+        });
+        return row;
+      }
+      return ui.field(label, box, kind === 'textarea' || kind === 'line' ? 'span-all rf-line' : '');
     };
 
     // Pick-lists you can also type over (victim, gang, hair and eye colour).
-    const picks = Object.entries(F().PICKS).map(([k, list]) => h('datalist', { id: `rf-pick-${k}` }, list.map((v) => h('option', { value: v }))));
 
     // ---- lists you add to: victims, offenders, charges, gangs, persons not arrested, personnel, vehicles
     function listEditor(key) {
@@ -80,19 +108,41 @@
       const box = h('div', { class: 'rf-items' });
       const draw = () => {
         box.replaceChildren(...(data[key].length ? data[key].map((it, i) => {
+          const inputs = {};
           const fields = L.fields.map(([k, label, kind, opts]) => {
             let el;
             if (kind === 'select') {
               el = h('select', {}, opts.map((o) => h('option', { value: o, selected: o === (it[k] || '') }, o || '—')));
               el.addEventListener('change', () => { it[k] = el.value; save(); });
+            } else if (kind === 'age') {
+              // Worked out from the date of birth.
+              el = h('input', { type: 'text', readonly: true, tabindex: -1, class: 'rf-auto', value: it[k] || '', title: 'From the date of birth' });
             } else {
-              el = h('input', { type: kind === 'date' ? 'date' : kind === 'phone' ? 'tel' : 'text', autocomplete: 'off', value: it[k] || '', list: F().PICKS[kind] ? `rf-pick-${kind}` : null });
+              el = h('input', { type: kind === 'date' ? 'date' : kind === 'phone' ? 'tel' : 'text', autocomplete: 'off', value: it[k] || '' });
               if (kind === 'phone' && root.CVFormat) CVFormat.phone && el.addEventListener('blur', () => { el.value = CVFormat.phone(el.value); it[k] = el.value; save(); });
               el.addEventListener('input', () => { it[k] = el.value; save(); });
             }
             el.setAttribute('aria-label', `${L.item} ${i + 1} ${label}`);
-            return ui.field(label, el, kind === 'wide' ? 'rf-wide' : '');
+            inputs[k] = el;
+            let box = el;
+            if (F().PICKS[kind]) box = CVCombo.attach(el, { items: () => pickItems(F().PICKS[kind]) });
+            else if (kind === 'charge' || kind === 'chargeWide') {
+              // Search the charges by statute or wording; picking fills both boxes.
+              box = CVCombo.attach(el, { items: () => CHARGE_ITEMS.map((c) => ({ ...c, value: kind === 'charge' ? c.statute : c.desc })), onPick: (c) => {
+                it.statute = c.statute; it.description = c.desc;
+                if (inputs.statute) inputs.statute.value = c.statute;
+                if (inputs.description) inputs.description.value = c.desc;
+                save();
+              } });
+            }
+            return ui.field(label, box, kind === 'wide' || kind === 'chargeWide' ? 'rf-wide' : '');
           });
+          // Age follows the date of birth.
+          if (inputs.dob && inputs.age) {
+            const upd = () => { it.age = F().ageOn(inputs.dob.value, Vault.localDay()); inputs.age.value = it.age; save(); };
+            inputs.dob.addEventListener('input', upd);
+            inputs.dob.addEventListener('change', upd);
+          }
           return h('div', { class: 'rf-item' },
             h('div', { class: 'rf-item-head' }, h('strong', {}, `${L.item} ${i + 1}`),
               archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: `Delete ${L.item.toLowerCase()}`, onclick: async () => {
@@ -155,9 +205,11 @@
         const strip = h('div', { class: 'rf-photos' });
         const drawPhotos = () => {
           strip.replaceChildren(...e.photos.map((path, j) => {
-            const img = h('img', { alt: `Exhibit ${n} photo ${j + 1}` });
+            const tag = F().photoLabel(n, j);
+            const img = h('img', { alt: `Exhibit ${tag}` });
             Vault.readFile(c.id, path).then((f) => { img.src = URL.createObjectURL(f); img.addEventListener('load', () => URL.revokeObjectURL(img.src), { once: true }); }).catch(() => { img.alt = 'Photo not found'; });
             return h('div', { class: 'rf-photo' },
+              h('span', { class: 'rf-photo-tag' }, tag),
               h('button', { 'data-ro-ok': 'true', class: 'rf-photo-open', type: 'button', title: 'View', onclick: () => ui.previewFile(c, path) }, img),
               archived ? null : h('button', { class: 'rf-photo-x', type: 'button', title: 'Take off this exhibit (the photo stays in the case files)', onclick: () => { e.photos.splice(j, 1); drawPhotos(); save(); } }, ui.icon('x-lg'), h('span', { class: 'sr-only' }, 'Remove photo')));
           }));
@@ -216,7 +268,7 @@
       const out = [];
       if (F().isHidden(data, 'evidence')) return out;
       for (const e of data.evidence) {
-        for (const path of e.photos || []) {
+        for (const [j, path] of (e.photos || []).entries()) {
           try {
             const bmp = await createImageBitmap(await Vault.readFile(c.id, path));
             const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
@@ -225,7 +277,7 @@
             g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
             g.drawImage(bmp, 0, 0, cv.width, cv.height);
             const blob = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.88));
-            out.push({ jpeg: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height, caption: F().exhibitLine(e) });
+            out.push({ jpeg: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height, caption: F().exhibitLine(e).replace(/^Exhibit \S+?(?=[,:])/, `Exhibit ${F().photoLabel(e.number, j)}`) });
           } catch { /* a photo that can't be read is left out */ }
         }
       }
@@ -299,7 +351,6 @@
         h('h2', { icon: 'card-checklist' }, 'Report Fields'), h('div', { class: 'spacer' }), archived ? null : saveBtn),
       h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case. Print it, save it as a PDF, or email it to sign. Saved as report-fields.json.'),
       h('div', { class: 'rf-actions' }, printBtn, archived ? null : pdfCaseBtn, archived ? null : signBtn, archived ? null : makeBtn),
-      ucrList, locList, ...picks,
       ...sections.slice(0, -1),
       part('evidence', 'Evidence Inventoried', 'box-seam', evRows, archived ? null : h('div', { class: 'contact-add' }, addExhibit)),
       part('summary', 'Summary of Investigation', 'journal-text', fmt, rich.el, narrative),

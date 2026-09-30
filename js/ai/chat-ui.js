@@ -68,7 +68,7 @@
     searchFiles.addEventListener('change', () => { mem.searchFiles = searchFiles.checked; });
 
     const thread = h('div', { class: 'chat-thread', 'aria-live': 'polite' });
-    const input = h('textarea', { class: 'chat-input', rows: 3, placeholder: 'Ask anything. Enter sends, Shift+Enter makes a new line.', 'aria-label': 'Your question' });
+    const input = h('textarea', { class: 'chat-input', rows: 3, placeholder: 'Ask anything. Enter sends · Shift+Enter: new line', 'aria-label': 'Your question' });
     const sendBtn = h('button', { class: 'btn primary chat-send', type: 'button', icon: 'send', title: 'Send (Enter)' }, 'Send');
     const stopBtn = h('button', { class: 'btn chat-send', type: 'button', icon: 'x-circle', hidden: true, title: 'Stop the answer; what is written so far is kept.' }, 'Stop');
 
@@ -88,7 +88,7 @@
         h('div', { class: 'chat-options' }, ui.field('Model', modelSel), ui.field('Case', caseSel), filesToggle),
         thread,
         h('div', { class: 'chat-composer' }, input, h('div', { class: 'chat-actions' }, sendBtn, stopBtn)),
-        h('p', { class: 'muted small chat-foot' }, ui.icon('shield-lock-fill'), ' Local AI only: nothing leaves this computer. Answers can be wrong; check them.')));
+        h('p', { class: 'chat-foot', title: 'The AI runs on this computer: questions, case details and answers never leave it. Answers can be wrong; check them against the case.' }, 'Local AI: nothing leaves this PC. Check answers.')));
     document.body.append(box);
 
     // Drag the box by its title bar. Where it goes is kept for this window only.
@@ -166,7 +166,7 @@
     modelSel.replaceChildren(...(list.length ? list.map((m) => h('option', { value: m, selected: m === mem.model }, m)) : [h('option', { value: '' }, 'No AI engine found')]));
     const cases = activeCases();
     if (mem.caseId && !cases.some((c) => c.id === mem.caseId)) mem.caseId = '';
-    caseSel.replaceChildren(h('option', { value: '' }, 'No case: general questions'), ...cases.map((c) => h('option', { value: c.id, selected: c.id === mem.caseId }, caseLabel(c))));
+    caseSel.replaceChildren(h('option', { value: '' }, 'General Questions'), ...cases.map((c) => h('option', { value: c.id, selected: c.id === mem.caseId }, caseLabel(c))));
     caseSel.value = mem.caseId;
     els.syncCase();
     followOpenCase();

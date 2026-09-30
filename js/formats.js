@@ -192,7 +192,10 @@
     }).join('');
   }
 
-  const api = { phone, ssn, dateText, parseDate, dateField, install, titleCase };
+  /** A folder path as shown on screen (v1.22): "cases\\2026-B1\\files" -> "cases | 2026-B1 | files". */
+  const pathText = (p) => String(p || '').split(/[\\/]+/).filter(Boolean).join(' | ');
+
+  const api = { phone, ssn, dateText, parseDate, dateField, install, titleCase, pathText };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else {
     root.CVFormat = api;

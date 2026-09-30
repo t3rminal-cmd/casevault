@@ -91,18 +91,21 @@
     // Reports: the case notes first (always there), then every draft.
     const words = (notesText.match(/\S+/g) || []).length;
     const notesRow = h('tr', { class: 'notes-row' },
-      h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/.notes` }, 'Field Notes ', ui.icon('journal-text'))),
+      h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/.notes` }, 'Field Notes')),
       h('td', { class: 'muted' }, 'Notes'),
-      h('td', { class: 'muted' }, words ? `${words} word${words === 1 ? '' : 's'}` : 'Empty'),
+      h('td', { class: 'muted' }, 'General Investigator Notes', h('span', { class: 'small' }, words ? ` · ${words} word${words === 1 ? '' : 's'}` : ' · Empty')),
       h('td', { class: 'actions' }, words && !Vault.isArchived(c.id) ? h('button', { class: 'btn small ghost', type: 'button', title: 'Empties the Field Notes', onclick: async () => {
         if (!(await confirmDialog({ title: 'Delete the Field Notes?', message: `All ${words} words of this case's notes are permanently deleted from the SSD.`, confirmText: 'Delete', danger: true }))) return;
         try { await Save.track(`notes:${c.id}`, () => Vault.saveNotes(c.id, '')); ui.refresh(); } catch { /* reported */ }
       } }, 'Delete') : null));
     // Report Fields: the incident facts for this case's reports (js/report-fields-ui.js).
+    let reportType = '';
+    try { reportType = root.CVReportFieldsUI ? (await CVReportFieldsUI.load(c)).activity || '' : ''; } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+    if (token !== state.renderToken) return;
     const fieldsRow = h('tr', { class: 'notes-row' },
-      h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/.fields` }, 'Report Fields ', ui.icon('card-checklist'))),
+      h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/.fields` }, 'Report Fields')),
       h('td', { class: 'muted' }, 'Fields'),
-      h('td', { class: 'muted' }, 'Supplementary Report: offense, people, evidence, summary'),
+      h('td', { class: 'muted' }, `Report Type: ${reportType || 'Investigation, Purchase, Surveillance, Correction'}`),
       h('td', {}));
     const list = h('table', { class: 'files drafts-table' },
       h('thead', {}, h('tr', {}, h('th', {}, 'Report'), h('th', {}, 'Type'), h('th', {}, 'Updated'), h('th', {}, ''))),
@@ -125,7 +128,7 @@
         h('div', { class: 'form-actions' }, create))]),
       h('h2', { class: 'section-title' }, 'Reports'),
       list,
-      h('p', { class: 'muted small explain' }, `Your field notes and every report, draft or AI draft for this case. Saved on the SSD in ${archived ? 'archive' : 'cases'}\\${c.id}: notes.md and the drafts folder, as Markdown files. Templates live in CaseVault-Data\\templates (Vault → Templates).`));
+      h('p', { class: 'muted small explain' }, `Your field notes and every report, draft or AI draft for this case. Saved on the SSD in ${CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}`)}: notes.md and the drafts folder, as Markdown files. Templates live in CaseVault-Data | templates (Vault → Templates).`));
   }
 
   /* =====================================================================
@@ -405,7 +408,7 @@
           // Remember exports so the draft's consistency check never compares the draft with its own copy.
           meta.exports = [...new Set([...(meta.exports || []), name])];
           save(0);
-          toast(`Saved to this case's Files as ${name.replace('/', '\\')}.`, 'success');
+          toast(`Saved to this case's Files as ${CVFormat.pathText(name)}.`, 'success');
         } catch { /* reported by Save */ }
         return;
       }
