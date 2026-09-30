@@ -103,7 +103,7 @@ The header has three parts:
 At the bottom of the Overview, in three tabs:
 
 - **Reference:** Location Codes, Common UCR and the Narcotic Calculator (CaseVault's own pages, see *Reference*).
-- **OSINT:** MaxMind IP (where an IP address is) and Fingerprint.io (browser and device fingerprint).
+- **OSINT:** MaxMind IP (where an IP address is) and Fingerprint (browser and device fingerprint).
 - **LEO:** Accurint, Kodex Portal and Chicago HIDTA, plus any you add.
 
 OSINT and LEO links open the website **in a new browser tab**, outside CaseVault. CaseVault never contacts those sites itself and sends them nothing (not even which page you came from), so CaseVault stays offline: the **Offline** badge doesn't change when you click one. The website itself needs the PC's internet connection, like any site you open in the browser. Don't paste case details into outside websites unless your policy allows it.
@@ -116,7 +116,7 @@ OSINT and LEO links open the website **in a new browser tab**, outside CaseVault
 
 - **New case** asks for a **Title or Operation Name** (required: an operation can hold several case numbers, so put each case under the operation's name and the same agency case number), the **file number**, the **case number**, the **agency case number** (your agency's own internal number), the client (**State**, **Federal** or **Other**), status, opened date, and tags. A client typed in before v1.14 is kept as its own choice in the list. One file number can hold several cases: the File number box offers the file numbers you already use. The case folder and file names use the case number.
 - The case list and the case's header show both, for example *File F-2026-01 · Case 00123*, and the search box finds either. Templates can use `{{case.fileNumber}}` and `{{case.number}}`.
-- The **left list** shows every case: open and pending first, most recently changed first, then closed ones. Each case shows its status in words (**Open**, **Pending**, **Closed** or **Archived**) and its title, with just the numbers under it: file number | case number | client, for example `100 | JH123456 | State`. A **red bell** at the right means the case has an open deadline on its Timeline (it gently rings when the deadline is overdue or due within a week). The selected case is shown in grey. Point at a case to see the deadline, and for a Pending case what it's waiting on. Use the search box (title, any of the numbers, client, status or tag) to find one.
+- The **left list** shows every case, with its status and the red deadline bell together on the right,: open and pending first, most recently changed first, then closed ones. Each case shows its status in words (**Open**, **Pending**, **Closed** or **Archived**) and its title, with just the numbers under it: file number | case number | client, for example `100 | JH123456 | State`. A **red bell** at the right means the case has an open deadline on its Timeline (it gently rings when the deadline is overdue or due within a week). The selected case is shown in grey. Point at a case to see the deadline, and for a Pending case what it's waiting on. Use the search box (title, any of the numbers, client, status or tag) to find one.
 - **Make the list wider or narrower:** drag its right edge (or click the edge and use ← →). Double-click the edge to reset it. Each PC remembers its own width.
 - **Details** tab: edit any field. A short note under **Status** says what the status means and, for a Pending case, what you're waiting on.
 - **Suspects** (on the Details tab): **Add suspect** for each person the case is about: name, date of birth (the **age** is worked out for you), residence, and role (**Main**, **Secondary** or **Other**). The first one is Main, later ones Secondary. They save with the case, go to **Ask AI** and **Draft with AI** with the case, and templates can use `{{suspect.name}}`, `{{suspect.dob}}`, `{{suspect.age}}`, `{{suspect.residence}}` and `{{suspect.role}}` (the main suspect) and `{{suspects}}` (all of them, one per line).
@@ -210,13 +210,28 @@ The **formatting bar** above the text does this for you: **B** bold, *I* italic,
 
 Notes save on their own as you type. The **Save** button writes them straight away, and the text beside it shows *✓ Saved 14:02* once they're on the SSD. **Delete** on the Case notes row empties the notes after you confirm.
 
-### Report Fields
+### Report Fields (the Supplementary Report)
 
-**Report Fields** is a form for the facts an incident or case report asks for: case number, offense classification, UCR code and location code (type a few characters and pick from the Reference lists), address, location type, date, time, beat of occurrence and beat assigned, activity (Purchase, Surveillance, Investigation, Correction), operation/mission, method assigned (Field, Supervisor, On View, OEMC), unit; victims and offenders (number, name, relation code), number arrested, arrest unit, adults, juveniles, fire and gang (yes/no), persons not arrested, police personnel on scene; total weight, street value, purchase price, fund sheet, evidence officer; vehicle information and impound/tow; court branch and date, charges, judge, search warrant, ASA approving, notifications; and a **Narrative**.
+**Report Fields** is the case's Supplementary Report, laid out like a narcotics supplementary report form:
 
-- **Evidence inventoried:** **Add exhibit** gives the next exhibit number by itself. Every case with the same **agency case number** shares one count (an operation with several case numbers doesn't start again at 1), and a removed exhibit's number isn't given out again. Pick the type: narcotic, personal property, personal currency, currency, recording (audio/video), photograph, other.
-- Fields save as you type (and with **Save changes**), in the case folder as `report-fields.json`.
-- They fill `{{report.…}}` placeholders in templates (for example `{{report.ucr}}`, `{{report.evidence}}`, `{{report.narrative}}`), go to **Draft with AI**, and **Create report from fields** turns them into a new report you can edit and export.
+- **Case Numbers:** case, event, incident, raid and R.D. numbers, and the officer report type (Investigation, Purchase, Surveillance, Correction).
+- **Offense:** offense classification / last report, IUCR code and location code (type a few characters and pick from the Reference lists), address and type of location, offense reclassification / DNA and revised IUCR, date, time and beat of occurrence, beat assigned.
+- **Victims and Offenders:** numbers, names, relation codes, method code, number arrested.
+- **Assignment:** method assigned (Field, Supervisor, On View, OEMC), unit, safe method, if residence where, arrest unit, adults, juveniles, fire and gang related.
+- **Update Information and Status:** the verified / updated tick boxes, status (0 - Prog to 7 - C/N/C) and how cleared (1 - Arrest to 5 - Other).
+- **Officer's Report:** one line each for operation / mission number, offenders, gang affiliations, charges, within 1000 feet of, court branch and court officer, court date, search warrant number, the ASA and judge approving the search warrant, persons present not arrested, police personnel on scene, victims, total weight, street value, purchase price, pre-recorded fund sheet inventory number, evidence officer, vehicle impounded / towed, proof of residence, notifications and offender's vehicle.
+- **Evidence Inventoried:** **Add Exhibit** gives the next exhibit number by itself. Every case with the same **agency case number** shares one count (an operation with several case numbers doesn't start again at 1), and a removed exhibit's number isn't given out again. Each exhibit has an **Inventory Number**, a **Type** (Narcotics, Currency, Personal Currency, Personal Property, Personal Jewelry, Jewelry, Electronics, Video/Audio, Photograph, Packaging, Other) and a long **Description**. Choosing **Narcotics** adds **Narcotic Type** (Cannabis, Cocaine, Heroin, Fentanyl…) and **Weight**.
+- **Summary of Investigation:** a large box for the narrative, with the formatting bar.
+- **Submission and Approval:** extra copies, date and time submitted, the reporting officers, supervisor and lieutenant with their star numbers, date and time approved. The signatures are left for ink or e-sign.
+
+The buttons above the form:
+
+- **Print / PDF** shows the report as a PDF. Use the printer button above the page to print it, or the download button to save it.
+- **Save PDF to Case** saves it in the case's **Supplementary Report** folder.
+- **Email for E-Sign** saves the PDF to the case and opens the **Mail** tab with it attached and a subject and message filled in. Add the recipients and create the Outlook draft as usual. The signature boxes in the PDF are real signature fields: in Adobe Acrobat or Reader (**Fill & Sign**, or **Request e-signatures**) they can be signed electronically, or the report can be printed and signed in blue ink.
+- **Create Report** makes an editable report from the fields, to change and export to Word.
+
+The header of the printed report shows your agency from **Vault → My Profile**. Fields save as you type (and with **Save Changes**), in the case folder as `report-fields.json`; fields saved by v1.18 and v1.19 open in the new layout. They fill `{{report.…}}` placeholders in templates (for example `{{report.ucr}}`, `{{report.evidence}}`, `{{report.narrative}}`) and go to **Draft with AI**.
 
 ## Timeline
 

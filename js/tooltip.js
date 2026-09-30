@@ -51,9 +51,22 @@
     b.classList.toggle('above', !below);
   }
 
+  /** Hover boxes stay short (v1.20): the first sentence, at most about 100 characters. A box
+   * with several lines (a case's deadline and what it waits on) is kept whole. Screen readers
+   * still get the full text through the element's own label. */
+  function shorten(text, sentences = 1, max = 110) {
+    const t = String(text).trim();
+    if (sentences === 1 && t.includes('\n')) return t;
+    const parts = t.replace(/\n+/g, ' ').match(/[^.!?]+(?:[.!?]+(?=\s|$)|$)/g) || [t];
+    let s = parts.slice(0, sentences).join('').trim();
+    if (s.length > max) s = `${s.slice(0, max - 10).replace(/\s+\S*$/, '')}…`;
+    return sentences === 1 ? s.replace(/\.$/, '') : s;
+  }
+
   function show(el, delay) {
     clearTimeout(timer);
-    const text = textOf(el);
+    // An ⓘ holds a longer explanation: two sentences; any other box: one.
+    const text = el.classList.contains('tip-btn') ? shorten(textOf(el), 2, 240) : shorten(textOf(el));
     if (!text) return;
     timer = setTimeout(() => {
       if (!el.isConnected) return;
@@ -71,7 +84,8 @@
     if (tip) tip.hidden = true;
   }
 
-  const target = (e) => (e.target && e.target.closest ? e.target.closest('[title], [data-tip]') : null);
+  // A frame's title names it for screen readers; it isn't an explanation to show.
+  const target = (e) => { const el = e.target && e.target.closest ? e.target.closest('[title], [data-tip]') : null; return el && el.tagName !== 'IFRAME' ? el : null; };
 
   doc.addEventListener('pointerover', (e) => {
     const el = target(e);

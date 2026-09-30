@@ -15,7 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.19)
+## Features (v1.20)
+
+- **Supplementary Report:** Report Fields laid out like a narcotics supplementary report (case numbers, offense, victims and offenders, assignment, update information and status, the officer's report lines, evidence, summary of investigation, approvals). **Print / PDF**, **Save PDF to Case**, and **Email for E-Sign** (the PDF has real signature fields for Adobe Fill & Sign)
+- Evidence: exhibit number, inventory number, type, a long description, and narcotic type and weight for narcotics
+- Title Case headings without parentheses, shorter hover boxes, status next to the red bell in the case list, a proper X next to Done in the Vault and Options, a longer summary box and clearer fonts in Report Fields
 
 - **Formatted editing** in reports, case notes and the narrative: bold shows bold, underline underlined, headings, lists and tables as in Word, with no `**` on screen. Paste from Word keeps the formatting; copy (or Export → Copy for Word) pastes into Word formatted. A **Markdown** switch shows the marks; the files on the SSD stay the same Markdown
 
@@ -45,7 +49,7 @@ The app detects the browser and picks the mode by itself. The data format on the
 - **Ask AI**: a floating chat with the AI on this computer, like claude.ai but offline, that stays open while you write drafts or notes (Insert puts an answer at your cursor); pick any installed model (including a less-filtered one, see docs/AI-SETUP.md) and optionally a case, whose details, timeline, notes and file passages go with each question; save the conversation to a case
 - **The LE Cyber-Docs look**: icons throughout (bundled Bootstrap Icons), the Poppins font, rounded cards, and **light / dark / automatic** themes with a switch in the header; a Vault settings panel with a section list
 - **Reference** (from LE Cyber-Docs): narcotic **value calculator** and **street value chart** (HIDTA 2022), **incident location codes** and **commonly used UCR** codes
-- **Quick links** at the bottom of the Overview: Reference, **OSINT** (MaxMind IP, Fingerprint.io) and **LEO** (Accurint, Kodex, Chicago HIDTA, your own); hide any, edit addresses, add your own; they open in a new tab and CaseVault never contacts them
+- **Quick links** at the bottom of the Overview: Reference, **OSINT** (MaxMind IP, Fingerprint) and **LEO** (Accurint, Kodex, Chicago HIDTA, your own); hide any, edit addresses, add your own; they open in a new tab and CaseVault never contacts them
 - **Library for the AI** (Vault → Library): sample DEA-6/7/202 reports, warrants and directives the AI learns to write from (never their facts), and editable **writing behaviors** with **DEA-6 style** as the default
 - Hover boxes explain every button, and an ⓘ holds each longer explanation; file previews fill the window; the layout is centred and symmetric from a phone to 1920×1080 and up
 - Cases with a **file number** (shared by several cases) and a **case number**, client, status, tags, and opened/closed dates; search and filter
@@ -135,6 +139,7 @@ CaseVault-Data/
 | `js/ai/hardware.js` | AI profile per PC, and what Auto picks from the GPU |
 | `js/selftest.js` | Self-test with built-in made-up documents |
 | `js/markdown.js` | Minimal, escaping Markdown previewer for notes |
+| `js/report-pdf.js` | The Supplementary Report as a PDF (its own small PDF writer; signature fields for e-sign) |
 | `js/rich-editor.js` | Formatted view for notes and reports: edits in Word-like form, saved as Markdown; paste from Word, copy for Word |
 | `js/app.js` | User interface, autosave, connect/reconnect |
 | `js/theme.js` | Light / dark / automatic theme (loaded first, so the page never flashes) |

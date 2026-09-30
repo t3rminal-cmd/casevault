@@ -92,3 +92,11 @@ test('round trip: the Markdown from the formatting bar survives', () => {
   const back = R.toMarkdown(parse(R.toHTML(src, Markdown.render)), { editor: true });
   assert.strictEqual(back, src);
 });
+
+test('Title Case for headings', () => {
+  const { titleCase } = require('../js/formats.js');
+  assert.strictEqual(titleCase('Upcoming deadlines'), 'Upcoming Deadlines');
+  assert.strictEqual(titleCase('Re-phrase to DEA standards'), 'Re-phrase to DEA Standards');
+  assert.strictEqual(titleCase('Delete "Operation example"?'), 'Delete "Operation example"?', 'a quoted title stays as typed');
+  assert.strictEqual(titleCase('Saved as report-fields.json'), 'Saved as report-fields.json');
+});

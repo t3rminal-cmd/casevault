@@ -533,7 +533,7 @@
         h('h2', { icon: 'clipboard2-check' }, 'Review'),
         h('h3', {}, 'Totals'),
         h('div', { class: `review-math ${math.issues.length ? 'warn' : 'ok'}` }, ...mathText.split('\n').map((l) => h('p', {}, (math.issues.length ? '⚠ ' : '✓ ') + l))),
-        h('h3', {}, 'Consistency (local AI)'),
+        h('h3', {}, 'Consistency - Local AI'),
         aiBox,
         h('p', { class: 'muted small' }, 'AI reviews can miss things or be wrong. Read the report yourself too.'),
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => { ctrl.abort(); close(); } }, 'Done'))));

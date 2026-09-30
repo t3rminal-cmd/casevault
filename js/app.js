@@ -21,6 +21,8 @@
       return box;
     }
     const el = document.createElement(tag);
+    // Headings in Title Case (v1.20): "Upcoming deadlines" shows as "Upcoming Deadlines".
+    if (/^h[2-4]$/.test(tag) && !(attrs && attrs['data-keep-case'])) kids = kids.map((k) => (typeof k === 'string' ? CVFormat.titleCase(k) : k));
     for (const [k, v] of Object.entries(attrs || {})) {
       if (v == null || v === false) continue;
       if (k === 'icon') el.prepend(CVIcons.icon(v));
@@ -107,7 +109,7 @@
 
   const DIALOG_SIZES = [
     ['panel', '.vault-panel'],
-    ['full', '.preview, .doc-view, .lib-preview'],
+    ['full', '.preview, .doc-view, .lib-preview, .pdf-view'],
     ['wide', '.type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
   ];
 
@@ -127,7 +129,11 @@
       dialogEl.onclose = () => { if (dialogEl.open) return; if (!done) { done = true; resolve(undefined); } };
       dialogEl.append(build(close));
       // Every box has an X at the top right that closes it without doing anything, like Esc.
-      dialogEl.append(h('button', { class: 'icon-btn dialog-x', type: 'button', title: 'Close (Esc)', onclick: () => close(undefined) }, I('x-lg'), h('span', { class: 'sr-only' }, 'Close')));
+      // A box with its own header row (the Vault, Options, a file) gets the X in that row, after
+      // Done, as a button of the same size (v1.20); any other box has it in the corner.
+      const xBtn = h('button', { class: 'icon-btn dialog-x', type: 'button', title: 'Close', 'aria-label': 'Close (Esc)', onclick: () => close(undefined) }, I('x-lg'));
+      const head = dialogEl.querySelector('.vault-panel-head, .opt-head, .preview-head');
+      if (head) { xBtn.classList.add('in-head'); head.append(xBtn); } else dialogEl.append(xBtn);
       // The dialog's size comes from what it shows (set here, not with CSS :has(), which older
       // Firefox versions don't know and would leave file previews 620px wide and clipped).
       const kind = DIALOG_SIZES.find(([, sel]) => dialogEl.querySelector(sel));
@@ -527,10 +533,12 @@
         'aria-current': c.id === state.caseId ? 'page' : null,
         title: tip,
       },
+      // Title on the left; the status and the red bell together on the right (v1.20).
       h('div', { class: 'case-item-top' },
-        h('span', { class: `case-status status-${String(c.status).toLowerCase()}` }, c.status),
         h('span', { class: 'case-item-title' }, c.title || 'Untitled case'),
-        alarm ? h('span', { class: `case-bell ${due.cls}`, 'aria-label': `Deadline ${due.text}` }, I('bell-fill')) : null),
+        h('span', { class: 'case-item-flags' },
+          h('span', { class: `case-status status-${String(c.status).toLowerCase()}` }, c.status),
+          alarm ? h('span', { class: `case-bell ${due.cls}`, 'aria-label': `Deadline ${due.text}` }, I('bell-fill')) : null)),
       // Just the numbers: file number | case number | client, e.g. "100 | JH123456 | State".
       h('div', { class: 'case-item-meta muted' }, [c.fileNumber, c.number, c.client].filter(Boolean).join(' | ') || '\u00a0')));
   }
