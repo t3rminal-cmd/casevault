@@ -25,6 +25,9 @@ jobs:
       - name: No case data in the repository
         run: bash scripts/check-no-case-data.sh
 
+      - name: Updater tests (offline, fake GitHub)
+        run: python3 -m unittest discover -s updater/tests -v
+
       - name: App makes no external requests (offline rule)
         run: |
           # Any http(s) URL in the shipped app files must point at localhost, except the two online

@@ -81,3 +81,12 @@ System Volume Information/
 .idea/
 *.[sS][wW][pP]
 node_modules/
+
+# CaseVault Updater: the SSD's own files, never committed
+/version.json
+updater/python/
+updater/updater-settings.json
+.update-staging/
+.update-backup/
+__pycache__/
+*.py[cod]
