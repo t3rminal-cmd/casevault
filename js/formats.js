@@ -168,7 +168,31 @@
     }, true);
   }
 
-  const api = { phone, ssn, dateText, parseDate, dateField, install };
+  /* ---------------- headings: Title Case ---------------- */
+
+  const SMALL = new Set(['a', 'an', 'the', 'and', 'or', 'but', 'nor', 'for', 'of', 'on', 'in', 'to', 'at', 'by', 'with', 'from', 'as', 'per', 'vs', 'via', 'into']);
+  /** "Upcoming deadlines" -> "Upcoming Deadlines". Short joining words stay lower case (except
+   * first); words with capitals, digits, dots or slashes (DEA-6, notes.md, AI) and anything in
+   * quotes (a case's own title) are left as they are. */
+  function titleCase(text) {
+    let quoted = false;
+    let first = true;
+    return String(text).split(/(\s+)/).map((w) => {
+      if (/^\s+$/.test(w) || !w) return w;
+      const opens = /^["“']/.test(w);
+      const was = quoted;
+      if (opens && !quoted) quoted = true;
+      if (quoted && /["”']$/.test(w) && (w.length > 1 || !opens)) quoted = false;
+      if (was || opens) { first = false; return w; }
+      const skip = /[@\\/]|\.\w/.test(w) || !/^[a-z]/.test(w);
+      const small = !first && SMALL.has(w.toLowerCase().replace(/[^a-z]/g, ''));
+      const out = skip || small ? w : w[0].toUpperCase() + w.slice(1);
+      first = /[:–—-]$/.test(w);
+      return out;
+    }).join('');
+  }
+
+  const api = { phone, ssn, dateText, parseDate, dateField, install, titleCase };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else {
     root.CVFormat = api;

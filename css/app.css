@@ -1635,7 +1635,7 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 /* The X at the top right of every box. */
 .dialog > .dialog-x { position: absolute; top: .55rem; right: .55rem; z-index: 3; width: 2rem; height: 2rem; }
 .dialog > .dialog-x:hover { background: var(--danger-soft); color: var(--danger); }
-.vault-panel-head, .opt-head, .preview-head { padding-right: 2.6rem; }
+.dialog > .vault-panel-head, .opt-head, .preview-head { padding-right: 0; }
 .dialog > form > h2:first-child, .dialog > div > h2:first-child { padding-right: 2.2rem; }
 /* Header: blue chat bubble for Ask AI; the memory bars move. */
 #btn-chat.tb-square .bi { color: var(--accent); }
@@ -1732,3 +1732,43 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 .edit-mode .btn { min-width: 5.5rem; }
 .fmt-bar .edit-mode { margin-right: .1rem; }
 .fmt-bar { flex-wrap: wrap; max-width: 100%; }
+
+/* ---------- v1.20: Report Fields as the Supplementary Report ---------- */
+.rf-page { --font-doc: "Segoe UI", Calibri, system-ui, Arial, sans-serif; }
+.rf-section, .rf-actions { font-family: "Segoe UI", Calibri, system-ui, Arial, sans-serif; }
+.rf-section .field > span, .rf-section label.field > span:first-child { font-size: .8rem; font-weight: 600; letter-spacing: .01em; color: var(--muted); white-space: normal; overflow-wrap: anywhere; }
+.rf-section input, .rf-section select, .rf-section textarea { font-family: "Segoe UI", Calibri, system-ui, Arial, sans-serif; font-size: 15px; }
+.rf-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .5rem 0 .2rem; }
+.rf-lines { display: grid; gap: .45rem; }
+.rf-lines .field { display: grid; grid-template-columns: minmax(11rem, 17rem) minmax(0, 1fr); align-items: center; gap: .9rem; margin: 0; }
+.rf-lines .field > span { text-transform: uppercase; font-size: .74rem; }
+@media (max-width: 700px) { .rf-lines .field { grid-template-columns: 1fr; gap: .2rem; } }
+.rf-update .rf-grid { grid-template-columns: repeat(auto-fill, minmax(min(13rem, 100%), 1fr)); }
+.rf-check { align-self: center; min-height: 2.2rem; }
+.rf-exhibits { display: grid; gap: .7rem; margin-bottom: .6rem; }
+.rf-exhibit-card { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr) auto; gap: 1rem; align-items: start; padding: .8rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); }
+.rf-exhibit-no { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .1rem; min-height: 4.5rem; border-radius: var(--radius-sm); background: var(--accent-soft); text-align: center; }
+.rf-exhibit-no .rf-exhibit { font-size: 1.7rem; line-height: 1; color: var(--accent); font-family: "Segoe UI", Calibri, Arial, sans-serif; }
+.rf-exhibit-body { display: grid; gap: .6rem; min-width: 0; }
+.rf-exhibit-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr)); gap: .6rem; }
+.rf-exhibit-row .field, .rf-exhibit-body .field { margin: 0; min-width: 0; }
+.rf-narc { display: contents; }
+.rf-narc[hidden] { display: none; }
+.rf-exhibit-card textarea { width: 100%; min-height: 5rem; resize: vertical; }
+@media (max-width: 600px) { .rf-exhibit-card { grid-template-columns: 1fr; } .rf-exhibit-no { flex-direction: row; min-height: 0; padding: .4rem; } }
+.rf-narrative-rich { min-height: 34rem; max-height: none; font: 16px/1.7 Cambria, Georgia, "Times New Roman", serif; padding: 1rem 1.2rem; }
+.rf-narrative { min-height: 34rem; font: 15px/1.6 Consolas, "Cascadia Mono", monospace; }
+.pdf-view { display: flex; flex-direction: column; gap: .5rem; height: 100%; min-height: 0; }
+.pdf-view h2, .pdf-view p { margin: 0; }
+.pdf-view .preview-frame { flex: 1; width: 100%; min-height: 60vh; border: 1px solid var(--border); border-radius: var(--radius-sm); background: #fff; }
+
+/* ---------- v1.20: polish ---------- */
+.case-item-flags { display: inline-flex; align-items: center; gap: .35rem; flex-shrink: 0; margin-left: auto; }
+.case-item-flags .case-bell { margin-left: 0; }
+
+/* The X that closes a box: a square button, like the header's, in the header row next to Done. */
+.dialog-x { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--muted); }
+.dialog-x .bi { width: 1rem; height: 1rem; }
+.dialog-x.in-head { width: 2.4rem; height: 2.4rem; margin-left: .15rem; }
+.dialog > .dialog-x { top: .75rem; right: .75rem; width: 2.1rem; height: 2.1rem; }
+.dialog-x:hover, .dialog-x:focus-visible { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }

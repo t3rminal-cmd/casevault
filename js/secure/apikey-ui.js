@@ -33,7 +33,7 @@
   const PROVIDERS = {
     anthropic: {
       id: 'anthropic',
-      name: 'Anthropic API (Claude)',
+      name: 'Anthropic API - Claude',
       short: 'Anthropic',
       host: 'api.anthropic.com',
       placeholder: 'sk-ant-api03-…',
@@ -65,7 +65,7 @@
     },
     gemini: {
       id: 'gemini',
-      name: 'Google Gemini API (free tier)',
+      name: 'Google Gemini API - Free Tier',
       short: 'Gemini',
       host: 'generativelanguage.googleapis.com',
       placeholder: 'AIza…',
@@ -97,7 +97,7 @@
     },
     openrouter: {
       id: 'openrouter',
-      name: 'OpenRouter (free models)',
+      name: 'OpenRouter - Free Models',
       short: 'OpenRouter',
       host: 'openrouter.ai',
       placeholder: 'sk-or-v1-…',

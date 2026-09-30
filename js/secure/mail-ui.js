@@ -40,9 +40,7 @@
       return;
     }
 
-    const d = drafts.get(c.id) || {
-      to: '', cc: '', subject: `${st.marking ? `${st.marking} ` : ''}${prefix || c.number || c.title || ''} – `, body: `\n\n\n${st.footer ? `--\n${st.footer}` : ''}`, attach: new Set(),
-    };
+    const d = drafts.get(c.id) || newDraft(c, st);
     drafts.set(c.id, d);
 
     const book = h('datalist', { id: 'cv-address-book' }, (st.addressBook || []).map((a) => h('option', { value: a.name ? `${a.name} <${a.email}>` : a.email })));
@@ -271,7 +269,22 @@
     await ui.Save.track(`mail-log:${c.id}`, () => V().writeCaseJSON(c.id, 'mail-log.json', cur));
   }
 
+  function newDraft(c, st = mailSettings()) {
+    const prefix = CVCaseFiles.casePrefix(c);
+    return { to: '', cc: '', subject: `${st.marking ? `${st.marking} ` : ''}${prefix || c.number || c.title || ''} – `, body: `\n\n\n${st.footer ? `--\n${st.footer}` : ''}`, attach: new Set() };
+  }
+
+  /** Start this case's mail with a subject, a message and files ticked (Report Fields → Email for E-Sign). */
+  function prepare(c, { subject = '', body = '', attach = [] } = {}) {
+    const st = mailSettings();
+    const d = drafts.get(c.id) || newDraft(c, st);
+    if (subject) d.subject = `${st.marking ? `${st.marking} ` : ''}${subject}`;
+    if (body) d.body = `${body}\n\n${st.footer ? `--\n${st.footer}` : ''}`;
+    for (const name of attach) d.attach.add(name);
+    drafts.set(c.id, d);
+  }
+
   function init(kit) { ui = kit; }
 
-  root.CVMailUI = { init, render };
+  root.CVMailUI = { init, render, prepare };
 })(this);

@@ -22,7 +22,7 @@
     { id: 'ref-ucr', tab: 'reference', name: 'Common UCR', hash: '#/reference/ucr', icon: 'journal-text', note: 'UCR codes by category. Search by code or offense.' },
     { id: 'ref-narcotics', tab: 'reference', name: 'Narcotic Calculator', hash: '#/reference/narcotics', icon: 'calculator-fill', note: 'Street value calculator and value chart, HIDTA 2022.' },
     { id: 'osint-maxmind', tab: 'osint', name: 'MaxMind IP', url: 'https://www.maxmind.com/en/geoip-demo', icon: 'globe2', note: 'Where an IP address is: city, ISP and organisation.' },
-    { id: 'osint-fingerprint', tab: 'osint', name: 'Fingerprint.io', url: 'https://fingerprint.com/demo/', icon: 'fingerprint', note: 'Browser and device fingerprint demo.' },
+    { id: 'osint-fingerprint', tab: 'osint', name: 'Fingerprint', url: 'https://fingerprint.com/demo/', icon: 'fingerprint', note: 'Browser and device fingerprint demo.' },
     { id: 'leo-accurint', tab: 'leo', name: 'Accurint', url: 'https://www.accurint.com/', icon: 'person-lines-fill', note: 'LexisNexis Accurint for law enforcement, with your account.' },
     { id: 'leo-kodex', tab: 'leo', name: 'Kodex Portal', url: 'https://www.kodexglobal.com/', icon: 'send', note: 'Legal process and emergency requests to online platforms, with your account. Change the address to your portal\'s login page if it differs.' },
     { id: 'leo-chicago-hidta', tab: 'leo', name: 'Chicago HIDTA', url: '', icon: 'building', note: 'Add your Chicago HIDTA portal\'s web address in Vault → Quick links.' },

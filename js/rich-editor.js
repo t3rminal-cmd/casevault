@@ -22,7 +22,7 @@
   const SKIP = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'IMG', 'SVG', 'VIDEO', 'AUDIO', 'IFRAME', 'OBJECT', 'EMBED', 'META', 'LINK', 'TITLE', 'HEAD', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'NOSCRIPT', 'XML']);
   const kids = (n) => Array.from(n.childNodes || []);
   const name = (n) => String(n.nodeName || '').toUpperCase().replace(/^.*:/, ''); // o:p → P
-  const style = (n) => (n.getAttribute && n.getAttribute('style')) || '';
+  const style = (n) => (n.getAttribute && (n.getAttribute('style') || n.getAttribute('data-cv-style'))) || '';
   const isBlock = (n) => n.nodeType === 1 && BLOCKS.has(name(n));
 
   // Word's pasted HTML marks bold/italic/underline with styles as often as with tags.
@@ -246,7 +246,10 @@
       const html = cd.getData('text/html');
       let md;
       if (html) {
-        const parsed = new root.DOMParser().parseFromString(html, 'text/html'); // inert: nothing runs
+        // Inert: nothing runs. Word's style="…" attributes are renamed first, so the page's
+        // Content Security Policy has nothing to refuse; marks() still reads them.
+        const safe = html.replace(/\sstyle\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, ' data-cv-style=$1');
+        const parsed = new root.DOMParser().parseFromString(safe, 'text/html');
         md = toMarkdown(parsed.body);
       } else md = cd.getData('text/plain');
       insertMarkdown(md);
