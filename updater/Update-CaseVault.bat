@@ -1,9 +1,11 @@
 @echo off
 rem ==========================================================================
-rem  Check-For-Updates.bat
+rem  Update-CaseVault.bat
 rem  CaseVault Updater. Lives in CaseVault-App\updater on the SSD; runs only
-rem  when you start it. It checks GitHub for a newer CaseVault
-rem  and changes nothing (Update-CaseVault.bat installs). No installation and no admin rights needed.
+rem  when you start it. Checks GitHub, downloads only the changed files, asks,
+rem  then installs them with a backup (put back if anything fails). Closes and
+rem  restarts the CaseVault helper if it runs. "Update-CaseVault.bat undo" puts
+rem  back the version from before the last update. No admin rights needed.
 rem
 rem  Python: uses the portable Python in updater\python if it's there,
 rem  otherwise a Python already on the PC ("py" or "python"). See README.md.
@@ -23,7 +25,7 @@ if not defined PY (
   exit /b 1
 )
 pushd "%HERE%"
-%PY% -m casevault_updater check %*
+if /i "%~1"=="undo" (%PY% -m casevault_updater undo) else (%PY% -m casevault_updater install %*)
 set "RC=%errorlevel%"
 popd
 echo.

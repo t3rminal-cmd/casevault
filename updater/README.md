@@ -4,10 +4,9 @@ A small updater that sits on the SSD with CaseVault (in `CaseVault-App\updater\`
 copy up to date from GitHub (`t3rminal-cmd/casevault`, branch `main`) when you ask it to. It never
 runs on its own, and it never touches `CaseVault-Data`.
 
-> **Status: step 2 of 4.** The version check, the list of changed files, and the verified download
-> into a staging folder work. CaseVault itself is still never changed.
-> Next: applying with backup and rollback, including the W: tools (step 3), then the window with the
-> Check for Updates button and progress bar (step 4).
+> **Status: step 3 of 4.** Checking, downloading only the changed files, and installing them with a
+> backup (put back automatically if anything fails) all work, from `Update-CaseVault.bat`.
+> Next (step 4): a small window with a **Check for Updates** button and a progress bar.
 
 ## What it does when you check
 
@@ -39,6 +38,28 @@ Double-click `Check-For-Updates.bat`, or from a command prompt in this folder:
     python -m casevault_updater check --json    # for scripts
 
 Exit code 0 means up to date, 10 means an update is available (or it can't tell yet), 2 means an error.
+
+## Updating (step 3)
+
+Double-click **`Update-CaseVault.bat`** in `V:\CaseVault-App\updater\` (or run
+`python -m casevault_updater install`). It:
+
+1. undoes an update that was cut off last time (power cut, SSD pulled out), if any;
+2. asks GitHub for the newest version and compares every file on the SSD with it;
+3. downloads only the files that differ, checking each one (see below). Nothing is changed yet;
+4. says what it will change and asks **Install now?** Answer `n` and nothing changes (the download
+   is kept, so installing later is quick);
+5. closes the CaseVault helper window if it is running (Firefox) and the Ollama it started from the
+   CV-AI drive. With Edge on its own, close the CaseVault window yourself first;
+6. copies every file it will replace or remove to `.update-backup\<time>-<commit>\`, writes a journal,
+   then puts the new files in place one by one;
+7. writes `version.json`, and starts the helper again (it opens CaseVault in the browser). In Edge,
+   reload CaseVault (F5).
+
+If anything fails during step 6, everything already changed is put back from the backup and you're
+told what went wrong. **`Update-CaseVault.bat undo`** (or `python -m casevault_updater undo`) puts back
+the version from before the last update. The two newest backups are kept. `CaseVault-Data` (the
+cases) is never read or written by the updater.
 
 ## Which files, and the download
 

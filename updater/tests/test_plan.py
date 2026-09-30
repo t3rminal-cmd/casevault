@@ -50,6 +50,8 @@ def fake(corrupt=None, truncated=False):
         calls.append(url)
         api = "https://api.github.com/repos/t3rminal-cmd/casevault/git/trees/"
         raw = "https://raw.githubusercontent.com/t3rminal-cmd/casevault/"
+        if url.startswith("https://api.github.com/repos/t3rminal-cmd/casevault/commits/"):
+            return 200, {}, json.dumps({"sha": NEW, "commit": {"message": "v1.23", "committer": {"date": "2026-10-02T10:00:00Z"}}}).encode()
         if url.startswith(api):
             sha = url[len(api):].split("?")[0]
             return 200, {}, tree_json(FILES_NEW if sha == NEW else FILES_OLD, truncated)
