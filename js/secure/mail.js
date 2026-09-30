@@ -145,8 +145,11 @@
     return url.length > 2000 ? null : url;
   }
 
+  // Filled in until you set your own (v1.26): Chicago Police, DEA and the Postal Inspection Service.
+  const PRELOADED_DOMAINS = ['chicagopolice.org', 'dea.gov', 'uspis.gov'];
   const DEFAULTS = {
-    domains: [],
+    domains: PRELOADED_DOMAINS,
+    signature: '',          // put above the footer of every new message (v1.26)
     addressBook: [],        // [{ name, email }]
     marking: '',            // e.g. "[LES]" put in front of every subject
     footer: 'CONFIDENTIALITY NOTICE: This email and any attachments are for the sole use of the intended recipient(s) and may contain law enforcement sensitive information. If you received this in error, notify the sender and delete it.',
@@ -154,7 +157,24 @@
     requireMarking: false,
   };
 
-  const api = { EMAIL_RE, DEFAULTS, parseAddresses, parseDomains, domainAllowed, checkRecipients, otherCaseFiles, buildEml, mailtoUrl, encodeHeader, rfc2822Date };
+  /** The mail settings in use: saved ones over the defaults; an empty domain list gets the preloaded ones. */
+  function settingsOf(saved) {
+    const st = { ...DEFAULTS, ...(saved || {}) };
+    if (!Array.isArray(st.domains) || !st.domains.length) st.domains = [...PRELOADED_DOMAINS];
+    return st;
+  }
+  /** The end of a new message: the signature, then the footer after "--". */
+  function closing(st) {
+    const sig = String(st.signature || '').trim();
+    return `${sig ? `${sig}\n\n` : ''}${st.footer ? `--\n${st.footer}` : ''}`;
+  }
+  /** A signature from My Profile (name, title, agency, phone, email). */
+  function signatureFrom(p) {
+    const a = p || {};
+    return [a.name, a.title, a.agency, a.phone && `Phone: ${a.phone}`, a.email].map((x) => String(x || '').trim()).filter(Boolean).join('\n');
+  }
+
+  const api = { EMAIL_RE, DEFAULTS, PRELOADED_DOMAINS, settingsOf, closing, signatureFrom, parseAddresses, parseDomains, domainAllowed, checkRecipients, otherCaseFiles, buildEml, mailtoUrl, encodeHeader, rfc2822Date };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVMail = api;
 })(this);

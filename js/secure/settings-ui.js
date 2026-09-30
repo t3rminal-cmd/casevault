@@ -49,7 +49,7 @@
 
   function mailSection() {
     const { h } = ui;
-    const cur = { ...CVMail.DEFAULTS, ...(V().data.settings.mail || {}) };
+    const cur = CVMail.settingsOf(V().data.settings.mail);
     const domains = h('input', { type: 'text', value: cur.domains.join(', '), placeholder: 'agency.gov, *.county.gov', autocomplete: 'off' });
     const book = h('textarea', { rows: 4, placeholder: 'Jane Doe <jane.doe@agency.gov>\nnarcotics-unit@agency.gov', spellcheck: 'false' });
     book.value = (cur.addressBook || []).map((a) => (a.name ? `${a.name} <${a.email}>` : a.email)).join('\n');
@@ -58,6 +58,14 @@
     const maxMB = h('input', { type: 'number', min: 1, max: 150, value: cur.maxMB, class: 'narrow' });
     const footer = h('textarea', { rows: 3 });
     footer.value = cur.footer;
+    // Signature (v1.26): goes at the end of every new message, above the footer.
+    const signature = h('textarea', { rows: 4, placeholder: 'Det. Jane Doe #12345\nNarcotics Division\nPhone: 555-010-0100', spellcheck: 'true', 'aria-label': 'Signature' });
+    signature.value = cur.signature || '';
+    const sigFromProfile = h('button', { class: 'btn small', type: 'button', icon: 'person-badge', title: 'Fill the signature from Vault → My Profile (name, title, agency, phone, email)', onclick: () => {
+      const s = CVMail.signatureFrom(V().data.settings.affiant);
+      if (!s) { ui.toast('Fill in My Profile first (Vault → My Profile).'); return; }
+      signature.value = s; commit(); ui.toast('Signature filled from My Profile.', 'success', 2500);
+    } }, 'Fill From My Profile');
     const status = h('p', { class: 'small' });
 
     const commit = () => {
@@ -72,18 +80,19 @@
         requireMarking: requireMarking.checked,
         maxMB: Math.max(1, Math.min(150, Number(maxMB.value) || 20)),
         footer: footer.value.trim(),
+        signature: signature.value.replace(/\s+$/, ''),
       };
       status.className = `small ${bad.length ? 'error-text' : 'muted'}`;
       status.textContent = bad.length ? `Left out of the address book (not an address, or outside the allowed domains): ${bad.map((b) => b.raw).join(', ')}` : `Allowed domains: ${doms.join(', ') || 'none yet'}`;
       Object.assign(cur, next);
       save({ mail: next });
     };
-    for (const el of [domains, book, marking, requireMarking, maxMB, footer]) el.addEventListener('change', commit);
+    for (const el of [domains, book, marking, requireMarking, maxMB, footer, signature]) el.addEventListener('change', commit);
     status.textContent = `Allowed domains: ${cur.domains.join(', ') || 'none yet'}`;
 
     return h('section', { 'data-section': 'mail' },
       h('h3', {}, 'Department mail'),
-      h('p', { class: 'muted small explain' }, 'Mail from a case\'s Mail tab can only go to these domains. ', h('code', {}, 'agency.gov'), ' allows exactly @agency.gov; ', h('code', {}, '*.agency.gov'), ' also allows its sub-domains.'),
+      h('p', { class: 'muted small explain' }, 'Mail from a case\'s Mail tab can only go to these domains. chicagopolice.org, dea.gov and uspis.gov are filled in to start with. ', h('code', {}, 'agency.gov'), ' allows exactly @agency.gov; ', h('code', {}, '*.agency.gov'), ' also allows its sub-domains.'),
       ui.field('Allowed mail domains', domains),
       status,
       ui.field('Address book', book, '', 'One address per line.'),
@@ -91,6 +100,8 @@
         h('label', { class: 'inline' }, 'Subject marking ', marking),
         h('label', { class: 'check-row' }, requireMarking, h('span', {}, 'Required on every email')),
         h('label', { class: 'inline' }, 'Attachment limit ', maxMB, ' MB')),
+      ui.field('Signature', signature, 'mail-signature', 'Added to the end of every new message, above the footer.'),
+      h('div', { class: 'row' }, sigFromProfile),
       ui.field('Footer added to new messages', footer),
       h('div', { class: 'row vault-save-row' }, h('div', { class: 'spacer' }),
         h('button', { class: 'btn primary vault-save', type: 'button', icon: 'save', title: 'Save the department mail settings to vault.json on the SSD. Each box also saves when you leave it.', onclick: () => { commit(); ui.toast('Department mail settings saved to the SSD.', 'success', 2500); } }, 'Save changes')));

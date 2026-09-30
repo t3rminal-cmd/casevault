@@ -77,7 +77,7 @@ The header has three parts:
   - **Robot:** the AI engine. Blue means it's running, and pointing at it shows the model, for example *AI: Quick · qwen2.5:7b*. Red means it isn't running. Click it for AI settings.
   - Moving bars show while the AI is working, and a **memory** icon turns amber or red when memory runs short.
   - **Drive:** green means everything is saved to the SSD, amber means saving, and red with words means something isn't saved (reconnect the SSD).
-- **Right:** three square buttons: **Ask AI** (the blue chat bubble), **Hide** (the crossed-out eye, privacy screen) and the **menu** (⋮, three dots). Point at one for its name. The menu holds:
+- **Right:** two square buttons: **Hide** (the crossed-out eye, privacy screen) and the **menu** (⋮, three dots). Point at one for its name. **Ask AI** and **Notes** are the two square blue buttons at the bottom right of every screen. The menu holds (names on the left, icons in one column on the right):
   - **Reference**;
   - **Library**, which opens the Vault at the Library, where you add files the AI learns from;
   - **Vault**;
@@ -91,7 +91,7 @@ The header has three parts:
 - **Point at a button** (or reach it with Tab) to see what it does in a hover box. Buttons show just an icon and a short name; the explanation is in the hover box.
 - Labels have no brackets, and the longer explanations aren't printed on the page: an **ⓘ** next to a heading, label or box holds them. Point at it (or Tab to it) to read it. In the Vault, pointing at a section's heading shows what that section is for, and pointing at a box in **My Profile** shows which `{{affiant.…}}` placeholder it fills.
 - **Opening a file** (the eye button) shows it in a window that fills almost the whole screen, so wide Word tables, spreadsheets and PDFs aren't cut off.
-- **Ask AI** in the header opens a floating chat with the AI on this computer that stays open while you work (see *Ask AI*).
+- **Ask AI** (bottom right, next to Notes) opens a floating chat with the AI on this computer that stays open while you work (see *Ask AI*).
 - The page is centred and uses the width of the screen, from a phone up to 1920×1080 and larger. Case actions are same-size buttons in one row.
 - The **Overview** shows your case counts, then, each under a line: **Upcoming deadlines**, **Recently updated**, and **Quick links** (see below).
 - On a narrow window the header buttons shrink to their icons.
@@ -118,8 +118,10 @@ With no case open, CaseVault shows the **Overview**: a welcome banner with the d
 
 ## Cases
 
-- **New case** asks for a **Title or Operation Name** (required: an operation can hold several case numbers, so put each case under the operation's name and the same agency case number), the **file number**, the **Original Case Number** (the first report number of the case: an operation with several case numbers keeps its first one here), the **agency case number** (your agency's own internal number), the client (**State**, **Federal** or **Other**), status, opened date, and tags. A client typed in before v1.14 is kept as its own choice in the list. One file number can hold several cases: the File number box offers the file numbers you already use. The case folder and file names use the case number.
+- **New case** asks for a **Title or Operation Name** (required). To add another case number to an operation you already have, pick the operation from the list (the ▾ button, or start typing): its file number, agency case number and client fill in, and the box under it lists the case numbers it already has. A new name starts a new operation. the **file number**, the **Original Case Number** (the first report number of the case: an operation with several case numbers keeps its first one here), the **agency case number** (your agency's own internal number), the client (**State**, **Federal** or **Other**), status, opened date, and tags. A client typed in before v1.14 is kept as its own choice in the list. One file number can hold several cases: the File number box offers the file numbers you already use. The case folder and file names use the case number.
 - The case list and the case's header show both, for example *File F-2026-01 · Case 00123*, and the search box finds either. Templates can use `{{case.fileNumber}}` and `{{case.number}}`.
+- **Operations in the case list:** cases that share an operation name are grouped under it: the operation's name with the number of cases and a folder icon, and under it each case by its case number (with file number, agency case number and client). Click the operation's name to fold the group; CaseVault remembers which are folded. On a case's **Details** tab, under the name, are the operation's other case numbers (click one to open it) and **Add Case Number to This Operation**, which opens New case with the operation filled in.
+- **LEO Partners** (on the Details tab): tick the agencies working the case with you: DEA, FBI, IRS, USPIS, CBP, HSI, Local PD, Sheriff Dept. **Local PD** and **Sheriff Dept** ask which department (several: separate them with a semicolon); the pencil changes it. Templates can use `{{case.partners}}` (for example *DEA, USPIS, Local PD (Example Police Department)*), and Ask AI and Draft with AI get them with the case.
 - The **left list** shows every case, with its status and the red deadline bell together on the right,: open and pending first, most recently changed first, then closed ones. Each case shows its status in words (**Open**, **Pending**, **Closed** or **Archived**) and its title, with just the numbers under it: file number | case number | client, for example `100 | JH123456 | State`. A **red bell** at the right means the case has an open deadline on its Timeline (it gently rings when the deadline is overdue or due within a week). The selected case is shown in grey. Point at a case to see the deadline, and for a Pending case what it's waiting on. Use the search box (title, any of the numbers, client, status or tag) to find one.
 - **Make the list wider or narrower:** drag its right edge (or click the edge and use ← →). Double-click the edge to reset it. Each PC remembers its own width.
 - **Details** tab: edit any field. A short note under **Status** says what the status means and, for a Pending case, what you're waiting on.
@@ -199,7 +201,7 @@ Field Notes, every report and the Report Fields narrative open in the **Formatte
 
 ### Field Notes
 
-**The round Notes button** at the bottom right of every screen opens the Field Notes in a floating box, like Ask AI, so you can write notes while you look at the Details, Files or Timeline. It shows the notes of the case you have open (or pick another case from its list), saves to the same `notes.md` a moment after you stop typing (or **Save**), and has the same formatting bar. Drag it by its title bar, resize it from its corner, make it bigger, minimize it, or open the full Field Notes page with the arrow button. Spell check underlines misspelled words here, in Field Notes, the reports and the Ask AI box.
+**The Notes button** (square, bottom right, next to **Ask AI**) opens the Field Notes in a floating box, like Ask AI, so you can write notes while you look at the Details, Files or Timeline. It shows the notes of the case you have open (or pick another case from its list), saves to the same `notes.md` a moment after you stop typing (or **Save**), and has the same formatting bar. Drag it by its title bar, resize it from its corner, make it bigger, minimize it, or open the full Field Notes page with the arrow button. Spell check underlines misspelled words here, in Field Notes, the reports and the Ask AI box.
 
 **Field Notes** is a large free-form page, saved as `notes.md` in the case folder. In the Markdown view, the formatting is written like this:
 
@@ -234,7 +236,7 @@ Notes save on their own as you type. The **Save** button writes them straight aw
   - **Narcotics Recovered** (under the judge line): **Add Narcotic** for each narcotic, on one line: **Narcotics Type Recovered** (pick from the list or type), **Total Weight** with its **Unit** (gram, ounce, pound, kilogram, pill, mL), **Purchase Price** and **Street Value**. **Calculate** next to the street value works it out with the narcotic calculator (Reference → Narcotic calculator, HIDTA 2022 prices) from the type, weight and unit, and shows the line it used; you can type over it. Reports saved before v1.25 keep their total weight, street value and purchase price as the first narcotic.
 
   Then lists you add to, as many as needed:
-  - **Charges:** statute and statute description. Type part of a statute or of its wording (for example *fentanyl 15* or *402(c)*) and pick from the charges list; both boxes fill in. The list is also in **Reference → Charges**. Anything else can be typed. LSD and psilocybin are Schedule I hallucinogens: the list has *Possession* (402(c)) and *Manufacture/Delivery, other amount* (401(e)) for each. The weight-based tiers for larger amounts aren't in the list; confirm those subsections with your ASA and type them in.
+  - **Charges:** statute and statute description. Type part of a statute or of its wording (for example *fentanyl 15* or *402(c)*) and pick from the charges list; both boxes fill in. The list is also in **Reference → Charges**, grouped as **Illinois** (delivery, possession, trafficking and conspiracy, weapons) and **Federal** (narcotics; mail, parcels and online, such as 21 U.S.C. § 843(b) use of a communication facility including the mail, 18 U.S.C. § 1716 mailing injurious articles and the Travel Act; weapons). Anything else can be typed. LSD and psilocybin are Schedule I hallucinogens: the list has *Possession* (402(c)) and *Manufacture/Delivery, other amount* (401(e)) for each. The weight-based tiers for larger amounts aren't in the list; confirm those subsections with your ASA and type them in.
   - **Gang Affiliations:** pick a gang from the list (Chicago street gangs, then national and foreign gangs and cartels) or type one, and the faction or set.
   - **Persons Present Not Arrested:** name, contact number and address.
   - **Police Personnel on Scene:** name, star number, unit and role (Case, Affiant, Entry, Perimeter, UC, Surveillance, Enforcement, Sergeant, Lieutenant, Agent, Other).
@@ -453,7 +455,7 @@ A white screen with blue 1s and 0s raining down covers the whole app, with no ca
 
 The **Mail** tab of a case prepares an email to your department with documents from that case. CaseVault never sends mail itself and never holds a mail password: it checks the message, then hands it to Outlook, and you press **Send** there, so your department's own mail system (encryption, retention, DLP) handles it.
 
-**One-time setup** in **Vault → Department mail**: your department's mail domain(s), for example `agency.gov` (exactly that domain) or `*.agency.gov` (it and its sub-domains); an optional address book; an optional subject marking such as `[LES]` (can be made required); the footer; and the attachment limit (20 MB by default).
+**One-time setup** in **Vault → Department mail**: your department's mail domain(s), for example `agency.gov` (exactly that domain) or `*.agency.gov` (it and its sub-domains); an optional address book; an optional subject marking such as `[LES]` (can be made required); a **signature** (added to the end of every new message, above the footer; **Fill From My Profile** makes one from Vault → My Profile); the footer; and the attachment limit (20 MB by default). **chicagopolice.org**, **dea.gov** and **uspis.gov** are filled in as the allowed domains to start with; change the list to suit.
 
 **Safeguards**, checked every time:
 
@@ -638,7 +640,7 @@ With **AI suggestions** ticked in the toolbar, pausing for a moment at the end o
 
 Click **Draft with AI…** in the editor (or pick it when creating a draft) and choose:
 
-- **Document type** (including **DEA 6**, **DEA 7**, **DEA 7a** and **DEA 202**) and optionally a **template** to follow.
+- **Document type** (including **Supplemental Report**, **DEA 6**, **DEA 7**, **DEA 7a** and **DEA 202**) and optionally a **template** to follow.
 - **What to use:** the case details (always), the timeline, the notes, and any attached documents. For long documents, CaseVault picks the passages most relevant to the draft.
 - **Writing behavior:** how the AI writes. **DEA-6 style** is the default (third person, SYNOPSIS, numbered DETAILS paragraphs in time order, INDEXING). Others: plain narrative report, affidavit / formal legal, brief summary, and any you make (see *AI writing behavior*).
 - **Library:** the examples to write like and the directives to follow (see *The Library*). Examples of the document type you chose are ticked for you, and so are your "always use" directives.
@@ -713,7 +715,7 @@ A template is your document format (an affidavit, an arrest report, a subpoena�
 1. **Import your agency's Word form** (easiest): **Import Word, .md or .txt…** and pick the `.docx`. CaseVault turns it into text: headings, bold/italic, lists and tables are kept; fonts, logos and exact spacing aren't (the draft exports to Word with CaseVault's plain layout). Check the text in the editor, put placeholders where case details go, and **Save template**.
    *Tip:* type the placeholders in Word before you import, for example `{{case.number}}` or `«case.number»`: both come through as `{{case.number}}`.
 2. **New template**: paste or type the text and add placeholders.
-3. **Add starter templates**: Affidavit, Subpoena, Case Summary and Arrest Report. They're **examples, not legal forms**; use them as a starting point and replace them with your agency's approved formats.
+3. **Add starter templates**: Affidavit, Subpoena, Case Summary, Arrest Report and Supplemental Report. They're **examples, not legal forms**; use them as a starting point and replace them with your agency's approved formats.
 
 **Using a template:** in **Vault → Templates** each one has **Use** (makes a report from it in the case you have open and opens it), **Download** (a Word .docx of the template), **Edit** and **Delete**. On the Reports tab, pick **Template** under *Start from*.
 

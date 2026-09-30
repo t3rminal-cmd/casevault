@@ -179,9 +179,20 @@
 
   function init(kit) {
     ui = kit;
-    const fab = ui.h('button', { id: 'btn-notes-fab', class: 'notes-fab', type: 'button', 'aria-controls': 'notes-float', 'aria-expanded': 'false', title: 'Field Notes: jot notes for the case you have open, in a box you can keep open while you work.' }, ui.icon('journal-text'), ui.h('span', { class: 'sr-only' }, 'Field Notes'));
+    const fab = ui.h('button', { id: 'btn-notes-fab', class: 'fab notes-fab', type: 'button', 'aria-controls': 'notes-float', 'aria-expanded': 'false', title: 'Field Notes', 'data-tip-side': 'left' }, ui.icon('journal-text'), ui.h('span', { class: 'sr-only' }, 'Field Notes'));
     fab.addEventListener('click', () => toggle());
-    document.body.append(fab);
+    // v1.26: Ask AI moves from the header to sit beside the Notes button, bottom right.
+    const dock = ui.h('div', { id: 'fab-dock', class: 'fab-dock' });
+    const chat = document.getElementById('btn-chat');
+    if (chat) {
+      chat.className = 'fab chat-fab';
+      chat.removeAttribute('data-tip');
+      chat.title = 'Ask AI';
+      chat.dataset.tipSide = 'left';
+      dock.append(chat);
+    }
+    dock.append(fab);
+    document.body.append(dock);
   }
 
   root.CVNotesFloat = { init, toggle, reset, isOpen: () => mem.open };

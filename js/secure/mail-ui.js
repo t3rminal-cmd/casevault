@@ -20,7 +20,7 @@
   let ui = null;
   const drafts = new Map(); // caseId -> unsent compose state (memory only), so switching tabs keeps it
 
-  const mailSettings = () => ({ ...CVMail.DEFAULTS, ...((V().data.settings && V().data.settings.mail) || {}) });
+  const mailSettings = () => CVMail.settingsOf(V().data.settings && V().data.settings.mail);
   const MB = 1024 * 1024;
 
   async function render(panel, c, token) {
@@ -93,7 +93,7 @@
 
     // Throw away what's typed (it's only in this window until an Outlook draft is created).
     const discardBtn = h('button', { class: 'btn ghost', type: 'button', onclick: async () => {
-      const typed = to.value.trim() || cc.value.trim() || body.value.replace(st.footer || '\u0000', '').trim() || d.attach.size;
+      const typed = to.value.trim() || cc.value.trim() || body.value.replace(CVMail.closing(st) || '\u0000', '').trim() || d.attach.size;
       if (typed && !(await ui.confirmDialog({ title: 'Discard this draft?', message: 'The recipients, subject, message and ticked attachments are cleared. Nothing has been saved or sent yet.', confirmText: 'Discard' }))) return;
       drafts.delete(c.id);
       ui.refresh();
@@ -271,7 +271,7 @@
 
   function newDraft(c, st = mailSettings()) {
     const prefix = CVCaseFiles.casePrefix(c);
-    return { to: '', cc: '', subject: `${st.marking ? `${st.marking} ` : ''}${prefix || c.number || c.title || ''} – `, body: `\n\n\n${st.footer ? `--\n${st.footer}` : ''}`, attach: new Set() };
+    return { to: '', cc: '', subject: `${st.marking ? `${st.marking} ` : ''}${prefix || c.number || c.title || ''} – `, body: `\n\n\n${CVMail.closing(st)}`, attach: new Set() };
   }
 
   /** Start this case's mail with a subject, a message and files ticked (Report Fields → Email for E-Sign). */
@@ -279,7 +279,7 @@
     const st = mailSettings();
     const d = drafts.get(c.id) || newDraft(c, st);
     if (subject) d.subject = `${st.marking ? `${st.marking} ` : ''}${subject}`;
-    if (body) d.body = `${body}\n\n${st.footer ? `--\n${st.footer}` : ''}`;
+    if (body) d.body = `${body}\n\n${CVMail.closing(st)}`;
     for (const name of attach) d.attach.add(name);
     drafts.set(c.id, d);
   }
