@@ -4,9 +4,22 @@ A small updater that sits on the SSD with CaseVault (in `CaseVault-App\updater\`
 copy up to date from GitHub (`t3rminal-cmd/casevault`, branch `main`) when you ask it to. It never
 runs on its own, and it never touches `CaseVault-Data`.
 
-> **Status: step 3 of 4.** Checking, downloading only the changed files, and installing them with a
-> backup (put back automatically if anything fails) all work, from `Update-CaseVault.bat`.
-> Next (step 4): a small window with a **Check for Updates** button and a progress bar.
+## The window (how you'll normally use it)
+
+Double-click **`Check-For-Updates.bat`** in `V:\CaseVault-App\updater\`. The **CaseVault Updater**
+window opens and shows which version the SSD has.
+
+1. **Check for Updates**: it checks GitHub, compares every file on the SSD and downloads only the
+   ones that changed. The progress bar moves; nothing in CaseVault is changed yet.
+2. If there is an update, it says what will change (the list of files) and offers **Install Now** or
+   **Not Now**. Not Now keeps the download, so installing later is quick.
+3. **Install Now**: it closes the CaseVault helper window if it runs (Firefox), backs up the files it
+   replaces, installs, and starts the helper again. With Edge, close CaseVault first and reload it
+   afterwards (the window says which).
+4. The result shows in green, or in red with what went wrong (everything is put back).
+
+**Undo Last Update** (bottom left, after an update) puts the previous version back. The window can't
+be closed while files are being installed. It never runs on its own: only when you open it.
 
 ## What it does when you check
 
@@ -39,7 +52,7 @@ Double-click `Check-For-Updates.bat`, or from a command prompt in this folder:
 
 Exit code 0 means up to date, 10 means an update is available (or it can't tell yet), 2 means an error.
 
-## Updating (step 3)
+## Updating from a command prompt
 
 Double-click **`Update-CaseVault.bat`** in `V:\CaseVault-App\updater\` (or run
 `python -m casevault_updater install`). It:

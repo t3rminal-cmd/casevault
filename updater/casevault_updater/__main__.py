@@ -1,4 +1,4 @@
-"""Command line, for now:
+"""Command line. With no command (or `window`), the updater window opens.
 
     python -m casevault_updater check           the version check, in words
     python -m casevault_updater check --json    the same as JSON (for scripts)
@@ -10,7 +10,6 @@
     python -m casevault_updater undo            put back the version from before the last update
 
 Exit codes: 0 up to date, 10 update available (or can't tell), 2 error.
-The window with the Check for Updates button and progress bar comes in a later step.
 """
 
 import argparse
@@ -31,7 +30,7 @@ from .version import ERROR, UP_TO_DATE, check, read_local
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="casevault_updater", description="CaseVault Updater")
     p.add_argument("--version", action="version", version=f"CaseVault Updater {__version__}")
-    sub = p.add_subparsers(dest="cmd", required=True)
+    sub = p.add_subparsers(dest="cmd")
     c = sub.add_parser("check", help="Check GitHub for a newer CaseVault (changes nothing)")
     c.add_argument("--app-dir", help="The CaseVault-App folder (default: the updater's parent folder)")
     c.add_argument("--json", action="store_true", help="Print the result as JSON")
@@ -45,9 +44,20 @@ def main(argv=None) -> int:
     c.add_argument("--app-dir", help="The CaseVault-App folder (default: the updater's parent folder)")
     c.add_argument("--tools-dir", help="The CV-AI drive root (default: found by Start-CaseVault.bat)")
     c.add_argument("--yes", action="store_true", help="Don't ask before installing")
+    c = sub.add_parser("window", help="Open the updater window (the default)")
+    c.add_argument("--app-dir", help="The CaseVault-App folder (default: the updater's parent folder)")
     c = sub.add_parser("undo", help="Put back the version from before the last update")
     c.add_argument("--app-dir", help="The CaseVault-App folder (default: the updater's parent folder)")
     args = p.parse_args(argv)
+
+    if args.cmd in (None, "window"):
+        try:
+            from .window import main as window_main
+        except ImportError:
+            print("This Python has no tkinter, so the window can't open. Install Python from python.org with "
+                  "\"tcl/tk and IDLE\" ticked (see README.md), or use Update-CaseVault.bat.")
+            return 2
+        return window_main(getattr(args, "app_dir", None))
 
     settings = config.load()
     if args.app_dir:

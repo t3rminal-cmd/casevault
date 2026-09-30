@@ -92,3 +92,12 @@ W:\
 - Keep Windows' default **Quick removal** policy for the SSD (Device Manager → the SanDisk → Properties → Policies). It makes Windows write changes to the drive immediately.
 - If Windows ever says the drive needs scanning, let it, or run `chkdsk V: /f` from an administrator Command Prompt (with V: unlocked).
 - **Keep a second copy.** One SSD is one point of failure. Regularly copy `V:\CaseVault-Data` to a second BitLocker-encrypted drive kept in a different place.
+
+## Updating CaseVault on the SSD
+
+With Python placed in `CaseVault-App\updater\python` (see `updater\README.md`), double-click
+**`CaseVault-App\updater\Check-For-Updates.bat`**. The CaseVault Updater window checks GitHub,
+downloads only the files that changed, and installs them after you press **Install Now**, with a
+backup it puts back if anything fails (and **Undo Last Update** later). It updates the W: tools too
+when the CV-AI drive is plugged in, and never touches `CaseVault-Data`. Without Python, the manual
+way still works: download the ZIP and replace everything in `CaseVault-App` (not `CaseVault-Data`).
