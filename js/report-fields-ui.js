@@ -97,7 +97,7 @@
         });
         return row;
       }
-      return ui.field(label, box, kind === 'textarea' || kind === 'line' ? 'span-all rf-line' : '');
+      return ui.field(label, box, kind === 'textarea' || kind === 'line' ? 'span-all rf-line' : opts === 'span' ? 'span-all' : '');
     };
 
     // Pick-lists you can also type over (victim, gang, hair and eye colour).
@@ -158,7 +158,15 @@
         const last = box.lastElementChild && box.lastElementChild.querySelector('input, select');
         if (last) last.focus();
       } }, `Add ${L.item}`);
-      return h('div', { class: `rf-list rf-list-${key}` }, h('h4', {}, L.title), box, archived ? null : h('div', { class: 'contact-add' }, add));
+      // Offenders can be filled from Details → Suspects (name, date of birth and More Info; v1.23).
+      const fromSuspects = key === 'offendersList' && !archived ? h('button', { class: 'btn small', type: 'button', icon: 'person-exclamation', title: 'Adds each suspect from Details (or updates the offender with the same name) with the suspect\'s More Info.', onclick: () => {
+        const list = (c.suspects || []).filter((s) => String(s.name || '').trim());
+        if (!list.length) { toast('No named suspects on the Details tab yet.'); return; }
+        for (const s of list) F().suspectToOffender(data, s, Vault.localDay());
+        draw(); save();
+        toast(`${list.length} suspect${list.length === 1 ? '' : 's'} filled into Offenders.`, 'success');
+      } }, 'Add From Suspects') : null;
+      return h('div', { class: `rf-list rf-list-${key}` }, h('h4', {}, L.title), box, archived ? null : h('div', { class: 'contact-add' }, add, fromSuspects));
     }
 
     // ---- every part has an Include box on the left: untick it when the part doesn't apply; it's
@@ -181,7 +189,7 @@
     }
 
     const sections = F().SECTIONS.map((s) => part(s.id, s.title, s.icon,
-      h('div', { class: s.id === 'report' ? 'rf-lines' : `rf-grid${s.id === 'update' ? ' rf-grid-4' : ''}` }, s.fields.map(([k, label, kind, opts]) => input(k, label, kind, opts))),
+      h('div', { class: s.id === 'report' ? 'rf-lines' : `rf-grid${s.id === 'update' ? ' rf-grid-4' : s.id === 'approval' ? ' rf-grid-officers' : ''}` }, s.fields.map(([k, label, kind, opts]) => input(k, label, kind, opts))),
       ...(s.lists || []).map(listEditor)));
 
     // ---- evidence inventoried: one card per exhibit (number given automatically)

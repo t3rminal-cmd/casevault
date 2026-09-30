@@ -60,7 +60,7 @@ test('Report PDF: a valid PDF with the fields, signature fields and page numbers
   const pages = Number(/\/Count (\d+)/.exec(s)[1]);
   assert.ok(pages >= 3, `long summary flows onto more pages (${pages})`);
   assert.match(s, new RegExp(`Page ${pages} of ${pages}`));
-  assert.strictEqual((s.match(/\/FT \/Sig/g) || []).length, 4, 'four signature fields');
+  assert.strictEqual((s.match(/\/FT \/Sig/g) || []).length, 3, 'three signature fields: reporting, secondary, supervisor');
   // Every xref offset points at its object.
   const xref = Number(/startxref\n(\d+)/.exec(s)[1]);
   const table = s.slice(xref).split('\n').slice(3).filter((l) => /^\d{10} 00000 n/.test(l));
@@ -132,4 +132,44 @@ test('v1.22: searchable lists and the charges from LE Cyber-Docs', () => {
   assert.ok(all.every(([s]) => /^720 ILCS \d+\//.test(s)));
   const { pathText } = require('../js/formats.js');
   assert.strictEqual(pathText('cases\\2024-JH123456'), 'cases | 2024-JH123456');
+});
+
+test('v1.23: Submission and Approval is one row per officer, no Lieutenant', () => {
+  const keys = F.SECTIONS.find((s) => s.id === 'approval').fields.map(([k]) => k);
+  assert.deepStrictEqual(keys.slice(0, 12), ['reportingOfficer', 'reportingStar', 'dateSubmitted', 'timeSubmitted',
+    'secondOfficer', 'secondStar', 'secondDate', 'secondTime', 'supervisor', 'supervisorStar', 'dateApproved', 'timeApproved']);
+  assert.ok(!keys.includes('lieutenant') && !keys.includes('lieutenantStar'));
+  const d = F.normalize({ lieutenant: 'LT Example', lieutenantStar: '99', reportingOfficer: 'P.O. Example' });
+  assert.ok(!('lieutenant' in d) && !('lieutenantStar' in d), 'old Lieutenant entries are dropped');
+  assert.strictEqual(d.secondDate, '');
+  const s = Buffer.from(P.build({ ...d, secondOfficer: 'P.O. Second', secondDate: '2026-03-15', secondTime: '14:30' }, {})).toString('latin1');
+  assert.doesNotMatch(s, /LIEUTENANT|LieutenantSignature/);
+  assert.match(s, /SECONDARY REPORTING OFFICER/);
+  assert.match(s, /\(03\.15\.2026\)/);
+});
+
+test('v1.23: a Details suspect fills the report Offenders by name', () => {
+  const d = F.normalize({ offendersList: [{ name: '' }] });
+  const s = { name: 'John Example', dob: '1990-06-15', info: { race: 'White', hair: 'Brown', marks: 'Tattoo, left forearm', bogus: 'x' } };
+  assert.deepStrictEqual(F.suspectToOffender(d, s, '2026-03-15'), { index: 0, added: false }, 'the empty offender is used first');
+  assert.strictEqual(d.offendersList[0].age, '35');
+  assert.strictEqual(d.offendersList[0].marks, 'Tattoo, left forearm');
+  assert.ok(!('bogus' in d.offendersList[0]));
+  // Same name (any case or spacing): updated, and blank suspect fields don't wipe the report's.
+  d.offendersList[0].eyes = 'Blue';
+  assert.deepStrictEqual(F.suspectToOffender(d, { name: ' john  EXAMPLE ', info: { eyes: '', weight: '180' } }, '2026-03-15'), { index: 0, added: false });
+  assert.strictEqual(d.offendersList[0].eyes, 'Blue');
+  assert.strictEqual(d.offendersList[0].weight, '180');
+  assert.deepStrictEqual(F.suspectToOffender(d, { name: 'Jane Example' }, '2026-03-15'), { index: 1, added: true });
+  assert.strictEqual(F.suspectToOffender(d, { name: '  ' }, '2026-03-15'), null);
+  assert.ok(F.SUSPECT_INFO.every(([k]) => !['name', 'dob', 'age'].includes(k)));
+});
+
+test('v1.23: LSD and psilocybin (Schedule I hallucinogens) are in the charges', () => {
+  const RD = require('../js/reference/ref-data.js');
+  const all = RD.CHARGES.flatMap((g) => g.codes);
+  for (const drug of ['LSD', 'Psilocybin']) {
+    assert.ok(all.some(([s, d]) => s === '720 ILCS 570/401(e)' && d.includes(drug) && /Hallucinogen/.test(d)), `${drug} delivery`);
+    assert.ok(all.some(([s, d]) => s === '720 ILCS 570/402(c)' && d.includes(drug)), `${drug} possession`);
+  }
 });

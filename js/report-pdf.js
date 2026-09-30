@@ -303,12 +303,14 @@
 
     // ---- submission and approval (kept together on one page)
     if (on('approval')) {
-      ensure(4 * 30 + 30);
+      ensure(4 * 38 + 30);
       band('Submission and Approval');
-      boxes([cell('extraCopies', 1.6), cell('dateSubmitted', 1), cell('timeSubmitted', 0.7), cell('supervisor', 1.5), cell('supervisorStar', 0.7, 'Star')]);
-      boxes([cell('reportingOfficer', 1.6, 'Reporting Officer - Print'), cell('reportingStar', 0.6, 'Star'), cell('secondOfficer', 1.5, 'Reporting Officer'), cell('secondStar', 0.6, 'Star'), { label: 'Signature', value: '', w: 1.6, sign: 'SupervisorSignature' }], 36);
-      boxes([{ label: 'Signature', value: '', w: 2.2, sign: 'ReportingOfficerSignature' }, { label: 'Signature', value: '', w: 2.1, sign: 'SecondOfficerSignature' }, cell('dateApproved', 1, 'Date Approved'), cell('timeApproved', 0.6, 'Time')], 36);
-      boxes([cell('lieutenant', 1.6, 'Lieutenant Approval'), cell('lieutenantStar', 0.6, 'Star'), { label: 'Signature', value: '', w: 2.1, sign: 'LieutenantSignature' }, { label: 'Note', value: 'Sign in blue ink or with an electronic signature.', w: 1.6 }], 36);
+      // One row per officer, the same columns each time: name, star, date, time, signature.
+      const officer = (name, star, date, time, label, sign) => boxes([cell(name, 2, label), cell(star, 0.7, 'Star'), cell(date, 1, 'Date'), cell(time, 0.7, 'Time'), { label: 'Signature', value: '', w: 2.2, sign }], 36);
+      officer('reportingOfficer', 'reportingStar', 'dateSubmitted', 'timeSubmitted', 'Reporting Officer - Print', 'ReportingOfficerSignature');
+      officer('secondOfficer', 'secondStar', 'secondDate', 'secondTime', 'Secondary Reporting Officer', 'SecondOfficerSignature');
+      officer('supervisor', 'supervisorStar', 'dateApproved', 'timeApproved', 'Supervisor Approval', 'SupervisorSignature');
+      boxes([cell('extraCopies', 2.7, 'Extra Copies Required'), { label: 'Note', value: 'Sign in blue ink or with an electronic signature.', w: 3.9 }]);
     }
 
     // ---- Exhibit Attachments: the exhibit photos, two to a portrait page, each as large as fits,

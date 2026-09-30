@@ -1778,6 +1778,9 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 .rf-grid.rf-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 1100px) { .rf-grid, .rf-grid.rf-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .rf-grid, .rf-grid.rf-grid-4 { grid-template-columns: 1fr; } }
+/* Submission and Approval: one row per officer - Name | Star | Date | Time (v1.23). */
+.rf-grid.rf-grid-officers { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.15fr) minmax(0, 1.1fr) minmax(0, 1fr); align-items: end; }
+@media (max-width: 600px) { .rf-grid.rf-grid-officers { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .rf-head { display: flex; align-items: center; gap: .6rem; margin-bottom: .7rem; }
 .rf-head h3 { margin: 0; }
 .rf-include { display: inline-flex; align-items: center; cursor: pointer; }
@@ -1894,7 +1897,14 @@ table.files thead th:last-child { border-top-right-radius: calc(var(--radius) - 
 .decon-table th:nth-child(1) { width: 11.5rem; }
 .decon-table .date-field .date-text { padding-right: 2.2rem; }
 /* v1.22: the role box is wide enough for "Secondary". */
-.suspect-row { grid-template-columns: minmax(0, 1.5fr) 10.5rem 3.5rem minmax(0, 1.6fr) 10rem 2.1rem; }
+.suspect-row { grid-template-columns: minmax(0, 1.5fr) 10.5rem 3.5rem minmax(0, 1.6fr) 10rem auto 2.1rem; }
+.suspect-row .suspect-more { white-space: nowrap; align-self: end; }
+/* A suspect's More Info dialog (v1.23): the report's Offender fields, three to a row. */
+.suspect-info-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem 1rem; margin: .8rem 0 1rem; }
+.suspect-info-grid .field { margin: 0; min-width: 0; }
+.suspect-info-grid .span-all { grid-column: 1 / -1; }
+.suspect-info-grid input, .suspect-info-grid select { width: 100%; }
+@media (max-width: 700px) { .suspect-info-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 900px) { .suspect-row { grid-template-columns: 1fr 1fr; } }
 /* One grid for every Officer's Report line: tick box | label | entry, so all entries line up. */
 .rf-lines .field, .rf-lines .rf-optional { grid-template-columns: 1.2rem minmax(10rem, 16rem) minmax(0, 1fr); padding-left: 0; }
