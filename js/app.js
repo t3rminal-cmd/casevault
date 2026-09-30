@@ -116,7 +116,7 @@
   const DIALOG_SIZES = [
     ['panel', '.vault-panel'],
     ['full', '.preview, .doc-view, .lib-preview, .pdf-view'],
-    ['wide', '.type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
+    ['wide', '.type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form, .suspect-info'],
   ];
 
   function openDialog(build) {
@@ -746,7 +746,7 @@
       field('File number', h('input', { name: 'fileNumber', maxlength: 100, list: 'file-numbers', title: 'The investigation file. Several cases can share one file number.' })),
       field('Case number', numberIn),
       fileList,
-      field('Agency case number', h('input', { name: 'agencyNumber', maxlength: 100, title: 'Your agency\'s own internal number for this case.' })),
+      field('Agency Case Number', h('input', { name: 'agencyNumber', maxlength: 100, title: 'Your agency\'s own internal number for this case.' })),
       field('Client', clientSelect('', { name: 'client' })),
       field('Status', h('select', { name: 'status' }, Vault.STATUSES.map((s) => h('option', {}, s)))),
       field('Opened', openedIn),
@@ -932,7 +932,7 @@
         field('Title or Operation Name', bind(h('input', { value: c.title, maxlength: 200 }), (v) => { c.title = v; }), 'span-2', 'The case title, or the operation\'s name. An operation can hold several case numbers: give each its own case here with the same operation name and file number.'),
         field('File number', bind(h('input', { value: c.fileNumber || '', maxlength: 100, title: 'The investigation file. Several cases can share one file number.' }), (v) => { c.fileNumber = v; })),
         field('Case number', bind(h('input', { value: c.number, maxlength: 100 }), (v) => { c.number = v; })),
-        field('Agency case number', bind(h('input', { value: c.agencyNumber || '', maxlength: 100, title: 'Your agency\'s own internal number for this case.' }), (v) => { c.agencyNumber = v; })),
+        field('Agency Case Number', bind(h('input', { value: c.agencyNumber || '', maxlength: 100, title: 'Your agency\'s own internal number for this case.' }), (v) => { c.agencyNumber = v; })),
         field('Client', (() => { const sel = clientSelect(c.client); sel.addEventListener('change', () => { c.client = sel.value; save(); }); return sel; })()),
         h('label', { class: 'field' }, h('span', {}, 'Status'), statusSelect, statusNote),
         field('Opened', bind(h('input', { type: 'date', value: c.dates.opened || '' }), (v) => { c.dates.opened = v; })),
@@ -1005,6 +1005,7 @@
           h('div', { class: 'field' }, h('span', {}, 'Age'), age),
           field('Residence', input('residence', { maxlength: 200, 'aria-label': `${who} residence` })),
           field('Role', role),
+          h('button', { class: 'btn small suspect-more', type: 'button', icon: 'person-vcard', title: 'Gender, race, height, hair, tattoos… as on the report. Can fill Report Fields → Offenders.', onclick: () => suspectMoreInfo(c, s, i, save) }, 'More Info'),
           h('button', { class: 'icon-btn danger-icon contact-remove', type: 'button', title: 'Remove this suspect', onclick: () => { c.suspects.splice(i, 1); draw(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Remove ${who}`)));
       }) : [h('p', { class: 'muted small suspect-empty' }, 'No suspects yet.')]));
     };
@@ -1018,6 +1019,60 @@
         const last = rows.lastElementChild && rows.lastElementChild.querySelector('input');
         if (last) last.focus();
       } }, 'Add suspect')));
+  }
+
+  /* A suspect's More Info (v1.23): the demographics the report asks for (Report Fields → Offenders),
+   * kept on the suspect as s.info. "Fill in Report Fields" copies the suspect into the report's
+   * Offenders: the offender with the same name, or a new one. */
+  async function suspectMoreInfo(c, s, i, save) {
+    const RF = window.CVReportFields;
+    if (!RF) return;
+    const info = { ...(s.info || {}) };
+    const who = s.name || `Suspect ${i + 1}`;
+    const els = {};
+    const boxes = RF.SUSPECT_INFO.map(([k, label, kind, opts]) => {
+      let el;
+      if (kind === 'select') el = h('select', {}, opts.map((o) => h('option', { value: o, selected: o === (info[k] || '') }, o || '—')));
+      else el = h('input', { type: 'text', autocomplete: 'off', value: info[k] || '' });
+      el.setAttribute('aria-label', `${who} ${label}`);
+      els[k] = el;
+      const box = RF.PICKS[kind] && window.CVCombo ? CVCombo.attach(el, { items: () => RF.PICKS[kind].map((v) => ({ value: v, label: v })) }) : el;
+      return field(label, box, kind === 'wide' ? 'span-all' : '');
+    });
+    const toReport = h('input', { type: 'checkbox', checked: s.toReport !== false });
+    const result = await openDialog((close) => h('form', { class: 'suspect-info', method: 'dialog', onsubmit: (e) => { e.preventDefault(); close(true); } },
+      h('h2', { icon: 'person-vcard' }, `More Info - ${who}`),
+      h('p', { class: 'muted small' }, `The same fields as the report's Offenders.${s.dob ? ` Date of birth ${CVFormat.dateText(s.dob)} and age come from the suspect row.` : ''}`),
+      h('div', { class: 'suspect-info-grid' }, boxes),
+      h('label', { class: 'check-row' }, toReport, h('span', {}, 'Also fill this suspect into Report Fields → Offenders')),
+      h('div', { class: 'dialog-actions' },
+        h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'),
+        h('button', { class: 'btn primary', type: 'submit' }, 'Save'))));
+    if (!result) return;
+    for (const [k] of RF.SUSPECT_INFO) info[k] = String(els[k].value || '').trim();
+    s.info = info;
+    s.toReport = toReport.checked;
+    save();
+    if (s.toReport) await suspectsToReport(c, [s]);
+  }
+
+  /** Copy suspects into report-fields.json's Offenders (read, change, write back). */
+  async function suspectsToReport(c, list) {
+    const RF = window.CVReportFields;
+    const named = list.filter((s) => String(s.name || '').trim());
+    if (!RF || !named.length) { if (RF && list.length) toast('Give the suspect a name first, then it can go into Report Fields.', 'info'); return; }
+    try {
+      await Save.flushAll(); // an edit still waiting in Report Fields is written first
+      let d = null;
+      try { d = await Vault.readCaseJSON(c.id, 'report-fields.json'); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+      d = RF.normalize(d);
+      let added = 0;
+      for (const s of named) { const r = RF.suspectToOffender(d, s, Vault.localDay()); if (r && r.added) added++; }
+      await Vault.writeCaseJSON(c.id, 'report-fields.json', d);
+      toast(named.length === 1 ? `${named[0].name} is in Report Fields → Offenders${added ? ' (added)' : ' (updated)'}.` : `${named.length} suspects are in Report Fields → Offenders.`, 'success');
+    } catch (err) {
+      toast(`Couldn't fill Report Fields: ${err.message || err}`, 'error');
+    }
   }
 
   /* Contacts on the Details tab: the case officer, the prosecutor (ASA or AUSA) and anyone else

@@ -88,20 +88,21 @@
       ['evidenceOfficer', 'Evidence Officer', 'line'],
       ['proofResidence', 'Proof of Residence', 'line'],
     ], lists: ['charges', 'gangs', 'notArrested', 'personnel', 'vehicles', 'notifications'] },
+    // One row per officer: name, star, date, time (v1.23; the Lieutenant lines were removed).
     { id: 'approval', title: 'Submission and Approval', icon: 'pencil-square', fields: [
-      ['extraCopies', 'Extra Copies Required', 'text'],
-      ['dateSubmitted', 'Date Submitted', 'date'],
-      ['timeSubmitted', 'Time Submitted', 'time'],
       ['reportingOfficer', 'Reporting Officer', 'text'],
       ['reportingStar', 'Reporting Officer Star', 'text'],
-      ['secondOfficer', 'Second Reporting Officer', 'text'],
-      ['secondStar', 'Second Officer Star', 'text'],
+      ['dateSubmitted', 'Date Submitted', 'date'],
+      ['timeSubmitted', 'Time Submitted', 'time'],
+      ['secondOfficer', 'Secondary Reporting Officer', 'text'],
+      ['secondStar', 'Secondary Officer Star', 'text'],
+      ['secondDate', 'Secondary Officer Date', 'date'],
+      ['secondTime', 'Secondary Officer Time', 'time'],
       ['supervisor', 'Supervisor Approval', 'text'],
       ['supervisorStar', 'Supervisor Star', 'text'],
       ['dateApproved', 'Date Approved', 'date'],
       ['timeApproved', 'Time Approved', 'time'],
-      ['lieutenant', 'Lieutenant Approval', 'text'],
-      ['lieutenantStar', 'Lieutenant Star', 'text'],
+      ['extraCopies', 'Extra Copies Required', 'text', 'span'],
     ] },
   ];
   // Parts of the report that can be left out ("doesn't apply"): the sections above, and these.
@@ -177,7 +178,7 @@
       if (old('personnel') && typeof src.personnel === 'string') d.personnel = [{ ...blankItem('personnel'), name: old('personnel') }];
       if (old('vehicle') || old('impound')) d.vehicles.push({ ...blankItem('vehicles'), notes: [old('vehicle'), old('impound')].filter(Boolean).join('; ') });
     }
-    for (const k of ['victimName', 'victimRelation', 'victimDetails', 'offenderName', 'offenderRelation', 'offenderDetails', 'gangAffiliation', 'vehicle', 'impound']) delete d[k];
+    for (const k of ['victimName', 'victimRelation', 'victimDetails', 'offenderName', 'offenderRelation', 'offenderDetails', 'gangAffiliation', 'vehicle', 'impound', 'lieutenant', 'lieutenantStar']) delete d[k];
     d.hidden = Array.isArray(d.hidden) ? d.hidden.filter((x) => typeof x === 'string') : [];
     d.schema = 4;
     return d;
@@ -208,6 +209,30 @@
       if (kind === 'date') { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v); if (m) v = `${m[2]}.${m[3]}.${m[1]}`; }
       return k === 'name' || k === 'statute' ? v : `${label}: ${v}`;
     }).filter(Boolean).join(', ');
+  }
+
+  // The Offender fields a suspect's More Info holds (Details → Suspects, v1.23): all but the three
+  // on the suspect's own row (name, date of birth, age).
+  const SUSPECT_INFO = PERSON.filter(([k]) => !['name', 'dob', 'age'].includes(k));
+  const nameKey = (n) => String(n || '').trim().replace(/\s+/g, ' ').toLowerCase();
+
+  /** A Details suspect copied into the report's Offenders: the offender with the same name is
+   * updated (or an empty one filled, or a new one added). Only filled suspect fields overwrite.
+   * Returns { index, added }, or null when the suspect has no name. */
+  function suspectToOffender(d, s, day) {
+    const name = String((s && s.name) || '').trim();
+    if (!name) return null;
+    const list = d.offendersList;
+    let index = list.findIndex((o) => nameKey(o.name) === nameKey(name));
+    let added = false;
+    if (index < 0) index = list.findIndex((o) => !filled(o));
+    if (index < 0) { list.push(blankItem('offendersList')); index = list.length - 1; added = true; }
+    const o = list[index];
+    o.name = name;
+    if (s.dob) { o.dob = s.dob; o.age = ageOn(s.dob, day); }
+    const info = (s && s.info) || {};
+    for (const [k] of SUSPECT_INFO) if (String(info[k] || '').trim()) o[k] = String(info[k]).trim();
+    return { index, added };
   }
 
   /** The next exhibit number: one more than the highest used in this case or any case sharing its agency case number. */
@@ -277,7 +302,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, exhibitLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, SUSPECT_INFO, suspectToOffender, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, exhibitLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);
