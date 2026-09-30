@@ -36,28 +36,28 @@
       if (hit) type.value = hit;
     };
     tplSelect.addEventListener('change', guessType);
-    const radios = {};
-    const radio = (value, label, extra) => {
-      radios[value] = h('input', { type: 'radio', name: 'draft-start', value, checked: value === 'blank' });
-      if (value === 'template') radios[value].addEventListener('change', guessType);
-      return h('label', { class: 'radio-row' }, radios[value], h('span', {}, h('strong', {}, label), extra || null));
-    };
+    // How to start: a dropdown (Blank, Template, Draft with AI). The template list shows under it
+    // when Template is picked.
+    const startSel = h('select', { 'aria-label': 'Start from' },
+      h('option', { value: 'blank' }, 'Blank'), h('option', { value: 'template' }, 'Template'), h('option', { value: 'ai' }, 'Draft with AI'));
     const aiNote = h('span', { class: 'muted small block' });
-    const startBox = h('div', { class: 'radio-list' });
+    const tplRow = h('div', { class: 'start-template', hidden: true }, templates.length
+      ? tplSelect
+      : h('span', { class: 'muted small block' }, 'No templates yet. ', h('button', { class: 'linkish', type: 'button', onclick: addStarters }, 'Add the starter templates'), ' or manage them under Vault → Templates.'));
+    const startBox = h('div', { class: 'start-box' }, startSel, tplRow, aiNote);
     function drawStart() {
       const ready = aiReady();
-      radios.ai && (radios.ai.disabled = !ready);
-      if (!ready && radios.ai && radios.ai.checked) radios.blank.checked = true;
+      const aiOpt = startSel.querySelector('option[value="ai"]');
+      aiOpt.disabled = !ready;
+      if (!ready && startSel.value === 'ai') startSel.value = 'blank';
+      tplRow.hidden = startSel.value !== 'template';
+      aiNote.hidden = startSel.value !== 'ai';
       aiNote.textContent = ready
-        ? `Writes a first draft from this case's details, timeline, notes and attached documents, using ${CVChecks.profileLabel(Engine().choice())}.`
-        : 'Needs the local AI engine (header shows "AI: Connected"). Start Start-CaseVault.bat on the CV-AI drive.';
+        ? `Writes a first draft from this case's details, timeline, notes, report fields and attached documents, using ${CVChecks.profileLabel(Engine().choice())}.`
+        : 'Draft with AI needs the local AI engine. Start Start-CaseVault.bat on the CV-AI drive.';
+      if (startSel.value === 'template') guessType();
     }
-    startBox.append(
-      radio('blank', 'Blank'),
-      radio('template', 'Template', templates.length
-        ? h('span', { class: 'block' }, tplSelect)
-        : h('span', { class: 'muted small block' }, 'No templates yet. ', h('button', { class: 'linkish', type: 'button', onclick: addStarters }, 'Add the starter templates'), ' or manage them under Vault → Templates.')),
-      radio('ai', 'Draft with AI', aiNote));
+    startSel.addEventListener('change', drawStart);
     drawStart();
 
     async function addStarters() {
@@ -71,7 +71,7 @@
     const create = h('button', { class: 'btn primary', type: 'button' }, 'Create report');
     create.addEventListener('click', async () => {
       const name = title.value.trim() || `${CVDraft.DOC_TYPES[type.value].label} ${CVFormat.dateText(Vault.localDay())}`;
-      const start = Object.values(radios).find((r) => r.checked).value;
+      const start = startSel.value;
       let body = `# ${name}\n\n`;
       try {
         if (start === 'template') {
@@ -94,10 +94,19 @@
       h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/.notes` }, ui.icon('journal-text'), ' Case notes')),
       h('td', { class: 'muted' }, 'Notes'),
       h('td', { class: 'muted' }, words ? `${words} word${words === 1 ? '' : 's'}` : 'Empty'),
+      h('td', { class: 'actions' }, words && !Vault.isArchived(c.id) ? h('button', { class: 'btn small ghost', type: 'button', title: 'Empties the case notes (notes.md). Case notes always stay in the list.', onclick: async () => {
+        if (!(await confirmDialog({ title: 'Delete the case notes?', message: `All ${words} words of this case's notes are permanently deleted from the SSD.`, confirmText: 'Delete', danger: true }))) return;
+        try { await Save.track(`notes:${c.id}`, () => Vault.saveNotes(c.id, '')); ui.refresh(); } catch { /* reported */ }
+      } }, 'Delete') : null));
+    // Report Fields: the incident facts for this case's reports (js/report-fields-ui.js).
+    const fieldsRow = h('tr', { class: 'notes-row' },
+      h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/.fields` }, ui.icon('card-checklist'), ' Report Fields')),
+      h('td', { class: 'muted' }, 'Fields'),
+      h('td', { class: 'muted' }, 'Offense, UCR, location, people, evidence, narrative'),
       h('td', {}));
     const list = h('table', { class: 'files drafts-table' },
       h('thead', {}, h('tr', {}, h('th', {}, 'Report'), h('th', {}, 'Type'), h('th', {}, 'Updated'), h('th', {}, ''))),
-      h('tbody', {}, notesRow, drafts.map((d) => h('tr', {},
+      h('tbody', {}, notesRow, fieldsRow, drafts.map((d) => h('tr', {},
         h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/${encodeURIComponent(d.slug)}` }, d.title), d.ai ? h('span', { class: 'layer-badge ai-badge' }, 'AI') : null),
         h('td', { class: 'muted' }, (CVDraft.DOC_TYPES[d.type] || CVDraft.DOC_TYPES.other).label),
         h('td', { class: 'muted' }, d.updated ? fmtDateTime(Date.parse(d.updated)) : ''),
@@ -321,6 +330,8 @@
       preview.hidden = false; wrap.hidden = true; btnPreview.classList.add('active'); btnEdit.classList.remove('active');
     });
     const genBtn = h('button', { class: 'btn small', type: 'button', onclick: () => openGenerate() }, 'Draft with AI…');
+    const rephraseBtn = h('button', { class: 'btn small', type: 'button', icon: 'magic', title: 'Select a sentence or paragraph, then click: the AI on this computer rewrites it the way DEA reports are written. You see both before anything changes.', onclick: () => rephrase() }, 'Re-phrase');
+    const reviewBtn = h('button', { class: 'btn small', type: 'button', icon: 'clipboard2-check', title: 'Checks that the totals add up (money and weights), then has the AI on this computer look for names, dates, amounts and facts that don\'t agree.', onclick: () => review() }, 'Review');
     const checkBtn = h('button', { class: 'btn small', type: 'button', hidden: meta.type !== 'affidavit', onclick: async () => {
       await Save.flushAll();
       CVChecks.checkDraft(c, { slug, title: meta.title, exclude: meta.exports || [] });
@@ -330,7 +341,8 @@
       h('div', { class: 'menu-items' },
         h('button', { type: 'button', onclick: () => exportDocx('case') }, 'Save .docx to case files'),
         h('button', { 'data-ro-ok': 'true', type: 'button', onclick: () => exportDocx('download') }, 'Save .docx to this computer…'),
-        h('button', { 'data-ro-ok': 'true', type: 'button', onclick: copyPlain }, 'Copy as plain text')));
+        h('button', { 'data-ro-ok': 'true', type: 'button', onclick: copyPlain }, 'Copy as plain text'),
+        h('button', { type: 'button', onclick: saveAsTemplate }, 'Save as a template…')));
     // Drafts save by themselves; Save (or Ctrl+S) writes now and says so.
     const saveBtn = h('button', { class: 'btn small primary', type: 'button', title: 'Save now (Ctrl+S). Drafts also save by themselves.', onclick: async () => {
       save(0);
@@ -357,7 +369,7 @@
         fmtBar,
         h('label', { class: 'check-row suggest-toggle' }, suggestToggle, h('span', {}, 'AI suggestions ', suggestNote)),
         h('div', { class: 'spacer' }),
-        genBtn, checkBtn, exportMenu, saveBtn, delBtn),
+        genBtn, rephraseBtn, reviewBtn, checkBtn, exportMenu, saveBtn, delBtn),
       genStatus,
       h('div', { class: 'draft-grid' },
         h('div', { class: 'draft-main' }, wrap, preview),
@@ -436,6 +448,94 @@
       return !Engine().inBrowser() && chat.length > 0 && chat.every((m) => m.size != null && m.size < 5);
     }
 
+    // Export → Save as a template: this report's text becomes a template in Vault → Templates.
+    async function saveAsTemplate() {
+      exportMenu.open = false;
+      const name = await ui.openDialog((close) => {
+        const inp = h('input', { type: 'text', value: meta.title, maxlength: 80, autofocus: true });
+        return h('form', { onsubmit: (e) => { e.preventDefault(); close(inp.value.trim()); } },
+          h('h2', {}, 'Save as a template'),
+          h('p', { class: 'muted small' }, 'Replace this case\'s details with {{placeholders}} afterwards in Vault → Templates (for example {{case.number}}), or use Options → Dev Tools to make it fictitious first.'),
+          ui.field('Template name', inp),
+          h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Save template')));
+      });
+      if (!name) return;
+      const file = `${name.replace(/\.md$/i, '')}.md`;
+      try { await Save.track(`template:${file}`, () => Vault.saveTemplate(file, ta.value)); toast(`Saved as the template "${name}".`, 'success'); } catch { /* reported by Save */ }
+    }
+
+    // Re-phrase: the selection rewritten the DEA way; shown side by side before it replaces anything.
+    async function rephrase() {
+      const s = ta.selectionStart; const e = ta.selectionEnd;
+      const text = ta.value.slice(s, e).trim();
+      if (!text) return toast('Select the sentence or paragraph to re-phrase first.', 'error');
+      await Engine().refresh();
+      if (!aiReady()) return toast('The local AI engine is not connected. Start Start-CaseVault.bat on the CV-AI drive, then try again.', 'error', 8000);
+      const choice = Engine().choice(); const det = Engine().detected;
+      const ctrl = new AbortController();
+      const out = h('div', { class: 'rephrase-out notes-preview' }, h('span', { class: 'spinner', 'aria-hidden': 'true' }), ' Re-phrasing…');
+      let result = '';
+      const use = h('button', { class: 'btn primary', type: 'button', disabled: true }, 'Replace the selection');
+      const done = ui.openDialog((close) => {
+        use.addEventListener('click', () => close(result.trim()));
+        return h('div', { class: 'rephrase-form' },
+          h('h2', { icon: 'magic' }, 'Re-phrase to DEA standards'),
+          h('div', { class: 'rephrase-cols' },
+            h('div', {}, h('h3', {}, 'Now'), h('div', { class: 'rephrase-in notes-preview' }, text)),
+            h('div', {}, h('h3', {}, 'Re-phrased'), out)),
+          h('p', { class: 'muted small' }, 'Check that every fact, number and name is unchanged before you use it.'),
+          h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => { ctrl.abort(); close(null); } }, 'Cancel'), use));
+      });
+      CVActivity.exclusive('draft', () => CVCopilot.streamChat({
+        fetchImpl: Engine().fetchImpl(), base: det.base, model: choice.model, signal: ctrl.signal, numCtx: CVAI.numCtxFor(choice.profile),
+        messages: CVCopilot.rephraseMessages(text, CVLibrary.behaviorById(Vault.data.settings, meta.behavior || CVLibrary.defaultBehaviorId(Vault.data.settings)).prompt),
+        onText: (piece) => { result += piece; out.textContent = result; },
+      }), { label: 'Re-phrasing…', model: choice.model })
+        .then(() => { use.disabled = !result.trim(); })
+        .catch((err) => { if (!ctrl.signal.aborted) out.textContent = `Could not re-phrase: ${err.message}`; });
+      const chosen = await done;
+      ctrl.abort();
+      if (!chosen) return;
+      ta.focus();
+      ta.setRangeText(chosen, s, e, 'select');
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    // Review: the arithmetic check at once, then the AI's consistency review (added when the
+    // local AI is found; the window doesn't wait for it).
+    async function review() {
+      save(0);
+      const math = CVReview.check(ta.value);
+      const mathText = CVReview.describe(math);
+      const aiBox = h('div', { class: 'review-ai notes-preview' }, h('span', { class: 'spinner', 'aria-hidden': 'true' }), ' Looking for the local AI…');
+      const ctrl = new AbortController();
+      const dlg = ui.openDialog((close) => h('div', { class: 'review-report' },
+        h('h2', { icon: 'clipboard2-check' }, 'Review'),
+        h('h3', {}, 'Totals'),
+        h('div', { class: `review-math ${math.issues.length ? 'warn' : 'ok'}` }, ...mathText.split('\n').map((l) => h('p', {}, (math.issues.length ? '⚠ ' : '✓ ') + l))),
+        h('h3', {}, 'Consistency (local AI)'),
+        aiBox,
+        h('p', { class: 'muted small' }, 'AI reviews can miss things or be wrong. Read the report yourself too.'),
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => { ctrl.abort(); close(); } }, 'Done'))));
+      (async () => {
+        await Engine().refresh().catch(() => {});
+        if (ctrl.signal.aborted) return;
+        if (!aiReady()) { aiBox.replaceChildren('The local AI engine is not connected, so only the totals were checked.'); return; }
+        const choice = Engine().choice(); const det = Engine().detected;
+        const caseObj = await Vault.getCase(c.id);
+        const facts = [`Title: ${caseObj.title || ''}`, `Case number: ${caseObj.number || ''}`, caseObj.agencyNumber ? `Agency case number: ${caseObj.agencyNumber}` : '', ...CVCopilot.contactLines(caseObj.contacts)].filter(Boolean).join('\n');
+        let result = '';
+        aiBox.replaceChildren(h('span', { class: 'spinner', 'aria-hidden': 'true' }), ' Reading the report…');
+        await CVActivity.exclusive('draft', () => CVCopilot.streamChat({
+          fetchImpl: Engine().fetchImpl(), base: det.base, model: choice.model, signal: ctrl.signal, numCtx: CVAI.numCtxFor(choice.profile),
+          messages: CVCopilot.reviewMessages(ta.value, { facts, math: mathText }),
+          onText: (piece) => { result += piece; aiBox.innerHTML = Markdown.render(result); },
+        }), { label: 'Reviewing…', model: choice.model });
+      })().catch((err) => { if (!ctrl.signal.aborted) aiBox.textContent = `Could not finish the review: ${err.message}`; });
+      await dlg;
+      ctrl.abort();
+    }
+
     async function openGenerate() {
       await Engine().refresh();
       if (!aiReady()) return toast('The local AI engine is not connected. Start Start-CaseVault.bat on the CV-AI drive, then try again.', 'error', 8000);
@@ -473,12 +573,14 @@
         drawLibrary();
         const useValues = h('input', { type: 'checkbox', checked: /drug|narcotic|cocaine|heroin|fentanyl|meth|cannabis/i.test(`${c.title} ${(c.tags || []).join(' ')}`) });
         const useCodes = h('input', { type: 'checkbox' });
+        // Off by default: the draft starts straight with the summary.
+        const useHeader = h('input', { type: 'checkbox' });
         const replace = h('input', { type: 'radio', name: 'gen-mode', value: 'replace', checked: !ta.value.trim() });
         const append = h('input', { type: 'radio', name: 'gen-mode', value: 'append', checked: !!ta.value.trim() });
         return h('form', { class: 'gen-form', onsubmit: (e) => {
           e.preventDefault();
           close({ type: type.value, template: tpl.value, timeline: useTimeline.checked, notes: useNotes.checked, docs: docBoxes.filter((b) => b.checked).map((b) => b.value), instructions: instr.value.trim(), mode: replace.checked ? 'replace' : 'append',
-            behavior: behavior.value, library: libChecks.filter((b) => b.checked).map((b) => b.value), values: useValues.checked, codes: useCodes.checked });
+            behavior: behavior.value, library: libChecks.filter((b) => b.checked).map((b) => b.value), values: useValues.checked, codes: useCodes.checked, header: useHeader.checked });
         } },
         h('h2', {}, 'Draft with AI'),
         h('p', { class: 'muted small' }, `Uses ${CVChecks.profileLabel(Engine().choice())} on this computer. The AI is told to use only this case's material and to write [CONFIRM: ...] for anything missing.`),
@@ -491,6 +593,8 @@
             h('label', { class: 'check-row' }, useNotes, h('span', {}, 'Notes')),
             docBoxes.map((b) => h('label', { class: 'check-row' }, b, h('span', {}, b.value))),
             docs.length ? null : h('p', { class: 'muted small' }, 'No attached documents to draw on.'))),
+        h('div', { class: 'field' }, h('span', {}, 'Header'),
+          h('label', { class: 'check-row', title: 'Off: the draft starts straight with the summary.' }, useHeader, h('span', {}, 'Start with a header block: case officer, ASA/AUSA, file, case and agency numbers, date'))),
         ui.field('Writing behavior', behavior),
         h('div', { class: 'field' }, h('span', { title: 'How to write, never facts: names and events in the examples belong to other cases.' }, 'Library'), libBox),
         h('div', { class: 'field' }, h('span', {}, 'Reference'),
@@ -561,7 +665,8 @@
           const behaviorPrompt = CVLibrary.behaviorById(Vault.data.settings, opts.behavior).prompt;
           if (opts.values) references.push({ title: 'Narcotics street values', text: CVReference.narcoticsText() });
           if (opts.codes) references.push({ title: 'Incident location codes', text: CVReference.locationCodesText() }, { title: 'UCR codes', text: CVReference.ucrText() });
-          const messages = CVCopilot.draftMessages({ type: opts.type, template, instructions: opts.instructions, caseObj, timeline, notes, passages, references, examples, directives, behavior: behaviorPrompt, numCtx });
+          const fields = root.CVReportFields ? CVReportFields.asText(await CVReportFieldsUI.load(c)) : '';
+          const messages = CVCopilot.draftMessages({ type: opts.type, template, instructions: opts.instructions, caseObj, timeline, notes, passages, references, examples, directives, behavior: behaviorPrompt, numCtx, header: !!opts.header, fields });
 
           Object.assign(meta, {
             ai: true, type: opts.type, ...(opts.template ? { template: opts.template } : {}), behavior: opts.behavior,
@@ -625,7 +730,7 @@
     return h('details', { class: 'placeholder-help' },
       h('summary', { title: 'Click one to insert it at the cursor.' }, 'Placeholders'),
       h('p', { class: 'muted small explain' }, 'When a draft is made, each placeholder is replaced with the case\'s value. Anything empty or unknown becomes [CONFIRM: …] so nothing slips through. Upper/lower case does not matter.'),
-      CVDraft.placeholderGroups(arrestKeys).map((grp) => h('div', { class: 'ph-group' },
+      CVDraft.placeholderGroups(arrestKeys, root.CVReportFields ? CVReportFields.PLACEHOLDERS : []).map((grp) => h('div', { class: 'ph-group' },
         h('span', { class: 'ph-title small' }, grp.title),
         h('span', { class: 'ph-keys' }, grp.keys.map((k) => h('button', { class: 'ph-key', type: 'button', title: `Insert {{${k}}}`, onclick: () => insert(k) }, `{{${k}}}`))))));
   }
@@ -641,13 +746,55 @@
       box.replaceChildren(list.length
         ? h('ul', { class: 'plain-list template-list' }, list.map((t) => h('li', {},
           h('span', {}, t.title, h('span', { class: 'muted small' }, ` · ${t.file}`)),
-          h('span', {},
+          h('span', { class: 'template-btns' },
+            h('button', { class: 'btn small ghost', type: 'button', icon: 'file-earmark-plus', title: 'Start a new report from this template in the case you have open, with its details filled in.', onclick: () => useTemplate(t) }, 'Use'),
+            h('button', { class: 'btn small ghost', type: 'button', icon: 'download', title: 'Save this template as a Word document (.docx) on this computer, with its {{placeholders}}.', onclick: () => downloadTemplate(t) }, 'Download'),
             h('button', { class: 'btn small ghost', type: 'button', onclick: () => edit(t.file) }, 'Edit'),
             h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
               if (!window.confirm(`Delete the template "${t.title}" from the SSD?`)) return;
               try { await Save.track('templates', () => Vault.deleteTemplate(t.file)); draw(); } catch { /* reported */ }
             } }, 'Delete')))))
         : h('p', { class: 'muted small' }, 'No templates yet.'));
+    }
+
+    // Use: a new report in the open case, filled from this template, then open it.
+    async function useTemplate(t) {
+      const id = ui.state.caseId;
+      if (!id || Vault.isArchived(id)) return toast('Open a case first (not an archived one), then use the template.', 'error');
+      try {
+        const caseObj = await Vault.getCase(id);
+        const text = CVDraft.fillTemplate(await Vault.readTemplate(t.file), CVDraft.templateContext(caseObj, new Date(), Vault.data.settings.affiant, await CVClosingUI.templateExtra(caseObj)));
+        const name = `${t.title} ${CVFormat.dateText(Vault.localDay())}`;
+        const hit = Object.keys(CVDraft.DOC_TYPES).find((k) => k !== 'other' && `${t.file} ${t.title}`.toLowerCase().includes(k)) || 'other';
+        const slug = await Vault.newDraftSlug(id, name);
+        await Save.track(`draft:${id}:${slug}`, () => Vault.saveDraft(id, slug, { title: name, type: hit, ai: false, created: new Date().toISOString(), template: t.file }, text));
+        const d = document.getElementById('dialog');
+        if (d && d.open) d.close();
+        ui.go(id, 'reports', slug);
+        toast(`New report from "${t.title}" in this case.`, 'success');
+      } catch (err) { if (err && err.message) toast(`Could not use the template: ${err.message}`, 'error'); }
+    }
+
+    // Download: the template as a Word document, placeholders and all.
+    async function downloadTemplate(t) {
+      try {
+        const text = await Vault.readTemplate(t.file);
+        const bytes = CVDocx.buildDocx(text, { title: t.title });
+        const type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        const fname = `${t.title.replace(/[<>:"/\\|?*]+/g, '-')}.docx`;
+        if (window.showSaveFilePicker) {
+          try {
+            const handle = await window.showSaveFilePicker({ suggestedName: fname, types: [{ description: 'Word document', accept: { [type]: ['.docx'] } }] });
+            const w = await handle.createWritable(); await w.write(new Blob([bytes], { type })); await w.close();
+            toast(`Saved ${fname}.`, 'success');
+            return;
+          } catch (err) { if (err && err.name === 'AbortError') return; }
+        }
+        const url = URL.createObjectURL(new Blob([bytes], { type }));
+        const a = h('a', { href: url, download: fname, hidden: true });
+        document.body.append(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      } catch (err) { toast(`Could not save the template: ${err.message}`, 'error'); }
     }
 
     function edit(file, text) {
@@ -662,7 +809,7 @@
         h('div', { class: 'row' },
           h('div', { class: 'spacer' }),
           h('button', { class: 'btn', type: 'button', onclick: () => { editor.hidden = true; } }, 'Cancel'),
-          h('button', { class: 'btn primary', type: 'button', onclick: async () => {
+          h('button', { class: 'btn primary vault-save', type: 'button', icon: 'save', onclick: async () => {
             let fname = name.value.trim() || 'template.md';
             if (!/\.md$/i.test(fname)) fname += '.md';
             try {

@@ -52,7 +52,10 @@
   function otherCaseFiles(names, prefix, prefixInName) {
     if (!prefix) return [];
     return names.filter((n) => {
-      const p = prefixInName(String(n).split('/').pop());
+      const base = String(n).split('/').pop();
+      const low = base.toLowerCase();
+      if (low.startsWith(`${prefix.toLowerCase()}-`) || low.startsWith(`${prefix.toLowerCase()} `)) return false;
+      const p = prefixInName(base);
       return p && p.toLowerCase() !== prefix.toLowerCase() && !p.toLowerCase().startsWith(`${prefix.toLowerCase()}-`);
     });
   }

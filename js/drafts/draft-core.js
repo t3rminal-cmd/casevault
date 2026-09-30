@@ -150,7 +150,7 @@
    * The placeholders a template can use, grouped for the template editor's help list. `arrestKeys`
    * are the arrest field names (from js/closing.js), so this file stays independent of it.
    */
-  function placeholderGroups(arrestKeys = []) {
+  function placeholderGroups(arrestKeys = [], reportKeys = []) {
     const g = (title, keys) => ({ title, keys });
     return [
       g('Case', ['case.fileNumber', 'case.number', 'case.agencyNumber', 'case.title', 'case.client', 'case.status', 'case.opened', 'case.closed', 'case.tags']),
@@ -162,6 +162,7 @@
         ...arrestKeys.filter((k) => !['dob'].includes(k)).map((k) => `arrest.${k}`), 'arrest.property', 'arrest.notes']
         .filter((k, i, all) => all.indexOf(k) === i)),
       g('Closing', ['closure.disposition', 'closure.reason', 'closure.date', 'closure.note']),
+      ...(reportKeys.length ? [g('Report fields', reportKeys)] : []),
       g('Ask yourself to check', ['confirm: what to check']),
     ];
   }

@@ -138,7 +138,7 @@
       h('p', { class: 'muted small explain' }, 'The OSINT and LEO buttons at the bottom of the Overview. Change a name or address (it saves when you leave the box), untick Show to hide a button, or add your own, such as your agency\'s portals. They open in a new browser tab; CaseVault never contacts them itself.'),
       box,
       h('div', { class: 'row links-save' }, h('div', { class: 'spacer' }),
-        h('button', { class: 'btn primary', type: 'button', icon: 'save', title: 'Save every name and address in this box to vault.json on the SSD.', onclick: async () => {
+        h('button', { class: 'btn primary vault-save', type: 'button', icon: 'save', title: 'Save every name and address in this box to vault.json on the SSD.', onclick: async () => {
           let ok = true;
           for (const fn of [...savers]) ok = (await fn({ redraw: false })) && ok;
           draw();

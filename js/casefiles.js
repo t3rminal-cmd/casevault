@@ -5,9 +5,12 @@
  *   files/Case Initiation, files/Affidavit Drafts, ... files/Recordings/Video, ... files/Other
  *
  * The case folder is named <year>-<case number>, e.g. 2026-00123 (year of the Opened date), and
- * every file saved into a case is named after it and its document type:
+ * every file saved into a case is named <year>-<case number>-<file name> (v1.18); the document
+ * folder it's in says what it is:
  *
- *   2026-00123 Arrest Report.pdf, 2026-00123 Arrest Report (2).pdf, 2026-00123 Recording.mp3
+ *   Arrest Report\2026-00123-scan0001.pdf, Email\2026-00123-Lab results.eml
+ *
+ * Files named before v1.18 ("2026-00123 Arrest Report.pdf") keep their names and still count.
  *
  * Plain logic with no DOM, so the tests run it under Node.
  */
@@ -107,14 +110,16 @@
    *   "2026-00123 Arrest Report.pdf", or with a description "2026-00123 Arrest Report - Smith.pdf".
    * A case without a number uses "<year>-NOCASENO" so the file still sorts and shows its type.
    */
+  // Year-Case-FileName: the description if one was given, otherwise the original file name
+  // (without its own old prefix, so moving a file doesn't stack them up).
   function fileName(c, folder, originalName, description = '') {
     const cat = byFolder(folder) || byFolder('Other');
     const prefix = casePrefix(c) || `${yearOf(c)}-NOCASENO`;
-    // A description that starts with the document type isn't repeated: a draft titled
-    // "Affidavit - arrest warrant" is saved as "2026-00123 Affidavit - arrest warrant.docx".
-    const type = cat.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/s$/, '');
-    const desc = clean(description).replace(new RegExp(`^${type}s?\\b\\s*[-–—:,]?\\s*`, 'i'), '').slice(0, 80);
-    return `${prefix} ${cat.label}${desc ? ` - ${desc}` : ''}${extOf(originalName)}`;
+    const ext = extOf(originalName);
+    const base = String(originalName || '').replace(/\.[^.]{1,10}$/, '');
+    const unprefixed = base.replace(/^\d{4}-[^ ]+?(?:-| (?=\S))/, (m) => (m.trim().replace(/-$/, '') === prefix ? '' : m));
+    const name = (clean(description) || clean(unprefixed) || cat.label).slice(0, 100);
+    return `${prefix}-${name}${ext}`;
   }
 
   /** Does this file name already follow the convention for this case and folder? */
@@ -122,8 +127,8 @@
     const cat = byFolder(folder);
     const prefix = casePrefix(c);
     if (!cat || !prefix) return false;
-    const stem = `${prefix} ${cat.label}`;
-    return name === stem || name.startsWith(`${stem} `) || name.startsWith(`${stem}.`);
+    const stem = `${prefix} ${cat.label}`; // before v1.18
+    return name.startsWith(`${prefix}-`) || name === stem || name.startsWith(`${stem} `) || name.startsWith(`${stem}.`);
   }
 
   // Best guess of the document type from the original file name. Returns a folder, or 'Other'.
@@ -171,7 +176,9 @@
 
   /** The case number found in a conventional file name ("2026-00123 Arrest Report.pdf" -> "2026-00123"). */
   function prefixInName(name) {
-    const m = /^(\d{4}-[^ ]+) /.exec(String(name || ''));
+    const s = String(name || '');
+    // Before v1.18: "2026-00123 Arrest Report.pdf"; since: "2026-00123-scan0001.pdf".
+    const m = /^(\d{4}-[^ ]+) /.exec(s) || /^(\d{4}-[A-Za-z0-9]+)-/.exec(s);
     return m ? m[1] : null;
   }
 

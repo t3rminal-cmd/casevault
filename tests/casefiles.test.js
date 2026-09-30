@@ -31,15 +31,14 @@ test('case prefix: <year opened>-<case number>', () => {
   assert.strictEqual(CF.caseFolderName(C('')), null);
 });
 
-test('file names: prefix + document type (+ description) + extension', () => {
-  assert.strictEqual(CF.fileName(C('00123'), 'Arrest Report', 'scan0001.PDF'), '2026-00123 Arrest Report.pdf');
-  assert.strictEqual(CF.fileName(C('00123'), 'Supplementary Report', 'x.docx', 'Det. Doe'), '2026-00123 Supplementary Report - Det. Doe.docx');
-  assert.strictEqual(CF.fileName(C('00123'), 'Recordings', 'IMG_1.m4a'), '2026-00123 Recording.m4a');
-  assert.strictEqual(CF.fileName(C('00123'), 'Affidavits', 'a.pdf'), '2026-00123 Affidavit.pdf');
-  assert.strictEqual(CF.fileName(C('00123'), 'Affidavit Drafts', 'a.docx'), '2026-00123 Affidavit Draft.docx');
-  assert.strictEqual(CF.fileName(C('00123'), 'Warrants Signed', 'w.pdf'), '2026-00123 Signed Warrant.pdf');
-  assert.strictEqual(CF.fileName(C('00123'), 'Recordings/Video', 'IMG_2.MOV'), '2026-00123 Video Recording.mov');
-  assert.strictEqual(CF.fileName(C(''), 'Maps', 'area.png'), '2026-NOCASENO Map.png');
+test('file names: Year-Case-FileName (v1.18)', () => {
+  assert.strictEqual(CF.fileName(C('00123'), 'Arrest Report', 'scan0001.PDF'), '2026-00123-scan0001.pdf');
+  assert.strictEqual(CF.fileName(C('00123'), 'Supplementary Report', 'x.docx', 'Det. Doe'), '2026-00123-Det. Doe.docx', 'a description replaces the file name');
+  assert.strictEqual(CF.fileName(C('00123'), 'Other', '2026-00123 Arrest Report.pdf'), '2026-00123-Arrest Report.pdf', 'the old prefix is not repeated');
+  assert.strictEqual(CF.fileName(C('00123'), 'Other', '2026-00123-bank records.pdf'), '2026-00123-bank records.pdf');
+  assert.strictEqual(CF.fileName(C('00123'), 'Recordings/Video', 'IMG_2.MOV'), '2026-00123-IMG_2.mov');
+  assert.strictEqual(CF.fileName(C(''), 'Maps', 'area.png'), '2026-NOCASENO-area.png');
+  assert.ok(CF.followsConvention(C('00123'), 'Arrest Report', '2026-00123-scan.pdf'));
   assert.ok(CF.followsConvention(C('00123'), 'Arrest Report', '2026-00123 Arrest Report (2).pdf'));
   assert.ok(!CF.followsConvention(C('00123'), 'Arrest Report', 'scan.pdf'));
   assert.strictEqual(CF.prefixInName('2026-00999 Case Report.pdf'), '2026-00999');
@@ -107,9 +106,9 @@ test('files are saved into their folder and named by the convention; moving rena
   const p2 = await Vault.addFile(c.id, new File(['two'], 'scan2.pdf'), { folder: 'Arrest Report' });
   const p3 = await Vault.addFile(c.id, new File(['three'], 'call.mp3'), { folder: 'Recordings', description: 'Jail call 1' });
   const p4 = await Vault.addFile(c.id, new File(['legacy'], 'old name.txt'));
-  assert.strictEqual(p1, 'Arrest Report/2026-00777 Arrest Report.pdf');
-  assert.strictEqual(p2, 'Arrest Report/2026-00777 Arrest Report (2).pdf');
-  assert.strictEqual(p3, 'Recordings/2026-00777 Recording - Jail call 1.mp3');
+  assert.strictEqual(p1, 'Arrest Report/2026-00777-scan.pdf');
+  assert.strictEqual(p2, 'Arrest Report/2026-00777-scan2.pdf');
+  assert.strictEqual(p3, 'Recordings/2026-00777-Jail call 1.mp3');
   assert.strictEqual(p4, 'old name.txt', 'no folder: kept as-is, unsorted');
 
   const list = await Vault.listFiles(c.id);
@@ -117,7 +116,7 @@ test('files are saved into their folder and named by the convention; moving rena
   assert.strictEqual(await (await Vault.readFile(c.id, p3)).text(), 'three');
 
   const moved = await Vault.moveFile(c.id, p4, 'Case Report');
-  assert.strictEqual(moved, 'Case Report/2026-00777 Case Report.txt');
+  assert.strictEqual(moved, 'Case Report/2026-00777-old name.txt');
   assert.strictEqual(await (await Vault.readFile(c.id, moved)).text(), 'legacy');
   assert.strictEqual(await Vault.readFile(c.id, p4), null, 'the original is gone');
   await Vault.deleteFile(c.id, p2);
@@ -162,16 +161,8 @@ test('an interrupted rename is finished or undone on the next open', async () =>
   assert.deepStrictEqual(ids, ['2026-2', a.id].sort());
 });
 
-test('a description that starts with the document type is not repeated (v1.9.1)', () => {
-  const c = { number: '00123', dates: { opened: '2026-03-14' } };
-  assert.strictEqual(CF.fileName(c, 'Affidavits', 'x.docx', 'Affidavit - arrest warrant'), '2026-00123 Affidavit - arrest warrant.docx');
-  assert.strictEqual(CF.fileName(c, 'Affidavits', 'x.docx', 'Affidavit'), '2026-00123 Affidavit.docx');
-  assert.strictEqual(CF.fileName(c, 'Case Report', 'x.docx', 'Case report summary'), '2026-00123 Case Report - summary.docx');
-  assert.strictEqual(CF.fileName(c, 'Supplementary Report', 'x.pdf', 'Det. Doe'), '2026-00123 Supplementary Report - Det. Doe.pdf');
-});
-
 test('Other Exhibits: its own folder, named "Exhibit", guessed from evidence words (v1.9.2)', () => {
-  assert.strictEqual(CF.fileName(C('00123'), 'Other Exhibits', 'knife.jpg', 'kitchen knife'), '2026-00123 Exhibit - kitchen knife.jpg');
+  assert.strictEqual(CF.fileName(C('00123'), 'Other Exhibits', 'knife.jpg', 'kitchen knife'), '2026-00123-kitchen knife.jpg');
   assert.strictEqual(CF.guessFolder('evidence photo 3.jpg'), 'Other Exhibits');
   assert.strictEqual(CF.guessFolder('firearm trace.pdf'), 'Other Exhibits');
   assert.strictEqual(CF.guessFolder('drug exhibits log.xlsx'), 'Drug Exhibits');
@@ -182,11 +173,11 @@ test('sub-folders: files in Recordings/Video are listed, moved and read back', a
   const { Vault } = await freshVault();
   const c = await Vault.createCase({ title: 'R', number: '00888', opened: '2026-09-01' });
   const v = await Vault.addFile(c.id, new File(['vid'], 'cam.mp4'), { folder: 'Recordings/Video' });
-  assert.strictEqual(v, 'Recordings/Video/2026-00888 Video Recording.mp4');
+  assert.strictEqual(v, 'Recordings/Video/2026-00888-cam.mp4');
   const a = await Vault.addFile(c.id, new File(['aud'], 'call.mp3'), { folder: 'Recordings' });
   const moved = await Vault.moveFile(c.id, a, 'Recordings/Audio');
-  assert.strictEqual(moved, 'Recordings/Audio/2026-00888 Audio Recording.mp3');
+  assert.strictEqual(moved, 'Recordings/Audio/2026-00888-call.mp3');
   const list = await Vault.listFiles(c.id);
-  assert.deepStrictEqual(list.map((f) => [f.folder, f.base]), [['Recordings/Video', '2026-00888 Video Recording.mp4'], ['Recordings/Audio', '2026-00888 Audio Recording.mp3']]);
+  assert.deepStrictEqual(list.map((f) => [f.folder, f.base]), [['Recordings/Video', '2026-00888-cam.mp4'], ['Recordings/Audio', '2026-00888-call.mp3']]);
   assert.strictEqual(await (await Vault.readFile(c.id, v)).text(), 'vid');
 });
