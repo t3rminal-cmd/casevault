@@ -161,6 +161,9 @@
   function settingsOf(saved) {
     const st = { ...DEFAULTS, ...(saved || {}) };
     if (!Array.isArray(st.domains) || !st.domains.length) st.domains = [...PRELOADED_DOMAINS];
+    // v1.27: a list saved before the preloaded domains existed gets them added once (after that,
+    // removing one from the list sticks).
+    else if (!st.preloaded) st.domains = [...new Set([...PRELOADED_DOMAINS, ...st.domains])];
     return st;
   }
   /** The end of a new message: the signature, then the footer after "--". */

@@ -81,6 +81,7 @@
         maxMB: Math.max(1, Math.min(150, Number(maxMB.value) || 20)),
         footer: footer.value.trim(),
         signature: signature.value.replace(/\s+$/, ''),
+        preloaded: true,
       };
       status.className = `small ${bad.length ? 'error-text' : 'muted'}`;
       status.textContent = bad.length ? `Left out of the address book (not an address, or outside the allowed domains): ${bad.map((b) => b.raw).join(', ')}` : `Allowed domains: ${doms.join(', ') || 'none yet'}`;

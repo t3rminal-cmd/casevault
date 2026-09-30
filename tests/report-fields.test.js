@@ -234,7 +234,7 @@ test('v1.26: Illinois and federal charges, grouped, with the mail-related narcot
 
 test('v1.26: LEO partners text, Supplemental Report type and template, mail signature and preloaded domains', () => {
   const D = require('../js/drafts/draft-core.js');
-  assert.deepStrictEqual(D.PARTNER_AGENCIES, ['DEA', 'FBI', 'IRS', 'USPIS', 'CBP', 'HSI', 'Local PD', 'Sheriff Dept']);
+  assert.deepStrictEqual(D.PARTNER_AGENCIES, ['DEA', 'FBI', 'IRS', 'CBP', 'HSI', 'USPIS', 'Local PD', 'Sheriff Dept', 'Other']);
   assert.strictEqual(D.partnersText([{ agency: 'USPIS' }, { agency: 'DEA' }, { agency: 'Local PD', name: 'Example Police Department' }, { agency: 'Sheriff Dept', name: 'Example County Sheriff' }]),
     'DEA, USPIS, Local PD (Example Police Department), Sheriff Dept (Example County Sheriff)');
   assert.strictEqual(D.partnersText([]), '');
@@ -242,10 +242,46 @@ test('v1.26: LEO partners text, Supplemental Report type and template, mail sign
   assert.ok(D.STARTER_TEMPLATES['generic-supplemental-report.md'].includes('{{report.narcotics}}'));
   const M = require('../js/secure/mail.js');
   assert.deepStrictEqual(M.settingsOf({}).domains, ['chicagopolice.org', 'dea.gov', 'uspis.gov']);
-  assert.deepStrictEqual(M.settingsOf({ domains: ['agency.gov'] }).domains, ['agency.gov'], 'your own list wins');
+  assert.deepStrictEqual(M.settingsOf({ domains: ['agency.gov'], preloaded: true }).domains, ['agency.gov'], 'your own list wins once saved');
+  assert.deepStrictEqual(M.settingsOf({ domains: ['agency.gov'] }).domains, ['chicagopolice.org', 'dea.gov', 'uspis.gov', 'agency.gov'], 'an older list gets the preloaded domains once');
   assert.ok(M.checkRecipients([{ email: 'a.b@dea.gov' }], M.settingsOf({}).domains).ok);
   assert.strictEqual(M.closing({ signature: 'Det. Example\nNarcotics', footer: 'NOTICE' }), 'Det. Example\nNarcotics\n\n--\nNOTICE');
   assert.strictEqual(M.closing({ signature: '', footer: 'NOTICE' }), '--\nNOTICE');
   assert.strictEqual(M.signatureFrom({ name: 'Det. Example', title: 'Detective', agency: 'Example PD', phone: '555-010-0100', email: 'det@example.gov' }),
     'Det. Example\nDetective\nExample PD\nPhone: 555-010-0100\ndet@example.gov');
+});
+
+test('v1.27: operations share one Case Overview and one Timeline', () => {
+  const O = require('../js/operation.js');
+  const a = { suspects: [{ name: 'John Example', role: 'Main' }, { name: '', role: 'Secondary' }], contacts: { officer: { name: 'Det. A' }, prosecutor: {}, others: [{ role: 'Finance', name: 'F. Example' }] }, deconfliction: [{ date: '2026-01-02', event: 'Buy', system: 'RISSafe', number: '1' }] };
+  const b = { suspects: [{ name: 'john example', role: 'Main' }, { name: 'Jane Example', role: 'Secondary' }], contacts: { officer: {}, prosecutor: { title: 'ASA', name: 'P. Example' }, others: [{ role: 'finance', name: 'f. example' }, { role: 'Supervisor', name: 'S. Example' }] }, deconfliction: [{ date: '2026-01-02', event: 'buy', system: 'RISSafe', number: '1' }, { date: '2026-02-03', event: 'Search warrant', system: 'RISSafe', number: '2' }] };
+  const m = O.mergeOverview([a, b]);
+  assert.deepStrictEqual(m.suspects.map((s) => s.name), ['John Example', '', 'Jane Example'], 'each person once; the case on screen comes first');
+  assert.strictEqual(m.contacts.officer.name, 'Det. A');
+  assert.strictEqual(m.contacts.prosecutor.name, 'P. Example');
+  assert.deepStrictEqual(m.contacts.others.map((o) => o.name), ['F. Example', 'S. Example']);
+  assert.strictEqual(m.deconfliction.length, 2);
+  assert.ok(O.sameOverview({ ...a, ...m }, { ...b, ...m }));
+  assert.ok(!O.sameOverview(a, b));
+  assert.strictEqual(O.opKey('  Operation   Example '), 'operation example');
+  const ev = O.mergeEvents([
+    { caseId: 'c1', number: 'JH1', events: [{ id: 1, date: '2026-03-01', time: '10:00', title: 'Buy 2' }, { id: 2, date: '2026-01-01', title: 'Opened' }] },
+    { caseId: 'c2', number: 'JH2', events: [{ id: 3, date: '2026-02-01', title: 'Warrant' }, { id: 4, date: '2026-03-01', time: '09:00', title: 'Buy 1' }] },
+  ]);
+  assert.deepStrictEqual(ev.map((x) => `${x.number} ${x.ev.title}`), ['JH1 Opened', 'JH2 Warrant', 'JH2 Buy 1', 'JH1 Buy 2']);
+});
+
+test('v1.27: State of Illinois victim, compact Local AI box', () => {
+  const d = F.normalize({ victimsList: [{ name: 'State of Illinois', officer: 'P.O. Example #1234', race: 'White' }, { name: 'Jane Example', race: 'Black', officer: 'left over' }] });
+  assert.deepStrictEqual(F.fieldsFor('victimsList', d.victimsList[0]).map(([k]) => k), ['name', 'officer']);
+  assert.ok(!F.fieldsFor('victimsList', d.victimsList[1]).some(([k]) => k === 'officer'));
+  assert.strictEqual(F.itemLine('victimsList', d.victimsList[0]), 'State of Illinois, Officer Name: P.O. Example #1234');
+  assert.strictEqual(F.itemLine('victimsList', d.victimsList[1]), 'Jane Example, Race: Black');
+  const s = Buffer.from(P.build(d, {})).toString('latin1');
+  assert.match(s, /VICTIM 1 - OFFICER NAME/);
+  assert.doesNotMatch(s, /VICTIM 1 - RACE/);
+  const M = require('../js/ai/memory.js');
+  assert.deepStrictEqual(M.compact({ drive: 'V:\\', vaultBytes: 3 * 1024 * 1024, diskTotal: 4 * 1024 ** 3, model: 'qwen2.5:7b', ramTotal: 16 * 1024 ** 3 }),
+    [['Drive', 'V'], ['Vault', '3 MB of 4.0 GB'], ['Model', 'qwen2.5:7b'], ['RAM', '16 GB']]);
+  assert.deepStrictEqual(M.compact({ vaultBytes: 2048 * 1024, model: '' }), [['Vault', '2 MB'], ['Model', 'none selected']]);
 });

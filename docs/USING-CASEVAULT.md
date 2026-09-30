@@ -120,16 +120,17 @@ With no case open, CaseVault shows the **Overview**: a welcome banner with the d
 
 - **New case** asks for a **Title or Operation Name** (required). To add another case number to an operation you already have, pick the operation from the list (the ▾ button, or start typing): its file number, agency case number and client fill in, and the box under it lists the case numbers it already has. A new name starts a new operation. the **file number**, the **Original Case Number** (the first report number of the case: an operation with several case numbers keeps its first one here), the **agency case number** (your agency's own internal number), the client (**State**, **Federal** or **Other**), status, opened date, and tags. A client typed in before v1.14 is kept as its own choice in the list. One file number can hold several cases: the File number box offers the file numbers you already use. The case folder and file names use the case number.
 - The case list and the case's header show both, for example *File F-2026-01 · Case 00123*, and the search box finds either. Templates can use `{{case.fileNumber}}` and `{{case.number}}`.
-- **Operations in the case list:** cases that share an operation name are grouped under it: the operation's name with the number of cases and a folder icon, and under it each case by its case number (with file number, agency case number and client). Click the operation's name to fold the group; CaseVault remembers which are folded. On a case's **Details** tab, under the name, are the operation's other case numbers (click one to open it) and **Add Case Number to This Operation**, which opens New case with the operation filled in.
-- **LEO Partners** (on the Details tab): tick the agencies working the case with you: DEA, FBI, IRS, USPIS, CBP, HSI, Local PD, Sheriff Dept. **Local PD** and **Sheriff Dept** ask which department (several: separate them with a semicolon); the pencil changes it. Templates can use `{{case.partners}}` (for example *DEA, USPIS, Local PD (Example Police Department)*), and Ask AI and Draft with AI get them with the case.
+- **Operations in the case list:** cases that share an operation name are grouped under it: the operation's name with the number of cases and a folder icon, and under it each case by its case number (with file number, agency case number and client). Click the operation's name to fold the group; CaseVault remembers which are folded. On a case's **Details** tab, at the top, are the **Title or Operation Name**, **Status**, **Opened** and **Closed** dates, and a folder tile for each case number of the operation (the case number and its status under the folder; click one to open it). **Add Case Number** opens New case with the operation filled in. Renaming the title renames it for every case of the operation.
+- **LEO Partners** (on the Details tab): tick the agencies working the case with you: DEA, FBI, IRS, CBP, HSI, USPIS, Local PD, Sheriff Dept, Other. **Local PD** and **Sheriff Dept** ask which department, **Other** asks which agency (several: separate them with a semicolon); the pencil changes it. Templates can use `{{case.partners}}` (for example *DEA, USPIS, Local PD (Example Police Department)*), and Ask AI and Draft with AI get them with the case.
 - The **left list** shows every case, with its status and the red deadline bell together on the right,: open and pending first, most recently changed first, then closed ones. Each case shows its status in words (**Open**, **Pending**, **Closed** or **Archived**) and its title, with just the numbers under it: file number | case number | client, for example `100 | JH123456 | State`. A **red bell** at the right means the case has an open deadline on its Timeline (it gently rings when the deadline is overdue or due within a week). The selected case is shown in grey. Point at a case to see the deadline, and for a Pending case what it's waiting on. Use the search box (title, any of the numbers, client, status or tag) to find one.
 - **Make the list wider or narrower:** drag its right edge (or click the edge and use ← →). Double-click the edge to reset it. Each PC remembers its own width.
+- **Case Overview** (the bottom half of the Details tab, under a line): **Suspects**, **Contacts** and **Deconfliction**. They belong to the whole operation: every case number of the operation shows the same lists, and a change in one case is saved to the others. (Cases made before v1.27 each had their own lists; they are joined the first time you open one.)
 - **Details** tab: edit any field. A short note under **Status** says what the status means and, for a Pending case, what you're waiting on.
 - **Suspects** (on the Details tab): **Add suspect** for each person the case is about: name, date of birth (the **age** is worked out for you), residence, and role (**Main**, **Secondary** or **Other**). The first one is Main, later ones Secondary. They save with the case, go to **Ask AI** and **Draft with AI** with the case, and templates can use `{{suspect.name}}`, `{{suspect.dob}}`, `{{suspect.age}}`, `{{suspect.residence}}` and `{{suspect.role}}` (the main suspect) and `{{suspects}}` (all of them, one per line).
 - **Save changes** at the bottom of the Details tab saves the case to the SSD now and confirms it. Changes also save by themselves a moment after you type.
 - **Deconfliction** (on the Details tab, under Contacts): a table with a row for each deconfliction check: date, event or location, the system checked (RISSafe, HIDTA, DICE… or type one), the deconfliction number, **Conflict** Yes / No (a Yes shows in red) and notes. **Add Deconfliction** adds a row; the bin deletes one.
 - **Contacts** (on the Details tab, under Suspects): the **Case Officer**, the **prosecutor** (choose **ASA** or **AUSA**), each with name, email and phone, and **Add contact** for anyone else on the case: the Team Supervisor, a Team Member, Finance, Asset Forfeiture and so on (pick a role from the list or type your own). The bin button removes one. They save with the case on the SSD, go to **Ask AI** with the case, and templates can use `{{case.officer.name}}`, `{{case.prosecutor.title}}`, `{{case.prosecutor.email}}` and so on.
-- **Case actions** (at the bottom of Details) has **Close case…** (or **Reopen case**), **Add arrest details**, **Archive case…** and **Delete case…**.
+- **Case actions** (at the bottom of Details) has **Close Case** (or **Reopen case**), **Close Operation** (when the operation has more than one open case number), **Add arrest details** (or **Remove Arrest Details**), **Archive Case** and **Delete case…**.
 
 ### Open, Pending, Closed, Archived: which one?
 
@@ -146,11 +147,13 @@ A rule of thumb: *Is the next step mine?* → Open. *Am I waiting on someone?* �
 
 ### Close a case
 
-Choose **Close case…** under Case actions (or set the status to *Closed*). CaseVault asks for:
+Choose **Close Case** under Case actions (or set the status to *Closed*). CaseVault asks for:
 
 - **Disposition**: *Cleared by arrest*, *Exceptionally cleared* (with the reason: death of the offender, prosecution declined, victim refused to cooperate, extradition denied, juvenile/no custody, other), *Unfounded*, *Inactive / no further leads*, *Referred to another agency*, or *Other*. Use your agency's own definitions where they differ.
 - **Closed date** (today by default) and a **closing note**.
 - **Before you close** lists loose ends: open deadlines on the timeline, open consistency check flags, and `[CONFIRM: …]` left in drafts. They're reminders; they don't stop you closing.
+
+**Close Operation** closes every open case number of the operation at once, with the same disposition, date and note; to close only one case number, open it and use **Close Case**.
 
 Choosing *Cleared by arrest* opens the **Arrest details** tab so you can fill it in. **Reopen case** sets the status back to Open; the closing is kept in the case history, and the arrest details stay.
 
@@ -165,9 +168,11 @@ The **Arrest details** tab (after Details) appears once you choose **Add arrest 
 
 It saves on its own as you type (and with the **Save** button) to `arrest.json` in the case folder. **Start an arrest report draft** makes a new draft from your arrest report template with all of this filled in (see *Templates*). Arrestees' names are added to the names the privacy scan always hides from online AI and flags in mail.
 
+**Remove Arrest Details** (under Case actions, after confirming) empties the arrest details and hides the tab again. It isn't offered for a case closed *Cleared by arrest*.
+
 ### Archive a case
 
-**Archive case…** moves the whole case folder from `CaseVault-Data\cases\<case>\` to `CaseVault-Data\archive\<case>\`: notes, timeline, files, drafts and checks. CaseVault copies every file, reads each copy back and compares it with the original byte for byte, and only then removes the original. If anything goes wrong on the way (the SSD is unplugged, a copy doesn't match), the case stays where it was, unchanged, and CaseVault says so. The status becomes *Archived*, and the closed date is filled in if it was empty.
+**Archive Case** moves the whole case folder from `CaseVault-Data\cases\<case>\` to `CaseVault-Data\archive\<case>\`: notes, timeline, files, drafts and checks. CaseVault copies every file, reads each copy back and compares it with the original byte for byte, and only then removes the original. If anything goes wrong on the way (the SSD is unplugged, a copy doesn't match), the case stays where it was, unchanged, and CaseVault says so. The status becomes *Archived*, and the closed date is filled in if it was empty.
 
 - Archived cases leave the case list. They appear under **Archived (N)** at the bottom of the list; click it to fold it open. The search box searches them too.
 - An archived case opens **read-only**, with an *Archived case* banner. You can read the notes and timeline, open files, read drafts and past checks, and export a copy of a draft to this computer. Nothing can be changed or added.
@@ -229,7 +234,7 @@ Notes save on their own as you type. The **Save** button writes them straight aw
 - **Fold buttons:** the arrow on the right of each part's heading only hides it on screen, to keep the page short while you work (it stays in the PDF). **Hide All** and **Show All** at the top fold or open every part. The folds are remembered in this browser.
 - **Case Numbers:** agency report number (filled from the case's agency case number), event, incident, raid and R.D. numbers, and the officer report type (Investigation, Purchase, Surveillance, Correction).
 - **Offense:** offense classification / last report, IUCR code (search and pick from **Common UCR**; an empty offense classification fills in with its group, such as Narcotics) and location code (search and pick from **Location Codes**; **Type of Location** fills in from the code). The ▾ button shows the whole list, and you can still type anything that isn't in it. address and type of location, offense reclassification / DNA and revised IUCR, date, time and beat of occurrence, beat assigned.
-- **Victims and Offenders:** the number of victims, offenders and arrested, the method code, and **Add Victim** / **Add Offender** for each person (or **Add From Suspects** to bring in every named suspect from the Details tab: name, date of birth and age; the description of the day goes here, in the report): name, relation code, date of birth, **age** (worked out from the date of birth), gender, gender identity, race, complexion, height (**feet** and **inches** boxes), weight (in **pounds**), hair color, eye color, veteran (Yes / No), tattoos / scars and clothing description. For a victim, pick **State of Illinois** from the list, or type a name. The bin button deletes an entry. For an offender whose name isn't known, tick **Unknown Offender**: the name becomes *Unknown Offender* (you can change it), the date of birth is set aside, and age, height and weight become ranges (*from … to …*), printed as *Age Range*, *Height Range* and *Weight Range*.
+- **Victims and Offenders:** the number of victims, offenders and arrested, the method code, and **Add Victim** / **Add Offender** for each person (or **Add From Suspects** to bring in every named suspect from the Details tab: name, date of birth and age; the description of the day goes here, in the report): name, relation code, date of birth, **age** (worked out from the date of birth), gender, gender identity, race, complexion, height (**feet** and **inches** boxes), weight (in **pounds**), hair color, eye color, veteran (Yes / No), tattoos / scars and clothing description. For a victim, pick **State of Illinois** from the list, or type a name. A **State of Illinois** victim has only two boxes, the name and **Officer Name** (the officer for the State); the other victim boxes go away. The bin button deletes an entry. For an offender whose name isn't known, tick **Unknown Offender**: the name becomes *Unknown Offender* (you can change it), the date of birth is set aside, and age, height and weight become ranges (*from … to …*), printed as *Age Range*, *Height Range* and *Weight Range*.
 - **Assignment:** method assigned (Field, Supervisor, On View, OEMC), unit, safe method, if residence where, arrest unit, adults, juveniles, fire and gang related.
 - **Update Information and Status:** the verified / updated tick boxes, status (0 - Prog to 7 - C/N/C) and how cleared (1 - Arrest to 5 - Other).
 - **Officer's Report:** one line each for operation / mission number, within 1000 feet of, court branch and court officer, court date, search warrant number, **subpoena GJ number**, the ASA and judge approving the search warrant, pre-recorded fund sheet inventory number, evidence officer and proof of residence. **Within 1000 feet of**, **search warrant number**, **subpoena GJ number**, **ASA**, **judge** and **proof of residence** have a tick box: untick one that doesn't apply and it's left out of the report.
@@ -259,6 +264,8 @@ The header of the printed report shows your agency from **Vault → My Profile**
 
 Add dated **Events** (things that happened) and **Deadlines** (things that are due), with an optional time and note.
 
+The Timeline covers the whole **operation**: the events of every case number with the same Title or Operation Name are shown as one list, each marked with its case number. When the operation has several case numbers, the **Case Number** box says which one an entry belongs to (editing an entry can move it to another). Each case still keeps its own `timeline.json`.
+
 - **Dates, phone numbers and SSNs** are written the same way everywhere:
   - **Dates:** `12.01.2026` (month.day.year). Type it as `12012026`, `12/1/26` or `12.01.2026` (the dots go in by themselves), or click the calendar button.
   - **Phone numbers:** `123.456.7890`. Type the digits, or paste one in any format, and it's tidied when you leave the box.
@@ -286,10 +293,10 @@ Affidavits are kept with their warrants, in **Warrant Drafts** and **Warrant Fin
 - **Folders:** click **Arrange folders** under the folder list. Use the up and down arrows (or drag a folder in that list), then **Save order**. **Standard order** puts them back. You can also drag a folder in the list itself, or select it and press **Alt+↑ / Alt+↓**. The order is the same in every case; Video and Audio stay under Recordings.
 - **Video and Audio** are folded away under **Recordings** until you click Recordings or the arrow next to it. Each folder's icon is at the right end of its row, after the file count.
 - **Move a file:** drag it from the table onto a folder on the left. It's renamed by that folder's convention, like **Move / rename**.
-- **Sort:** click a column heading (Name, Type, Size, Added) to sort by it; click again to reverse.
+- **Sort:** click a column heading (Name, Document, File, Size, Added) to sort by it; click again to reverse.
 - **Your own order:** in a folder, click **Custom** and drag the rows into the order you want. It's kept for that folder in the case (`file-order.json`).
 
-The table has one row per file with clear lines: **Name** (with the folder underneath in *All documents*; a long name ends in "…", and pointing at it shows the whole name), **Document** (the folder: Arrest Report, Case Report…; pointing at it shows the file format), **Size**, **Added**, and the **Open**, **Move / rename** and **Delete** buttons.
+The table has one row per file with clear lines: **Name** shown as `2024-JH123456 | scan0001` (the case prefix, then the file name; with the folder underneath in *All documents*; a long name ends in "…", and pointing at it shows the whole name), **Document** (the folder: Arrest Report, Case Report…), **File** (the format, for example `.docx`), **Size**, **Added** (month.day hour.minute, for example `09.30 08.57`), and the **Open**, **Move / rename** and **Delete** buttons.
 
 ### Naming convention
 
@@ -334,7 +341,7 @@ Some agency forms are *XFA* PDFs, made with Adobe LiveCycle Designer. In Chrome,
 
 **Ask AI** in the header opens a chat, like claude.ai, with the AI **on this computer**: nothing you type leaves the PC, and it works offline. It opens in a **floating box** in the corner, so you can keep writing a draft or your notes, or move between tabs and cases, while it answers.
 
-- **The box:** drag its title bar to move it and its bottom-right corner to resize it. The buttons on the title bar are **New chat**, **History** (your saved chats: open one to carry on, or delete it; **Delete all** asks twice), **Clear** (empties this chat and deletes its saved copy), **Save to case**, **Bigger** (a large box in the middle of the screen; click again for the normal size), **Minimize** (just the title bar; Esc does the same) and **Close**. Closing keeps the conversation; **Ask AI** brings it back.
+- **The box:** drag its title bar to move it and its bottom-right corner to resize it. The buttons on the title bar are **New chat**, **History** (your saved chats: open one to carry on, or delete it; **Delete all** asks twice), **Clear** (the fire icon: empties this chat and deletes its saved copy), **Save to case**, **Bigger** (a large box in the middle of the screen; click again for the normal size), **Minimize** (just the title bar; Esc does the same) and **Close**. Closing keeps the conversation; **Ask AI** brings it back.
 - **Model:** every AI model installed in Ollama on W: (and the in-browser model, if that's what's running). Your choice is remembered in the vault. See *Other models* in [AI-SETUP.md](AI-SETUP.md) to add one, including a less-filtered model.
 - **Case:** until you ask your first question, it follows the case you have open. Or pick any case, or *No case* for general questions. The case's details, contacts, timeline and notes go with each question, and the AI is told to answer from them and say where each fact comes from. **Search the case files** also reads the case's documents and sends the passages that answer your question (slower the first time a document is read).
 - Type and press **Enter** (Shift+Enter for a new line). **Stop** ends an answer early and keeps what's written. Earlier questions and answers go along, so you can ask follow-ups; the oldest drop off when the AI's window is full.
@@ -455,7 +462,7 @@ A white screen with blue 1s and 0s raining down covers the whole app, with no ca
 
 The **Mail** tab of a case prepares an email to your department with documents from that case. CaseVault never sends mail itself and never holds a mail password: it checks the message, then hands it to Outlook, and you press **Send** there, so your department's own mail system (encryption, retention, DLP) handles it.
 
-**One-time setup** in **Vault → Department mail**: your department's mail domain(s), for example `agency.gov` (exactly that domain) or `*.agency.gov` (it and its sub-domains); an optional address book; an optional subject marking such as `[LES]` (can be made required); a **signature** (added to the end of every new message, above the footer; **Fill From My Profile** makes one from Vault → My Profile); the footer; and the attachment limit (20 MB by default). **chicagopolice.org**, **dea.gov** and **uspis.gov** are filled in as the allowed domains to start with; change the list to suit.
+**One-time setup** in **Vault → Department mail**: your department's mail domain(s), for example `agency.gov` (exactly that domain) or `*.agency.gov` (it and its sub-domains); an optional address book; an optional subject marking such as `[LES]` (can be made required); a **signature** (added to the end of every new message, above the footer; **Fill From My Profile** makes one from Vault → My Profile); the footer; and the attachment limit (20 MB by default). **chicagopolice.org**, **dea.gov** and **uspis.gov** are filled in as the allowed domains to start with (and are added once to a list set up before v1.27); change the list to suit.
 
 **Safeguards**, checked every time:
 
@@ -599,6 +606,17 @@ The memory icon in the header is a small **green wave** while memory is fine. It
 - **App**: CaseVault's own memory in this tab (Chrome and Edge report it).
 - **AI**: the local model Ollama has loaded, how much of it is on the graphics card and how much in RAM. The Quick profile on the Beelink should show 100% GPU; Thorough is split.
 - **RAM** and **CASEVAULT drive** free space: shown when CaseVault runs through Start-CaseVault.bat (the browser can't read them on its own).
+
+Pointing at it shows a short summary:
+
+```
+Drive: V
+Vault: 3 MB of 4 GB
+Model: Qwen…
+RAM: 16 GB
+```
+
+**Model** is the model picked in Ask AI, and changes as soon as you pick another one there.
 
 It turns amber, then red, when memory or disk space is running low. **Free AI memory** unloads the local model now instead of after 10 idle minutes. It loads again the next time it's needed.
 

@@ -134,7 +134,9 @@
 
   /* ---------------- Close case ---------------- */
 
-  async function closeCaseDialog(c) {
+  async function closeCaseDialog(c, { operation = null } = {}) {
+    // v1.27: close every open case number of an operation with one disposition.
+    const opCases = operation ? operation.filter((x) => x.status !== 'Closed' && !Vault.isArchived(x.id)) : null;
     const { h, openDialog, Save, toast } = ui;
     await Save.flushAll();
     // Loose ends, as a reminder.
@@ -160,7 +162,7 @@
       const arrestNote = h('p', { class: 'small', hidden: true });
       const date = h('input', { type: 'date', value: (c.dates && c.dates.closed) || today(), required: true });
       const note = h('textarea', { rows: 3, placeholder: 'Optional: how the case ended, where the final report is, who was notified…' });
-      const ok = h('button', { class: 'btn primary', type: 'submit', disabled: true }, 'Close case');
+      const ok = h('button', { class: 'btn primary', type: 'submit', disabled: true }, opCases ? 'Close Operation' : 'Close Case');
       const pick = () => {
         const sel = radios.find((x) => x.r.checked);
         reasonRow.hidden = !(sel && sel.d.key === 'exceptional');
@@ -180,7 +182,8 @@
         if (!sel) return;
         close({ disposition: sel.d.key, reason: sel.d.key === 'exceptional' ? reason.value : '', date: date.value, note: note.value.trim() });
       } },
-      h('h2', {}, `Close "${c.title || 'Untitled case'}"`),
+      h('h2', {}, opCases ? `Close the operation "${c.title || 'Untitled case'}"` : `Close "${c.title || 'Untitled case'}"${c.number ? ` (${c.number})` : ''}`),
+      opCases ? h('p', { class: 'small' }, `Closes ${opCases.length} case number${opCases.length === 1 ? '' : 's'}: ${opCases.map((x) => x.number || 'no number').join(', ')}. Each can still be reopened on its own.`) : null,
       h('p', { class: 'muted small explain' }, 'Close a case when the investigation is finished. Choose how it ended. A closed case stays in the list (filter: Closed) until you archive it, and can be reopened.'),
       loose.length ? h('div', { class: 'card warn-card' }, h('strong', {}, 'Before you close'), h('ul', { class: 'small' }, loose.map((x) => h('li', {}, x.text))),
         h('p', { class: 'small muted' }, 'You can still close the case; this is a reminder.')) : h('p', { class: 'small ok-text' }, '✓ No open deadlines, check flags or [CONFIRM: …] left.'),
@@ -192,6 +195,26 @@
       h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), ok));
     });
     if (!result) return false;
+    if (opCases) {
+      let n = 0;
+      for (const x of opCases) {
+        try {
+          const oc = x.id === c.id ? c : await Vault.getCase(x.id);
+          const was = oc.closure;
+          oc.status = 'Closed';
+          oc.dates.closed = result.date;
+          oc.closure = { ...result, at: new Date().toISOString() };
+          if (was && was.at) oc.closureHistory = [...(oc.closureHistory || []), was];
+          oc.pending = null;
+          if (result.disposition === 'arrest') oc.arrest = true;
+          await Save.track(`case:${oc.id}`, () => Vault.saveCase(structuredClone(oc)));
+          n++;
+        } catch { /* reported by Save */ }
+      }
+      toast(`Operation closed: ${n} case number${n === 1 ? '' : 's'}, ${K().disposition(result.disposition).label}.`, 'success');
+      ui.refresh();
+      return true;
+    }
     const prev = c.closure;
     c.status = 'Closed';
     c.dates.closed = result.date;

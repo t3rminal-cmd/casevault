@@ -770,7 +770,7 @@
       try { list = await Vault.listTemplates(); } catch (err) { if (FS.isDisconnectError(err)) return ui.onDriveLost(); }
       box.replaceChildren(list.length
         ? h('ul', { class: 'plain-list template-list' }, list.map((t) => h('li', {},
-          h('span', {}, t.title, h('span', { class: 'muted small' }, ` · ${t.file}`)),
+          h('span', { title: t.file }, t.title),
           h('span', { class: 'template-btns' },
             h('button', { class: 'btn small ghost', type: 'button', icon: 'file-earmark-plus', title: 'Start a new report from this template in the case you have open, with its details filled in.', onclick: () => useTemplate(t) }, 'Use'),
             h('button', { class: 'btn small ghost', type: 'button', icon: 'download', title: 'Save this template as a Word document (.docx) on this computer, with its {{placeholders}}.', onclick: () => downloadTemplate(t) }, 'Download'),

@@ -119,7 +119,8 @@
           const inputs = {};
           const unknown = key === 'offendersList' && !!it.unknown;
           const lab = `${L.item} ${i + 1}`;
-          const fields = L.fields.map(([k, label, kind, opts]) => {
+          const stateVictim = F().isStateVictim(key, it);
+          const fields = F().fieldsFor(key, it).map(([k, label, kind, opts]) => {
             let el;
             // Height in feet and inches, weight in pounds; for an unknown offender, from–to (v1.25).
             if (kind === 'height' || kind === 'weight' || (kind === 'age' && unknown)) {
@@ -165,7 +166,17 @@
             el.setAttribute('aria-label', `${L.item} ${i + 1} ${label}`);
             inputs[k] = el;
             let box = el;
-            if (F().PICKS[kind]) box = CVCombo.attach(el, { items: () => pickItems(F().PICKS[kind]) });
+            // A victim that becomes (or stops being) the State of Illinois changes its boxes (v1.27).
+            // Switched as you type or pick (not when you leave the box, which would move the page
+            // under a click); the cursor stays in the name box.
+            const redrawIfState = () => {
+              if (F().isStateVictim(key, it) === stateVictim) return;
+              draw(); save();
+              const again = box.querySelector(`[aria-label="${L.item} ${i + 1} Name"]`);
+              if (again) { again.focus(); const n = again.value.length; try { again.setSelectionRange(n, n); } catch { /* not a text box */ } }
+            };
+            if (key === 'victimsList' && k === 'name') el.addEventListener('input', redrawIfState);
+            if (F().PICKS[kind]) box = CVCombo.attach(el, { items: () => pickItems(F().PICKS[kind]), onPick: () => { if (key === 'victimsList') redrawIfState(); } });
             else if (kind === 'narcotic') box = CVCombo.attach(el, { items: () => NARCOTIC_ITEMS });
             else if (key === 'narcotics' && k === 'value') {
               // Street value from the narcotic calculator (Reference): type, amount and unit.
@@ -211,7 +222,7 @@
               if (it.unknown) { it.dob = ''; it.age = ''; }
               draw(); save();
             } }), h('span', {}, 'Unknown Offender')) : null;
-          return h('div', { class: `rf-item${unknown ? ' rf-item-unknown' : ''}` },
+          return h('div', { class: `rf-item${unknown ? ' rf-item-unknown' : ''}${stateVictim ? ' rf-item-state' : ''}` },
             h('div', { class: 'rf-item-head' }, h('strong', {}, `${L.item} ${i + 1}`), unknownBox,
               archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: `Delete ${L.item.toLowerCase()}`, onclick: async () => {
                 if (F().filled(it) && !(await ui.confirmDialog({ title: `Delete ${L.item} ${i + 1}?`, message: 'This entry is removed from the report.', confirmText: 'Delete', danger: true }))) return;
@@ -443,8 +454,8 @@
     } }, 'Create Report');
 
     panel.replaceChildren(
-      h('div', { class: 'notes-head' }, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports`, class: 'back-link' }, '← All reports'),
-        h('h2', { icon: 'card-checklist' }, 'Report Fields'), h('div', { class: 'spacer' }), archived ? null : saveBtn),
+      h('div', { class: 'notes-head rf-head-bar' }, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports`, class: 'back-link' }, '← All reports'),
+        h('h2', {}, 'Report Fields'), h('div', { class: 'spacer' }), archived ? null : saveBtn),
       h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case. Print it, save it as a PDF, or email it to sign. Saved as report-fields.json.'),
       h('div', { class: 'rf-actions' }, printBtn, archived ? null : pdfCaseBtn, archived ? null : signBtn, archived ? null : makeBtn, h('div', { class: 'spacer' }),
         h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-down', title: 'Open every part on screen', onclick: () => foldAll(false) }, 'Show All'),
@@ -453,7 +464,7 @@
       part('evidence', 'Evidence Inventoried', 'box-seam', evRows, archived ? null : h('div', { class: 'contact-add' }, addExhibit)),
       part('summary', 'Summary of Investigation', 'journal-text', fmt, rich.el, narrative),
       sections[sections.length - 1], // Submission and Approval comes last, as on the printed report
-      archived ? null : h('div', { class: 'details-save' }, saveBtn.cloneNode(true)));
+      archived ? null : h('div', { class: 'details-save rf-bottom' }, saveBtn.cloneNode(true)));
     // The copy at the bottom does the same as the one at the top.
     const bottom = panel.querySelector('.details-save .btn');
     if (bottom) bottom.addEventListener('click', () => saveBtn.click());

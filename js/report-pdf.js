@@ -178,7 +178,7 @@
       y -= 13;
       items.forEach((it, i) => {
         // A narcotic's unit goes with its amount, so its four boxes fill one row (v1.25).
-        const cellsOf = L.fields.filter(([k]) => !(key === 'narcotics' && k === 'unit')).map(([k, label, kind]) => (
+        const cellsOf = RF.fieldsFor(key, it).filter(([k]) => !(key === 'narcotics' && k === 'unit')).map(([k, label, kind]) => (
           { label: `${L.item} ${i + 1} - ${RF.labelFor(it, k, label)}`, value: RF.valueText(key, it, k, kind), wide: kind === 'wide' }));
         const row = [];
         // Short rows are filled out with empty boxes so the four columns always line up.

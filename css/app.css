@@ -2059,3 +2059,42 @@ body.gated .fab-dock { display: none; }
 .partner-form { width: min(30rem, 100%); }
 /* Mail signature box. */
 .mail-signature textarea { font-family: var(--font); }
+
+/* ---------------- v1.27 ---------------- */
+/* Room at the bottom of every page, so the Ask AI and Notes buttons never cover a Save button. */
+.main { padding-bottom: 7rem; }
+/* Report Fields: no decorative icons (v1.27). Icon-only buttons (delete, fold, calendar) stay. */
+.rf-head-bar svg, .rf-actions .btn svg, .rf-section h3 > svg, .rf-section h4 > svg, .rf-section .btn svg, .rf-bottom .btn svg { display: none; }
+.rf-item-state .rf-item-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* Local AI box: four short lines (v1.27). */
+.mem-pop { min-width: 12rem; }
+.mem-rows { display: grid; grid-template-columns: auto 1fr; gap: .15rem .9rem; white-space: normal; }
+.mem-k { color: var(--muted); font-weight: 600; }
+.mem-v { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+/* Files: a File column for the kind (.docx, .pdf) (v1.27). */
+.files-table-wrap col.col-ext { width: 4.6rem; }
+.files .fext { font-variant-numeric: tabular-nums; }
+@media (max-width: 700px) { .files-table-wrap col.col-ext { width: 0; } .files .fext, .files .fext-head { display: none; } }
+/* Details (v1.27): the operation at the top, its case numbers as folders, then this case, then
+   the shared Case Overview below a line. */
+.op-card { margin-bottom: 1.2rem; }
+.op-top { margin-bottom: .6rem; }
+.case-tiles { display: flex; flex-wrap: wrap; gap: .6rem; margin: .2rem 0 .4rem; }
+.case-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .15rem; min-width: 6.8rem; padding: .55rem .7rem .45rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); text-decoration: none; font: inherit; cursor: pointer; }
+.case-tile svg { font-size: 1.6rem; width: 1.6rem; height: 1.6rem; color: var(--accent); }
+.case-tile-num { font-weight: 700; font-size: .85rem; font-variant-numeric: tabular-nums; }
+.case-tile-status { font-size: .7rem; color: var(--muted); }
+.case-tile:hover { border-color: var(--accent); background: var(--accent-soft); }
+.case-tile.current { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); cursor: default; }
+.case-tile.status-closed svg { color: var(--muted); }
+.case-tile.add { border-style: dashed; color: var(--muted); }
+.case-tile.add svg { color: var(--muted); }
+.overview-sep { border: 0; border-top: 2px solid var(--border); margin: 2rem 0 1rem; }
+.overview-head h2 { margin: 0 0 .2rem; }
+.overview-head p { margin: 0 0 .8rem; }
+/* Timeline: which case number an event belongs to. */
+.tl-case { font-size: .72rem; font-weight: 700; padding: .05rem .45rem; border-radius: 999px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+.tl-case.current { color: var(--accent); border-color: var(--accent); }
+.tl-op-note { margin: 0 0 .6rem; }
+.case-tile > svg.bi, .case-tile > svg { order: -1; margin: 0; }
+.case-tiles .case-tile > svg.bi:not(:only-child) { order: -1; }

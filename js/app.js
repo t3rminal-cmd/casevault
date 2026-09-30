@@ -956,7 +956,8 @@
   }
 
   function caseSubtitle(c) {
-    return [c.fileNumber && `File ${c.fileNumber}`, c.number && `Case ${c.number}`, c.agencyNumber && `Agency ${c.agencyNumber}`, c.client, statusPill(c.status), c.dates.opened && `Opened ${fmtDate(c.dates.opened)}`]
+    // v1.27: the file and case numbers and the opened date are on the Details tab itself.
+    return [c.agencyNumber && `Agency ${c.agencyNumber}`, c.client, statusPill(c.status)]
       .filter(Boolean).flatMap((x, i) => (i ? [' · ', x] : [x]));
   }
 
@@ -969,11 +970,27 @@
 
   /* ---------- Details ---------- */
 
+  /** v1.27: the operation's other cases get this case's Case Overview (suspects, contacts,
+   * deconfliction), so every case number shows the same one. */
+  async function syncOverview(c) {
+    const others = operationCases(c.title).filter((x) => x.id !== c.id);
+    for (const o of others) {
+      let oc;
+      try { oc = await Vault.getCase(o.id); } catch { continue; }
+      if (CVOperation.sameOverview(oc, c)) continue;
+      oc.suspects = structuredClone(c.suspects || []);
+      oc.contacts = structuredClone(c.contacts || {});
+      oc.deconfliction = structuredClone(c.deconfliction || []);
+      await Vault.saveCase(oc);
+    }
+  }
+
   function renderDetails(panel, c) {
     const save = () => {
       refreshCaseHeader(c);
       const snapshot = structuredClone(c);
       Save.schedule(`case:${c.id}`, () => Vault.saveCase(snapshot), 600);
+      if (operationCases(c.title).some((x) => x.id !== c.id)) Save.schedule(`overview:${opKey(c.title)}`, () => syncOverview(snapshot), 1200);
     };
     const bind = (input, apply) => { input.addEventListener('input', () => { apply(input.value); save(); }); return input; };
 
@@ -1002,24 +1019,47 @@
     const statusNote = h('span', { class: 'muted small block status-note' }, CVClosingUI.statusLine(c));
     const archived = Vault.isArchived(c.id);
 
+    const members = archived ? [c] : [c, ...operationCases(c.title).filter((x) => x.id !== c.id)];
+    // The operation's name: renaming it renames it on every case number of the operation (v1.27).
+    const titleIn = bind(h('input', { value: c.title, maxlength: 200 }), (v) => { c.title = v; });
+    let titleWas = c.title;
+    titleIn.addEventListener('change', async () => {
+      const others = operationCases(titleWas).filter((x) => x.id !== c.id);
+      const now = c.title;
+      titleWas = now;
+      if (!others.length || !opKey(now)) return;
+      for (const o of others) {
+        try { const oc = await Vault.getCase(o.id); oc.title = now; await Save.track(`case:${o.id}`, () => Vault.saveCase(oc)); } catch { /* reported */ }
+      }
+      toast(`The operation is now "${now}" on all ${others.length + 1} case numbers.`, 'success', 4000);
+      renderCaseList();
+    });
     panel.replaceChildren(
+      // ---- the operation, the same on every one of its case numbers: name, status, dates
+      h('section', { class: 'op-card' },
+        h('form', { class: 'form-grid details-grid op-top', onsubmit: (e) => e.preventDefault() },
+          field('Title or Operation Name', titleIn, 'span-2', 'The case title, or the operation\'s name. An operation holds several case numbers; renaming it here renames it on all of them.'),
+          h('label', { class: 'field' }, h('span', {}, 'Status'), statusSelect, statusNote),
+          field('Opened', bind(h('input', { type: 'date', value: c.dates.opened || '' }), (v) => { c.dates.opened = v; })),
+          field('Closed', bind(closedInput, (v) => { c.dates.closed = v; }))),
+        caseTiles(c, members, archived)),
+      // ---- this case number
       h('form', { class: 'form-grid details-grid', onsubmit: (e) => e.preventDefault() },
-        field('Title or Operation Name', bind(h('input', { value: c.title, maxlength: 200 }), (v) => { c.title = v; }), 'span-2', 'The case title, or the operation\'s name. An operation can hold several case numbers: give each its own case here with the same operation name and file number.'),
-        operationLine(c),
         field('File number', bind(h('input', { value: c.fileNumber || '', maxlength: 100, title: 'The investigation file. Several cases can share one file number.' }), (v) => { c.fileNumber = v; })),
         field('Original Case Number', bind(h('input', { value: c.number, maxlength: 100 }), (v) => { c.number = v; })),
         field('Agency Case Number', bind(h('input', { value: c.agencyNumber || '', maxlength: 100, title: 'Your agency\'s own internal number for this case.' }), (v) => { c.agencyNumber = v; })),
         field('Client', (() => { const sel = clientSelect(c.client); sel.addEventListener('change', () => { c.client = sel.value; save(); }); return sel; })()),
-        h('label', { class: 'field' }, h('span', {}, 'Status'), statusSelect, statusNote),
-        field('Opened', bind(h('input', { type: 'date', value: c.dates.opened || '' }), (v) => { c.dates.opened = v; })),
-        field('Closed', bind(closedInput, (v) => { c.dates.closed = v; })),
         field('Tags', bind(h('input', { value: c.tags.join(', '), maxlength: 300 }), (v) => { c.tags = parseTags(v); }), 'span-2', 'Separate tags with commas.'),
         h('p', { class: 'muted span-2 small' },
           `Created ${c.dates.created ? fmtDateTime(Date.parse(c.dates.created)) : '—'} · Folder: ${CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}`)}`
           + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),
+      partnersSection(c, save),
+      // ---- Case Overview: shared by the operation's case numbers (v1.27)
+      h('hr', { class: 'overview-sep' }),
+      h('div', { class: 'overview-head' }, h('h2', {}, 'Case Overview'),
+        h('p', { class: 'muted small' }, members.length > 1 ? `Suspects, contacts and deconfliction for the whole operation: the same on all ${members.length} case numbers.` : 'Suspects, contacts and deconfliction. Case numbers added to this operation share them.')),
       suspectsSection(c, save),
       contactsSection(c, save),
-      partnersSection(c, save),
       deconflictionSection(c, save),
       // Everything saves by itself as you type; the button saves now and says so.
       archived ? null : h('div', { class: 'details-save' },
@@ -1039,14 +1079,39 @@
             : null,
           !archived ? (c.status === 'Closed'
             ? h('button', { class: 'btn action-btn', type: 'button', icon: 'unlock', title: 'Back to Open, for new information. The closing is kept in the case\'s history.', onclick: () => CVClosingUI.reopenCase(c) }, 'Reopen case')
-            : h('button', { class: 'btn primary action-btn', type: 'button', icon: 'lock-fill', title: 'When the investigation is finished: choose how it ended, such as arrest, exceptionally cleared or unfounded. Lists loose ends first.', onclick: () => CVClosingUI.closeCaseDialog(c) }, 'Close case…')) : null,
+            : h('button', { class: 'btn primary action-btn', type: 'button', icon: 'lock-fill', title: 'When the investigation of this case number is finished: choose how it ended, such as arrest, exceptionally cleared or unfounded. Lists loose ends first.', onclick: () => CVClosingUI.closeCaseDialog(c) }, 'Close Case')) : null,
+          // v1.27: close every open case number of the operation at once.
+          !archived && members.length > 1 && members.some((x) => x.status !== 'Closed') ? h('button', { class: 'btn action-btn', type: 'button', icon: 'lock-fill', title: `Closes all ${members.filter((x) => x.status !== 'Closed').length} open case numbers of this operation with one disposition.`, onclick: () => CVClosingUI.closeCaseDialog(c, { operation: members }) }, 'Close Operation') : null,
           !archived && !CVClosingUI.hasArrestTab(c) ? h('button', { class: 'btn action-btn', type: 'button', icon: 'person-vcard', title: 'Arrestee, arrest and charges, for the arrest report. Adds an Arrest details tab.', onclick: async () => {
             c.arrest = true;
             try { await Save.track(`case:${c.id}`, () => Vault.saveCase(structuredClone(c))); go(c.id, 'arrest'); } catch { /* reported */ }
           } }, 'Add arrest details') : null,
+          // v1.27: the arrest details can be taken off again (not when the case was closed by arrest).
+          !archived && c.arrest && !(c.closure && c.closure.disposition === 'arrest') ? h('button', { class: 'btn action-btn', type: 'button', icon: 'trash3', title: 'Takes the Arrest details tab off this case and deletes what was entered in it.', onclick: async () => {
+            if (!(await confirmDialog({ title: 'Remove the arrest details?', message: 'The Arrest details tab is taken off this case, and the arrestee, arrest and charges entered there are deleted from the SSD.', confirmText: 'Remove', danger: true }))) return;
+            c.arrest = false;
+            try {
+              await Save.track(`arrest:${c.id}`, () => Vault.writeCaseJSON(c.id, 'arrest.json', CVClosing.emptyArrest()));
+              await Save.track(`case:${c.id}`, () => Vault.saveCase(structuredClone(c)));
+              toast('Arrest details removed.', 'success', 2500);
+              route();
+            } catch { /* reported */ }
+          } }, 'Remove Arrest Details') : null,
           !archived && Vault.conventionalId(c) ? h('button', { class: 'btn action-btn', type: 'button', icon: 'folder', title: `Renames this case's folder on the SSD to the <year>-<case no.> convention (${Vault.conventionalId(c)}). Every file is copied and checked first.`, onclick: () => renameCaseFolder(c) }, 'Rename folder') : null,
-          !archived ? h('button', { class: 'btn action-btn', type: 'button', icon: 'archive', title: 'Keeps everything, read-only, in CaseVault-Data\\archive. It leaves the case list but can still be opened, searched and restored.', onclick: () => archiveCase(c) }, 'Archive case…') : null,
+          !archived ? h('button', { class: 'btn action-btn', type: 'button', icon: 'archive', title: 'Keeps everything, read-only, in CaseVault-Data\\archive. It leaves the case list but can still be opened, searched and restored.', onclick: () => archiveCase(c) }, 'Archive Case') : null,
           h('button', { class: 'btn danger action-btn', type: 'button', icon: 'trash3', title: 'Permanently deletes the case from the SSD. There is no trash to get it back from.', onclick: () => deleteCase(c) }, 'Delete case…'))));
+
+    // Cases of the operation made before v1.27 each had their own suspects, contacts and
+    // deconfliction: join them into the one Case Overview (then it's the same on all of them).
+    if (members.length > 1) (async () => {
+      const sibs = [];
+      for (const o of members.slice(1)) { try { sibs.push(await Vault.getCase(o.id)); } catch { /* moved or missing */ } }
+      const merged = CVOperation.mergeOverview([c, ...sibs]);
+      if (CVOperation.sameOverview(c, { ...c, ...merged }) || state.caseId !== c.id || !panel.isConnected) return;
+      Object.assign(c, merged);
+      save();
+      renderDetails(panel, c);
+    })();
   }
 
   // Client: who the case is for. A value from before v1.14 that isn't one of these is kept as its
@@ -1097,25 +1162,28 @@
       } }, 'Add suspect')));
   }
 
-  /* The operation this case belongs to (v1.26): its other case numbers, and a button to add one. */
-  function operationLine(c) {
-    const others = operationCases(c.title).filter((x) => x.id !== c.id);
-    const archived = Vault.isArchived(c.id);
-    return h('div', { class: 'span-2 op-line' },
-      others.length ? h('span', { class: 'muted small' }, `${others.length + 1} case numbers in this operation:`) : h('span', { class: 'muted small' }, 'Only case number in this operation so far.'),
-      others.length ? h('span', { class: 'op-chips' }, [c, ...others].sort((a, b) => String(a.number).localeCompare(String(b.number))).map((x) => (x.id === c.id
-        ? h('span', { class: 'op-chip current', title: 'This case' }, x.number || 'This case')
-        : h('a', { class: 'op-chip', href: `#/case/${encodeURIComponent(x.id)}`, title: `${x.title} · ${x.status}` }, x.number || 'No number')))) : null,
-      archived ? null : h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', title: 'A new case under the same operation name, with its file number, agency case number and client', onclick: () => { Save.flushAll(); newCase({ title: c.title }); } }, 'Add Case Number to This Operation'));
+  /* The operation's case numbers (v1.27): a folder for each, its number under it; the one on
+   * screen is highlighted. Click one to open it; + adds a case number to the operation. */
+  function caseTiles(c, members, archived) {
+    const sorted = [...members].sort((a, b) => String(a.number || '').localeCompare(String(b.number || ''), undefined, { numeric: true }));
+    return h('div', { class: 'case-tiles', role: 'list', 'aria-label': 'Case numbers in this operation' },
+      sorted.map((x) => {
+        const cur = x.id === c.id;
+        const tag = cur ? 'div' : 'a';
+        return h(tag, { class: `case-tile${cur ? ' current' : ''} status-${String(x.status).toLowerCase()}`, role: 'listitem', href: cur ? null : `#/case/${encodeURIComponent(x.id)}`, title: `${x.number || 'No case number'} · ${x.status}${cur ? ' (this one)' : ''}` },
+          I(cur ? 'folder2-open' : 'folder-fill'), h('span', { class: 'case-tile-num' }, x.number || 'No number'), h('span', { class: 'case-tile-status' }, x.status));
+      }),
+      archived ? null : h('button', { class: 'case-tile add', type: 'button', title: 'Add a case number to this operation: a new case with the same operation name, file number, agency case number and client', onclick: () => { Save.flushAll(); newCase({ title: c.title }); } },
+        I('plus-lg'), h('span', { class: 'case-tile-num' }, 'Add Case Number')));
   }
 
   /* LEO partners on the Details tab (v1.26): the agencies working the case with you. Local PD and
    * Sheriff Dept ask which department. Kept in case.json as c.partners [{ agency, name }];
    * {{case.partners}} fills templates. */
-  const DEPT_QUESTION = { 'Local PD': 'Which police department?', 'Sheriff Dept': 'Which sheriff\'s department?' };
+  const DEPT_QUESTION = { 'Local PD': 'Which police department?', 'Sheriff Dept': 'Which sheriff\'s department?', Other: 'Which agency?' };
   function askDepartment(agency, current = '') {
     return openDialog((close) => {
-      const inp = h('input', { type: 'text', value: current, autofocus: true, maxlength: 300, placeholder: agency === 'Local PD' ? 'e.g. Evanston Police Department' : 'e.g. Cook County Sheriff\'s Office', 'aria-label': DEPT_QUESTION[agency] });
+      const inp = h('input', { type: 'text', value: current, autofocus: true, maxlength: 300, placeholder: agency === 'Local PD' ? 'e.g. Evanston Police Department' : agency === 'Other' ? 'e.g. ATF, U.S. Marshals, Illinois State Police' : 'e.g. Cook County Sheriff\'s Office', 'aria-label': DEPT_QUESTION[agency] });
       return h('form', { class: 'partner-form', onsubmit: (e) => { e.preventDefault(); close(inp.value.trim()); } },
         h('h2', { icon: 'building' }, DEPT_QUESTION[agency]),
         h('p', { class: 'muted small' }, 'More than one? Separate them with a semicolon (;).'),
@@ -1145,7 +1213,7 @@
         else c.partners = c.partners.filter((p) => p.agency !== agency);
         draw(); save();
       });
-      const edit = on && DEPT_QUESTION[agency] ? h('button', { class: 'icon-btn partner-edit', type: 'button', title: `Change the ${agency === 'Local PD' ? 'police' : 'sheriff\'s'} department`, onclick: async () => {
+      const edit = on && DEPT_QUESTION[agency] ? h('button', { class: 'icon-btn partner-edit', type: 'button', title: `Change the ${agency === 'Local PD' ? 'police department' : agency === 'Other' ? 'agency' : 'sheriff\'s department'}`, onclick: async () => {
         const text = await askDepartment(agency, names);
         if (text == null) return;
         if (!setNames(agency, text)) c.partners = c.partners.filter((p) => p.agency !== agency);
@@ -1413,10 +1481,19 @@
 
   /* ---------- Timeline ---------- */
 
+  // v1.27: the Timeline is the operation's: the events of all its case numbers, in date order, each
+  // marked with its case number. New events go to the case number picked (this one by default).
   async function renderTimeline(panel, c, token) {
-    const tl = await Vault.getTimeline(c.id);
+    const archivedCase = Vault.isArchived(c.id);
+    const members = archivedCase ? [c] : [c, ...operationCases(c.title).filter((x) => x.id !== c.id)];
+    const tls = new Map();
+    for (const m of members) {
+      try { tls.set(m.id, await Vault.getTimeline(m.id)); } catch (err) { if (m.id === c.id) throw err; }
+    }
     if (token !== state.renderToken) return;
-    let editingId = null;
+    const many = tls.size > 1;
+    const numberOf = (id) => (members.find((m) => m.id === id) || {}).number || 'No number';
+    let editing = null; // { id, caseId }
 
     const f = {
       date: h('input', { type: 'date', required: true, value: today() }),
@@ -1424,19 +1501,21 @@
       kind: h('select', {}, h('option', { value: 'event' }, 'Event'), h('option', { value: 'deadline' }, 'Deadline')),
       title: h('input', { required: true, maxlength: 200, placeholder: 'What happened / what is due' }),
       note: h('textarea', { rows: 2, maxlength: 4000, placeholder: 'Details, optional' }),
+      caseSel: h('select', { 'aria-label': 'Case number' }, [...tls.keys()].map((id) => h('option', { value: id, selected: id === c.id }, numberOf(id)))),
     };
     const submit = h('button', { class: 'btn primary', type: 'submit' }, 'Add to timeline');
     const cancel = h('button', { class: 'btn', type: 'button', hidden: true }, 'Cancel');
     const list = h('ol', { class: 'timeline' });
 
-    const persist = () => {
-      const snapshot = structuredClone(tl);
-      return Save.track(`timeline:${c.id}`, () => Vault.saveTimeline(c.id, snapshot)).catch(() => {});
+    const persist = (caseId) => {
+      const snapshot = structuredClone(tls.get(caseId));
+      return Save.track(`timeline:${caseId}`, () => Vault.saveTimeline(caseId, snapshot)).catch(() => {});
     };
 
     const resetForm = () => {
-      editingId = null;
+      editing = null;
       f.title.value = ''; f.note.value = ''; f.time.value = '';
+      f.caseSel.value = c.id;
       submit.textContent = 'Add to timeline';
       cancel.hidden = true;
     };
@@ -1446,62 +1525,75 @@
       e.preventDefault();
       const data = { date: f.date.value, time: f.time.value, kind: f.kind.value, title: f.title.value.trim(), note: f.note.value.trim() };
       if (!data.date || !data.title) return;
-      if (editingId) {
-        const ev = tl.events.find((x) => x.id === editingId);
-        if (ev) Object.assign(ev, data, { updated: new Date().toISOString() });
+      const target = many ? f.caseSel.value : c.id;
+      const touched = new Set([target]);
+      if (editing) {
+        const from = tls.get(editing.caseId);
+        const ev = from.events.find((x) => x.id === editing.id);
+        if (ev && editing.caseId !== target) {
+          // Moved to another case number of the operation.
+          from.events = from.events.filter((x) => x.id !== ev.id);
+          tls.get(target).events.push({ ...ev, ...data, updated: new Date().toISOString() });
+          touched.add(editing.caseId);
+        } else if (ev) Object.assign(ev, data, { updated: new Date().toISOString() });
       } else {
-        tl.events.push({ id: Vault.newId('e'), ...data, done: false, created: new Date().toISOString() });
+        tls.get(target).events.push({ id: Vault.newId('e'), ...data, done: false, created: new Date().toISOString() });
       }
-      Vault.sortEvents(tl.events);
+      for (const id of touched) Vault.sortEvents(tls.get(id).events);
       resetForm();
       draw();
-      await persist();
+      for (const id of touched) await persist(id);
       f.title.focus();
     } },
     field('Date', f.date), field('Time', f.time), field('Type', f.kind),
+    many ? field('Case Number', f.caseSel, '', 'Which case number of the operation this belongs to') : null,
     field('Title', f.title, 'grow'),
     field('Note', f.note, 'full'),
     h('div', { class: 'full form-actions' }, cancel, submit));
 
     function draw() {
-      if (!tl.events.length) {
-        list.replaceChildren(h('li', { class: 'muted empty' }, 'No events yet. Add dates, hearings, filings, and deadlines above.'));
+      const all = CVOperation.mergeEvents([...tls.entries()].map(([caseId, t]) => ({ caseId, number: numberOf(caseId), events: t.events })));
+      if (!all.length) {
+        list.replaceChildren(h('li', { class: 'muted empty' }, many ? 'No events yet for any case number of this operation. Add dates, hearings, filings, and deadlines above.' : 'No events yet. Add dates, hearings, filings, and deadlines above.'));
         return;
       }
-      list.replaceChildren(...tl.events.map((ev) => {
+      list.replaceChildren(...all.map(({ caseId, ev }) => {
         const isDeadline = ev.kind === 'deadline';
         const due = isDeadline && !ev.done ? dueLabel(ev.date) : null;
         const done = isDeadline ? h('input', { type: 'checkbox', checked: !!ev.done, 'aria-label': 'Done', title: 'Mark done' }) : null;
-        if (done) done.addEventListener('change', () => { ev.done = done.checked; draw(); persist(); });
+        if (done) done.addEventListener('change', () => { ev.done = done.checked; draw(); persist(caseId); });
         return h('li', { class: `tl-item ${ev.kind} ${ev.done ? 'done' : ''} ${due ? due.cls : ''}` },
           h('div', { class: 'tl-when' }, h('div', {}, fmtDate(ev.date)), ev.time && h('div', { class: 'muted small' }, ev.time)),
           h('div', { class: 'tl-body' },
             h('div', { class: 'tl-title' },
               done,
               h('span', { class: `badge ${ev.kind}` }, isDeadline ? 'Deadline' : 'Event'),
+              many ? h('span', { class: `tl-case${caseId === c.id ? ' current' : ''}`, title: caseId === c.id ? 'This case number' : 'Another case number of this operation' }, numberOf(caseId)) : null,
               h('strong', {}, ev.title),
               due && h('span', { class: `due ${due.cls}` }, due.text)),
             ev.note && h('div', { class: 'tl-note' }, ev.note)),
           h('div', { class: 'tl-actions' },
             h('button', { class: 'btn small ghost', type: 'button', onclick: () => {
-              editingId = ev.id;
+              editing = { id: ev.id, caseId };
               f.date.value = ev.date; f.time.value = ev.time || ''; f.kind.value = ev.kind;
               f.title.value = ev.title; f.note.value = ev.note || '';
+              f.caseSel.value = caseId;
               submit.textContent = 'Save changes'; cancel.hidden = false;
               f.title.focus();
             } }, 'Edit'),
             h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
-              if (!(await confirmDialog({ title: 'Delete this entry?', message: `"${ev.title}" on ${fmtDate(ev.date)}`, confirmText: 'Delete', danger: true }))) return;
-              tl.events = tl.events.filter((x) => x.id !== ev.id);
-              if (editingId === ev.id) resetForm();
+              if (!(await confirmDialog({ title: 'Delete this entry?', message: `"${ev.title}" on ${fmtDate(ev.date)}${many ? ` (${numberOf(caseId)})` : ''}`, confirmText: 'Delete', danger: true }))) return;
+              const t = tls.get(caseId);
+              t.events = t.events.filter((x) => x.id !== ev.id);
+              if (editing && editing.id === ev.id) resetForm();
               draw();
-              persist();
+              persist(caseId);
             } }, 'Delete')));
       }));
     }
 
     draw();
-    panel.replaceChildren(form, list);
+    panel.replaceChildren(many ? h('p', { class: 'muted small tl-op-note' }, `The timeline of the whole operation: all ${tls.size} case numbers.`) : null, form, list);
   }
 
   /* ---------- Files ---------- */
@@ -1691,10 +1783,22 @@
     };
     // The Document column: what the file is (its folder's document type), e.g. "Arrest Report".
     const docLabel = (f) => (f.folder ? (CF.byFolder(f.folder) || {}).label || f.folder : 'Unsorted');
+    // v1.27: Name "2024-JH123456 | Arrest Report" (no extension), File ".docx", Added "09.30 08.57".
+    const extOf = (base) => ((/(\.[a-z0-9]{1,6})$/i.exec(base) || [])[1] || '').toLowerCase();
+    const nameOf = (base) => {
+      const stem = base.slice(0, base.length - extOf(base).length);
+      if (prefix && stem.toLowerCase().startsWith(prefix.toLowerCase()) && stem.length > prefix.length) {
+        const rest = stem.slice(prefix.length).replace(/^[\s_-]+/, '');
+        return rest ? `${stem.slice(0, prefix.length)} | ${rest}` : stem;
+      }
+      return stem || base;
+    };
+    const addedText = (ms) => { if (!ms) return '—'; const d = new Date(ms); return `${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${pad(d.getHours())}.${pad(d.getMinutes())}`; };
     const cmp = {
       custom: (a, b) => (inOneFolder ? byCustom(a, b) : 0),
       name: (a, b) => a.base.localeCompare(b.base, undefined, { numeric: true }),
       type: (a, b) => docLabel(a).localeCompare(docLabel(b)) || a.base.localeCompare(b.base),
+      ext: (a, b) => extOf(a.base).localeCompare(extOf(b.base)) || a.base.localeCompare(b.base),
       size: (a, b) => (a.size || 0) - (b.size || 0),
       added: (a, b) => (a.modified || 0) - (b.modified || 0),
     };
@@ -1715,10 +1819,10 @@
 
     const table = shown.length
       ? h('div', { class: 'files-table-wrap' }, h('table', { class: 'files' },
-        h('colgroup', {}, dragRows ? h('col', { class: 'col-grip' }) : null, h('col', { class: 'col-name' }), h('col', { class: 'col-type' }), h('col', { class: 'col-size' }), h('col', { class: 'col-added' }), h('col', { class: 'col-actions' })),
+        h('colgroup', {}, dragRows ? h('col', { class: 'col-grip' }) : null, h('col', { class: 'col-name' }), h('col', { class: 'col-type' }), h('col', { class: 'col-ext' }), h('col', { class: 'col-size' }), h('col', { class: 'col-added' }), h('col', { class: 'col-actions' })),
         h('thead', {}, h('tr', {},
           dragRows ? h('th', { class: 'grip-cell', title: 'Your own order: drag the rows' }, h('span', { class: 'sr-only' }, 'Order')) : null,
-          th('name', 'Name'), th('type', 'Document'), th('size', 'Size', 'num'), th('added', 'Added'),
+          th('name', 'Name'), th('type', 'Document'), th('ext', 'File', 'fext-head'), th('size', 'Size', 'num'), th('added', 'Added'),
           h('th', { class: 'actions-head' }, inOneFolder
             ? h('button', { type: 'button', class: `th-btn small ${sortPref.key === 'custom' ? 'sorted' : ''}`, 'data-ro-ok': 'true', icon: 'list-check', title: 'Your own order for this folder: drag the rows to arrange them.', onclick: () => setSort('custom') }, 'Custom')
             : h('span', { class: 'sr-only' }, 'Actions')))),
@@ -1728,12 +1832,13 @@
             h('td', { class: 'fname' },
               h('span', { class: `file-icon ${fileKind(f.base)}` }, I(FILE_ICONS[fileKind(f.base)])),
               h('span', { class: 'fname-text' },
-                h('button', { 'data-ro-ok': 'true', class: 'linkish fname-link', type: 'button', title: f.base, onclick: () => previewFile(c, f.name) }, f.base),
+                h('button', { 'data-ro-ok': 'true', class: 'linkish fname-link', type: 'button', title: f.base, onclick: () => previewFile(c, f.name) }, nameOf(f.base)),
                 !inOneFolder ? h('span', { class: 'fname-folder muted small' }, (f.folder || 'Unsorted').replace('/', ' › ')) : null),
               f.folder && prefix && !CF.followsConvention(c, f.folder, f.base) ? h('span', { class: 'pill warn-pill', title: `Not named ${prefix}-<file name>` }, 'name') : null),
             h('td', { class: 'ftype muted', title: fileTypeLabel(f.base) }, docLabel(f)),
+            h('td', { class: 'fext muted', title: fileTypeLabel(f.base) }, extOf(f.base) || '—'),
             h('td', { class: 'num muted' }, fmtSize(f.size)),
-            h('td', { class: 'muted nowrap', title: fmtDateTime(f.modified) }, fmtShortDateTime(f.modified)),
+            h('td', { class: 'muted nowrap', title: fmtDateTime(f.modified) }, addedText(f.modified)),
             h('td', { class: 'actions' },
               h('button', { 'data-ro-ok': 'true', class: 'icon-btn', type: 'button', title: 'Open', onclick: () => previewFile(c, f.name) }, I('eye'), h('span', { class: 'sr-only' }, `Open ${f.base}`)),
               h('button', { class: 'icon-btn', type: 'button', title: f.folder ? 'Move or rename' : 'File it in a folder', onclick: () => moveFileDialog(c, f, current) }, I('arrow-left-right'), h('span', { class: 'sr-only' }, `Move or rename ${f.base}`)),
@@ -2426,6 +2531,22 @@
   CVMemory.mount($('#mem-status'), {
     isHelper: () => MODE === 'helper',
     engineConnected: () => CVChecks.Engine.status() === 'connected' && !CVChecks.Engine.inBrowser(),
+    drive: () => (MODE === 'helper' ? state.drive : ''),
+    // The model picked in Ask AI, else the one the checks and drafts use (v1.27).
+    model: () => {
+      const s = Vault.data && Vault.data.settings;
+      if (s && s.chatModel) return s.chatModel;
+      try { const ch = CVChecks.Engine.choice(); return ch ? ch.model : ''; } catch { return ''; }
+    },
+    // What the vault holds: every file in the cases (counted every 2 minutes).
+    vaultBytes: async () => {
+      if (!state.connected || !Vault.data) return null;
+      let n = 0;
+      for (const c of Vault.data.cases || []) {
+        try { for (const f of await Vault.listFiles(c.id)) n += f.size || 0; } catch { /* archived or missing */ }
+      }
+      return n;
+    },
   });
   CVActivityLib.mount(CVActivity, $('#ai-activity'));
   CVDraftsUI.init(window.CaseVaultUI);

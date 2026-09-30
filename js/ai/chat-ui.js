@@ -59,7 +59,7 @@
   function build() {
     const { h } = ui;
     const modelSel = h('select', { 'aria-label': 'Model', title: 'The AI model on this computer that answers. Add models with Ollama; they show up here.' });
-    modelSel.addEventListener('change', () => { mem.model = modelSel.value; ui.Save.track('settings', () => Vault.updateSettings({ chatModel: modelSel.value })).catch(() => {}); });
+    modelSel.addEventListener('change', () => { mem.model = modelSel.value; ui.Save.track('settings', () => Vault.updateSettings({ chatModel: modelSel.value })).catch(() => {}); document.dispatchEvent(new Event('cv-model-changed')); });
     const caseSel = h('select', { 'aria-label': 'Case', title: 'Ask about a case: its details, contacts, timeline and notes go with each question.' });
     const searchFiles = h('input', { type: 'checkbox', checked: mem.searchFiles });
     const filesToggle = h('label', { class: 'check-row small', title: 'Also look through the case\'s documents for the passages that answer the question. Slower the first time a document is read.' }, searchFiles, h('span', {}, 'Search the case files'));
@@ -77,7 +77,7 @@
     const minBtn = iconBtn('dash-lg', 'Minimize: keep the chat, out of the way', () => setSize(mem.size === 'min' ? 'normal' : 'min'));
     const newBtn = iconBtn('plus-lg', 'New chat. The current one stays in History.', () => { if (ctrl) ctrl.abort(); startNew(); input.focus(); });
     const historyBtn = iconBtn('clock-history', 'History: open or delete earlier chats', () => showHistory());
-    const clearBtn = iconBtn('eraser', 'Clear this chat: empties it and deletes its saved copy', () => clearChat());
+    const clearBtn = iconBtn('fire', 'Clear this chat: empties it and deletes its saved copy', () => clearChat());
     const saveBtn = iconBtn('save', 'Save the conversation to a case as a draft, on the SSD.', () => saveToCase());
     const closeBtn = iconBtn('x-lg', 'Close. The conversation is kept until you start a new chat or close CaseVault.', () => toggle(false));
     const title = h('div', { class: 'chat-float-title' }, ui.icon('robot'), h('strong', {}, 'Ask AI'));
