@@ -253,5 +253,5 @@ test('suspects fill {{suspect.*}} with the main suspect, {{suspects}} lists them
 test('template titles drop the old "(generic example)" suffix', () => {
   assert.strictEqual(D.templateTitle('# Affidavit (generic example)\n\ntext', 'generic-affidavit.md'), 'Affidavit');
   assert.strictEqual(D.templateTitle('# My warrant\n', 'x.md'), 'My warrant');
-  assert.strictEqual(D.DOC_TYPES.dea202.label, 'DEA 202 - Personal History');
+  assert.strictEqual(D.DOC_TYPES.dea202.label, 'DEA 202');
 });

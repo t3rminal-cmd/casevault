@@ -91,18 +91,18 @@
     // Reports: the case notes first (always there), then every draft.
     const words = (notesText.match(/\S+/g) || []).length;
     const notesRow = h('tr', { class: 'notes-row' },
-      h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/.notes` }, ui.icon('journal-text'), ' Case notes')),
+      h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/.notes` }, 'Field Notes ', ui.icon('journal-text'))),
       h('td', { class: 'muted' }, 'Notes'),
       h('td', { class: 'muted' }, words ? `${words} word${words === 1 ? '' : 's'}` : 'Empty'),
-      h('td', { class: 'actions' }, words && !Vault.isArchived(c.id) ? h('button', { class: 'btn small ghost', type: 'button', title: 'Empties the case notes (notes.md). Case notes always stay in the list.', onclick: async () => {
-        if (!(await confirmDialog({ title: 'Delete the case notes?', message: `All ${words} words of this case's notes are permanently deleted from the SSD.`, confirmText: 'Delete', danger: true }))) return;
+      h('td', { class: 'actions' }, words && !Vault.isArchived(c.id) ? h('button', { class: 'btn small ghost', type: 'button', title: 'Empties the Field Notes', onclick: async () => {
+        if (!(await confirmDialog({ title: 'Delete the Field Notes?', message: `All ${words} words of this case's notes are permanently deleted from the SSD.`, confirmText: 'Delete', danger: true }))) return;
         try { await Save.track(`notes:${c.id}`, () => Vault.saveNotes(c.id, '')); ui.refresh(); } catch { /* reported */ }
       } }, 'Delete') : null));
     // Report Fields: the incident facts for this case's reports (js/report-fields-ui.js).
     const fieldsRow = h('tr', { class: 'notes-row' },
-      h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/.fields` }, ui.icon('card-checklist'), ' Report Fields')),
+      h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/.fields` }, 'Report Fields ', ui.icon('card-checklist'))),
       h('td', { class: 'muted' }, 'Fields'),
-      h('td', { class: 'muted' }, 'Offense, UCR, location, people, evidence, narrative'),
+      h('td', { class: 'muted' }, 'Supplementary Report: offense, people, evidence, summary'),
       h('td', {}));
     const list = h('table', { class: 'files drafts-table' },
       h('thead', {}, h('tr', {}, h('th', {}, 'Report'), h('th', {}, 'Type'), h('th', {}, 'Updated'), h('th', {}, ''))),
@@ -125,7 +125,7 @@
         h('div', { class: 'form-actions' }, create))]),
       h('h2', { class: 'section-title' }, 'Reports'),
       list,
-      h('p', { class: 'muted small explain' }, `Your case notes and every report, draft or AI draft for this case. Saved on the SSD in ${archived ? 'archive' : 'cases'}\\${c.id}: notes.md and the drafts folder, as Markdown files. Templates live in CaseVault-Data\\templates (Vault → Templates).`));
+      h('p', { class: 'muted small explain' }, `Your field notes and every report, draft or AI draft for this case. Saved on the SSD in ${archived ? 'archive' : 'cases'}\\${c.id}: notes.md and the drafts folder, as Markdown files. Templates live in CaseVault-Data\\templates (Vault → Templates).`));
   }
 
   /* =====================================================================

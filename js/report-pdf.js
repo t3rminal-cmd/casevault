@@ -83,7 +83,7 @@
   const M = 36; // margin
   const INNER = PAGE_W - 2 * M;
 
-  function layout(data, { agency = '', title = 'Supplementary Report', caseLabel = '', printed = '' } = {}) {
+  function layout(data, { agency = '', title = 'Supplementary Report', caseLabel = '', printed = '', photos: photosIn = [] } = {}) {
     const RF = F();
     const d = RF.normalize(data);
     const val = (k) => RF.shown(k, d[k]);
@@ -91,7 +91,7 @@
     let ops = null; let y = 0; let sigs = null;
     const newPage = () => {
       ops = []; sigs = [];
-      pages.push({ ops, sigs });
+      pages.push({ ops, sigs, imgs: [] });
       y = PAGE_H - M;
       // Header on every page.
       text(M, y - 10, agency || '', 9, true);
@@ -165,100 +165,174 @@
     };
 
     newPage();
+    const on = (id) => !RF.isHidden(d, id); // parts ticked off as "doesn't apply" are left out
+
+    // A list (victims, charges, vehicles…): one numbered block of boxes per entry, two fields a row
+    // (a wide field takes the whole row), so every box lines up.
+    const listBlock = (key) => {
+      const L = RF.LISTS[key];
+      const items = d[key].filter(RF.filled);
+      if (!items.length) return;
+      ensure(40);
+      text(M + 2, y - 10, L.title.toUpperCase(), 7.5, true);
+      y -= 13;
+      items.forEach((it, i) => {
+        const cellsOf = L.fields.map(([k, label, kind]) => {
+          let v = String(it[k] || '').trim();
+          if (kind === 'date') { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v); if (m) v = `${m[2]}.${m[3]}.${m[1]}`; }
+          return { label: `${L.item} ${i + 1} - ${label}`, value: v, wide: kind === 'wide' };
+        });
+        const row = [];
+        // Short rows are filled out with empty boxes so the four columns always line up.
+        const flush = () => { if (row.length) { while (row.length < 4) row.push({ label: '', value: '' }); boxes(row.splice(0).map((c) => ({ ...c, w: 1 }))); } };
+        for (const c of cellsOf) {
+          if (c.wide) { flush(); boxes([{ ...c, w: 1 }]); continue; }
+          row.push(c);
+          if (row.length === 4) flush();
+        }
+        flush();
+        y -= 3;
+      });
+    };
 
     // ---- case numbers
-    boxes([cell('caseNumber', 1.1), cell('eventNumber'), cell('incidentNumber'), cell('raidNumber'), cell('rdNumber')]);
-    boxes([{ label: 'Case', value: caseLabel, w: 2.6 }, cell('activity', 1.4)]);
-    y -= 6;
+    if (on('numbers')) {
+      boxes([cell('caseNumber', 1.3), cell('eventNumber'), cell('incidentNumber'), cell('raidNumber'), cell('rdNumber')]);
+      boxes([{ label: 'Case', value: caseLabel, w: 2.6 }, cell('activity', 1.4)]);
+      y -= 6;
+    }
 
     // ---- offense
-    band('Offense');
-    boxes([cell('offense', 3.3), cell('ucr', 1.4)]);
-    boxes([cell('address', 2.4), cell('locationType', 1.5), cell('locationCode', 1.1)]);
-    boxes([cell('reclass', 3.3), cell('revisedUcr', 1.4)]);
-    boxes([cell('date'), cell('time'), cell('beatOccurrence'), cell('beatAssigned')]);
-    y -= 6;
+    if (on('offense')) {
+      band('Offense');
+      boxes([cell('offense', 3.3), cell('ucr', 1.4)]);
+      boxes([cell('address', 2.4), cell('locationType', 1.5), cell('locationCode', 1.1)]);
+      boxes([cell('reclass', 3.3), cell('revisedUcr', 1.4)]);
+      boxes([cell('date'), cell('time'), cell('beatOccurrence'), cell('beatAssigned')]);
+      y -= 6;
+    }
 
     // ---- victims and offenders
-    band('Victims and Offenders');
-    boxes([cell('victims', 0.8), cell('victimName', 2.6), cell('victimRelation', 1.1), cell('methodCode', 1)]);
-    boxes([cell('offenders', 0.8), cell('offenderName', 2.6), cell('offenderRelation', 1.1), cell('arrested', 1)]);
-    y -= 6;
+    if (on('people')) {
+      band('Victims and Offenders');
+      boxes([cell('victims'), cell('offenders'), cell('arrested'), cell('methodCode')]);
+      y -= 4;
+      listBlock('victimsList');
+      listBlock('offendersList');
+      y -= 4;
+    }
 
     // ---- assignment
-    band('Assignment');
-    boxes([cell('method', 1.2), cell('unit', 0.9), cell('safeMethod', 1), cell('residence', 1.8)]);
-    boxes([cell('arrestUnit', 1.2), cell('adults', 0.8), cell('juveniles', 0.8), cell('fire', 0.7), cell('gang', 0.9)]);
-    y -= 6;
+    if (on('assignment')) {
+      band('Assignment');
+      boxes([cell('method', 1.2), cell('unit', 0.9), cell('safeMethod', 1), cell('residence', 1.8)]);
+      boxes([cell('arrestUnit', 1.2), cell('adults', 0.8), cell('juveniles', 0.8), cell('fire', 0.7), cell('gang', 0.9)]);
+      y -= 6;
+    }
 
     // ---- update information, status, how cleared
-    band('Update Information');
-    ticks(['victimVerified', 'offenderVerified', 'propertyVerified', 'circumstancesVerified', 'victimUpdated', 'offenderUpdated', 'propertyUpdated', 'circumstancesUpdated']
-      .map((k) => ({ label: RF.FIELDS.find(([key]) => key === k)[1], on: !!d[k] })), 4);
-    const opt = (k) => RF.FIELDS.find(([key]) => key === k)[3].filter(Boolean);
-    band('Status');
-    ticks(opt('status').map((o) => ({ label: o, on: d.status === o })), 8);
-    band('How Cleared');
-    ticks(opt('cleared').map((o) => ({ label: o, on: d.cleared === o })), 5);
-    y -= 6;
+    if (on('update')) {
+      band('Update Information');
+      ticks(['victimVerified', 'offenderVerified', 'propertyVerified', 'circumstancesVerified', 'victimUpdated', 'offenderUpdated', 'propertyUpdated', 'circumstancesUpdated']
+        .map((k) => ({ label: RF.FIELDS.find(([key]) => key === k)[1], on: !!d[k] })), 4);
+      const opt = (k) => RF.FIELDS.find(([key]) => key === k)[3].filter(Boolean);
+      band('Status');
+      ticks(opt('status').map((o) => ({ label: o, on: d.status === o })), 8);
+      band('How Cleared');
+      ticks(opt('cleared').map((o) => ({ label: o, on: d.cleared === o })), 5);
+      y -= 6;
+    }
 
     // ---- officer's report
-    band(`Officer's Report${d.activity ? ` - ${d.activity}` : ''}`);
-    const report = RF.SECTIONS.find((s) => s.id === 'report').fields;
-    for (const [k, label] of report) {
-      if (k === 'totalWeight') labelled('Evidence Inventoried', d.evidence.length ? d.evidence.map((e) => `Exhibit ${e.number}${e.inventory ? ` (Inv. ${e.inventory})` : ''}`).join(', ') : '');
-      if (k === 'courtDate') continue;
-      labelled(label, k === 'courtBranch' ? [val('courtBranch'), val('courtDate')].filter(Boolean).join(', ') : val(k));
+    if (on('report')) {
+      band(`Officer's Report${d.activity ? ` - ${d.activity}` : ''}`);
+      const report = RF.SECTIONS.find((s) => s.id === 'report').fields;
+      for (const [k, label] of report) {
+        if (k === 'totalWeight' && on('evidence')) labelled('Evidence Inventoried', d.evidence.length ? d.evidence.map((e) => `Exhibit ${e.number}${e.inventory ? ` - Inv. ${e.inventory}` : ''}`).join(', ') : '');
+        if (k === 'courtDate') continue;
+        labelled(label, k === 'courtBranch' ? [val('courtBranch'), val('courtDate')].filter(Boolean).join(', ') : val(k));
+      }
+      y -= 6;
+      for (const key of RF.SECTIONS.find((s) => s.id === 'report').lists) listBlock(key);
+      y -= 4;
     }
-    y -= 8;
 
     // ---- evidence inventoried
-    band('Evidence Inventoried');
-    const cols = [['Exhibit', 46], ['Inventory No.', 76], ['Type', 88], ['Narcotic Type', 88], ['Weight', 52]];
-    const descW = INNER - cols.reduce((n, [, w]) => n + w, 0);
-    const head = () => {
-      ensure(14);
-      let x = M;
-      for (const [l, w] of [...cols, ['Description', descW]]) { fill(x, y - 13, w, 13, 0.95); rect(x, y - 13, w, 13); text(x + 3, y - 9.3, l.toUpperCase(), 6.5, true); x += w; }
-      y -= 13;
-    };
-    head();
-    if (!d.evidence.length) { rect(M, y - 15, INNER, 15); text(M + 4, y - 10.5, 'None.', 9); y -= 15; }
-    for (const e of d.evidence) {
-      const vals = [String(e.number), e.inventory, e.type, e.type === 'Narcotics' ? e.drug : '', e.type === 'Narcotics' ? e.weight : ''];
-      const desc = wrap(e.description, 9, descW - 8);
-      const small = vals.map((v, i) => wrap(v, 9, cols[i][1] - 6));
-      const h = Math.max(15, 5 + Math.max(desc.length, ...small.map((l) => l.length)) * 11);
-      if (y - h < M + 18) { newPage(); head(); }
-      let x = M;
-      small.forEach((ls, i) => { rect(x, y - h, cols[i][1], h); ls.forEach((l, j) => text(x + 3, y - 10.5 - j * 11, l, 9)); x += cols[i][1]; });
-      rect(x, y - h, descW, h);
-      desc.forEach((l, j) => text(x + 4, y - 10.5 - j * 11, l, 9));
-      y -= h;
+    if (on('evidence')) {
+      band('Evidence Inventoried');
+      const cols = [['Exhibit', 46], ['Inventory No.', 76], ['Type', 88], ['Narcotic Type', 88], ['Weight', 52]];
+      const descW = INNER - cols.reduce((n, [, w]) => n + w, 0);
+      const head = () => {
+        ensure(14);
+        let x = M;
+        for (const [l, w] of [...cols, ['Description', descW]]) { fill(x, y - 13, w, 13, 0.95); rect(x, y - 13, w, 13); text(x + 3, y - 9.3, l.toUpperCase(), 6.5, true); x += w; }
+        y -= 13;
+      };
+      head();
+      if (!d.evidence.length) { rect(M, y - 15, INNER, 15); text(M + 4, y - 10.5, 'None.', 9); y -= 15; }
+      for (const e of d.evidence) {
+        const vals = [String(e.number), e.inventory, e.type, e.type === 'Narcotics' ? e.drug : '', e.type === 'Narcotics' ? e.weight : ''];
+        const desc = wrap(`${e.description}${e.photos && e.photos.length ? `${e.description ? ' ' : ''}[${e.photos.length} photo${e.photos.length === 1 ? '' : 's'} attached]` : ''}`, 9, descW - 8);
+        const small = vals.map((v, i) => wrap(v, 9, cols[i][1] - 6));
+        const h = Math.max(15, 5 + Math.max(desc.length, ...small.map((l) => l.length)) * 11);
+        if (y - h < M + 18) { newPage(); head(); }
+        let x = M;
+        small.forEach((ls, i) => { rect(x, y - h, cols[i][1], h); ls.forEach((l, j) => text(x + 3, y - 10.5 - j * 11, l, 9)); x += cols[i][1]; });
+        rect(x, y - h, descW, h);
+        desc.forEach((l, j) => text(x + 4, y - 10.5 - j * 11, l, 9));
+        y -= h;
+      }
+      y -= 8;
     }
-    y -= 8;
 
     // ---- summary of investigation
-    band('Summary of Investigation');
-    const summary = wrap(plain(d.narrative) || '', 10, INNER - 12);
-    let top = y;
-    const closeBox = () => { if (top > y) rect(M, y - 4, INNER, top - y + 4); };
-    y -= 4;
-    for (const l of (summary.length ? summary : [''])) {
-      if (y - 13 < M + 18) { closeBox(); newPage(); top = y; y -= 4; }
-      text(M + 6, y - 10, l, 10);
-      y -= 13;
+    if (on('summary')) {
+      band('Summary of Investigation');
+      const summary = wrap(plain(d.narrative) || '', 10, INNER - 12);
+      let top = y;
+      const closeBox = () => { if (top > y) rect(M, y - 4, INNER, top - y + 4); };
+      y -= 4;
+      for (const l of (summary.length ? summary : [''])) {
+        if (y - 13 < M + 18) { closeBox(); newPage(); top = y; y -= 4; }
+        text(M + 6, y - 10, l, 10);
+        y -= 13;
+      }
+      closeBox();
+      y -= 12;
     }
-    closeBox();
-    y -= 12;
 
     // ---- submission and approval (kept together on one page)
-    ensure(4 * 30 + 30);
-    band('Submission and Approval');
-    boxes([cell('extraCopies', 1.6), cell('dateSubmitted', 1), cell('timeSubmitted', 0.7), cell('supervisor', 1.5), cell('supervisorStar', 0.7, 'Star')]);
-    boxes([cell('reportingOfficer', 1.6, 'Reporting Officer - Print'), cell('reportingStar', 0.6, 'Star'), cell('secondOfficer', 1.5, 'Reporting Officer'), cell('secondStar', 0.6, 'Star'), { label: 'Signature', value: '', w: 1.6, sign: 'SupervisorSignature' }], 36);
-    boxes([{ label: 'Signature', value: '', w: 2.2, sign: 'ReportingOfficerSignature' }, { label: 'Signature', value: '', w: 2.1, sign: 'SecondOfficerSignature' }, cell('dateApproved', 1, 'Date Approved'), cell('timeApproved', 0.6, 'Time')], 36);
-    boxes([cell('lieutenant', 1.6, 'Lieutenant Approval'), cell('lieutenantStar', 0.6, 'Star'), { label: 'Signature', value: '', w: 2.1, sign: 'LieutenantSignature' }, { label: 'Note', value: 'Sign in blue ink or with an electronic signature.', w: 1.6 }], 36);
+    if (on('approval')) {
+      ensure(4 * 30 + 30);
+      band('Submission and Approval');
+      boxes([cell('extraCopies', 1.6), cell('dateSubmitted', 1), cell('timeSubmitted', 0.7), cell('supervisor', 1.5), cell('supervisorStar', 0.7, 'Star')]);
+      boxes([cell('reportingOfficer', 1.6, 'Reporting Officer - Print'), cell('reportingStar', 0.6, 'Star'), cell('secondOfficer', 1.5, 'Reporting Officer'), cell('secondStar', 0.6, 'Star'), { label: 'Signature', value: '', w: 1.6, sign: 'SupervisorSignature' }], 36);
+      boxes([{ label: 'Signature', value: '', w: 2.2, sign: 'ReportingOfficerSignature' }, { label: 'Signature', value: '', w: 2.1, sign: 'SecondOfficerSignature' }, cell('dateApproved', 1, 'Date Approved'), cell('timeApproved', 0.6, 'Time')], 36);
+      boxes([cell('lieutenant', 1.6, 'Lieutenant Approval'), cell('lieutenantStar', 0.6, 'Star'), { label: 'Signature', value: '', w: 2.1, sign: 'LieutenantSignature' }, { label: 'Note', value: 'Sign in blue ink or with an electronic signature.', w: 1.6 }], 36);
+    }
+
+    // ---- Exhibit Attachments: the exhibit photos, two to a portrait page, each as large as fits,
+    // with its exhibit line under it.
+    const photos = on('evidence') ? (photosIn || []) : [];
+    for (let i = 0; i < photos.length; i += 2) {
+      newPage();
+      band('Exhibit Attachments');
+      y -= 6;
+      const slotH = (y - (M + 18)) / 2;
+      photos.slice(i, i + 2).forEach((ph, j) => {
+        const top = y - j * slotH;
+        const cap = wrap(ph.caption || '', 9, INNER - 8).slice(0, 3);
+        const capH = cap.length * 11 + 8;
+        const boxH = slotH - capH - 10;
+        const k = Math.min((INNER - 12) / ph.w, (boxH - 12) / ph.h);
+        const w = ph.w * k; const hgt = ph.h * k;
+        rect(M, top - boxH, INNER, boxH);
+        const x = M + (INNER - w) / 2; const yy = top - boxH + (boxH - hgt) / 2;
+        ops.push(`q ${w.toFixed(2)} 0 0 ${hgt.toFixed(2)} ${x.toFixed(2)} ${yy.toFixed(2)} cm /Im${ph.index} Do Q`);
+        pages[pages.length - 1].imgs.push(ph.index);
+        cap.forEach((l, n) => text(M + 4, top - boxH - 12 - n * 11, l, 9, n === 0));
+      });
+    }
 
     // Footer with page numbers.
     pages.forEach((p, i) => {
@@ -272,12 +346,21 @@
 
   /** -> Uint8Array: the report as a PDF. opts: { agency, title, caseLabel, printed } */
   function build(data, opts = {}) {
-    const pages = layout(data, opts);
+    // Photos (JPEG bytes) become image objects; the layout refers to them as /Im0, /Im1…
+    // With Evidence left out, no photos go in the file at all.
+    const evidenceOff = Array.isArray(data && data.hidden) && data.hidden.includes('evidence');
+    const photos = evidenceOff ? [] : (opts.photos || []).map((p, index) => ({ ...p, index }));
+    const pages = layout(data, { ...opts, photos });
     const objs = []; // index = object number - 1
     const add = (body) => { objs.push(body); return objs.length; };
     const catalog = add(null); const pagesObj = add(null);
     const f1 = add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
     const f2 = add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+    const imgObj = photos.map((p) => {
+      let bin = '';
+      for (let i = 0; i < p.jpeg.length; i += 0x8000) bin += String.fromCharCode.apply(null, p.jpeg.subarray(i, i + 0x8000));
+      return add(`<< /Type /XObject /Subtype /Image /Width ${p.w} /Height ${p.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.jpeg.length} >>\nstream\n${bin}\nendstream`);
+    });
     const kids = []; const fields = [];
     for (const p of pages) {
       const content = p.ops.join('\n');
@@ -285,7 +368,7 @@
       const pageNum = objs.length + 1 + p.sigs.length;
       const annots = p.sigs.map((s) => add(`<< /Type /Annot /Subtype /Widget /FT /Sig /T ${pdfString(s.name)} /TU ${pdfString('Sign here')} /F 4 /Rect [${s.rect.map((n) => n.toFixed(2)).join(' ')}] /P ${pageNum} 0 R >>`));
       fields.push(...annots);
-      const pg = add(`<< /Type /Page /Parent ${pagesObj} 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] /Resources << /Font << /F1 ${f1} 0 R /F2 ${f2} 0 R >> >> /Contents ${cs} 0 R${annots.length ? ` /Annots [${annots.map((a) => `${a} 0 R`).join(' ')}]` : ''} >>`);
+      const pg = add(`<< /Type /Page /Parent ${pagesObj} 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] /Resources << /Font << /F1 ${f1} 0 R /F2 ${f2} 0 R >>${p.imgs.length ? ` /XObject << ${p.imgs.map((n) => `/Im${n} ${imgObj[n]} 0 R`).join(' ')} >>` : ''} >> /Contents ${cs} 0 R${annots.length ? ` /Annots [${annots.map((a) => `${a} 0 R`).join(' ')}]` : ''} >>`);
       kids.push(pg);
     }
     objs[pagesObj - 1] = `<< /Type /Pages /Kids [${kids.map((k) => `${k} 0 R`).join(' ')}] /Count ${kids.length} >>`;

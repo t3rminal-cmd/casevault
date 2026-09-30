@@ -22,7 +22,7 @@ test('Report Fields: saves from before v1.20 are brought up to date', () => {
   assert.deepStrictEqual(d.evidence.map((e) => e.type), ['Narcotics', 'Video/Audio']);
   assert.strictEqual(d.evidence[0].inventory, '');
   assert.strictEqual(d.victimVerified, false);
-  assert.strictEqual(d.schema, 2);
+  assert.strictEqual(d.schema, 3);
 });
 
 test('Report Fields: placeholders, AI text and a report made from them', () => {
@@ -71,4 +71,35 @@ test('Report PDF: wrapping keeps lines inside the width and breaks long words', 
   const lines = P.wrap('A '.repeat(100) + 'X'.repeat(300), 9, 200);
   for (const l of lines) assert.ok(P.width(l, 9) <= 200.01, l);
   assert.ok(lines.join('').includes('XXXX'));
+});
+
+test('Report Fields v1.21: lists, parts left out, and v1.20 single entries moved into the lists', () => {
+  const d = F.normalize({ schema: 2, victimName: 'State of Illinois', offenderName: 'DOE, John', offenderRelation: 'X', charges: '720 ILCS 570/401', gangAffiliation: 'Latin Kings', vehicle: '2015 Honda', impound: 'Towed' });
+  assert.strictEqual(d.victimsList[0].name, 'State of Illinois');
+  assert.deepStrictEqual([d.offendersList[0].name, d.offendersList[0].relation], ['DOE, John', 'X']);
+  assert.strictEqual(d.charges[0].description, '720 ILCS 570/401');
+  assert.strictEqual(d.gangs[0].name, 'Latin Kings');
+  assert.strictEqual(d.vehicles[0].notes, '2015 Honda; Towed');
+  assert.ok(!('victimName' in d) && !('vehicle' in d));
+  assert.strictEqual(F.normalize(d).victimsList.length, 1, 'normalizing twice does not add again');
+  d.offendersList[0].dob = '1990-01-02';
+  assert.match(F.itemLine('offendersList', d.offendersList[0]), /^DOE, John, Relation Code: X, Date of Birth: 01\.02\.1990/);
+  d.hidden = ['people'];
+  assert.doesNotMatch(F.asText(d), /Offender:/);
+  assert.doesNotMatch(F.toMarkdown(d), /Victims and Offenders/);
+  assert.ok(F.PICKS.gang.includes('Gangster Disciples') && F.PICKS.victim.includes('State of Illinois'));
+});
+
+test('Report PDF: exhibit photos on Exhibit Attachments pages; hidden parts left out', () => {
+  // A tiny valid JPEG is not needed: the writer only wraps the bytes.
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+  const d = F.normalize({ evidence: [{ number: 1, type: 'Narcotics', photos: ['a.jpg'] }], hidden: ['assignment'], offendersList: [{ name: 'DOE, John' }] });
+  const s = Buffer.from(P.build(d, { photos: [{ jpeg, w: 800, h: 600, caption: 'Exhibit 1' }, { jpeg, w: 600, h: 800, caption: 'Exhibit 1' }] })).toString('latin1');
+  assert.match(s, /\/Subtype \/Image \/Width 800 \/Height 600/);
+  assert.match(s, /\(EXHIBIT ATTACHMENTS\)/);
+  assert.match(s, /\/XObject << \/Im0 \d+ 0 R \/Im1 \d+ 0 R >>/, 'both photos on one page');
+  assert.doesNotMatch(s, /\(ASSIGNMENT\)/);
+  assert.match(s, /\(DOE, John\)/);
+  const noEvidence = Buffer.from(P.build({ ...d, hidden: ['evidence'] }, { photos: [{ jpeg, w: 10, h: 10 }] })).toString('latin1');
+  assert.doesNotMatch(noEvidence, /EXHIBIT ATTACHMENTS|\/Subtype \/Image/, 'no evidence part, no photo pages');
 });

@@ -34,7 +34,7 @@
     const { h, state, Save, toast, go } = ui;
     const data = await load(c);
     if (token !== state.renderToken) return;
-    if (!data.caseNumber && c.number) data.caseNumber = c.number;
+    if (!data.caseNumber && (c.agencyNumber || c.number)) data.caseNumber = c.agencyNumber || c.number; // Agency Report Number
     const archived = Vault.isArchived(c.id);
     const key = `report-fields:${c.id}`;
     const save = (delay = 700) => {
@@ -71,9 +71,68 @@
       return ui.field(label, el, kind === 'textarea' || kind === 'line' ? 'span-all rf-line' : '');
     };
 
-    const sections = F().SECTIONS.map((s) => h('section', { class: `rf-section rf-${s.id}` },
-      h('h3', { icon: s.icon }, s.title),
-      h('div', { class: s.id === 'report' ? 'rf-lines' : 'rf-grid' }, s.fields.map(([k, label, kind, opts]) => input(k, label, kind, opts)))));
+    // Pick-lists you can also type over (victim, gang, hair and eye colour).
+    const picks = Object.entries(F().PICKS).map(([k, list]) => h('datalist', { id: `rf-pick-${k}` }, list.map((v) => h('option', { value: v }))));
+
+    // ---- lists you add to: victims, offenders, charges, gangs, persons not arrested, personnel, vehicles
+    function listEditor(key) {
+      const L = F().LISTS[key];
+      const box = h('div', { class: 'rf-items' });
+      const draw = () => {
+        box.replaceChildren(...(data[key].length ? data[key].map((it, i) => {
+          const fields = L.fields.map(([k, label, kind, opts]) => {
+            let el;
+            if (kind === 'select') {
+              el = h('select', {}, opts.map((o) => h('option', { value: o, selected: o === (it[k] || '') }, o || '—')));
+              el.addEventListener('change', () => { it[k] = el.value; save(); });
+            } else {
+              el = h('input', { type: kind === 'date' ? 'date' : kind === 'phone' ? 'tel' : 'text', autocomplete: 'off', value: it[k] || '', list: F().PICKS[kind] ? `rf-pick-${kind}` : null });
+              if (kind === 'phone' && root.CVFormat) CVFormat.phone && el.addEventListener('blur', () => { el.value = CVFormat.phone(el.value); it[k] = el.value; save(); });
+              el.addEventListener('input', () => { it[k] = el.value; save(); });
+            }
+            el.setAttribute('aria-label', `${L.item} ${i + 1} ${label}`);
+            return ui.field(label, el, kind === 'wide' ? 'rf-wide' : '');
+          });
+          return h('div', { class: 'rf-item' },
+            h('div', { class: 'rf-item-head' }, h('strong', {}, `${L.item} ${i + 1}`),
+              archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: `Delete ${L.item.toLowerCase()}`, onclick: async () => {
+                if (F().filled(it) && !(await ui.confirmDialog({ title: `Delete ${L.item} ${i + 1}?`, message: 'This entry is removed from the report.', confirmText: 'Delete', danger: true }))) return;
+                data[key].splice(i, 1); draw(); save();
+              } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, `Delete ${L.item} ${i + 1}`))),
+            h('div', { class: 'rf-item-grid' }, fields));
+        }) : [h('p', { class: 'muted small rf-none' }, `No ${L.title.toLowerCase()} yet.`)]));
+      };
+      draw();
+      const add = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', onclick: () => {
+        data[key].push(F().blankItem(key)); draw(); save();
+        const last = box.lastElementChild && box.lastElementChild.querySelector('input, select');
+        if (last) last.focus();
+      } }, `Add ${L.item}`);
+      return h('div', { class: `rf-list rf-list-${key}` }, h('h4', {}, L.title), box, archived ? null : h('div', { class: 'contact-add' }, add));
+    }
+
+    // ---- every part has an Include box on the left: untick it when the part doesn't apply; it's
+    // then folded away and left out of the PDF and the report.
+    function part(id, title, icon, ...body) {
+      const on = !F().isHidden(data, id);
+      const inner = h('div', { class: 'rf-body', hidden: !on }, ...body);
+      const cb = h('input', { type: 'checkbox', checked: on, 'aria-label': `Include ${title}` });
+      const sec = h('section', { class: `rf-section rf-${id}${on ? '' : ' rf-off'}` },
+        h('div', { class: 'rf-head' }, h('label', { class: 'rf-include', title: 'Untick if this part doesn\'t apply' }, cb), h('h3', { icon }, title)),
+        inner);
+      cb.addEventListener('change', () => {
+        data.hidden = data.hidden.filter((x) => x !== id);
+        if (!cb.checked) data.hidden.push(id);
+        inner.hidden = !cb.checked;
+        sec.classList.toggle('rf-off', !cb.checked);
+        save();
+      });
+      return sec;
+    }
+
+    const sections = F().SECTIONS.map((s) => part(s.id, s.title, s.icon,
+      h('div', { class: s.id === 'report' ? 'rf-lines' : `rf-grid${s.id === 'update' ? ' rf-grid-4' : ''}` }, s.fields.map(([k, label, kind, opts]) => input(k, label, kind, opts))),
+      ...(s.lists || []).map(listEditor)));
 
     // ---- evidence inventoried: one card per exhibit (number given automatically)
     const evRows = h('div', { class: 'rf-exhibits' });
@@ -92,11 +151,38 @@
         const desc = h('textarea', { rows: 3, 'aria-label': `Exhibit ${n} description`, placeholder: 'What it is, where it was found, when and by whom.' });
         desc.value = e.description || '';
         desc.addEventListener('input', () => { e.description = desc.value; save(); });
+        // Photos: saved in the case's exhibit folder; click one to view it.
+        const strip = h('div', { class: 'rf-photos' });
+        const drawPhotos = () => {
+          strip.replaceChildren(...e.photos.map((path, j) => {
+            const img = h('img', { alt: `Exhibit ${n} photo ${j + 1}` });
+            Vault.readFile(c.id, path).then((f) => { img.src = URL.createObjectURL(f); img.addEventListener('load', () => URL.revokeObjectURL(img.src), { once: true }); }).catch(() => { img.alt = 'Photo not found'; });
+            return h('div', { class: 'rf-photo' },
+              h('button', { 'data-ro-ok': 'true', class: 'rf-photo-open', type: 'button', title: 'View', onclick: () => ui.previewFile(c, path) }, img),
+              archived ? null : h('button', { class: 'rf-photo-x', type: 'button', title: 'Take off this exhibit (the photo stays in the case files)', onclick: () => { e.photos.splice(j, 1); drawPhotos(); save(); } }, ui.icon('x-lg'), h('span', { class: 'sr-only' }, 'Remove photo')));
+          }));
+        };
+        drawPhotos();
+        const picker = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true });
+        picker.addEventListener('change', async () => {
+          const files = [...picker.files];
+          picker.value = '';
+          for (const f of files) {
+            try {
+              const path = await Save.track(`photo:${c.id}`, () => Vault.addFile(c.id, f, { folder: e.type === 'Narcotics' ? 'Drug Exhibits' : 'Other Exhibits', description: `Exhibit ${n} photo` }));
+              e.photos.push(path);
+            } catch { /* reported by Save */ }
+          }
+          drawPhotos();
+          save(0);
+        });
+        const addPhoto = archived ? null : h('button', { class: 'btn small', type: 'button', icon: 'camera', onclick: () => picker.click() }, 'Add Photos');
         return h('div', { class: 'rf-exhibit-card' },
           h('div', { class: 'rf-exhibit-no', title: 'Given automatically; never reused' }, h('span', { class: 'small muted' }, 'Exhibit No.'), h('strong', { class: 'rf-exhibit' }, String(n))),
           h('div', { class: 'rf-exhibit-body' },
             h('div', { class: 'rf-exhibit-row' }, ui.field('Inventory Number', inv), ui.field('Type', type), narc),
-            ui.field('Description', desc, 'span-all')),
+            ui.field('Description', desc, 'span-all'),
+            h('div', { class: 'rf-photo-row' }, strip, addPhoto, picker)),
           archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Remove exhibit', onclick: () => { data.evidence.splice(i, 1); drawEvidence(); save(); } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, `Remove exhibit ${n}`)));
       }) : [h('p', { class: 'muted small' }, 'No evidence yet.')]));
     };
@@ -104,7 +190,7 @@
     const addExhibit = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', title: c.agencyNumber ? `Numbered on from the last exhibit of any case with agency case number ${c.agencyNumber}.` : 'Numbered on from the last exhibit of this case. Cases with the same agency case number share one sequence.', onclick: async () => {
       try {
         const n = F().nextExhibit(await numbersInUse(c, data));
-        data.evidence.push({ number: n, inventory: '', type: '', drug: '', weight: '', description: '' });
+        data.evidence.push({ number: n, inventory: '', type: '', drug: '', weight: '', description: '', photos: [] });
         data.lastExhibit = Math.max(Number(data.lastExhibit) || 0, n);
         drawEvidence();
         save(0);
@@ -125,37 +211,63 @@
       if (!Save.failed.has(key)) toast('Report fields saved to the SSD.', 'success', 2500);
     } }, 'Save Changes');
     // ---- the Supplementary Report as a PDF: look at it and print, keep it, or send it to sign.
-    const pdfBytes = () => {
-      const p = Vault.data.settings.affiant || {};
-      return CVReportPdf.build(data, { agency: p.agency || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' \u00b7 '), printed: CVFormat.dateText(Vault.localDay()) });
-    };
-    const pdfName = () => `Supplementary Report ${CVFormat.dateText(Vault.localDay())}.pdf`;
-    // Saving twice without changes in between (Save PDF, then Email for E-Sign) keeps one file.
-    let lastPdf = null;
-    async function savePdf() {
-      save(0);
-      await Save.flushAll();
-      const bytes = pdfBytes();
-      const sig = JSON.stringify(data);
-      if (lastPdf && lastPdf.sig === sig) return lastPdf.path;
-      const file = new File([bytes], pdfName(), { type: 'application/pdf' });
-      const path = await Save.track(`report-pdf:${c.id}`, () => Vault.addFile(c.id, file, { folder: 'Supplementary Report', description: pdfName().replace(/\.pdf$/, '') }));
-      lastPdf = { sig, path };
-      return path;
+    // Exhibit photos as JPEG for the Exhibit Attachments pages (at most 1600 px, readable in print).
+    async function photoJpegs() {
+      const out = [];
+      if (F().isHidden(data, 'evidence')) return out;
+      for (const e of data.evidence) {
+        for (const path of e.photos || []) {
+          try {
+            const bmp = await createImageBitmap(await Vault.readFile(c.id, path));
+            const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+            const cv = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
+            const g = cv.getContext('2d');
+            g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+            g.drawImage(bmp, 0, 0, cv.width, cv.height);
+            const blob = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.88));
+            out.push({ jpeg: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height, caption: F().exhibitLine(e) });
+          } catch { /* a photo that can't be read is left out */ }
+        }
+      }
+      return out;
     }
-    const printBtn = h('button', { 'data-ro-ok': 'true', class: 'btn', type: 'button', icon: 'printer', title: 'Opens the report. Print it, or save it as a PDF.', onclick: async () => {
-      save(0);
-      await Save.flushAll();
-      const url = URL.createObjectURL(new Blob([pdfBytes()], { type: 'application/pdf' }));
+    const pdfBytes = async () => {
+      const p = Vault.data.settings.affiant || {};
+      return CVReportPdf.build(data, { agency: p.agency || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' \u00b7 '), printed: CVFormat.dateText(Vault.localDay()), photos: await photoJpegs() });
+    };
+    async function showPdf(bytes) {
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
       await ui.openDialog((close) => h('div', { class: 'pdf-view' },
         h('h2', { icon: 'printer' }, 'Supplementary Report'),
         h('p', { class: 'muted small' }, 'Use the printer button above the page to print, or the download button to save a PDF.'),
         h('iframe', { class: 'preview-frame', src: url, title: 'Supplementary Report' }),
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
       URL.revokeObjectURL(url);
+    }
+    const pdfName = () => `Supplementary Report ${CVFormat.dateText(Vault.localDay())}.pdf`;
+    // Saving twice without changes in between (Save PDF, then Email for E-Sign) keeps one file.
+    let lastPdf = null;
+    async function savePdf() {
+      save(0);
+      await Save.flushAll();
+      const sig = JSON.stringify(data);
+      if (lastPdf && lastPdf.sig === sig) return lastPdf.path;
+      const bytes = await pdfBytes();
+      const file = new File([bytes], pdfName(), { type: 'application/pdf' });
+      const path = await Save.track(`report-pdf:${c.id}`, () => Vault.addFile(c.id, file, { folder: 'Supplementary Report', description: pdfName().replace(/\.pdf$/, '') }));
+      lastPdf = { sig, path, bytes };
+      return path;
+    }
+    const printBtn = h('button', { 'data-ro-ok': 'true', class: 'btn', type: 'button', icon: 'printer', title: 'Opens the report. Print it, or save it as a PDF.', onclick: async () => {
+      save(0);
+      await Save.flushAll();
+      await showPdf(await pdfBytes());
     } }, 'Print / PDF');
     const pdfCaseBtn = h('button', { class: 'btn', type: 'button', icon: 'file-earmark-pdf-fill', title: 'Saves the PDF in this case\'s Supplementary Report folder.', onclick: async () => {
-      try { const path = await savePdf(); toast(`Saved to the case files: ${path.split('/').pop()}`, 'success', 5000); } catch { /* reported by Save */ }
+      let path;
+      try { path = await savePdf(); } catch { return; }
+      toast(`Saved to the case files: ${path.split('/').pop()}`, 'success', 5000);
+      await showPdf(lastPdf.bytes); // the saved report, to look at straight away
     } }, 'Save PDF to Case');
     const signBtn = h('button', { class: 'btn', type: 'button', icon: 'envelope-paper', title: 'Saves the PDF to the case and starts an email with it attached, for signing.', onclick: async () => {
       let path;
@@ -187,13 +299,10 @@
         h('h2', { icon: 'card-checklist' }, 'Report Fields'), h('div', { class: 'spacer' }), archived ? null : saveBtn),
       h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case. Print it, save it as a PDF, or email it to sign. Saved as report-fields.json.'),
       h('div', { class: 'rf-actions' }, printBtn, archived ? null : pdfCaseBtn, archived ? null : signBtn, archived ? null : makeBtn),
-      ucrList, locList,
+      ucrList, locList, ...picks,
       ...sections.slice(0, -1),
-      h('section', { class: 'rf-section' },
-        h('h3', { icon: 'box-seam', title: 'Numbers are automatic and shared by cases with the same agency case number.' }, 'Evidence Inventoried'),
-        evRows,
-        archived ? null : h('div', { class: 'contact-add' }, addExhibit)),
-      h('section', { class: 'rf-section' }, h('h3', { icon: 'journal-text' }, 'Summary of Investigation'), fmt, rich.el, narrative),
+      part('evidence', 'Evidence Inventoried', 'box-seam', evRows, archived ? null : h('div', { class: 'contact-add' }, addExhibit)),
+      part('summary', 'Summary of Investigation', 'journal-text', fmt, rich.el, narrative),
       sections[sections.length - 1], // Submission and Approval comes last, as on the printed report
       archived ? null : h('div', { class: 'details-save' }, saveBtn.cloneNode(true)));
     // The copy at the bottom does the same as the one at the top.

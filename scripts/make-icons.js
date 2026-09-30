@@ -26,7 +26,7 @@ box-arrow-left plug arrow-left-right collection bank2 building
 camera-video inbox type-bold type-italic type-underline type-h2 list-ul list-ol grip-vertical currency-bitcoin
 image person-lines-fill robot chat-left-text bookshelf link-45deg pin-angle eye-fill plus-square pencil-fill
 quote hr file-earmark-plus arrow-up arrow-down chevron-up
-clock dash-lg arrows-angle-expand arrows-angle-contract box-arrow-in-down-left journal-richtext person-plus list bug bell-fill brightness-high zoom-in eraser person-exclamation terminal sliders2 chat-dots-fill three-dots-vertical
+clock dash-lg arrows-angle-expand arrows-angle-contract box-arrow-in-down-left journal-richtext person-plus list bug bell-fill brightness-high zoom-in eraser person-exclamation terminal sliders2 chat-dots-fill three-dots-vertical camera shield-exclamation stars
 `.trim().split(/\s+/);
 
 const dir = process.argv[2];

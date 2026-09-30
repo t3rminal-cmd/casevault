@@ -103,7 +103,7 @@ The header has three parts:
 At the bottom of the Overview, in three tabs:
 
 - **Reference:** Location Codes, Common UCR and the Narcotic Calculator (CaseVault's own pages, see *Reference*).
-- **OSINT:** MaxMind IP (where an IP address is) and Fingerprint (browser and device fingerprint).
+- **OSINT:** MaxMind IP (where an IP address is), Fingerprint (browser and device fingerprint) and NumLookup (free reverse phone lookup).
 - **LEO:** Accurint, Kodex Portal and Chicago HIDTA, plus any you add.
 
 OSINT and LEO links open the website **in a new browser tab**, outside CaseVault. CaseVault never contacts those sites itself and sends them nothing (not even which page you came from), so CaseVault stays offline: the **Offline** badge doesn't change when you click one. The website itself needs the PC's internet connection, like any site you open in the browser. Don't paste case details into outside websites unless your policy allows it.
@@ -111,6 +111,10 @@ OSINT and LEO links open the website **in a new browser tab**, outside CaseVault
 - **Show / hide** lets you hide the buttons you don't use (click the eye on each), and bring them back.
 - Quick links sit in a slim strip at the bottom of the Overview: small buttons in rows, so they take little room.
 - **Edit links** (or **Vault → Quick links**, which also has a **Save changes** button) changes a link's name or web address, and adds your own, for example your agency's portals. Chicago HIDTA has no address until you add your portal's. Changes save when you leave the box, in `vault.json` on the SSD.
+
+## The Overview
+
+With no case open, CaseVault shows the **Overview**: a welcome banner with the date and time, how many cases are open, whether a deadline is due soon (and the next one, one click away), and buttons for **New Case**, **Ask AI**, **Reference** and the **Vault**. Below it are the case counts, upcoming deadlines, recently updated cases and the quick links.
 
 ## Cases
 
@@ -121,6 +125,7 @@ OSINT and LEO links open the website **in a new browser tab**, outside CaseVault
 - **Details** tab: edit any field. A short note under **Status** says what the status means and, for a Pending case, what you're waiting on.
 - **Suspects** (on the Details tab): **Add suspect** for each person the case is about: name, date of birth (the **age** is worked out for you), residence, and role (**Main**, **Secondary** or **Other**). The first one is Main, later ones Secondary. They save with the case, go to **Ask AI** and **Draft with AI** with the case, and templates can use `{{suspect.name}}`, `{{suspect.dob}}`, `{{suspect.age}}`, `{{suspect.residence}}` and `{{suspect.role}}` (the main suspect) and `{{suspects}}` (all of them, one per line).
 - **Save changes** at the bottom of the Details tab saves the case to the SSD now and confirms it. Changes also save by themselves a moment after you type.
+- **Deconfliction** (on the Details tab, under Contacts): a table with a row for each deconfliction check: date, event or location, the system checked (RISSafe, HIDTA, DICE… or type one), the deconfliction number, **Conflict** Yes / No (a Yes shows in red) and notes. **Add Deconfliction** adds a row; the bin deletes one.
 - **Contacts** (on the Details tab, under Suspects): the **Case Officer**, the **prosecutor** (choose **ASA** or **AUSA**), each with name, email and phone, and **Add contact** for anyone else on the case: the Team Supervisor, a Team Member, Finance, Asset Forfeiture and so on (pick a role from the list or type your own). The bin button removes one. They save with the case on the SSD, go to **Ask AI** with the case, and templates can use `{{case.officer.name}}`, `{{case.prosecutor.title}}`, `{{case.prosecutor.email}}` and so on.
 - **Case actions** (at the bottom of Details) has **Close case…** (or **Reopen case**), **Add arrest details**, **Archive case…** and **Delete case…**.
 
@@ -175,24 +180,24 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
-## Reports (case notes and drafts)
+## Reports (field notes and drafts)
 
-The **Reports** tab has everything you write for a case in one list: **Case notes** is always at the top, followed by every report and draft (including Draft with AI's). **New report** above the list starts one: pick **Blank**, **Template** or **Draft with AI** from the *Start from* dropdown (see *Drafts* below). **Report Fields**, pinned under Case notes, holds the facts of the case's reports (see below). Click a name to open it; **← All reports** goes back to the list. Old links to the Notes or Drafts tab open the same place.
+The **Reports** tab has everything you write for a case in one list: **Field Notes** is always at the top, followed by every report and draft (including Draft with AI's). **New report** above the list starts one: pick **Blank**, **Template** or **Draft with AI** from the *Start from* dropdown (see *Drafts* below). **Report Fields**, pinned under Field Notes, holds the facts of the case's reports (see below). Click a name to open it; **← All reports** goes back to the list. Old links to the Notes or Drafts tab open the same place.
 
-**Tab indents** in the case notes and in every report, like in Word: **Tab** puts in an indent (with several lines selected, it indents each one) and **Shift+Tab** takes one off. Indents show in the Formatted view and become tab stops in the Word export. When an AI suggestion is showing in a report, Tab accepts it instead. To leave the box with the keyboard, press **Esc**, then **Tab**.
+**Tab indents** in the field notes and in every report, like in Word: **Tab** puts in an indent (with several lines selected, it indents each one) and **Shift+Tab** takes one off. Indents show in the Formatted view and become tab stops in the Word export. When an AI suggestion is showing in a report, Tab accepts it instead. To leave the box with the keyboard, press **Esc**, then **Tab**.
 
 ### Formatted or Markdown
 
-Case notes, every report and the Report Fields narrative open in the **Formatted** view: **bold** shows bold, underline is underlined, and headings, lists and tables look as they will in Word, with no `**` or `++` on screen. Type as in Word: **Ctrl+B / Ctrl+I / Ctrl+U**, the buttons on the formatting bar, **Enter** for a new paragraph, **Shift+Enter** for a new line in the same paragraph, **Enter** twice to leave a list, **Tab** to indent. Every `[CONFIRM: ...]` is highlighted yellow, as in the Word export.
+Field Notes, every report and the Report Fields narrative open in the **Formatted** view: **bold** shows bold, underline is underlined, and headings, lists and tables look as they will in Word, with no `**` or `++` on screen. Type as in Word: **Ctrl+B / Ctrl+I / Ctrl+U**, the buttons on the formatting bar, **Enter** for a new paragraph, **Shift+Enter** for a new line in the same paragraph, **Enter** twice to leave a list, **Tab** to indent. Every `[CONFIRM: ...]` is highlighted yellow, as in the Word export.
 
 - **Paste from Word** (or Outlook, or a web page): bold, italic, underline, headings, lists and tables are kept; fonts, colours and pictures are left out.
 - **Copy for Word:** select text in the Formatted view and press Ctrl+C, or use **Export → Copy for Word (formatted)** for the whole report. It pastes into Word with its formatting. **Save .docx** is still the way to get a Word file.
 - **Markdown** (next to Formatted) shows the same text with its marks (`**bold**`, `++underline++`, `# heading`), as before v1.19. AI suggestions while you type work in this view. CaseVault remembers your choice on each PC.
 - The file on the SSD stays plain text with those marks (`notes.md`, the draft's `.md`), so templates, Draft with AI, the checks and the Word export work just as before.
 
-### Case notes
+### Field Notes
 
-**Case notes** is a large free-form page, saved as `notes.md` in the case folder. In the Markdown view, the formatting is written like this:
+**Field Notes** is a large free-form page, saved as `notes.md` in the case folder. In the Markdown view, the formatting is written like this:
 
 ```
 # Heading
@@ -208,26 +213,32 @@ Case notes, every report and the Report Fields narrative open in the **Formatted
 
 The **formatting bar** above the text does this for you: **B** bold, *I* italic, U underline (or **Ctrl+B / Ctrl+I / Ctrl+U**), heading, bulleted and numbered list (on the selected lines; click again to take it off), and **table** (pick the size on the grid, then type into the cells). Ctrl+Z undoes. Drafts have the same bar, and tables and underline come through in the Word export.
 
-Notes save on their own as you type. The **Save** button writes them straight away, and the text beside it shows *✓ Saved 14:02* once they're on the SSD. **Delete** on the Case notes row empties the notes after you confirm.
+Notes save on their own as you type. The **Save** button writes them straight away, and the text beside it shows *✓ Saved 14:02* once they're on the SSD. **Delete** on the Field Notes row empties the notes after you confirm.
 
 ### Report Fields (the Supplementary Report)
 
 **Report Fields** is the case's Supplementary Report, laid out like a narcotics supplementary report form:
 
-- **Case Numbers:** case, event, incident, raid and R.D. numbers, and the officer report type (Investigation, Purchase, Surveillance, Correction).
+- **Include boxes:** every part has a tick box on the left of its heading. Untick a part that doesn't apply: it folds away and is left out of the PDF, the report made from the fields and Draft with AI.
+- **Case Numbers:** agency report number (filled from the case's agency case number), event, incident, raid and R.D. numbers, and the officer report type (Investigation, Purchase, Surveillance, Correction).
 - **Offense:** offense classification / last report, IUCR code and location code (type a few characters and pick from the Reference lists), address and type of location, offense reclassification / DNA and revised IUCR, date, time and beat of occurrence, beat assigned.
-- **Victims and Offenders:** numbers, names, relation codes, method code, number arrested.
+- **Victims and Offenders:** the number of victims, offenders and arrested, the method code, and **Add Victim** / **Add Offender** for each person: name, relation code, date of birth, height, weight, hair color, eye color, tattoos / scars and clothing description. For a victim, pick **State of Illinois** or **People of the State of Illinois** from the list, or type a name. The bin button deletes an entry.
 - **Assignment:** method assigned (Field, Supervisor, On View, OEMC), unit, safe method, if residence where, arrest unit, adults, juveniles, fire and gang related.
 - **Update Information and Status:** the verified / updated tick boxes, status (0 - Prog to 7 - C/N/C) and how cleared (1 - Arrest to 5 - Other).
-- **Officer's Report:** one line each for operation / mission number, offenders, gang affiliations, charges, within 1000 feet of, court branch and court officer, court date, search warrant number, the ASA and judge approving the search warrant, persons present not arrested, police personnel on scene, victims, total weight, street value, purchase price, pre-recorded fund sheet inventory number, evidence officer, vehicle impounded / towed, proof of residence, notifications and offender's vehicle.
-- **Evidence Inventoried:** **Add Exhibit** gives the next exhibit number by itself. Every case with the same **agency case number** shares one count (an operation with several case numbers doesn't start again at 1), and a removed exhibit's number isn't given out again. Each exhibit has an **Inventory Number**, a **Type** (Narcotics, Currency, Personal Currency, Personal Property, Personal Jewelry, Jewelry, Electronics, Video/Audio, Photograph, Packaging, Other) and a long **Description**. Choosing **Narcotics** adds **Narcotic Type** (Cannabis, Cocaine, Heroin, Fentanyl…) and **Weight**.
+- **Officer's Report:** one line each for operation / mission number, within 1000 feet of, court branch and court officer, court date, search warrant number, the ASA and judge approving the search warrant, total weight, street value, purchase price, pre-recorded fund sheet inventory number, evidence officer, proof of residence and notifications. Then lists you add to, as many as needed:
+  - **Charges:** statute and statute description.
+  - **Gang Affiliations:** pick a gang from the list (Chicago street gangs, then national and foreign gangs and cartels) or type one, and the faction or set.
+  - **Persons Present Not Arrested:** name, contact number and address.
+  - **Police Personnel on Scene:** name, star number and unit or role.
+  - **Vehicles:** year, make, model, color, license plate and state, VIN, **Impound / Tow** (Impound, Tow, Other) and owner and notes.
+- **Evidence Inventoried:** **Add Exhibit** gives the next exhibit number by itself. Every case with the same **agency case number** shares one count (an operation with several case numbers doesn't start again at 1), and a removed exhibit's number isn't given out again. Each exhibit has an **Inventory Number**, a **Type** (Narcotics, Currency, Personal Currency, Personal Property, Personal Jewelry, Jewelry, Electronics, Video/Audio, Photograph, Packaging, Other) and a long **Description**. Choosing **Narcotics** adds **Narcotic Type** (Cannabis, Cocaine, Heroin, Fentanyl…) and **Weight**. **Add Photos** adds pictures of the exhibit: they're saved in the case's **Drug Exhibits** (or **Other Exhibits**) folder and shown as same-size thumbnails; click one to view it. The x takes a photo off the exhibit (it stays in the case files). In the PDF, the photos come after the report on **Exhibit Attachments** pages: two to a portrait page, as large as fits, each with its exhibit number, inventory number and description under it.
 - **Summary of Investigation:** a large box for the narrative, with the formatting bar.
 - **Submission and Approval:** extra copies, date and time submitted, the reporting officers, supervisor and lieutenant with their star numbers, date and time approved. The signatures are left for ink or e-sign.
 
 The buttons above the form:
 
 - **Print / PDF** shows the report as a PDF. Use the printer button above the page to print it, or the download button to save it.
-- **Save PDF to Case** saves it in the case's **Supplementary Report** folder.
+- **Save PDF to Case** saves it in the case's **Supplementary Report** folder and shows it straight away.
 - **Email for E-Sign** saves the PDF to the case and opens the **Mail** tab with it attached and a subject and message filled in. Add the recipients and create the Outlook draft as usual. The signature boxes in the PDF are real signature fields: in Adobe Acrobat or Reader (**Fill & Sign**, or **Request e-signatures**) they can be signed electronically, or the report can be printed and signed in blue ink.
 - **Create Report** makes an editable report from the fields, to change and export to Word.
 
@@ -416,15 +427,11 @@ The AI engine setup (profiles, models, the launcher) is in [AI-SETUP.md](AI-SETU
 
 ## Privacy screen
 
-To hide CaseVault instantly, for example when someone walks up to your desk, do any of these:
-
-- press **Ctrl + Shift + H**;
-- press **Esc twice** quickly (within half a second);
-- click **Hide** at the top right.
+To hide CaseVault instantly, for example when someone walks up to your desk, click **Hide** (the crossed-out eye) at the top right. It also hides by itself after the idle time you set (below). Since v1.21 there are no keyboard shortcuts for it.
 
 A white screen with blue 1s and 0s raining down covers the whole app, with no case names or data on it. The browser tab's title changes to **New Tab** and its icon goes blank. Audio and video pause, any open file preview closes, and any unsaved edits are written to the SSD first. If Windows is set to reduce animations, the rain stands still.
 
-**To come back:** click anywhere. If you set a PIN, a terminal-style prompt shows `PIN>` with a blinking blue cursor. Type the PIN (each digit shows as a dot) and press Enter; it also unlocks by itself once you've typed 6 digits. After 5 wrong PINs you have to wait 30 seconds.
+**To come back:** click anywhere. If you set a PIN, a terminal-style prompt shows `PIN>` with a blinking blue cursor. Type the PIN (each digit shows as a dot) and press Enter; it also unlocks by itself once you've typed 6 digits. After 5 wrong PINs you have to wait 30 seconds. Esc does nothing on the privacy screen: with a PIN set, only the PIN opens it.
 
 **Settings** (in **Vault → Privacy screen**):
 
@@ -432,8 +439,6 @@ A white screen with blue 1s and 0s raining down covers the whole app, with no ca
 - **Hide automatically after** 1 to 30 minutes without mouse or keyboard activity. **15 minutes** unless you choose another time or Off.
 
 > The privacy screen only hides what's on the screen. It isn't encryption, and anyone at the PC could close the browser tab. **For real security when you leave, press Windows key + L to lock the PC.**
-
-In Firefox, Ctrl + Shift + H normally opens the History window. While CaseVault is the active tab, CaseVault uses it instead. If it ever doesn't respond, use Esc Esc or the Hide button.
 
 ## Department mail (Mail tab)
 
@@ -624,7 +629,7 @@ With **AI suggestions** ticked in the toolbar, pausing for a moment at the end o
 
 Click **Draft with AI…** in the editor (or pick it when creating a draft) and choose:
 
-- **Document type** (including **DEA-6 Report of Investigation**, **DEA-7 drug evidence** and **DEA-202 personal history**) and optionally a **template** to follow.
+- **Document type** (including **DEA 6**, **DEA 7**, **DEA 7a** and **DEA 202**) and optionally a **template** to follow.
 - **What to use:** the case details (always), the timeline, the notes, and any attached documents. For long documents, CaseVault picks the passages most relevant to the draft.
 - **Writing behavior:** how the AI writes. **DEA-6 style** is the default (third person, SYNOPSIS, numbered DETAILS paragraphs in time order, INDEXING). Others: plain narrative report, affidavit / formal legal, brief summary, and any you make (see *AI writing behavior*).
 - **Library:** the examples to write like and the directives to follow (see *The Library*). Examples of the document type you chose are ticked for you, and so are your "always use" directives.
@@ -761,7 +766,6 @@ To make a PC forget the vault folder, open **Vault → Disconnect**.
 | Checks are very slow on the laptop | The laptop runs AI on its processor. Click **AI:** and choose **Light** for this PC (or keep **Auto**: it switches to Light by itself after the first request). The choice is kept per PC. |
 | *AI: Offline* in the header | Start `W:\Start-CaseVault.bat`, then click the pill → **Check again**. Checks still run with rules only. |
 | *Reading PDFs needs the installed app or the helper* | You opened `index.html` straight from the SSD. Use the installed app or the launcher address instead. |
-| Ctrl + Shift + H does nothing | Click in the CaseVault page first (the shortcut only works while CaseVault is the active tab), or use Esc Esc or the **Hide** button. |
 | I forgot the privacy-screen PIN | Reload the page (F5). The screen is gone, and you'll be asked to reconnect in Chrome/Edge. Then set a new PIN under Vault → Privacy screen. |
 | No grey AI suggestions appear | The header must show the AI model (not **AI: Offline**), and **AI suggestions** must be ticked. Suggestions only appear when the cursor is at the end of a line. |
 | *Draft with AI* is greyed out | Start `W:\Start-CaseVault.bat` so the AI engine runs, then click the AI pill → **Check again**. |
