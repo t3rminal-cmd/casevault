@@ -164,11 +164,13 @@
       h('div', { class: 'sugg-label', 'aria-hidden': 'true' }, 'AI suggestion'),
       h('div', { class: 'sugg-body', 'aria-live': 'polite' }, h('span', { class: 'sr-only' }, 'AI suggestion: '), suggContext, suggText),
       h('div', { class: 'sugg-foot', 'aria-hidden': 'true' }, h('kbd', {}, 'Tab'), ' to accept · ', h('kbd', {}, 'Esc'), ' to dismiss'));
-    const wrap = h('div', { class: 'editor-wrap' }, ta, suggBox);
-    const preview = h('div', { class: 'notes-preview draft-preview', hidden: true });
+    // Formatted view (bold shows bold, as in Word) over the Markdown text box (v1.19).
+    const rich = CVRichEditor.create(ta, { h, icon: ui.icon, label: 'Draft text' });
+    const wrap = h('div', { class: 'editor-wrap' }, rich.el, ta, suggBox);
 
     const suggestToggle = h('input', { type: 'checkbox', checked: Vault.data.settings.draftSuggestions !== false });
     const suggestNote = h('span', { class: 'muted small' });
+    const suggestLabel = h('label', { class: 'check-row suggest-toggle', title: 'Suggestions as you type, in the Markdown view.' }, suggestToggle, h('span', {}, 'AI suggestions ', suggestNote));
     const suggestionsOn = () => suggestToggle.checked && !suggestToggle.disabled;
     function drawSuggestState() {
       const ready = aiReady() && !!CVCopilot.fastModel(Engine().detected);
@@ -308,7 +310,13 @@
       confirmList.replaceChildren(...(ph.length ? ph.map((p) => h('li', {}, h('button', {
         'data-ro-ok': 'true', type: 'button', class: 'linkish', title: `Line ${p.line}`,
         onclick: () => {
-          if (!preview.hidden) btnEdit.click();
+          if (rich.active()) {
+            // The nth time this exact placeholder appears, found in the formatted view.
+            let nth = 0; let at = -1;
+            while ((at = ta.value.indexOf(p.text, at + 1)) >= 0 && at < p.start) nth += 1;
+            if (rich.selectText(p.text, nth)) return;
+            rich.setMode('markdown');
+          }
           ta.focus();
           ta.setSelectionRange(p.start, p.end);
           const lh = parseFloat(getComputedStyle(ta).lineHeight) || 22;
@@ -321,14 +329,6 @@
     drawPlaceholders();
 
     // ---- toolbar
-    const btnEdit = h('button', { 'data-ro-ok': 'true', class: 'btn small active', type: 'button' }, 'Edit');
-    const btnPreview = h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button' }, 'Preview');
-    btnEdit.addEventListener('click', () => { preview.hidden = true; wrap.hidden = false; btnEdit.classList.add('active'); btnPreview.classList.remove('active'); ta.focus(); });
-    btnPreview.addEventListener('click', () => {
-      ghost.stop();
-      preview.innerHTML = Markdown.render(ta.value) || '<p class="muted">Nothing written yet.</p>'; // Markdown.render escapes everything
-      preview.hidden = false; wrap.hidden = true; btnPreview.classList.add('active'); btnEdit.classList.remove('active');
-    });
     const genBtn = h('button', { class: 'btn small', type: 'button', onclick: () => openGenerate() }, 'Draft with AI…');
     const rephraseBtn = h('button', { class: 'btn small', type: 'button', icon: 'magic', title: 'Select a sentence or paragraph, then click: the AI on this computer rewrites it the way DEA reports are written. You see both before anything changes.', onclick: () => rephrase() }, 'Re-phrase');
     const reviewBtn = h('button', { class: 'btn small', type: 'button', icon: 'clipboard2-check', title: 'Checks that the totals add up (money and weights), then has the AI on this computer look for names, dates, amounts and facts that don\'t agree.', onclick: () => review() }, 'Review');
@@ -341,6 +341,7 @@
       h('div', { class: 'menu-items' },
         h('button', { type: 'button', onclick: () => exportDocx('case') }, 'Save .docx to case files'),
         h('button', { 'data-ro-ok': 'true', type: 'button', onclick: () => exportDocx('download') }, 'Save .docx to this computer…'),
+        h('button', { 'data-ro-ok': 'true', type: 'button', onclick: copyForWord }, 'Copy for Word (formatted)'),
         h('button', { 'data-ro-ok': 'true', type: 'button', onclick: copyPlain }, 'Copy as plain text'),
         h('button', { type: 'button', onclick: saveAsTemplate }, 'Save as a template…')));
     // Drafts save by themselves; Save (or Ctrl+S) writes now and says so.
@@ -357,27 +358,29 @@
     } }, 'Delete');
 
     const genStatus = h('div', { class: 'gen-status', hidden: true });
-    const fmtBar = CVFormatBar.attach(ta, { h, icon: ui.icon });
-    new MutationObserver(() => { fmtBar.hidden = wrap.hidden; }).observe(wrap, { attributes: true, attributeFilter: ['hidden'] });
+    const fmtBar = CVFormatBar.attach(ta, { h, icon: ui.icon, rich });
+    // AI suggestions follow the cursor in the Markdown text, so they run in that view.
+    const drawSuggestMode = (m) => { suggestLabel.hidden = m === 'rich'; if (m === 'rich') ghost.stop(); };
 
     panel.replaceChildren(
       back,
       banner,
       h('div', { class: 'draft-head' }, titleInput, typeSelect),
       h('div', { class: 'toolbar draft-toolbar' },
-        h('div', { class: 'segmented' }, btnEdit, btnPreview),
         fmtBar,
-        h('label', { class: 'check-row suggest-toggle' }, suggestToggle, h('span', {}, 'AI suggestions ', suggestNote)),
+        suggestLabel,
         h('div', { class: 'spacer' }),
         genBtn, rephraseBtn, reviewBtn, checkBtn, exportMenu, saveBtn, delBtn),
       genStatus,
       h('div', { class: 'draft-grid' },
-        h('div', { class: 'draft-main' }, wrap, preview),
+        h('div', { class: 'draft-main' }, wrap),
         h('aside', { class: 'confirm-panel' },
           h('h3', {}, 'To confirm ', confirmCount),
           h('p', { class: 'muted small explain' }, 'Every [CONFIRM: ...] in the draft. Click one to jump to it, then replace it with the checked fact.'),
           confirmList)));
     drawSuggestState();
+    rich.onMode(drawSuggestMode);
+    drawSuggestMode(rich.mode());
     Engine().refresh().then(() => { if (ta.isConnected) drawSuggestState(); });
 
     /* ---- export ---- */
@@ -425,6 +428,21 @@
       setTimeout(() => URL.revokeObjectURL(url), 10000);
     }
 
+    // Formatted copy: pastes into Word (or Outlook) with bold, underline, headings, lists and tables.
+    async function copyForWord() {
+      exportMenu.open = false;
+      try {
+        const md = ta.value;
+        await navigator.clipboard.write([new ClipboardItem({
+          'text/html': new Blob([CVRichEditor.clipboardHTML(md, Markdown.render)], { type: 'text/html' }),
+          'text/plain': new Blob([CVDraft.stripMarkdown(md)], { type: 'text/plain' }),
+        })]);
+        toast('Copied. Paste it into Word with Ctrl+V.', 'success');
+      } catch {
+        toast('The browser did not allow copying. In the Formatted view, select the text and press Ctrl+C.', 'error');
+      }
+    }
+
     async function copyPlain() {
       exportMenu.open = false;
       try {
@@ -466,8 +484,9 @@
 
     // Re-phrase: the selection rewritten the DEA way; shown side by side before it replaces anything.
     async function rephrase() {
+      const inRich = rich.active();
       const s = ta.selectionStart; const e = ta.selectionEnd;
-      const text = ta.value.slice(s, e).trim();
+      const text = (inRich ? rich.selectionText() : ta.value.slice(s, e)).trim();
       if (!text) return toast('Select the sentence or paragraph to re-phrase first.', 'error');
       await Engine().refresh();
       if (!aiReady()) return toast('The local AI engine is not connected. Start Start-CaseVault.bat on the CV-AI drive, then try again.', 'error', 8000);
@@ -496,6 +515,7 @@
       const chosen = await done;
       ctrl.abort();
       if (!chosen) return;
+      if (inRich) { rich.replaceSelection(chosen); return; }
       ta.focus();
       ta.setRangeText(chosen, s, e, 'select');
       ta.dispatchEvent(new Event('input', { bubbles: true }));
@@ -707,6 +727,8 @@
     if (pendingGenerate && pendingGenerate.caseId === c.id && pendingGenerate.slug === slug) {
       pendingGenerate = null;
       openGenerate();
+    } else if (rich.active()) {
+      rich.focus();
     } else {
       ta.focus();
       ta.setSelectionRange(ta.value.length, ta.value.length);

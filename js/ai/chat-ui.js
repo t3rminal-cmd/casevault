@@ -27,7 +27,9 @@
   // Remember the last text box you typed in outside the chat, so an answer can go there.
   function trackEditors() {
     document.addEventListener('focusin', (e) => {
-      const t = e.target;
+      // The formatted view of a draft or the notes stands for its text box (v1.19).
+      const richEl = e.target.closest && e.target.closest('.rich-editor');
+      const t = richEl && richEl.cvRich ? richEl.cvRich.ta : e.target;
       if (!(t instanceof HTMLTextAreaElement) || t.readOnly || t.disabled) return;
       if (els && els.box.contains(t)) return;
       if (t.closest('dialog')) return;
@@ -38,6 +40,11 @@
   function insertIntoEditor(text) {
     const t = lastEditor;
     if (!t || !t.isConnected) { ui.toast('Click in a draft or your notes first, where the answer should go.', 'error', 5000); return; }
+    if (t.cvRich && t.cvRich.active()) {
+      t.cvRich.insertMarkdown(`${text.trim()}\n`);
+      ui.toast('Inserted.', 'success', 1500);
+      return;
+    }
     const start = t.selectionStart ?? t.value.length;
     const end = t.selectionEnd ?? start;
     const before = t.value.slice(0, start);

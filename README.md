@@ -15,7 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.18)
+## Features (v1.19)
+
+- **Formatted editing** in reports, case notes and the narrative: bold shows bold, underline underlined, headings, lists and tables as in Word, with no `**` on screen. Paste from Word keeps the formatting; copy (or Export → Copy for Word) pastes into Word formatted. A **Markdown** switch shows the marks; the files on the SSD stay the same Markdown
 
 - **Report Fields** (Reports tab): offense, UCR and location codes, date/time/beat, victims and offenders, arrests, activity (Purchase, Surveillance, Investigation, Correction), evidence with **automatic exhibit numbers** shared by every case with the same agency case number, money and weights, vehicle, court and approvals, and a narrative. They fill `{{report.*}}` in templates, go to Draft with AI, and **Create report from fields** turns them into a report
 - **Re-phrase** a sentence to DEA writing standards and **Review** a report for consistency, with totals (money and weights) checked by arithmetic
@@ -133,6 +135,7 @@ CaseVault-Data/
 | `js/ai/hardware.js` | AI profile per PC, and what Auto picks from the GPU |
 | `js/selftest.js` | Self-test with built-in made-up documents |
 | `js/markdown.js` | Minimal, escaping Markdown previewer for notes |
+| `js/rich-editor.js` | Formatted view for notes and reports: edits in Word-like form, saved as Markdown; paste from Word, copy for Word |
 | `js/app.js` | User interface, autosave, connect/reconnect |
 | `js/theme.js` | Light / dark / automatic theme (loaded first, so the page never flashes) |
 | `js/icons.js`, `js/icons-data.js` | Icons as inline SVG (a subset of Bootstrap Icons, made by `scripts/make-icons.js`) |

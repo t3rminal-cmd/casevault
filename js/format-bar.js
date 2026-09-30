@@ -114,11 +114,19 @@
     return { text: next, start: s, end: multi ? endLine + total : s + (end - start) };
   }
 
-  function attach(ta, { h, icon }) {
-    const act = (fn) => () => { if (ta.readOnly || ta.disabled) return; apply(ta, fn(ta.value, ta.selectionStart, ta.selectionEnd)); };
-    const bold = act((t, s, e) => wrap(t, s, e, '**'));
-    const italic = act((t, s, e) => wrap(t, s, e, '*'));
-    const underline = act((t, s, e) => wrap(t, s, e, '++'));
+  /** The bar. With `rich` (js/rich-editor.js), the buttons format the Formatted view while it's
+   * showing, and the Formatted | Markdown switch comes first on the bar. */
+  function attach(ta, { h, icon, rich = null }) {
+    const on = () => rich && rich.active();
+    // In the Formatted view: the browser's editing command; in Markdown: the marks in the text.
+    const act = (fn, richFn) => () => {
+      if (ta.readOnly || ta.disabled) return;
+      if (on()) { richFn(); return; }
+      apply(ta, fn(ta.value, ta.selectionStart, ta.selectionEnd));
+    };
+    const bold = act((t, s, e) => wrap(t, s, e, '**'), () => rich.exec('bold'));
+    const italic = act((t, s, e) => wrap(t, s, e, '*'), () => rich.exec('italic'));
+    const underline = act((t, s, e) => wrap(t, s, e, '++'), () => rich.exec('underline'));
     const btn = (ic, label, key, fn) => h('button', { type: 'button', class: 'fmt-btn', title: `${label}${key ? ` (${key})` : ''}`, onmousedown: (e) => e.preventDefault(), onclick: fn }, icon(ic), h('span', { class: 'sr-only' }, label));
 
     // Table: a grid to pick the size, like Word's.
@@ -127,7 +135,7 @@
     const cellsEl = [];
     for (let r = 1; r <= 8; r++) {
       for (let c = 1; c <= 6; c++) {
-        const cell = h('button', { type: 'button', class: 'fmt-cell', 'aria-label': `${r} rows by ${c} columns`, onmousedown: (e) => e.preventDefault(), onclick: () => { grid.hidden = true; if (!ta.readOnly) apply(ta, insertTable(ta.value, ta.selectionStart, ta.selectionEnd, r, c)); } });
+        const cell = h('button', { type: 'button', class: 'fmt-cell', 'aria-label': `${r} rows by ${c} columns`, onmousedown: (e) => e.preventDefault(), onclick: () => { grid.hidden = true; if (ta.readOnly) return; if (on()) rich.table(r, c); else apply(ta, insertTable(ta.value, ta.selectionStart, ta.selectionEnd, r, c)); } });
         cell.addEventListener('mouseenter', () => { gridLabel.textContent = `${r} × ${c}`; for (const x of cellsEl) x.el.classList.toggle('on', x.r <= r && x.c <= c); });
         cellsEl.push({ el: cell, r, c });
       }
@@ -152,13 +160,15 @@
     });
 
     return h('div', { class: 'fmt-bar', role: 'toolbar', 'aria-label': 'Formatting' },
+      rich ? rich.toggle : null,
+      rich ? h('span', { class: 'fmt-sep', 'aria-hidden': 'true' }) : null,
       btn('type-bold', 'Bold', 'Ctrl+B', bold),
       btn('type-italic', 'Italic', 'Ctrl+I', italic),
       btn('type-underline', 'Underline', 'Ctrl+U', underline),
       h('span', { class: 'fmt-sep', 'aria-hidden': 'true' }),
-      btn('type-h2', 'Heading', '', act((t, s, e) => prefixLines(t, s, e, 'heading'))),
-      btn('list-ul', 'Bulleted list', '', act((t, s, e) => prefixLines(t, s, e, 'bullet'))),
-      btn('list-ol', 'Numbered list', '', act((t, s, e) => prefixLines(t, s, e, 'number'))),
+      btn('type-h2', 'Heading', '', act((t, s, e) => prefixLines(t, s, e, 'heading'), () => rich.heading())),
+      btn('list-ul', 'Bulleted list', '', act((t, s, e) => prefixLines(t, s, e, 'bullet'), () => rich.exec('insertUnorderedList'))),
+      btn('list-ol', 'Numbered list', '', act((t, s, e) => prefixLines(t, s, e, 'number'), () => rich.exec('insertOrderedList'))),
       h('span', { class: 'fmt-sep', 'aria-hidden': 'true' }),
       h('span', { class: 'fmt-table' }, tableBtn, grid));
   }

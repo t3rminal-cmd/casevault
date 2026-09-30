@@ -1127,7 +1127,6 @@
     const back = h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports`, class: 'back-link' }, '← All reports');
     const ta = h('textarea', { class: 'notes-editor', spellcheck: 'true', 'aria-label': 'Case notes', placeholder: 'Write notes here. Markdown works: # Heading, **bold**, - list items.' });
     ta.value = text;
-    const preview = h('div', { class: 'notes-preview', hidden: true });
     const counter = h('span', { class: 'muted small' });
     const updateCount = () => {
       const words = (ta.value.match(/\S+/g) || []).length;
@@ -1154,23 +1153,14 @@
       try { await Save.run(key, saveNotes(ta.value)); markSaved(); } catch { /* shown by the header indicator */ } finally { btnSave.disabled = false; }
     });
 
-    const btnEdit = h('button', { 'data-ro-ok': 'true', class: 'btn small active', type: 'button' }, 'Edit');
-    const btnPreview = h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button' }, 'Preview');
-    const fmtBar = CVFormatBar.attach(ta, { h, icon: I });
-    btnEdit.addEventListener('click', () => {
-      preview.hidden = true; ta.hidden = false; fmtBar.hidden = false; ta.focus();
-      btnEdit.classList.add('active'); btnPreview.classList.remove('active');
-    });
-    btnPreview.addEventListener('click', () => {
-      preview.innerHTML = Markdown.render(ta.value) || '<p class="muted">Nothing written yet.</p>';
-      preview.hidden = false; ta.hidden = true; fmtBar.hidden = true;
-      btnPreview.classList.add('active'); btnEdit.classList.remove('active');
-    });
+    // Formatted (bold shows bold, as in Word) or Markdown; notes.md stays Markdown (v1.19).
+    const rich = CVRichEditor.create(ta, { h, icon: I, label: 'Case notes' });
+    const fmtBar = CVFormatBar.attach(ta, { h, icon: I, rich });
 
     panel.replaceChildren(
       h('div', { class: 'notes-head' }, back, h('h2', { icon: 'journal-text' }, 'Case notes')),
-      h('div', { class: 'toolbar' }, h('div', { class: 'segmented' }, btnEdit, btnPreview), fmtBar, h('div', { class: 'spacer' }), counter, status, btnSave),
-      ta, preview);
+      h('div', { class: 'toolbar' }, fmtBar, h('div', { class: 'spacer' }), counter, status, btnSave),
+      rich.el, ta);
   }
 
   /* ---------- Timeline ---------- */

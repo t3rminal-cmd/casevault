@@ -103,7 +103,8 @@
     const narrative = h('textarea', { class: 'rf-narrative', rows: 12, placeholder: 'What happened, in order. Tab indents.', 'aria-label': 'Narrative' });
     narrative.value = data.narrative || '';
     narrative.addEventListener('input', () => { data.narrative = narrative.value; save(); });
-    const fmt = CVFormatBar.attach(narrative, { h, icon: ui.icon });
+    const rich = CVRichEditor.create(narrative, { h, icon: ui.icon, label: 'Narrative' });
+    const fmt = CVFormatBar.attach(narrative, { h, icon: ui.icon, rich });
 
     const saveBtn = h('button', { class: 'btn primary', type: 'button', icon: 'save', onclick: async () => {
       save(0);
@@ -131,7 +132,7 @@
         h('h3', { icon: 'box-seam', title: 'Exhibit numbers are given automatically and never reused. Every case with the same agency case number continues the same count.' }, 'Evidence inventoried'),
         h('table', { class: 'files rf-evidence' }, h('thead', {}, h('tr', {}, h('th', {}, 'Exhibit'), h('th', {}, 'Description'), h('th', {}, 'Type'), h('th', {}, ''))), evRows),
         archived ? null : h('div', { class: 'contact-add' }, addExhibit)),
-      h('section', { class: 'rf-section' }, h('h3', { icon: 'journal-text' }, 'Narrative'), fmt, narrative),
+      h('section', { class: 'rf-section' }, h('h3', { icon: 'journal-text' }, 'Narrative'), fmt, rich.el, narrative),
       archived ? null : h('div', { class: 'details-save' }, saveBtn.cloneNode(true)));
     // The copy at the bottom does the same as the one at the top.
     const bottom = panel.querySelector('.details-save .btn');

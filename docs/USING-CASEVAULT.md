@@ -179,11 +179,20 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 The **Reports** tab has everything you write for a case in one list: **Case notes** is always at the top, followed by every report and draft (including Draft with AI's). **New report** above the list starts one: pick **Blank**, **Template** or **Draft with AI** from the *Start from* dropdown (see *Drafts* below). **Report Fields**, pinned under Case notes, holds the facts of the case's reports (see below). Click a name to open it; **← All reports** goes back to the list. Old links to the Notes or Drafts tab open the same place.
 
-**Tab indents** in the case notes and in every report, like in Word: **Tab** puts in an indent (with several lines selected, it indents each one) and **Shift+Tab** takes one off. Indents show in Preview and become tab stops in the Word export. When an AI suggestion is showing in a report, Tab accepts it instead. To leave the box with the keyboard, press **Esc**, then **Tab**.
+**Tab indents** in the case notes and in every report, like in Word: **Tab** puts in an indent (with several lines selected, it indents each one) and **Shift+Tab** takes one off. Indents show in the Formatted view and become tab stops in the Word export. When an AI suggestion is showing in a report, Tab accepts it instead. To leave the box with the keyboard, press **Esc**, then **Tab**.
+
+### Formatted or Markdown
+
+Case notes, every report and the Report Fields narrative open in the **Formatted** view: **bold** shows bold, underline is underlined, and headings, lists and tables look as they will in Word, with no `**` or `++` on screen. Type as in Word: **Ctrl+B / Ctrl+I / Ctrl+U**, the buttons on the formatting bar, **Enter** for a new paragraph, **Shift+Enter** for a new line in the same paragraph, **Enter** twice to leave a list, **Tab** to indent. Every `[CONFIRM: ...]` is highlighted yellow, as in the Word export.
+
+- **Paste from Word** (or Outlook, or a web page): bold, italic, underline, headings, lists and tables are kept; fonts, colours and pictures are left out.
+- **Copy for Word:** select text in the Formatted view and press Ctrl+C, or use **Export → Copy for Word (formatted)** for the whole report. It pastes into Word with its formatting. **Save .docx** is still the way to get a Word file.
+- **Markdown** (next to Formatted) shows the same text with its marks (`**bold**`, `++underline++`, `# heading`), as before v1.19. AI suggestions while you type work in this view. CaseVault remembers your choice on each PC.
+- The file on the SSD stays plain text with those marks (`notes.md`, the draft's `.md`), so templates, Draft with AI, the checks and the Word export work just as before.
 
 ### Case notes
 
-**Case notes** is a large free-form page, saved as `notes.md` in the case folder. You can use simple formatting and check it with **Preview**:
+**Case notes** is a large free-form page, saved as `notes.md` in the case folder. In the Markdown view, the formatting is written like this:
 
 ```
 # Heading
@@ -199,7 +208,7 @@ The **Reports** tab has everything you write for a case in one list: **Case note
 
 The **formatting bar** above the text does this for you: **B** bold, *I* italic, U underline (or **Ctrl+B / Ctrl+I / Ctrl+U**), heading, bulleted and numbered list (on the selected lines; click again to take it off), and **table** (pick the size on the grid, then type into the cells). Ctrl+Z undoes. Drafts have the same bar, and tables and underline come through in the Word export.
 
-Notes save on their own as you type. The **Save** button next to Preview writes them straight away, and the text beside it shows *✓ Saved 14:02* once they're on the SSD. **Delete** on the Case notes row empties the notes after you confirm.
+Notes save on their own as you type. The **Save** button writes them straight away, and the text beside it shows *✓ Saved 14:02* once they're on the SSD. **Delete** on the Case notes row empties the notes after you confirm.
 
 ### Report Fields
 
@@ -576,7 +585,7 @@ Give it a title and a type (Case summary, Affidavit, Subpoena, Memo, Other), the
 
 Pick the start from the **Start from** dropdown; the template list shows when you choose Template.
 
-The editor understands simple Markdown (`#` headings, `**bold**`, `1.` numbered paragraphs, `-` bullets). **Preview** shows it formatted.
+The editor opens in the **Formatted** view (see *Formatted or Markdown* above); **Markdown** shows the text with its marks (`#` headings, `**bold**`, `1.` numbered paragraphs, `-` bullets).
 
 ### [CONFIRM: ...] placeholders
 
@@ -593,6 +602,7 @@ With **AI suggestions** ticked in the toolbar, pausing for a moment at the end o
 - The cursor stays in your text the whole time; the box never takes the focus. Screen readers announce the suggestion.
 - It uses the smallest AI model you have installed, so it's quick, and it only ever talks to the AI engine on this computer.
 - It pauses while a consistency check or *Draft with AI* is running, so they don't compete for the graphics card.
+- It works in the **Markdown** view (the checkbox hides in the Formatted view).
 - It switches itself off when the header shows **AI: Offline** or **AI: Rules-only**. Untick it any time; CaseVault remembers the choice.
 
 ### Draft with AI
@@ -659,6 +669,7 @@ On an **Affidavit** draft, **Run consistency check** checks the draft against ev
 
 - **Save .docx to case files (SSD).** A Word file is added to the case's Files tab. Recommended: it stays on the encrypted SSD.
 - **Save .docx to this computer…** Chrome/Edge ask where to save it. Firefox uses its normal download. Choose a folder on the SSD if you don't want a copy on the PC.
+- **Copy for Word (formatted).** Copies the whole report with its formatting, to paste into Word or Outlook.
 - **Copy as plain text.** Copies the text without Markdown symbols, to paste into another program.
 - **Save as a template…** Saves this report as a template in **Vault → Templates** (put placeholders in it there).
 
