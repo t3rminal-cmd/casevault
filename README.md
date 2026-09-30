@@ -15,7 +15,7 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.24)
+## Features (v1.25)
 
 - **Searchable lists** you can also type into: IUCR code (from Common UCR), location code (Type of Location fills in), charges (the Illinois statutes from LE Cyber-Docs, also in Reference → Charges), gangs, victim, hair and eye color
 - People get age (from the DOB), gender, gender identity, race, complexion and veteran; police personnel get Unit and a Role list; Notifications is a list (date, person notified, notified by); five Officer's Report lines can be left out; exhibit photos are labeled 1a, 1b…
