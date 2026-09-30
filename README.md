@@ -15,22 +15,29 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.20)
+## Features (v1.21)
+
+- **Privacy screen fix:** Esc can no longer get past the PIN, and the Ctrl+Shift+H / Esc Esc shortcuts are gone (Hide button and idle timer only)
+- **Supplementary Report:** an include box on every part (untick what doesn't apply), victims and offenders with demographics (DOB, height, weight, hair, eyes, tattoos / scars, clothing), and lists for charges (statute and description), gangs (pick-list with write-in), persons not arrested, police personnel and vehicles (with Impound / Tow); Agency Report Number; evenly lined-up boxes
+- **Exhibit photos:** add photos to an exhibit, view them, and get them in the PDF on portrait **Exhibit Attachments** pages
+- **Deconfliction** table on the Details tab; a welcome **Overview**; icons after the words; Title Case buttons; **Field Notes**; NumLookup in OSINT; equal Reference / OSINT / LEO buttons; DEA 6, 7, 7a and 202; a straight full-width tab bar
+
+## Earlier (v1.20)
 
 - **Supplementary Report:** Report Fields laid out like a narcotics supplementary report (case numbers, offense, victims and offenders, assignment, update information and status, the officer's report lines, evidence, summary of investigation, approvals). **Print / PDF**, **Save PDF to Case**, and **Email for E-Sign** (the PDF has real signature fields for Adobe Fill & Sign)
 - Evidence: exhibit number, inventory number, type, a long description, and narcotic type and weight for narcotics
 - Title Case headings without parentheses, shorter hover boxes, status next to the red bell in the case list, a proper X next to Done in the Vault and Options, a longer summary box and clearer fonts in Report Fields
 
-- **Formatted editing** in reports, case notes and the narrative: bold shows bold, underline underlined, headings, lists and tables as in Word, with no `**` on screen. Paste from Word keeps the formatting; copy (or Export → Copy for Word) pastes into Word formatted. A **Markdown** switch shows the marks; the files on the SSD stay the same Markdown
+- **Formatted editing** in reports, field notes and the narrative: bold shows bold, underline underlined, headings, lists and tables as in Word, with no `**` on screen. Paste from Word keeps the formatting; copy (or Export → Copy for Word) pastes into Word formatted. A **Markdown** switch shows the marks; the files on the SSD stay the same Markdown
 
 - **Report Fields** (Reports tab): offense, UCR and location codes, date/time/beat, victims and offenders, arrests, activity (Purchase, Surveillance, Investigation, Correction), evidence with **automatic exhibit numbers** shared by every case with the same agency case number, money and weights, vehicle, court and approvals, and a narrative. They fill `{{report.*}}` in templates, go to Draft with AI, and **Create report from fields** turns them into a report
 - **Re-phrase** a sentence to DEA writing standards and **Review** a report for consistency, with totals (money and weights) checked by arithmetic
 - New report starts from a dropdown (Blank / Template / Draft with AI); Draft with AI starts at the summary unless you tick **Header** (officer, ASA/AUSA, numbers)
-- Templates: **Use**, **Download** (.docx), Edit, Delete, and **Save as a template** from any report; delete the case notes
+- Templates: **Use**, **Download** (.docx), Edit, Delete, and **Save as a template** from any report; delete the field notes
 - Files named `<year>-<case no.>-<file name>` with a **Document** column; **Title or Operation Name** on Details; the case list without the Open/Pending filter
 - Ask AI: **History** of saved chats (open or delete), **Clear**; chats saved to the SSD. Mail settings Save button; same-size Save buttons in the Vault; green wave memory icon; tidy code cards in Reference
 
-- **Reports** tab: the case notes and every draft in one list; Tab and Shift+Tab indent in notes and reports (kept in the preview and the Word export)
+- **Reports** tab: the field notes and every draft in one list; Tab and Shift+Tab indent in notes and reports (kept in the preview and the Word export)
 
 - Case tabs in working order (Details, Timeline, Drafts, Files, Mail, Notes, Checks); a red bell on the right of any case with an open deadline; an X to close every box; blue chat bubble for Ask AI and a ⋮ menu
 
@@ -76,7 +83,7 @@ The app detects the browser and picks the mode by itself. The data format on the
   - side-by-side results with click-to-source, High/Medium/Low severity, and Fix / Not an issue / Explained, saved to `checks/<date>-check.json`
   - AI profiles (Quick / Thorough / Light / Rules-only), auto-detected from installed models
 - **Excel and CSV**: `.xlsx/.xls/.ods/.csv` open as tables with sheet tabs, and the checker reads them row by row with sheet + row locations (bundled SheetJS, loaded only when needed)
-- **Privacy screen**: Ctrl+Shift+H, Esc twice, or **Hide** instantly covers the app (the tab title becomes "New Tab", media pauses, edits are saved). Optional 4–6 digit PIN, stored as a salted SHA-256 hash, and optional auto-hide after inactivity
+- **Privacy screen**: **Hide** (or the idle timer) instantly covers the app; Esc can't uncover it (the tab title becomes "New Tab", media pauses, edits are saved). Optional 4–6 digit PIN, stored as a salted SHA-256 hash, and optional auto-hide after inactivity
 - **Drafts with a local-AI copilot**: Markdown drafts per case, saved to `drafts/` on the SSD
   - an **AI suggestion** box under the cursor line (Tab accepts, Esc dismisses)
   - **Draft with AI** from the case details, timeline, notes and attached documents, never inventing facts and marking gaps as `[CONFIRM: ...]`

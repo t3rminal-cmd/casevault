@@ -4,7 +4,8 @@
  * neutral screen: no case data and no names in it, the tab title becomes "New Tab", the tab icon
  * goes blank, audio/video pause, open file previews close, and pending edits are saved to the SSD.
  *
- * Shortcuts: Ctrl+Shift+H, or Esc twice within half a second. Also the "Hide" button in the header.
+ * It locks from the "Hide" button in the header, or after the idle time. (No keyboard shortcuts
+ * since v1.21; Esc can't close it.)
  * Unlock: the PIN if one is set (stored in vault.json settings as a salted SHA-256 hash, never the
  * PIN itself), otherwise one click. Optional: hide automatically after N minutes without activity.
  *
@@ -278,20 +279,26 @@
       input.value = input.value.replace(/\D/g, '').slice(0, 6);
       if (input.value.length === 6) tryUnlock();
     });
-    dlg.addEventListener('cancel', (e) => e.preventDefault()); // Esc must not reveal the app
-    dlg.addEventListener('click', (e) => { if (!needsPin) { e.preventDefault(); controller.unlock(); } else if (e.target === dlg) input.focus(); });
+    // Esc must never reveal the app. Chrome closes a modal dialog on a second Esc even when its
+    // "cancel" is prevented (v1.21 fix), so Esc is stopped at the key, and if the dialog closes
+    // anyway while locked, it opens again at once.
+    dlg.addEventListener('cancel', (e) => e.preventDefault());
+    dlg.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); } }, true);
+    dlg.addEventListener('close', () => {
+      if (!controller || !controller.locked) return;
+      dlg.showModal();
+      rain.start();
+      if (needsPin) input.focus(); else dlg.focus();
+    });
+    dlg.addEventListener('click', (e) => { if (!needsPin) { e.preventDefault(); controller.unlock(); } else input.focus(); });
+    // With a PIN, typing anywhere on the cover goes into the PIN box.
+    dlg.addEventListener('keydown', (e) => { if (needsPin && e.target !== input && /^\d$/.test(e.key)) input.focus(); }, true);
     dlg.addEventListener('keydown', (e) => { if (!needsPin && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); controller.unlock(); } });
 
-    const isEsc2 = createEscDetector();
+    // While locked, no key reaches the app behind the cover. (The Ctrl+Shift+H and Esc Esc
+    // shortcuts were removed in v1.21: the Hide button and the idle timer lock it.)
     root.addEventListener('keydown', (e) => {
-      if (controller.locked) return;
-      if (e.ctrlKey && e.shiftKey && !e.altKey && (e.code === 'KeyH' || e.key.toLowerCase() === 'h')) {
-        e.preventDefault();
-        e.stopPropagation();
-        controller.lock();
-      } else if (e.key === 'Escape' && isEsc2()) {
-        controller.lock();
-      }
+      if (controller.locked && !dlg.contains(e.target)) { e.preventDefault(); e.stopPropagation(); }
     }, true);
 
     if (button) button.addEventListener('click', () => controller.lock());

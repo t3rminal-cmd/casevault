@@ -17,8 +17,8 @@
 
 (function (root) {
   const CATEGORIES = [
-    { key: 'examples', folder: 'Report examples', label: 'Report examples', role: 'example', icon: 'journal-bookmark', hint: 'Finished reports written the way you want: DEA-6, DEA-7, DEA-202, supplementary reports.' },
-    { key: 'warrants', folder: 'Warrant examples', label: 'Warrant examples', role: 'example', icon: 'file-earmark-ruled', hint: 'Search and arrest warrants and affidavits to follow.' },
+    { key: 'examples', folder: 'Report examples', label: 'Report Examples', role: 'example', icon: 'journal-bookmark', hint: 'Finished reports written the way you want: DEA-6, DEA-7, DEA-202, supplementary reports.' },
+    { key: 'warrants', folder: 'Warrant examples', label: 'Warrant Examples', role: 'example', icon: 'file-earmark-ruled', hint: 'Search and arrest warrants and affidavits to follow.' },
     { key: 'directives', folder: 'Directives', label: 'Directives', role: 'directive', icon: 'bookshelf', hint: 'Policies and directives the AI must follow and can cite.' },
     { key: 'other', folder: 'Other', label: 'Other', role: 'example', icon: 'folder', hint: 'Anything else to keep at hand.' },
   ];
@@ -27,7 +27,7 @@
 
   // Which document a sample is an example of (matches the draft's document type).
   const DOC_TYPES = [
-    ['any', 'Any Document'], ['dea6', 'DEA 6 - Report of Investigation'], ['dea7', 'DEA 7 - Drug Evidence'], ['dea202', 'DEA 202 - Personal History'],
+    ['any', 'Any Document'], ['dea6', 'DEA 6'], ['dea7', 'DEA 7'], ['dea7a', 'DEA 7a'], ['dea202', 'DEA 202'],
     ['affidavit', 'Affidavit'], ['warrant', 'Warrant'], ['summary', 'Case Summary'], ['subpoena', 'Subpoena'], ['memo', 'Memo'], ['complaint', 'Criminal Complaint'],
   ];
 
@@ -35,7 +35,8 @@
   function guessDocType(name) {
     const n = String(name || '').toLowerCase().replace(/[_]+/g, ' ');
     if (/dea[\s-]?6\b|dea[\s-]?6[^0-9]|report of investigation|\broi\b/.test(n)) return 'dea6';
-    if (/dea[\s-]?7a?\b|drug (evidence|property|exhibit)/.test(n)) return 'dea7';
+    if (/dea[\s-]?7a\b|non[\s-]?drug/.test(n)) return 'dea7a';
+    if (/dea[\s-]?7\b|drug (evidence|property|exhibit)/.test(n)) return 'dea7';
     if (/dea[\s-]?202\b|personal history/.test(n)) return 'dea202';
     if (/affidavit|affiant|probable cause/.test(n)) return 'affidavit';
     if (/warrant/.test(n)) return 'warrant';

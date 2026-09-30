@@ -32,15 +32,19 @@
       guide: 'An internal memo with a To / From / Date / Re header, then purpose, relevant facts, and recommended next steps.',
     },
     dea6: {
-      label: 'DEA 6 - Report of Investigation',
+      label: 'DEA 6',
       guide: 'A DEA-6 style Report of Investigation: header lines (File No., File Title, G-DEP Identifier, Program Code, By, At, Date Prepared), SYNOPSIS, DETAILS in numbered paragraphs in time order, and INDEXING of every person, business, vehicle and telephone number mentioned.',
     },
     dea7: {
-      label: 'DEA 7 - Drug Evidence',
+      label: 'DEA 7',
       guide: 'A DEA-7 style report of drug property collected, purchased or seized: for each exhibit its number, description, packaging, gross weight, how and when it was obtained, where, by whom, the chain of custody, and the laboratory it was submitted to.',
     },
+    dea7a: {
+      label: 'DEA 7a',
+      guide: 'A DEA-7a style report of non-drug property or evidence collected or seized (money, documents, phones, firearms, vehicles): for each exhibit its number, a description, how, when and where it was obtained, by whom, the chain of custody, and where it is stored.',
+    },
     dea202: {
-      label: 'DEA 202 - Personal History',
+      label: 'DEA 202',
       guide: 'A DEA-202 style personal history: the subject\'s name and aliases, date and place of birth, identifying numbers, physical description, addresses, telephone numbers, vehicles, employment, associates, criminal history and remarks. Only facts from the material; [CONFIRM: ...] for the rest.',
     },
     complaint: {

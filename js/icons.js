@@ -3,7 +3,7 @@
  *
  *   CVIcons.icon('folder')                    decorative (hidden from screen readers)
  *   CVIcons.icon('trash3', { label: 'Delete' }) announced as "Delete"
- *   <button data-icon="gear">Vault</button>  in index.html: the icon is added in front at startup
+ *   <button data-icon="gear">Vault</button>  in index.html: the icon is added after the words at startup
  */
 'use strict';
 
@@ -29,11 +29,12 @@
     return svg;
   }
 
-  /** Put the icon named in data-icon in front of each element's text (index.html's static buttons). */
+  /** Put the icon named in data-icon after each element's text (index.html's static buttons). */
   function decorate(scope = root.document) {
     for (const el of scope.querySelectorAll('[data-icon]')) {
-      if (el.firstChild && el.firstChild.nodeName === 'svg') continue;
-      el.prepend(icon(el.dataset.icon));
+      if (el.querySelector(':scope > svg')) continue;
+      if (el.childNodes.length) el.append(' ');
+      el.append(icon(el.dataset.icon)); // on the right of the words (v1.21)
     }
   }
 

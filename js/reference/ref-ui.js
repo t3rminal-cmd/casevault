@@ -66,11 +66,11 @@
           }, t.label))),
           h('div', { class: 'spacer' }),
           !editing && hiddenCount ? h('span', { class: 'small muted' }, `${hiddenCount} hidden`) : null,
-          h('button', { type: 'button', class: `btn small ${editing ? 'primary' : 'ghost'}`, icon: editing ? 'check2' : 'eye-slash', title: editing ? 'Finish' : 'Choose which buttons to show', onclick: () => { mem.editLinks = !mem.editLinks; draw(); } }, editing ? 'Done' : 'Show / hide'),
-          h('button', { type: 'button', class: 'btn small ghost', icon: 'pencil', title: 'Change addresses and add your own links (Vault → Quick links)', onclick: () => ui.showVaultPanel('links') }, 'Edit links')),
+          h('button', { type: 'button', class: `btn small ${editing ? 'primary' : 'ghost'}`, icon: editing ? 'check2' : 'eye-slash', title: editing ? 'Finish' : 'Choose which buttons to show', onclick: () => { mem.editLinks = !mem.editLinks; draw(); } }, editing ? 'Done' : 'Show/Hide'),
+          h('button', { type: 'button', class: 'btn small ghost', icon: 'pencil', title: 'Change addresses and add your own links (Vault → Quick links)', onclick: () => ui.showVaultPanel('links') }, 'Edit Links')),
         tab !== 'reference' ? h('p', { class: 'muted small ql-note' }, ui.icon('info-circle'), ' These open outside CaseVault, in a new browser tab. Never paste case details into outside websites unless your policy allows it.') : null,
         shown.length ? h('div', { class: 'quick-links' }, shown.map((l) => linkTile(l, { editing, redraw: draw })))
-          : h('p', { class: 'muted small' }, inTab.length ? 'All the links here are hidden. Click Show / hide to bring them back.' : 'No links here yet. Add one in Vault → Quick links.')].filter(Boolean));
+          : h('p', { class: 'muted small' }, inTab.length ? 'All the links here are hidden. Click Show/Hide to bring them back.' : 'No links here yet. Add one in Vault → Quick links.')].filter(Boolean));
     };
     draw();
     return wrap;

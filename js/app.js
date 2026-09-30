@@ -22,10 +22,14 @@
     }
     const el = document.createElement(tag);
     // Headings in Title Case (v1.20): "Upcoming deadlines" shows as "Upcoming Deadlines".
-    if (/^h[2-4]$/.test(tag) && !(attrs && attrs['data-keep-case'])) kids = kids.map((k) => (typeof k === 'string' ? CVFormat.titleCase(k) : k));
+    // Buttons too (v1.21): "Show/hide" -> "Show/Hide", "Edit links" -> "Edit Links".
+    const cls = String((attrs && attrs.class) || '');
+    const labelled = /^h[2-4]$/.test(tag) || (tag === 'button' && /\b(btn|menu-item|tab)\b/.test(cls) && !/\blinkish\b/.test(cls));
+    if (labelled && !(attrs && attrs['data-keep-case'])) kids = kids.map((k) => (typeof k === 'string' ? CVFormat.titleCase(k) : k));
+    let iconName = null;
     for (const [k, v] of Object.entries(attrs || {})) {
       if (v == null || v === false) continue;
-      if (k === 'icon') el.prepend(CVIcons.icon(v));
+      if (k === 'icon') iconName = v;
       else if (k === 'class') el.className = v;
       else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
       else if (k === 'value' || k === 'checked' || k === 'selected') el[k] = v;
@@ -36,6 +40,8 @@
       if (kid == null || kid === false) continue;
       el.append(kid instanceof Node ? kid : String(kid));
     }
+    // Icons go on the right of the words (v1.21).
+    if (iconName) { if (el.childNodes.length) el.append(' '); el.append(CVIcons.icon(iconName)); }
     return el;
   }
 
@@ -641,7 +647,7 @@
     const recent = [...cases].sort((a, b) => (b.updated || '').localeCompare(a.updated || '')).slice(0, 8);
 
     $('#main').replaceChildren(h('section', { class: 'dashboard' },
-      h('h1', { class: 'page-title', icon: 'speedometer2' }, 'Overview'),
+      welcomeHero(cases, deadlines),
       h('div', { class: 'stats' },
         ...Vault.STATUSES.map((s) => h('div', { class: `stat stat-${s.toLowerCase()}` },
           h('span', { class: 'stat-icon' }, I(STATUS_ICONS[s])),
@@ -664,6 +670,49 @@
           h('span', { class: 'muted' }, c.updated ? fmtDateTime(Date.parse(c.updated)) : '')))))
         : h('p', { class: 'muted' }, 'Create your first case with "New case".')),
       h('div', { class: 'dash-section dash-quick' }, h('h2', { class: 'section-title', icon: 'lightning-charge' }, 'Quick links'), CVReferenceUI.quickLinks())));
+  }
+
+  /* The landing page's welcome banner (v1.21): a greeting, the date and time, what needs you
+   * today, and one-click actions. */
+  function welcomeHero(cases, deadlines) {
+    const who = ((Vault.data.settings.affiant || {}).name || '').trim();
+    const hour = new Date().getHours();
+    const greet = hour < 5 ? 'Working Late' : hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+    const open = cases.filter((c) => c.status === 'Open').length;
+    const soon = deadlines.filter((c) => ['overdue', 'soon', 'today'].includes(dueLabel(c.nextDeadline.date).cls)).length;
+    const clock = h('div', { class: 'hero-clock', 'aria-hidden': 'true' });
+    const dateLine = h('div', { class: 'hero-date' });
+    const tick = () => {
+      if (!clock.isConnected && clock.dataset.started) return false;
+      const d = new Date();
+      clock.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      dateLine.textContent = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      return true;
+    };
+    tick();
+    clock.dataset.started = '1';
+    const timer = setInterval(() => { if (!tick()) clearInterval(timer); }, 15000);
+    const next = deadlines[0];
+    const summary = [
+      `${open} open case${open === 1 ? '' : 's'}`,
+      soon ? `${soon} deadline${soon === 1 ? '' : 's'} due soon` : 'No deadlines due this week',
+    ].join(' · ');
+    const action = (label, icon, onclick, primary) => h('button', { class: `btn ${primary ? 'primary' : 'hero-btn'}`, type: 'button', icon, onclick }, label);
+    return h('div', { class: 'hero' },
+      h('div', { class: 'hero-art', 'aria-hidden': 'true' }, h('span', { class: 'hero-ring r1' }), h('span', { class: 'hero-ring r2' }), h('span', { class: 'hero-ring r3' }), I('shield-lock-fill')),
+      h('div', { class: 'hero-text' },
+        dateLine,
+        h('h1', { class: 'hero-title' }, `${greet}${who ? `, ${who.split(/\s+/)[0]}` : ''}`),
+        h('p', { class: 'hero-sub' }, summary),
+        next ? h('a', { class: 'hero-next', href: `#/case/${encodeURIComponent(next.id)}/timeline` },
+          h('span', { class: 'hero-next-label' }, 'Next Up'),
+          h('span', {}, h('strong', {}, next.nextDeadline.title || 'Deadline'), ` · ${next.title} · ${fmtDate(next.nextDeadline.date)} · ${dueLabel(next.nextDeadline.date).text}`), I('chevron-right')) : null,
+        h('div', { class: 'hero-actions' },
+          action('New Case', 'plus-lg', () => newCase(), true),
+          action('Ask AI', 'chat-dots-fill', () => { const b = document.getElementById('btn-chat'); if (b) b.click(); }),
+          action('Reference', 'book', () => { location.hash = '#/reference'; }),
+          action('Vault', 'safe2', () => showVaultPanel()))),
+      clock);
   }
 
   /* =====================================================================
@@ -898,6 +947,7 @@
           + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),
       suspectsSection(c, save),
       contactsSection(c, save),
+      deconflictionSection(c, save),
       // Everything saves by itself as you type; the button saves now and says so.
       archived ? null : h('div', { class: 'details-save' },
         h('button', { class: 'btn primary', type: 'button', icon: 'save', title: 'Save this case to the SSD now. Changes also save by themselves a moment after you type.', onclick: async () => {
@@ -1021,6 +1071,48 @@
       h('div', { class: 'contact-add' }, add));
   }
 
+  /* Deconfliction (v1.21): a table of each deconfliction check before an operation: date, event
+   * or location, the system checked, its deconfliction number, and whether there was a conflict
+   * (Yes / No). Kept in case.json as c.deconfliction. */
+  const DECON_SYSTEMS = ['RISSafe', 'HIDTA Deconfliction', 'DICE', 'Case Explorer', 'SAFETNet', 'Department Deconfliction'];
+  function deconflictionSection(c, save) {
+    c.deconfliction = Array.isArray(c.deconfliction) ? c.deconfliction : [];
+    const rows = h('tbody', {});
+    const cellInput = (row, key, attrs) => {
+      const el = h('input', { value: row[key] || '', autocomplete: 'off', ...attrs });
+      el.addEventListener('input', () => { row[key] = el.value.trim(); save(); });
+      el.addEventListener('change', () => { row[key] = String(el.value).trim(); save(); });
+      return el;
+    };
+    const draw = () => {
+      rows.replaceChildren(...(c.deconfliction.length ? c.deconfliction.map((r, i) => {
+        const conflict = h('select', { 'aria-label': `Row ${i + 1} conflict`, class: r.conflict === 'Yes' ? 'decon-yes' : '' }, ['', 'No', 'Yes'].map((o) => h('option', { value: o, selected: o === (r.conflict || '') }, o || '—')));
+        conflict.addEventListener('change', () => { r.conflict = conflict.value; conflict.className = r.conflict === 'Yes' ? 'decon-yes' : ''; save(); });
+        return h('tr', {},
+          h('td', {}, cellInput(r, 'date', { type: 'date', 'aria-label': `Row ${i + 1} date` })),
+          h('td', {}, cellInput(r, 'event', { 'aria-label': `Row ${i + 1} event or location`, placeholder: 'Buy at 100 N Example St' })),
+          h('td', {}, cellInput(r, 'system', { list: 'decon-systems', 'aria-label': `Row ${i + 1} system` })),
+          h('td', {}, cellInput(r, 'number', { 'aria-label': `Row ${i + 1} deconfliction number` })),
+          h('td', {}, conflict),
+          h('td', {}, cellInput(r, 'notes', { 'aria-label': `Row ${i + 1} notes` })),
+          h('td', {}, h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Delete this row', onclick: () => { c.deconfliction.splice(i, 1); draw(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Delete row ${i + 1}`))));
+      }) : [h('tr', {}, h('td', { colspan: 7, class: 'muted small' }, 'No deconfliction yet.'))]));
+    };
+    draw();
+    const add = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', onclick: () => {
+      c.deconfliction.push({ date: today(), event: '', system: '', number: '', conflict: '', notes: '' });
+      draw(); save();
+      const last = rows.lastElementChild && rows.lastElementChild.querySelector('input:not([type=date]), .date-text');
+      if (last) last.focus();
+    } }, 'Add Deconfliction');
+    return h('section', { class: 'contacts deconfliction', 'aria-labelledby': 'decon-title' },
+      h('h3', { id: 'decon-title', icon: 'shield-exclamation', title: 'Each deconfliction check for this case, and whether it showed a conflict.' }, 'Deconfliction'),
+      h('datalist', { id: 'decon-systems' }, DECON_SYSTEMS.map((x) => h('option', { value: x }))),
+      h('div', { class: 'table-wrap' }, h('table', { class: 'files decon-table' },
+        h('thead', {}, h('tr', {}, ['Date', 'Event / Location', 'System', 'Deconfliction Number', 'Conflict', 'Notes', ''].map((t) => h('th', {}, t)))), rows)),
+      h('div', { class: 'contact-add' }, add));
+  }
+
   // Pending edits to a case that is being deleted are dropped rather than written.
   function dropPendingSaves(id) {
     for (const key of [...Save.timers.keys()]) {
@@ -1133,7 +1225,7 @@
     if (token !== state.renderToken) return;
     // The case notes are opened from Reports (v1.17).
     const back = h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports`, class: 'back-link' }, '← All reports');
-    const ta = h('textarea', { class: 'notes-editor', spellcheck: 'true', 'aria-label': 'Case notes', placeholder: 'Write notes here. Markdown works: # Heading, **bold**, - list items.' });
+    const ta = h('textarea', { class: 'notes-editor', spellcheck: 'true', 'aria-label': 'Field Notes', placeholder: 'Write notes here. Markdown works: # Heading, **bold**, - list items.' });
     ta.value = text;
     const counter = h('span', { class: 'muted small' });
     const updateCount = () => {
@@ -1162,11 +1254,11 @@
     });
 
     // Formatted (bold shows bold, as in Word) or Markdown; notes.md stays Markdown (v1.19).
-    const rich = CVRichEditor.create(ta, { h, icon: I, label: 'Case notes' });
+    const rich = CVRichEditor.create(ta, { h, icon: I, label: 'Field Notes' });
     const fmtBar = CVFormatBar.attach(ta, { h, icon: I, rich });
 
     panel.replaceChildren(
-      h('div', { class: 'notes-head' }, back, h('h2', { icon: 'journal-text' }, 'Case notes')),
+      h('div', { class: 'notes-head' }, back, h('h2', { icon: 'journal-text' }, 'Field Notes')),
       h('div', { class: 'toolbar' }, fmtBar, h('div', { class: 'spacer' }), counter, status, btnSave),
       rich.el, ta);
   }
@@ -1851,7 +1943,7 @@
         sec.dataset.section = key;
         sec.classList.add('vault-card');
         const title = sec.querySelector('h3');
-        if (title && !title.querySelector('svg')) title.prepend(I(SECTION_ICONS[key] || 'gear'));
+        if (title && !title.querySelector('svg')) title.append(' ', I(SECTION_ICONS[key] || 'gear'));
         // The section's explanation goes into a hover box on its heading (an ⓘ marks it).
         const intro = title && title.nextElementSibling;
         if (intro && intro.matches('p.muted')) {
@@ -2167,7 +2259,7 @@
   CVLibraryUI.init(window.CaseVaultUI);
   CVChatUI.init(window.CaseVaultUI);
 
-  // Privacy screen: Ctrl+Shift+H, Esc twice, or the "Hide" button. See js/privacy.js.
+  // Privacy screen: the "Hide" button or the idle timer. See js/privacy.js.
   CVPrivacy.init({
     flush: () => Save.flushAll(),
     getPinRecord: () => (Vault.data && Vault.data.settings.privacyPin) || null,
