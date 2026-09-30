@@ -88,5 +88,6 @@ updater/python/
 updater/updater-settings.json
 .update-staging/
 .update-backup/
+.update-journal.json
 __pycache__/
 *.py[cod]
