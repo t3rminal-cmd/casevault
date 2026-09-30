@@ -16,6 +16,7 @@
     { key: 'narcotics', title: 'Narcotic Calculator', icon: 'calculator-fill', blurb: 'Street value calculator and value chart, HIDTA 2022.' },
     { key: 'incident', title: 'Location Codes', icon: 'geo-alt', blurb: 'Location codes by place type. Click a code to copy it.' },
     { key: 'ucr', title: 'Common UCR', icon: 'journal-text', blurb: 'UCR codes by category. Search by code or offense.' },
+    { key: 'charges', title: 'Charges', icon: 'bank2', blurb: 'Illinois statutes for narcotics and weapons charges. Search by statute or wording.' },
   ];
 
   // This window only.
@@ -162,6 +163,7 @@
     if (sec.key === 'narcotics') return body.replaceChildren(h('div', { class: 'ref-grid' }, calculator(), card(`Street value chart (${RD().NARCOTIC_SOURCE})`, 'table', valueChartEl())));
     if (sec.key === 'incident') return body.replaceChildren(codeBrowser(RD().LOCATION_CODES, 'Search location codes', 'location code'));
     if (sec.key === 'ucr') return body.replaceChildren(codeBrowser(RD().UCR_CODES, 'Search UCR codes or offenses', 'UCR code'));
+    if (sec.key === 'charges') return body.replaceChildren(codeBrowser(RD().CHARGES, 'Search statutes or charges', 'statute'));
   }
 
   const card = (title, icon, ...kids) => ui.h('section', { class: 'ref-card' }, ui.h('h2', { class: 'ref-card-title', icon }, title), ...kids);

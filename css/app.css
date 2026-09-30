@@ -1853,3 +1853,53 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 .stats .stat { transition: transform .15s, box-shadow .15s; }
 .stats .stat:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0, 0, 0, .08); }
 :where(h1, h2, h3, h4, label) > .tip-btn { order: 100; }
+
+/* ---------- v1.22: searchable lists, optional lines, photo labels ---------- */
+.combo { position: relative; display: flex; align-items: stretch; min-width: 0; }
+.combo > input { flex: 1; min-width: 0; padding-right: 2.1rem; }
+.combo-toggle { position: absolute; right: 1px; top: 1px; bottom: 1px; width: 2rem; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-left: 1px solid var(--border); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; background: var(--surface-2); color: var(--muted); cursor: pointer; }
+.combo-toggle:hover { color: var(--accent); }
+.combo-toggle .bi { width: .8rem; height: .8rem; }
+.combo-list { position: absolute; z-index: 60; top: calc(100% + 2px); left: 0; right: 0; min-width: min(26rem, 90vw); max-height: 17rem; overflow-y: auto; margin: 0; padding: .25rem 0; list-style: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: 0 10px 28px rgba(0, 0, 0, .14); }
+.combo-list[hidden] { display: none; }
+.combo-opt { display: flex; align-items: baseline; justify-content: space-between; gap: .8rem; padding: .4rem .7rem; cursor: pointer; font-size: .9rem; }
+.combo-opt:hover, .combo-opt.active { background: var(--accent-soft); }
+.combo-hint { flex-shrink: 0; font-size: .72rem; color: var(--muted); }
+.rf-optional { position: relative; }
+.rf-lines .rf-optional { grid-template-columns: 1.2rem minmax(10rem, 16rem) minmax(0, 1fr); }
+.rf-lines .field:not(.rf-optional) { padding-left: 2.1rem; }
+.rf-optional > input[type=checkbox] { width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--accent); }
+.rf-line-off > span, .rf-line-off > input:not([type=checkbox]), .rf-line-off > .combo { opacity: .45; }
+.rf-line-off > span::after { content: "  Not in the report"; text-transform: none; font-weight: 500; }
+.rf-auto { background: var(--surface-2); color: var(--muted); }
+.rf-photo-tag { position: absolute; left: 4px; top: 4px; z-index: 1; padding: .05rem .4rem; border-radius: 999px; background: var(--accent); color: #fff; font-size: .72rem; font-weight: 700; }
+@media (max-width: 700px) { .rf-lines .rf-optional { grid-template-columns: 1.2rem minmax(0, 1fr); } .rf-lines .rf-optional > :last-child { grid-column: 1 / -1; } .rf-lines .field:not(.rf-optional) { padding-left: 0; } }
+
+/* ---------- v1.22: Ask AI box ---------- */
+.chat-float .chat-options { grid-template-columns: 1fr; gap: .35rem; }
+.chat-float .chat-options .field { display: grid; grid-template-columns: 3.4rem minmax(0, 1fr); align-items: center; gap: .5rem; }
+.chat-float .chat-options .field > span { font-size: .75rem; }
+.chat-float .chat-options select { font-size: .85rem; padding: .3rem .5rem; text-overflow: ellipsis; }
+.chat-input { font-size: .82rem; line-height: 1.45; min-height: 4.6rem; max-height: 4.6rem; }
+.chat-input::placeholder { font-size: .8rem; }
+.chat-foot { font-size: .7rem; color: var(--danger); font-weight: 600; margin: .35rem 0 0; }
+/* Vault menu: words on the left, icons lined up in one column on the right, in blue. */
+.vault-nav-item { justify-content: space-between; }
+.vault-nav-item > .bi { color: var(--accent); width: 1rem; height: 1rem; }
+/* v1.22: tables keep their rounded corners: the grey header row no longer pokes out of them. */
+table.files { border-collapse: separate; border-spacing: 0; }
+table.files tr:last-child > td { border-bottom: 0; }
+table.files thead th:first-child { border-top-left-radius: calc(var(--radius) - 1px); }
+table.files thead th:last-child { border-top-right-radius: calc(var(--radius) - 1px); }
+.decon-table th:nth-child(1) { width: 11.5rem; }
+.decon-table .date-field .date-text { padding-right: 2.2rem; }
+/* v1.22: the role box is wide enough for "Secondary". */
+.suspect-row { grid-template-columns: minmax(0, 1.5fr) 10.5rem 3.5rem minmax(0, 1.6fr) 10rem 2.1rem; }
+@media (max-width: 900px) { .suspect-row { grid-template-columns: 1fr 1fr; } }
+/* One grid for every Officer's Report line: tick box | label | entry, so all entries line up. */
+.rf-lines .field, .rf-lines .rf-optional { grid-template-columns: 1.2rem minmax(10rem, 16rem) minmax(0, 1fr); padding-left: 0; }
+.rf-lines .field:not(.rf-optional) > :first-child { grid-column: 2; }
+@media (max-width: 700px) { .rf-lines .field, .rf-lines .rf-optional { grid-template-columns: 1.2rem minmax(0, 1fr); } .rf-lines .field > :last-child { grid-column: 1 / -1; } .rf-lines .field:not(.rf-optional) > :first-child { grid-column: 1 / -1; } }
+.rf-lines .field, .rf-lines .rf-optional { grid-template-columns: 1.2rem 15rem minmax(0, 1fr); }
+@media (max-width: 700px) { .rf-lines .field, .rf-lines .rf-optional { grid-template-columns: 1.2rem minmax(0, 1fr); } }
+.rf-lines .field:not(.rf-optional) { padding-left: 0; }

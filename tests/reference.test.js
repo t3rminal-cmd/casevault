@@ -66,9 +66,9 @@ test('Library, behavior and reference text reach the AI in their places, within 
 test('quick links: tabs, hiding, edits, custom links, and only web addresses', () => {
   const LK = require('../js/reference/links.js');
   const all = LK.linksOf({});
-  assert.deepStrictEqual(all.filter((l) => l.tab === 'reference').map((l) => l.name), ['Location Codes', 'Common UCR', 'Narcotic Calculator']);
-  assert.deepStrictEqual(all.filter((l) => l.tab === 'osint').map((l) => l.name), ['MaxMind IP', 'Fingerprint', 'NumLookup']);
-  assert.deepStrictEqual(all.filter((l) => l.tab === 'leo').map((l) => l.name), ['Accurint', 'Kodex Portal', 'Chicago HIDTA']);
+  assert.deepStrictEqual(all.filter((l) => l.tab === 'reference').map((l) => l.name), ['Location Codes', 'Common UCR', 'Charges', 'Narcotic Calculator']);
+  assert.deepStrictEqual(all.filter((l) => l.tab === 'osint').map((l) => l.name), ['MaxMind IP', 'Fingerprint', 'NumLookup', 'Blockchair', 'Mempool', 'TinEye', 'Google Images']);
+  assert.deepStrictEqual(all.filter((l) => l.tab === 'leo').map((l) => l.name), ['Accurint', 'Kodex Portal', 'Chicago HIDTA', 'Chainalysis', 'Chicago Police Directives']);
   for (const l of all) if (l.url) assert.match(l.url, /^https:\/\//, l.name);
   const s = LK.linksOf({ hidden: ['osint-fingerprint'], edits: { 'leo-chicago-hidta': { url: 'portal.example.org/login' } }, custom: [{ id: 'c1', tab: 'leo', name: 'My portal', url: 'https://example.org' }, { id: 'c2', tab: 'reference', name: 'x', url: 'https://example.org' }] });
   assert.ok(s.find((l) => l.id === 'osint-fingerprint').hidden);

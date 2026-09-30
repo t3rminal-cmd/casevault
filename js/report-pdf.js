@@ -249,7 +249,7 @@
       const report = RF.SECTIONS.find((s) => s.id === 'report').fields;
       for (const [k, label] of report) {
         if (k === 'totalWeight' && on('evidence')) labelled('Evidence Inventoried', d.evidence.length ? d.evidence.map((e) => `Exhibit ${e.number}${e.inventory ? ` - Inv. ${e.inventory}` : ''}`).join(', ') : '');
-        if (k === 'courtDate') continue;
+        if (k === 'courtDate' || RF.isHidden(d, k)) continue;
         labelled(label, k === 'courtBranch' ? [val('courtBranch'), val('courtDate')].filter(Boolean).join(', ') : val(k));
       }
       y -= 6;
@@ -272,7 +272,7 @@
       if (!d.evidence.length) { rect(M, y - 15, INNER, 15); text(M + 4, y - 10.5, 'None.', 9); y -= 15; }
       for (const e of d.evidence) {
         const vals = [String(e.number), e.inventory, e.type, e.type === 'Narcotics' ? e.drug : '', e.type === 'Narcotics' ? e.weight : ''];
-        const desc = wrap(`${e.description}${e.photos && e.photos.length ? `${e.description ? ' ' : ''}[${e.photos.length} photo${e.photos.length === 1 ? '' : 's'} attached]` : ''}`, 9, descW - 8);
+        const desc = wrap(`${e.description}${e.photos && e.photos.length ? `${e.description ? ' ' : ''}[Photo${e.photos.length === 1 ? '' : 's'} ${e.photos.map((_, j) => RF.photoLabel(e.number, j)).join(', ')} attached]` : ''}`, 9, descW - 8);
         const small = vals.map((v, i) => wrap(v, 9, cols[i][1] - 6));
         const h = Math.max(15, 5 + Math.max(desc.length, ...small.map((l) => l.length)) * 11);
         if (y - h < M + 18) { newPage(); head(); }

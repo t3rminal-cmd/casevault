@@ -87,8 +87,7 @@
       ['fundSheet', 'Pre-Recorded Fund Sheet Inventory Number', 'line'],
       ['evidenceOfficer', 'Evidence Officer', 'line'],
       ['proofResidence', 'Proof of Residence', 'line'],
-      ['notifications', 'Notifications', 'line'],
-    ], lists: ['charges', 'gangs', 'notArrested', 'personnel', 'vehicles'] },
+    ], lists: ['charges', 'gangs', 'notArrested', 'personnel', 'vehicles', 'notifications'] },
     { id: 'approval', title: 'Submission and Approval', icon: 'pencil-square', fields: [
       ['extraCopies', 'Extra Copies Required', 'text'],
       ['dateSubmitted', 'Date Submitted', 'date'],
@@ -113,21 +112,31 @@
   // [key, label, kind, options]. kind: text, date, select, phone, wide (a full-width entry), and
   // the pick-lists below (write-in allowed): victim, gang, hair, eyes.
   const PERSON = [
-    ['name', 'Name', 'text'], ['relation', 'Relation Code', 'text'], ['dob', 'Date of Birth', 'date'],
+    ['name', 'Name', 'text'], ['relation', 'Relation Code', 'text'], ['dob', 'Date of Birth', 'date'], ['age', 'Age', 'age'],
+    ['gender', 'Gender', 'select', ['', 'Male', 'Female', 'X', 'Unknown']],
+    ['identity', 'Gender Identity', 'select', ['', 'Man', 'Woman', 'Transgender Man', 'Transgender Woman', 'Non-Binary', 'Other', 'Declined to State']],
+    ['race', 'Race', 'select', ['', 'White', 'Black', 'White Hispanic', 'Black Hispanic', 'Asian / Pacific Islander', 'American Indian / Alaska Native', 'Unknown']],
+    ['complexion', 'Complexion', 'select', ['', 'Light', 'Fair', 'Medium', 'Olive', 'Light Brown', 'Medium Brown', 'Dark Brown', 'Dark', 'Ruddy', 'Albino']],
     ['height', 'Height', 'text'], ['weight', 'Weight', 'text'], ['hair', 'Hair Color', 'hair'], ['eyes', 'Eye Color', 'eyes'],
+    ['veteran', 'Veteran', 'select', ['', 'Yes', 'No']],
     ['marks', 'Tattoos / Scars', 'wide'], ['clothing', 'Clothing Description', 'wide'],
   ];
+  // The officers' roles at the scene (Police Personnel).
+  const ROLES = ['', 'Case', 'Affiant', 'Entry', 'Perimeter', 'UC', 'Surveillance', 'Enforcement', 'Sergeant', 'Lieutenant', 'Agent', 'Other'];
+  // Officer's Report lines that can be ticked off when they don't apply (v1.22).
+  const OPTIONAL_LINES = ['within1000', 'searchWarrant', 'asa', 'judge', 'proofResidence'];
   const LISTS = {
     victimsList: { title: 'Victims', item: 'Victim', fields: [['name', 'Name', 'victim'], ...PERSON.slice(1)] },
     offendersList: { title: 'Offenders', item: 'Offender', fields: PERSON },
-    charges: { title: 'Charges', item: 'Charge', fields: [['statute', 'Statute', 'text'], ['description', 'Statute Description', 'wide']] },
+    charges: { title: 'Charges', item: 'Charge', fields: [['statute', 'Statute', 'charge'], ['description', 'Statute Description', 'chargeWide']] },
     gangs: { title: 'Gang Affiliations', item: 'Gang', fields: [['name', 'Gang', 'gang'], ['faction', 'Faction / Set', 'text']] },
     notArrested: { title: 'Persons Present Not Arrested', item: 'Person', fields: [['name', 'Name', 'text'], ['phone', 'Contact Number', 'phone'], ['address', 'Address', 'wide']] },
-    personnel: { title: 'Police Personnel on Scene', item: 'Officer', fields: [['name', 'Name', 'text'], ['star', 'Star Number', 'text'], ['role', 'Unit / Role', 'text']] },
+    personnel: { title: 'Police Personnel on Scene', item: 'Officer', fields: [['name', 'Name', 'text'], ['star', 'Star Number', 'text'], ['unit', 'Unit', 'text'], ['role', 'Role', 'select', ROLES]] },
+    notifications: { title: 'Notifications', item: 'Notification', fields: [['date', 'Date', 'date'], ['name', 'Person Notified', 'text'], ['by', 'Notified By', 'text'], ['notes', 'Notes', 'wide']] },
     vehicles: { title: 'Vehicles', item: 'Vehicle', fields: [['year', 'Year', 'text'], ['make', 'Make', 'text'], ['model', 'Model', 'text'], ['color', 'Color', 'text'], ['plate', 'License Plate', 'text'], ['state', 'Plate State', 'text'], ['vin', 'VIN', 'text'], ['disposition', 'Impound / Tow', 'select', ['', 'Impound', 'Tow', 'Other']], ['notes', 'Owner and Notes', 'wide']] },
   };
   const PICKS = {
-    victim: ['State of Illinois', 'People of the State of Illinois'],
+    victim: ['State of Illinois'],
     hair: ['Black', 'Brown', 'Blonde', 'Red', 'Gray', 'White', 'Bald', 'Dyed'],
     eyes: ['Brown', 'Black', 'Blue', 'Green', 'Hazel', 'Gray'],
     // Street gangs often named in Chicago reports, then national and foreign gangs and cartels.
@@ -142,7 +151,7 @@
   const OLD_TYPES = { Narcotic: 'Narcotics', 'Personal property': 'Personal Property', 'Personal currency': 'Personal Currency', 'Recording (audio/video)': 'Video/Audio' };
   const FIELDS = SECTIONS.flatMap((s) => s.fields);
 
-  const empty = () => ({ schema: 3, ...Object.fromEntries(FIELDS.map(([k, , kind]) => [k, kind === 'check' ? false : ''])), ...Object.fromEntries(Object.keys(LISTS).map((k) => [k, []])), evidence: [], narrative: '', hidden: [] });
+  const empty = () => ({ schema: 4, ...Object.fromEntries(FIELDS.map(([k, , kind]) => [k, kind === 'check' ? false : ''])), ...Object.fromEntries(Object.keys(LISTS).map((k) => [k, []])), evidence: [], narrative: '', hidden: [] });
 
   const blankItem = (list) => Object.fromEntries(LISTS[list].fields.map(([k]) => [k, '']));
   const filled = (item) => Object.values(item || {}).some((v) => String(v || '').trim());
@@ -153,7 +162,11 @@
     const src = data || {};
     const d = { ...empty(), ...src };
     d.evidence = (Array.isArray(d.evidence) ? d.evidence : []).map((e) => ({ number: e.number, inventory: e.inventory || '', type: OLD_TYPES[e.type] || e.type || '', drug: e.drug || '', weight: e.weight || '', description: e.description || '', photos: Array.isArray(e.photos) ? e.photos.filter((x) => typeof x === 'string') : [] }));
+    // A v1.21 single Notifications line becomes the first notification.
+    if (typeof src.notifications === 'string') d.notifications = String(src.notifications).trim() ? [{ notes: String(src.notifications).trim() }] : [];
     for (const k of Object.keys(LISTS)) d[k] = (Array.isArray(d[k]) ? d[k] : []).map((it) => ({ ...blankItem(k), ...(it && typeof it === 'object' ? it : {}) }));
+    // v1.21's "Unit / Role" text goes to Unit when it isn't one of the roles.
+    for (const p of d.personnel) if (p.role && !ROLES.includes(p.role)) { p.unit = p.unit || p.role; p.role = ''; }
     const old = (k) => String(src[k] || '').trim();
     if ((src.schema || 1) < 3) {
       if (!d.victimsList.length && (old('victimName') || old('victimDetails'))) d.victimsList.push({ ...blankItem('victimsList'), name: old('victimName') || old('victimDetails'), relation: old('victimRelation') });
@@ -166,10 +179,26 @@
     }
     for (const k of ['victimName', 'victimRelation', 'victimDetails', 'offenderName', 'offenderRelation', 'offenderDetails', 'gangAffiliation', 'vehicle', 'impound']) delete d[k];
     d.hidden = Array.isArray(d.hidden) ? d.hidden.filter((x) => typeof x === 'string') : [];
-    d.schema = 3;
+    d.schema = 4;
     return d;
   }
   const isHidden = (d, id) => (d.hidden || []).includes(id);
+
+  /** A photo's label under its exhibit: 1a, 1b … 1z, 1aa. */
+  function photoLabel(n, j) {
+    let x = j; let t = '';
+    do { t = String.fromCharCode(97 + (x % 26)) + t; x = Math.floor(x / 26) - 1; } while (x >= 0);
+    return `${n}${t}`;
+  }
+
+  /** Whole years from a date of birth to a day (both YYYY-MM-DD); '' when unknown. */
+  function ageOn(dob, day) {
+    const a = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dob || ''); const b = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day || '');
+    if (!a || !b) return '';
+    let n = Number(b[1]) - Number(a[1]);
+    if (b[2] < a[2] || (b[2] === a[2] && b[3] < a[3])) n -= 1;
+    return n >= 0 && n < 130 ? String(n) : '';
+  }
 
   /** One list entry as text: "DOE, John, DOB 01.02.1990, 5'10\", 180 lbs, Black hair…" */
   function itemLine(list, it) {
@@ -218,7 +247,7 @@
     const lines = [];
     for (const s of SECTIONS) {
       if (isHidden(d, s.id)) continue;
-      for (const [k, label] of s.fields) { const v = shown(k, d[k]); if (v) lines.push(`${label}: ${v.replace(/\s*\n\s*/g, '; ')}`); }
+      for (const [k, label] of s.fields) { if (isHidden(d, k)) continue; const v = shown(k, d[k]); if (v) lines.push(`${label}: ${v.replace(/\s*\n\s*/g, '; ')}`); }
       for (const k of s.lists || []) for (const it of d[k].filter(filled)) lines.push(`${LISTS[k].item}: ${itemLine(k, it)}`);
     }
     if (!isHidden(d, 'evidence')) for (const e of d.evidence) lines.push(`Evidence ${exhibitLine(e)}`);
@@ -233,7 +262,7 @@
     const out = [`# ${title}`, ''];
     for (const s of SECTIONS) {
       if (isHidden(d, s.id)) continue;
-      const rows = s.fields.map(([k, label]) => [label, shown(k, d[k])]).filter(([, v]) => v);
+      const rows = s.fields.filter(([k]) => !isHidden(d, k)).map(([k, label]) => [label, shown(k, d[k])]).filter(([, v]) => v);
       for (const k of s.lists || []) d[k].filter(filled).forEach((it, i) => rows.push([`${LISTS[k].item} ${i + 1}`, itemLine(k, it)]));
       if (!rows.length) continue;
       out.push(`## ${s.title}`, '', '| Field | Entry |', '|---|---|', ...rows.map(([l, v]) => `| ${l} | ${esc(v)} |`), '');
@@ -248,7 +277,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { SECTIONS, FIELDS, LISTS, PICKS, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, exhibitLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, exhibitLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

@@ -22,7 +22,7 @@ test('Report Fields: saves from before v1.20 are brought up to date', () => {
   assert.deepStrictEqual(d.evidence.map((e) => e.type), ['Narcotics', 'Video/Audio']);
   assert.strictEqual(d.evidence[0].inventory, '');
   assert.strictEqual(d.victimVerified, false);
-  assert.strictEqual(d.schema, 3);
+  assert.strictEqual(d.schema, 4);
 });
 
 test('Report Fields: placeholders, AI text and a report made from them', () => {
@@ -102,4 +102,34 @@ test('Report PDF: exhibit photos on Exhibit Attachments pages; hidden parts left
   assert.match(s, /\(DOE, John\)/);
   const noEvidence = Buffer.from(P.build({ ...d, hidden: ['evidence'] }, { photos: [{ jpeg, w: 10, h: 10 }] })).toString('latin1');
   assert.doesNotMatch(noEvidence, /EXHIBIT ATTACHMENTS|\/Subtype \/Image/, 'no evidence part, no photo pages');
+});
+
+test('v1.22: age from DOB, photo labels, roles, notifications and optional lines', () => {
+  assert.strictEqual(F.ageOn('1990-10-05', '2026-09-30'), '35');
+  assert.strictEqual(F.ageOn('1990-09-30', '2026-09-30'), '36');
+  assert.strictEqual(F.ageOn('', '2026-09-30'), '');
+  assert.deepStrictEqual([F.photoLabel(1, 0), F.photoLabel(1, 1), F.photoLabel(3, 25), F.photoLabel(3, 26)], ['1a', '1b', '3z', '3aa']);
+  assert.deepStrictEqual(F.PICKS.victim, ['State of Illinois']);
+  const d = F.normalize({ schema: 3, notifications: 'Called the watch commander', personnel: [{ name: 'A', role: 'Unit 189' }, { name: 'B', role: 'Entry' }], within1000: 'School', hidden: ['within1000'] });
+  assert.strictEqual(d.notifications[0].notes, 'Called the watch commander');
+  assert.deepStrictEqual(d.personnel.map((p) => [p.unit, p.role]), [['Unit 189', ''], ['', 'Entry']]);
+  assert.doesNotMatch(F.asText(d), /Within 1000/);
+  const s = Buffer.from(P.build(d)).toString('latin1');
+  assert.doesNotMatch(s, /WITHIN 1000 FEET/);
+  assert.match(s, /SEARCH WARRANT NUMBER/);
+});
+
+test('v1.22: searchable lists and the charges from LE Cyber-Docs', () => {
+  const C = require('../js/combo.js');
+  const items = [{ label: '2012 Delv: Cocaine', hint: 'Narcotics' }, { label: '2022 Poss: Cocaine', hint: 'Narcotics' }, { label: '0810 Over $500', hint: 'Theft' }];
+  assert.deepStrictEqual(C.filter(items, 'cocaine delv').map((i) => i.label), ['2012 Delv: Cocaine']);
+  assert.strictEqual(C.filter(items, 'narcotics').length, 2, 'the hint (group) is searched too');
+  assert.strictEqual(C.filter(items, '').length, 3);
+  const RD = require('../js/reference/ref-data.js');
+  const all = RD.CHARGES.flatMap((g) => g.codes);
+  assert.ok(all.length >= 50);
+  assert.ok(all.some(([s, d]) => s === '720 ILCS 570/401(a)(2)(A)' && /Cocaine, 15 to 100 grams/.test(d)));
+  assert.ok(all.every(([s]) => /^720 ILCS \d+\//.test(s)));
+  const { pathText } = require('../js/formats.js');
+  assert.strictEqual(pathText('cases\\2024-JH123456'), 'cases | 2024-JH123456');
 });

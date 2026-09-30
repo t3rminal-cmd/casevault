@@ -457,7 +457,7 @@
     state.connected = true;
     state.vaultId = data.vaultId;
     // Where the data is saved, e.g. W:\CaseVault-Data (helper mode knows the drive letter).
-    $('#vault-name').textContent = MODE === 'helper' && state.drive ? `${state.drive.replace(/[\\/]+$/, '')}\\${dir.name}` : dir.name;
+    $('#vault-name').textContent = MODE === 'helper' && state.drive ? CVFormat.pathText(`${state.drive.replace(/[\\/]+$/, '')}\\${dir.name}`) : dir.name;
     hideGate();
     setSidebar(!!(Vault.data.settings && Vault.data.settings.sidebarCollapsed), { save: false });
     Save.render();
@@ -692,7 +692,6 @@
     tick();
     clock.dataset.started = '1';
     const timer = setInterval(() => { if (!tick()) clearInterval(timer); }, 15000);
-    const next = deadlines[0];
     const summary = [
       `${open} open case${open === 1 ? '' : 's'}`,
       soon ? `${soon} deadline${soon === 1 ? '' : 's'} due soon` : 'No deadlines due this week',
@@ -704,9 +703,6 @@
         dateLine,
         h('h1', { class: 'hero-title' }, `${greet}${who ? `, ${who.split(/\s+/)[0]}` : ''}`),
         h('p', { class: 'hero-sub' }, summary),
-        next ? h('a', { class: 'hero-next', href: `#/case/${encodeURIComponent(next.id)}/timeline` },
-          h('span', { class: 'hero-next-label' }, 'Next Up'),
-          h('span', {}, h('strong', {}, next.nextDeadline.title || 'Deadline'), ` · ${next.title} · ${fmtDate(next.nextDeadline.date)} · ${dueLabel(next.nextDeadline.date).text}`), I('chevron-right')) : null,
         h('div', { class: 'hero-actions' },
           action('New Case', 'plus-lg', () => newCase(), true),
           action('Ask AI', 'chat-dots-fill', () => { const b = document.getElementById('btn-chat'); if (b) b.click(); }),
@@ -731,7 +727,7 @@
       const showFolder = () => {
         const name = CVCaseFiles.caseFolderName({ number: numberIn.value, dates: { opened: openedIn.value } });
         folderNote.replaceChildren(...(name
-          ? ['Case folder ', h('code', {}, `cases\\${name}`), ' · files named ', h('code', {}, `${name} Arrest Report.pdf`), ' and so on']
+          ? ['Case folder ', h('code', {}, CVFormat.pathText(`cases\\${name}`)), ' · files named ', h('code', {}, `${name} Arrest Report.pdf`), ' and so on']
           : ['Add the case number to name the folder and files ', h('code', {}, '<year>-<case no.>'), '.']));
       };
       numberIn.addEventListener('input', showFolder);
@@ -943,7 +939,7 @@
         field('Closed', bind(closedInput, (v) => { c.dates.closed = v; })),
         field('Tags', bind(h('input', { value: c.tags.join(', '), maxlength: 300 }), (v) => { c.tags = parseTags(v); }), 'span-2', 'Separate tags with commas.'),
         h('p', { class: 'muted span-2 small' },
-          `Created ${c.dates.created ? fmtDateTime(Date.parse(c.dates.created)) : '—'} · Folder: ${archived ? 'archive' : 'cases'}\\${c.id}`
+          `Created ${c.dates.created ? fmtDateTime(Date.parse(c.dates.created)) : '—'} · Folder: ${CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}`)}`
           + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),
       suspectsSection(c, save),
       contactsSection(c, save),
@@ -1390,7 +1386,7 @@
     input.addEventListener('change', () => { addFiles([...input.files]); input.value = ''; });
     const target = current && current !== 'unsorted' ? current : '';
     const dropTip = target
-      ? `Saved as "${CF.fileName(c, target, 'x.pdf').replace(/\.pdf$/, '')}…" in files\\${target}. The originals are not changed.`
+      ? `Saved as "${CF.fileName(c, target, 'x.pdf').replace(/\.pdf$/, '')}…" in ${CVFormat.pathText(`files\\${target}`)}. The originals are not changed.`
       : 'You pick the document type for each file next. They are copied to the SSD and named by the case number; the originals are not changed.';
     const drop = h('div', { class: 'dropzone', tabindex: '0', role: 'button', 'aria-label': 'Add files', title: dropTip },
       I('upload', { cls: 'drop-icon' }),
@@ -1630,7 +1626,7 @@
         }))))
       : h('p', { class: 'muted' }, current ? `No documents in ${current === 'unsorted' ? 'Unsorted' : current.replace('/', ' › ')} yet.` : 'No files attached yet.');
 
-    const where = `${archived ? 'archive' : 'cases'}\\${c.id}\\files${current && current !== 'unsorted' ? `\\${current.replace('/', '\\')}` : ''}`;
+    const where = CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}\\files${current && current !== 'unsorted' ? `\\${current}` : ''}`);
     panel.replaceChildren(...[
       prefix ? null : h('p', { class: 'hint' }, 'This case has no case number yet, so files are named ', h('code', {}, `${new Date().getFullYear()}-NOCASENO …`), '. Add the number on the Details tab first to have them named ', h('code', {}, '2026-<CaseNo> <Type>'), '.'),
       mergeNote,
@@ -1746,7 +1742,7 @@
     if (!plan) return;
     try {
       const to = await Save.track(`file-move:${c.id}:${f.name}`, () => Vault.moveFile(c.id, f.name, plan.folder, plan));
-      toast(`Saved as ${to.replace(/\//g, '\\')}`, 'success', 6000);
+      toast(`Saved as ${CVFormat.pathText(to)}`, 'success', 6000);
       showCase(c.id, 'files', current || null);
     } catch (err) { if (!FS.isDisconnectError(err)) { /* reported by Save */ } }
   }
@@ -1860,7 +1856,7 @@
           h('p', {}, 'This file type can\'t be shown inside CaseVault.'),
           ext === 'doc' ? h('p', { class: 'small' }, 'This is an old-style Word file (.doc). Open it in Word and use File → Save As → Word Document (.docx): CaseVault can show and check .docx files.') : null,
           h('p', {}, 'Open it straight from the SSD in its normal program:'),
-          h('code', { class: 'path' }, `${Vault.root.name}\\${Vault.isArchived(c.id) ? 'archive' : 'cases'}\\${c.id}\\files\\${name.replace(/\//g, '\\')}`),
+          h('code', { class: 'path' }, CVFormat.pathText(`${Vault.root.name}\\${Vault.isArchived(c.id) ? 'archive' : 'cases'}\\${c.id}\\files\\${name}`)),
           h('p', { class: 'muted small explain' }, 'Tip: in File Explorer, paste the folder part of that path after your CaseVault drive letter.'));
       }
       return h('div', { class: 'preview' },
@@ -1955,7 +1951,7 @@
         }
         scroller.append(sec);
         nav.append(h('button', { type: 'button', class: 'vault-nav-item', 'data-target': key, onclick: () => scrollToSection(sec, true) },
-          I(SECTION_ICONS[key] || 'gear'), h('span', {}, title ? title.textContent.replace(/\s*\(.*\)$/, '') : key)));
+          h('span', {}, title ? title.textContent.replace(/\s*\(.*\)$/, '').trim() : key), I(SECTION_ICONS[key] || 'gear')));
       });
       const spy = new IntersectionObserver((entries) => {
         const top = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];

@@ -251,7 +251,7 @@
       } catch (err) { console.warn('Could not open the draft', err); }
     }
     ui.refresh();
-    const winPath = `${V().root.name}\\${rel.replace(/\//g, '\\')}`;
+    const winPath = CVFormat.pathText(`${V().root.name}\\${rel}`);
     await ui.openDialog((close) => ui.h('div', {},
       ui.h('h2', {}, 'Outlook draft ready'),
       ui.h('p', {}, 'Saved in this case\'s Email folder. Open it from File Explorer (double-click): Outlook shows it as a new email with the attachments. Check it and press Send.'),
