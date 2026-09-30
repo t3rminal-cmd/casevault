@@ -173,3 +173,48 @@ test('v1.23: LSD and psilocybin (Schedule I hallucinogens) are in the charges', 
     assert.ok(all.some(([s, d]) => s === '720 ILCS 570/402(c)' && d.includes(drug)), `${drug} possession`);
   }
 });
+
+test('v1.25: height in feet and inches, weight in pounds, unknown offender ranges', () => {
+  assert.deepStrictEqual(F.parseHeight('5\'10"'), { ft: 5, in: 10 });
+  assert.deepStrictEqual(F.parseHeight('5 10'), { ft: 5, in: 10 });
+  assert.deepStrictEqual(F.parseHeight('70in'), { ft: 5, in: 10 });
+  assert.deepStrictEqual(F.parseHeight('6'), { ft: 6, in: 0 });
+  assert.strictEqual(F.parseHeight('tall'), null);
+  assert.strictEqual(F.parseHeight('5 13'), null);
+  assert.strictEqual(F.heightOf(5, 10), '5\'10"');
+  assert.deepStrictEqual(F.heightParts('5\'8" - 5\'11"'), [{ ft: 5, in: 8 }, { ft: 5, in: 11 }]);
+  assert.strictEqual(F.withLbs('180'), '180 lbs');
+  assert.strictEqual(F.withLbs('170 - 190'), '170 - 190 lbs');
+  assert.strictEqual(F.withLbs('about 180 lbs'), 'about 180 lbs', 'free text is left as typed');
+  const d = F.normalize({ offendersList: [{ height: '5\'10"', weight: '180', name: 'John Example' }, { unknown: true, age: '25 - 30', height: '5\'8" - 5\'11"', weight: '170 - 190' }] });
+  assert.strictEqual(d.offendersList[1].name, F.UNKNOWN, 'an unknown offender without a name is called Unknown Offender');
+  assert.strictEqual(F.itemLine('offendersList', d.offendersList[0]), 'John Example, Height: 5\'10", Weight: 180 lbs');
+  assert.strictEqual(F.itemLine('offendersList', d.offendersList[1]), 'Unknown Offender, Age Range: 25 - 30, Height Range: 5\'8" - 5\'11", Weight Range: 170 - 190 lbs');
+  const s = Buffer.from(P.build(d, {})).toString('latin1');
+  assert.match(s, /OFFENDER 2 - AGE RANGE/);
+  assert.match(s, /\(170 - 190 lbs\)/);
+});
+
+test('v1.25: narcotics recovered, one line each; older single lines move into the list', () => {
+  const old = F.normalize({ totalWeight: '12.4 g', streetValue: '$1,550', purchasePrice: '$400' });
+  assert.deepStrictEqual(old.narcotics, [{ drug: '', amount: '12.4 g', unit: '', price: '$400', value: '$1,550' }]);
+  assert.ok(!('totalWeight' in old) && !('streetValue' in old) && !('purchasePrice' in old));
+  const d = F.normalize({ narcotics: [{ drug: 'Cocaine (Powder)', amount: '28', unit: 'gram', price: '$1,200.00', value: '$3,500.00' }, { drug: 'Adderall', amount: '1', unit: 'pill' }], subpoenaGJ: 'GJ-1' });
+  assert.strictEqual(F.itemLine('narcotics', d.narcotics[0]), 'Cocaine (Powder), Total Weight: 28 grams, Purchase Price: $1,200.00, Street Value: $3,500.00');
+  assert.strictEqual(F.itemLine('narcotics', d.narcotics[1]), 'Adderall, Total Weight: 1 pill');
+  assert.ok(!F.FIELDS.some(([k]) => k === 'narcotics'), 'the list marker is not a field');
+  assert.ok(F.OPTIONAL_LINES.includes('subpoenaGJ'));
+  const ctx = F.context(d);
+  assert.strictEqual(ctx['report.streetValue'], '$3,500.00', 'templates from before v1.25 still fill in');
+  assert.strictEqual(ctx['report.totalWeight'], 'Cocaine (Powder) 28 grams; Adderall 1 pill');
+  assert.match(F.asText(d), /Subpoena GJ Number: GJ-1\n[\s\S]*Narcotic: Cocaine \(Powder\), Total Weight: 28 grams/);
+  const md = F.toMarkdown(d);
+  assert.match(md, /\| Narcotic 1 \| Cocaine \(Powder\), Total Weight: 28 grams/);
+  const s = Buffer.from(P.build(d, {})).toString('latin1');
+  assert.match(s, /NARCOTICS RECOVERED/);
+  assert.match(s, /NARCOTIC 1 - STREET VALUE/);
+  assert.match(s, /SUBPOENA GJ NUMBER/);
+  // The four narcotic boxes share one row.
+  const R = require('../js/reference/reference.js');
+  assert.strictEqual(R.streetValue('Cocaine (Powder)', 28, 'gram').value, 3500);
+});

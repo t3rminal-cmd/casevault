@@ -45,13 +45,21 @@
 
     // Searchable lists (v1.22): UCR codes and location codes from the Reference pages, and the
     // charges; the pick-lists (victim, gang, hair, eyes). All can still be typed over.
-    const RD = root.CVRefData || { UCR_CODES: [], LOCATION_CODES: [], CHARGES: [] };
+    const RD = root.CVRefData || { UCR_CODES: [], LOCATION_CODES: [], CHARGES: [], NARCOTIC_DATA: {} };
     const UCR_ITEMS = RD.UCR_CODES.flatMap((g) => g.codes.map(([code, desc]) => ({ value: `${code} ${desc}`, label: `${code} ${desc}`, hint: g.title, group: g.title })));
     const LOC_ITEMS = RD.LOCATION_CODES.flatMap((g) => g.codes.map(([code, desc]) => ({ value: code, label: `${code} ${desc}`, hint: g.title, desc })));
     const CHARGE_ITEMS = (RD.CHARGES || []).flatMap((g) => g.codes.map(([statute, desc]) => ({ value: statute, label: `${statute} ${desc}`, hint: g.title, statute, desc })));
     const pickItems = (list) => list.map((v) => ({ value: v, label: v }));
+    // Narcotic types: the calculator's list (it has prices), then the evidence types not in it.
+    const NARCOTIC_ITEMS = [...Object.keys(RD.NARCOTIC_DATA || {}).map((k) => ({ value: k, label: k, hint: RD.NARCOTIC_DATA[k].cat })),
+      ...F().DRUG_TYPES.filter((d) => !(RD.NARCOTIC_DATA || {})[d]).map((d) => ({ value: d, label: d }))];
+    const moneyText = (v) => {
+      const n = parseFloat(String(v || '').replace(/[$,\s]/g, ''));
+      return Number.isFinite(n) ? `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : String(v || '').trim();
+    };
     const els = {}; // the Report Fields inputs by key, for fields filled from a pick
     const input = (key, label, kind, opts) => {
+      if (kind === 'list') { const el = listEditor(key); el.classList.add('span-all'); return el; }
       let el;
       if (kind === 'select' || kind === 'yesno') {
         const list = kind === 'yesno' ? ['', 'Yes', 'No'] : opts;
@@ -109,8 +117,38 @@
       const draw = () => {
         box.replaceChildren(...(data[key].length ? data[key].map((it, i) => {
           const inputs = {};
+          const unknown = key === 'offendersList' && !!it.unknown;
+          const lab = `${L.item} ${i + 1}`;
           const fields = L.fields.map(([k, label, kind, opts]) => {
             let el;
+            // Height in feet and inches, weight in pounds; for an unknown offender, from–to (v1.25).
+            if (kind === 'height' || kind === 'weight' || (kind === 'age' && unknown)) {
+              const range = unknown;
+              const parts = kind === 'height' ? F().heightParts(it[k]) : F().numParts(it[k]);
+              const vals = [parts[0] || null, range ? parts[1] || null : null];
+              const store = () => {
+                const txt = vals.map((v) => (kind === 'height' ? (v ? F().heightOf(v.ft, v.in) : '') : (v || ''))).filter(Boolean);
+                it[k] = range ? txt.join(' - ') : (txt[0] || '');
+                save();
+              };
+              const one = (n) => {
+                const sub = range ? (n ? ' to' : ' from') : '';
+                if (kind === 'height') {
+                  const v = vals[n] || {};
+                  const ft = h('input', { type: 'number', min: 3, max: 8, inputmode: 'numeric', class: 'rf-num', value: v.ft == null ? '' : v.ft, 'aria-label': `${lab} ${label}${sub} feet` });
+                  const inch = h('input', { type: 'number', min: 0, max: 11, inputmode: 'numeric', class: 'rf-num', value: v.ft == null ? '' : v.in, 'aria-label': `${lab} ${label}${sub} inches` });
+                  const upd = () => { vals[n] = ft.value === '' ? null : { ft: Number(ft.value), in: Math.min(11, Number(inch.value || 0)) }; store(); };
+                  ft.addEventListener('input', upd); inch.addEventListener('input', upd);
+                  return [ft, h('span', { class: 'rf-unit' }, 'ft'), inch, h('span', { class: 'rf-unit' }, 'in')];
+                }
+                const num = h('input', { type: 'number', min: 0, inputmode: 'decimal', class: 'rf-num', value: vals[n] || '', 'aria-label': `${lab} ${label}${sub}` });
+                num.addEventListener('input', () => { vals[n] = num.value; store(); });
+                return kind === 'weight' ? [num, h('span', { class: 'rf-unit' }, 'lbs')] : [num];
+              };
+              el = h('span', { class: `rf-measure${range ? ' rf-range' : ''}` }, ...one(0), ...(range ? [h('span', { class: 'rf-unit' }, 'to'), ...one(1)] : []));
+              inputs[k] = el;
+              return ui.field(F().labelFor(it, k, label), el, range && kind !== 'age' ? 'rf-span2' : '');
+            }
             if (kind === 'select') {
               el = h('select', {}, opts.map((o) => h('option', { value: o, selected: o === (it[k] || '') }, o || '—')));
               el.addEventListener('change', () => { it[k] = el.value; save(); });
@@ -120,12 +158,33 @@
             } else {
               el = h('input', { type: kind === 'date' ? 'date' : kind === 'phone' ? 'tel' : 'text', autocomplete: 'off', value: it[k] || '' });
               if (kind === 'phone' && root.CVFormat) CVFormat.phone && el.addEventListener('blur', () => { el.value = CVFormat.phone(el.value); it[k] = el.value; save(); });
+              if (kind === 'money') el.addEventListener('blur', () => { const m = moneyText(el.value); if (m !== el.value) { el.value = m; it[k] = m; save(); } });
               el.addEventListener('input', () => { it[k] = el.value; save(); });
+              if (kind === 'date' && unknown && k === 'dob') el.disabled = true;
             }
             el.setAttribute('aria-label', `${L.item} ${i + 1} ${label}`);
             inputs[k] = el;
             let box = el;
             if (F().PICKS[kind]) box = CVCombo.attach(el, { items: () => pickItems(F().PICKS[kind]) });
+            else if (kind === 'narcotic') box = CVCombo.attach(el, { items: () => NARCOTIC_ITEMS });
+            else if (key === 'narcotics' && k === 'value') {
+              // Street value from the narcotic calculator (Reference): type, amount and unit.
+              const calc = h('button', { class: 'btn small rf-calc', type: 'button', icon: 'calculator', title: 'Work out the street value with the narcotic calculator (Reference → Narcotic calculator)', onclick: () => {
+                const Ref = root.CVReference;
+                const amount = parseFloat(String(it.amount || '').replace(/,/g, ''));
+                const drug = String(it.drug || '');
+                if (!Ref || !RD.NARCOTIC_DATA || !RD.NARCOTIC_DATA[drug]) { toast('Pick the narcotic type from the list first: the calculator knows those.'); return; }
+                const units = Ref.priceUnits(drug);
+                const unit = it.unit && units.includes(it.unit) ? it.unit : units[0];
+                const r = Ref.streetValue(drug, amount, unit);
+                if (!r.ok) { toast(r.error); return; }
+                it.value = moneyText(String(r.value)); el.value = it.value;
+                if (!it.unit) { it.unit = unit; if (inputs.unit) inputs.unit.value = unit; }
+                save();
+                toast(r.line, 'success', 7000);
+              } }, 'Calculate');
+              box = h('span', { class: 'rf-with-btn' }, el, calc);
+            }
             else if (kind === 'charge' || kind === 'chargeWide') {
               // Search the charges by statute or wording; picking fills both boxes.
               box = CVCombo.attach(el, { items: () => CHARGE_ITEMS.map((c) => ({ ...c, value: kind === 'charge' ? c.statute : c.desc })), onPick: (c) => {
@@ -138,18 +197,27 @@
             return ui.field(label, box, kind === 'wide' || kind === 'chargeWide' ? 'rf-wide' : '');
           });
           // Age follows the date of birth.
-          if (inputs.dob && inputs.age) {
+          if (inputs.dob && inputs.age && !unknown) {
             const upd = () => { it.age = F().ageOn(inputs.dob.value, Vault.localDay()); inputs.age.value = it.age; save(); };
             inputs.dob.addEventListener('input', upd);
             inputs.dob.addEventListener('change', upd);
           }
-          return h('div', { class: 'rf-item' },
-            h('div', { class: 'rf-item-head' }, h('strong', {}, `${L.item} ${i + 1}`),
+          const unknownBox = key === 'offendersList' ? h('label', { class: 'check-row small rf-unknown', title: 'Name not known: age, height and weight become ranges' },
+            h('input', { type: 'checkbox', checked: unknown, 'aria-label': `${lab} unknown offender`, onchange: (e) => {
+              it.unknown = e.target.checked;
+              if (it.unknown && !String(it.name || '').trim()) it.name = F().UNKNOWN;
+              if (!it.unknown && it.name === F().UNKNOWN) it.name = '';
+              if (!it.unknown) it.age = F().ageOn(it.dob, Vault.localDay());
+              if (it.unknown) { it.dob = ''; it.age = ''; }
+              draw(); save();
+            } }), h('span', {}, 'Unknown Offender')) : null;
+          return h('div', { class: `rf-item${unknown ? ' rf-item-unknown' : ''}` },
+            h('div', { class: 'rf-item-head' }, h('strong', {}, `${L.item} ${i + 1}`), unknownBox,
               archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: `Delete ${L.item.toLowerCase()}`, onclick: async () => {
                 if (F().filled(it) && !(await ui.confirmDialog({ title: `Delete ${L.item} ${i + 1}?`, message: 'This entry is removed from the report.', confirmText: 'Delete', danger: true }))) return;
                 data[key].splice(i, 1); draw(); save();
               } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, `Delete ${L.item} ${i + 1}`))),
-            h('div', { class: 'rf-item-grid' }, fields));
+            h('div', { class: `rf-item-grid rf-grid-${key}` }, fields));
         }) : [h('p', { class: 'muted small rf-none' }, `No ${L.title.toLowerCase()} yet.`)]));
       };
       draw();
@@ -171,22 +239,42 @@
 
     // ---- every part has an Include box on the left: untick it when the part doesn't apply; it's
     // then folded away and left out of the PDF and the report.
+    // v1.25: a fold button on the right (▾/▸) only folds the part away on screen, to keep the page
+    // short; it stays in the PDF. Remembered in this browser for every case.
+    const FOLD_KEY = 'casevault-rf-folded';
+    const folded = new Set((() => { try { return JSON.parse(localStorage.getItem(FOLD_KEY) || '[]'); } catch { return []; } })());
+    const keepFolds = () => { try { localStorage.setItem(FOLD_KEY, JSON.stringify([...folded])); } catch { /* this session only */ } };
+    const foldButtons = [];
     function part(id, title, icon, ...body) {
       const on = !F().isHidden(data, id);
-      const inner = h('div', { class: 'rf-body', hidden: !on }, ...body);
+      const inner = h('div', { class: 'rf-body' }, ...body);
       const cb = h('input', { type: 'checkbox', checked: on, 'aria-label': `Include ${title}` });
-      const sec = h('section', { class: `rf-section rf-${id}${on ? '' : ' rf-off'}` },
-        h('div', { class: 'rf-head' }, h('label', { class: 'rf-include', title: 'Untick if this part doesn\'t apply' }, cb), h('h3', { icon }, title)),
+      const fold = h('button', { class: 'icon-btn rf-fold', type: 'button' });
+      const sec = h('section', { class: `rf-section rf-${id}` },
+        h('div', { class: 'rf-head' }, h('label', { class: 'rf-include', title: 'Untick if this part doesn\'t apply: it is left out of the PDF' }, cb), h('h3', { icon }, title), h('div', { class: 'spacer' }), fold),
         inner);
+      const show = () => {
+        const isOn = cb.checked; const isFolded = folded.has(id);
+        inner.hidden = !isOn || isFolded;
+        sec.classList.toggle('rf-off', !isOn);
+        sec.classList.toggle('rf-folded', isOn && isFolded);
+        fold.disabled = !isOn;
+        const label = isFolded ? `Show ${title}` : `Hide ${title} on screen (it stays in the PDF)`;
+        fold.title = label; fold.setAttribute('aria-expanded', String(!isFolded));
+        fold.replaceChildren(ui.icon(isFolded ? 'chevron-right' : 'chevron-down'), h('span', { class: 'sr-only' }, label));
+      };
+      fold.addEventListener('click', () => { if (folded.has(id)) folded.delete(id); else folded.add(id); keepFolds(); show(); });
+      foldButtons.push((want) => { if (want) folded.add(id); else folded.delete(id); show(); });
       cb.addEventListener('change', () => {
         data.hidden = data.hidden.filter((x) => x !== id);
         if (!cb.checked) data.hidden.push(id);
-        inner.hidden = !cb.checked;
-        sec.classList.toggle('rf-off', !cb.checked);
+        show();
         save();
       });
+      show();
       return sec;
     }
+    const foldAll = (want) => { foldButtons.forEach((f) => f(want)); keepFolds(); };
 
     const sections = F().SECTIONS.map((s) => part(s.id, s.title, s.icon,
       h('div', { class: s.id === 'report' ? 'rf-lines' : `rf-grid${s.id === 'update' ? ' rf-grid-4' : s.id === 'approval' ? ' rf-grid-officers' : ''}` }, s.fields.map(([k, label, kind, opts]) => input(k, label, kind, opts))),
@@ -296,13 +384,13 @@
       return CVReportPdf.build(data, { agency: p.agency || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' \u00b7 '), printed: CVFormat.dateText(Vault.localDay()), photos: await photoJpegs() });
     };
     async function showPdf(bytes) {
-      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      // Our own viewer (pdf.js): the whole report always scrolls into view; zoom in percent (v1.25).
+      const viewer = CVPdfViewer.create(bytes, { h, icon: ui.icon, title: 'Supplementary Report', fileName: pdfName() });
       await ui.openDialog((close) => h('div', { class: 'pdf-view' },
         h('h2', { icon: 'printer' }, 'Supplementary Report'),
-        h('p', { class: 'muted small' }, 'Use the printer button above the page to print, or the download button to save a PDF.'),
-        h('iframe', { class: 'preview-frame', src: url, title: 'Supplementary Report' }),
+        viewer,
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
-      URL.revokeObjectURL(url);
+      viewer.destroy();
     }
     const pdfName = () => `Supplementary Report ${CVFormat.dateText(Vault.localDay())}.pdf`;
     // Saving twice without changes in between (Save PDF, then Email for E-Sign) keeps one file.
@@ -358,7 +446,9 @@
       h('div', { class: 'notes-head' }, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports`, class: 'back-link' }, '← All reports'),
         h('h2', { icon: 'card-checklist' }, 'Report Fields'), h('div', { class: 'spacer' }), archived ? null : saveBtn),
       h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case. Print it, save it as a PDF, or email it to sign. Saved as report-fields.json.'),
-      h('div', { class: 'rf-actions' }, printBtn, archived ? null : pdfCaseBtn, archived ? null : signBtn, archived ? null : makeBtn),
+      h('div', { class: 'rf-actions' }, printBtn, archived ? null : pdfCaseBtn, archived ? null : signBtn, archived ? null : makeBtn, h('div', { class: 'spacer' }),
+        h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-down', title: 'Open every part on screen', onclick: () => foldAll(false) }, 'Show All'),
+        h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-right', title: 'Fold every part away on screen (they stay in the PDF). Open one with its arrow.', onclick: () => foldAll(true) }, 'Hide All')),
       ...sections.slice(0, -1),
       part('evidence', 'Evidence Inventoried', 'box-seam', evRows, archived ? null : h('div', { class: 'contact-add' }, addExhibit)),
       part('summary', 'Summary of Investigation', 'journal-text', fmt, rich.el, narrative),

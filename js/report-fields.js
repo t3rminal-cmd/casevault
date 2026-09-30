@@ -79,11 +79,12 @@
       ['courtBranch', 'Court Branch and Court Officer', 'line'],
       ['courtDate', 'Court Date', 'date'],
       ['searchWarrant', 'Search Warrant Number', 'line'],
+      ['subpoenaGJ', 'Subpoena GJ Number', 'line'],
       ['asa', 'ASA Approving Search Warrant', 'line'],
       ['judge', 'Judge Approving Search Warrant', 'line'],
-      ['totalWeight', 'Total Weight', 'line'],
-      ['streetValue', 'Street Value', 'line'],
-      ['purchasePrice', 'Purchase Price', 'line'],
+      // v1.25: one line per narcotic (type, total weight, purchase price, street value) in place of
+      // the single Total Weight / Street Value / Purchase Price lines.
+      ['narcotics', 'Narcotics Recovered', 'list'],
       ['fundSheet', 'Pre-Recorded Fund Sheet Inventory Number', 'line'],
       ['evidenceOfficer', 'Evidence Officer', 'line'],
       ['proofResidence', 'Proof of Residence', 'line'],
@@ -118,15 +119,18 @@
     ['identity', 'Gender Identity', 'select', ['', 'Man', 'Woman', 'Transgender Man', 'Transgender Woman', 'Non-Binary', 'Other', 'Declined to State']],
     ['race', 'Race', 'select', ['', 'White', 'Black', 'White Hispanic', 'Black Hispanic', 'Asian / Pacific Islander', 'American Indian / Alaska Native', 'Unknown']],
     ['complexion', 'Complexion', 'select', ['', 'Light', 'Fair', 'Medium', 'Olive', 'Light Brown', 'Medium Brown', 'Dark Brown', 'Dark', 'Ruddy', 'Albino']],
-    ['height', 'Height', 'text'], ['weight', 'Weight', 'text'], ['hair', 'Hair Color', 'hair'], ['eyes', 'Eye Color', 'eyes'],
+    ['height', 'Height', 'height'], ['weight', 'Weight', 'weight'], ['hair', 'Hair Color', 'hair'], ['eyes', 'Eye Color', 'eyes'],
     ['veteran', 'Veteran', 'select', ['', 'Yes', 'No']],
     ['marks', 'Tattoos / Scars', 'wide'], ['clothing', 'Clothing Description', 'wide'],
   ];
   // The officers' roles at the scene (Police Personnel).
   const ROLES = ['', 'Case', 'Affiant', 'Entry', 'Perimeter', 'UC', 'Surveillance', 'Enforcement', 'Sergeant', 'Lieutenant', 'Agent', 'Other'];
   // Officer's Report lines that can be ticked off when they don't apply (v1.22).
-  const OPTIONAL_LINES = ['within1000', 'searchWarrant', 'asa', 'judge', 'proofResidence'];
+  const OPTIONAL_LINES = ['within1000', 'searchWarrant', 'subpoenaGJ', 'asa', 'judge', 'proofResidence'];
+  // Units the narcotic calculator prices by (js/reference).
+  const NARCOTIC_UNITS = ['', 'gram', 'ounce', 'pound', 'kilogram', 'pill', 'mL'];
   const LISTS = {
+    narcotics: { title: 'Narcotics Recovered', item: 'Narcotic', fields: [['drug', 'Narcotics Type Recovered', 'narcotic'], ['amount', 'Total Weight', 'text'], ['unit', 'Unit', 'select', NARCOTIC_UNITS], ['price', 'Purchase Price', 'money'], ['value', 'Street Value', 'money']] },
     victimsList: { title: 'Victims', item: 'Victim', fields: [['name', 'Name', 'victim'], ...PERSON.slice(1)] },
     offendersList: { title: 'Offenders', item: 'Offender', fields: PERSON },
     charges: { title: 'Charges', item: 'Charge', fields: [['statute', 'Statute', 'charge'], ['description', 'Statute Description', 'chargeWide']] },
@@ -150,7 +154,8 @@
   const DRUG_TYPES = ['Cannabis', 'Cocaine', 'Crack Cocaine', 'Heroin', 'Fentanyl', 'Methamphetamine', 'MDMA / Ecstasy', 'PCP', 'Oxycodone', 'Hydrocodone', 'Alprazolam', 'Ketamine', 'Psilocybin', 'LSD', 'Other Controlled Substance'];
   // Types saved before v1.20.
   const OLD_TYPES = { Narcotic: 'Narcotics', 'Personal property': 'Personal Property', 'Personal currency': 'Personal Currency', 'Recording (audio/video)': 'Video/Audio' };
-  const FIELDS = SECTIONS.flatMap((s) => s.fields);
+  // A 'list' entry in a section only marks where that list shows; it isn't a field of its own.
+  const FIELDS = SECTIONS.flatMap((s) => s.fields).filter((f) => f[2] !== 'list');
 
   const empty = () => ({ schema: 4, ...Object.fromEntries(FIELDS.map(([k, , kind]) => [k, kind === 'check' ? false : ''])), ...Object.fromEntries(Object.keys(LISTS).map((k) => [k, []])), evidence: [], narrative: '', hidden: [] });
 
@@ -178,7 +183,12 @@
       if (old('personnel') && typeof src.personnel === 'string') d.personnel = [{ ...blankItem('personnel'), name: old('personnel') }];
       if (old('vehicle') || old('impound')) d.vehicles.push({ ...blankItem('vehicles'), notes: [old('vehicle'), old('impound')].filter(Boolean).join('; ') });
     }
-    for (const k of ['victimName', 'victimRelation', 'victimDetails', 'offenderName', 'offenderRelation', 'offenderDetails', 'gangAffiliation', 'vehicle', 'impound', 'lieutenant', 'lieutenantStar']) delete d[k];
+    // v1.24 and before: one Total Weight / Street Value / Purchase Price line → the first narcotic.
+    if (!d.narcotics.length && (old('totalWeight') || old('streetValue') || old('purchasePrice'))) {
+      d.narcotics.push({ ...blankItem('narcotics'), amount: old('totalWeight'), value: old('streetValue'), price: old('purchasePrice') });
+    }
+    for (const o of d.offendersList) { o.unknown = !!o.unknown; if (o.unknown && !String(o.name || '').trim()) o.name = UNKNOWN; }
+    for (const k of ['victimName', 'victimRelation', 'victimDetails', 'offenderName', 'offenderRelation', 'offenderDetails', 'gangAffiliation', 'vehicle', 'impound', 'lieutenant', 'lieutenantStar', 'totalWeight', 'streetValue', 'purchasePrice']) delete d[k];
     d.hidden = Array.isArray(d.hidden) ? d.hidden.filter((x) => typeof x === 'string') : [];
     d.schema = 4;
     return d;
@@ -201,13 +211,46 @@
     return n >= 0 && n < 130 ? String(n) : '';
   }
 
+  /* ---- height (feet and inches), weight (pounds), and ranges for an unknown offender (v1.25) ---- */
+
+  /** "5'10\"", "5 10", "5-10", "5ft 10in", "70in" -> { ft: 5, in: 10 }; not a height -> null. */
+  function parseHeight(text) {
+    const t = String(text || '').trim().toLowerCase().replace(/[′’]/g, "'").replace(/[″”]/g, '"');
+    if (!t) return null;
+    let m = /^(\d{2,3})\s*(?:"|in|inches)$/.exec(t);
+    if (m) { const n = Number(m[1]); return { ft: Math.floor(n / 12), in: n % 12 }; }
+    m = /^(\d)\s*(?:'|ft|feet|-|\s)?\s*(\d{1,2})?\s*(?:"|in|inches)?$/.exec(t);
+    if (!m) return null;
+    const inch = m[2] ? Number(m[2]) : 0;
+    return inch < 12 ? { ft: Number(m[1]), in: inch } : null;
+  }
+  const heightOf = (ft, inch) => (ft === '' || ft == null ? '' : `${Number(ft)}'${Number(inch || 0)}"`);
+  /** The one or two heights in a stored value ("5'10\"" or "5'8\" - 5'11\""). */
+  const heightParts = (v) => String(v || '').split(/\s+-\s+|\s*–\s*/).map(parseHeight);
+  /** The one or two numbers in a stored weight or age ("180", "180 lbs", "170 - 190"). */
+  const numParts = (v) => String(v || '').replace(/lbs?\.?|pounds?/gi, '').split(/\s*[-–]\s*/).map((x) => x.trim());
+  const withLbs = (v) => (/^\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?$/.test(String(v || '').trim()) ? `${String(v).trim()} lbs` : String(v || '').trim());
+  const UNKNOWN = 'Unknown Offender';
+
+  /** A value as it reads in the report: weights get "lbs", a narcotic amount its unit. */
+  function valueText(list, it, k, kind) {
+    let v = String(it[k] == null ? '' : it[k]).trim();
+    if (!v) return '';
+    if (kind === 'date') { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v); if (m) v = `${m[2]}.${m[3]}.${m[1]}`; }
+    if (kind === 'weight') v = withLbs(v);
+    if (list === 'narcotics' && k === 'amount' && it.unit) v = `${v} ${it.unit}${/^1(\.0+)?$/.test(v) || it.unit === 'mL' || /s$/.test(it.unit) ? '' : 's'}`;
+    return v;
+  }
+  /** The label of a field for an entry: an unknown offender's age, height and weight are ranges. */
+  const labelFor = (it, k, label) => (it && it.unknown && ['age', 'height', 'weight'].includes(k) ? `${label} Range` : label);
+
   /** One list entry as text: "DOE, John, DOB 01.02.1990, 5'10\", 180 lbs, Black hair…" */
   function itemLine(list, it) {
     return LISTS[list].fields.map(([k, label, kind]) => {
-      let v = String(it[k] || '').trim();
+      if (list === 'narcotics' && k === 'unit') return ''; // shown with the amount
+      const v = valueText(list, it, k, kind);
       if (!v) return '';
-      if (kind === 'date') { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v); if (m) v = `${m[2]}.${m[3]}.${m[1]}`; }
-      return k === 'name' || k === 'statute' ? v : `${label}: ${v}`;
+      return k === 'name' || k === 'statute' || k === 'drug' ? v : `${labelFor(it, k, label)}: ${v}`;
     }).filter(Boolean).join(', ');
   }
 
@@ -262,6 +305,11 @@
     for (const [k] of FIELDS) ctx[`report.${k}`] = shown(k, d[k]);
     for (const k of Object.keys(LISTS)) ctx[`report.${k}`] = d[k].filter(filled).map((it) => itemLine(k, it)).join('\n');
     ctx['report.evidence'] = d.evidence.map(exhibitLine).join('\n');
+    // Templates written for the single lines before v1.25 still fill in.
+    const nar = d.narcotics.filter(filled);
+    ctx['report.totalWeight'] = nar.map((n) => [n.drug, valueText('narcotics', n, 'amount')].filter(Boolean).join(' ')).filter(Boolean).join('; ');
+    ctx['report.streetValue'] = nar.map((n) => n.value).filter(Boolean).join('; ');
+    ctx['report.purchasePrice'] = nar.map((n) => n.price).filter(Boolean).join('; ');
     ctx['report.narrative'] = String(d.narrative || '').trim();
     return ctx;
   }
@@ -272,7 +320,12 @@
     const lines = [];
     for (const s of SECTIONS) {
       if (isHidden(d, s.id)) continue;
-      for (const [k, label] of s.fields) { if (isHidden(d, k)) continue; const v = shown(k, d[k]); if (v) lines.push(`${label}: ${v.replace(/\s*\n\s*/g, '; ')}`); }
+      for (const [k, label, kind] of s.fields) {
+        if (kind === 'list') { for (const it of d[k].filter(filled)) lines.push(`${LISTS[k].item}: ${itemLine(k, it)}`); continue; }
+        if (isHidden(d, k)) continue;
+        const v = shown(k, d[k]);
+        if (v) lines.push(`${label}: ${v.replace(/\s*\n\s*/g, '; ')}`);
+      }
       for (const k of s.lists || []) for (const it of d[k].filter(filled)) lines.push(`${LISTS[k].item}: ${itemLine(k, it)}`);
     }
     if (!isHidden(d, 'evidence')) for (const e of d.evidence) lines.push(`Evidence ${exhibitLine(e)}`);
@@ -287,7 +340,12 @@
     const out = [`# ${title}`, ''];
     for (const s of SECTIONS) {
       if (isHidden(d, s.id)) continue;
-      const rows = s.fields.filter(([k]) => !isHidden(d, k)).map(([k, label]) => [label, shown(k, d[k])]).filter(([, v]) => v);
+      const rows = [];
+      for (const [k, label, kind] of s.fields) {
+        if (kind === 'list') { d[k].filter(filled).forEach((it, i) => rows.push([`${LISTS[k].item} ${i + 1}`, itemLine(k, it)])); continue; }
+        const v = isHidden(d, k) ? '' : shown(k, d[k]);
+        if (v) rows.push([label, v]);
+      }
       for (const k of s.lists || []) d[k].filter(filled).forEach((it, i) => rows.push([`${LISTS[k].item} ${i + 1}`, itemLine(k, it)]));
       if (!rows.length) continue;
       out.push(`## ${s.title}`, '', '| Field | Entry |', '|---|---|', ...rows.map(([l, v]) => `| ${l} | ${esc(v)} |`), '');
@@ -300,9 +358,9 @@
     return out.join('\n');
   }
 
-  const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
+  const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, SUSPECT_INFO, suspectToOffender, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, exhibitLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, exhibitLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

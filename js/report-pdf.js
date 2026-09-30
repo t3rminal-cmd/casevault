@@ -177,11 +177,9 @@
       text(M + 2, y - 10, L.title.toUpperCase(), 7.5, true);
       y -= 13;
       items.forEach((it, i) => {
-        const cellsOf = L.fields.map(([k, label, kind]) => {
-          let v = String(it[k] || '').trim();
-          if (kind === 'date') { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v); if (m) v = `${m[2]}.${m[3]}.${m[1]}`; }
-          return { label: `${L.item} ${i + 1} - ${label}`, value: v, wide: kind === 'wide' };
-        });
+        // A narcotic's unit goes with its amount, so its four boxes fill one row (v1.25).
+        const cellsOf = L.fields.filter(([k]) => !(key === 'narcotics' && k === 'unit')).map(([k, label, kind]) => (
+          { label: `${L.item} ${i + 1} - ${RF.labelFor(it, k, label)}`, value: RF.valueText(key, it, k, kind), wide: kind === 'wide' }));
         const row = [];
         // Short rows are filled out with empty boxes so the four columns always line up.
         const flush = () => { if (row.length) { while (row.length < 4) row.push({ label: '', value: '' }); boxes(row.splice(0).map((c) => ({ ...c, w: 1 }))); } };
@@ -247,8 +245,12 @@
     if (on('report')) {
       band(`Officer's Report${d.activity ? ` - ${d.activity}` : ''}`);
       const report = RF.SECTIONS.find((s) => s.id === 'report').fields;
-      for (const [k, label] of report) {
-        if (k === 'totalWeight' && on('evidence')) labelled('Evidence Inventoried', d.evidence.length ? d.evidence.map((e) => `Exhibit ${e.number}${e.inventory ? ` - Inv. ${e.inventory}` : ''}`).join(', ') : '');
+      for (const [k, label, kind] of report) {
+        if (kind === 'list') {
+          if (on('evidence')) labelled('Evidence Inventoried', d.evidence.length ? d.evidence.map((e) => `Exhibit ${e.number}${e.inventory ? ` - Inv. ${e.inventory}` : ''}`).join(', ') : '');
+          if (d[k].some(RF.filled)) { y -= 4; listBlock(k); }
+          continue;
+        }
         if (k === 'courtDate' || RF.isHidden(d, k)) continue;
         labelled(label, k === 'courtBranch' ? [val('courtBranch'), val('courtDate')].filter(Boolean).join(', ') : val(k));
       }

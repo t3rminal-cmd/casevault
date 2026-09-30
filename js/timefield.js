@@ -29,6 +29,24 @@
     return `${pad(hh)}:${pad(mm)}`;
   }
 
+  // Regular (12-hour, "9:30 PM") or military (24-hour, "21:30") on screen, for every time box
+  // at once; remembered in this browser (v1.25). The saved value is always "HH:MM".
+  const MODE_KEY = 'casevault-time-format';
+  function getMode() {
+    try { return root.localStorage && root.localStorage.getItem(MODE_KEY) === '12' ? '12' : '24'; } catch { return '24'; }
+  }
+  function setMode(m) {
+    try { root.localStorage.setItem(MODE_KEY, m === '12' ? '12' : '24'); } catch { /* this page only */ }
+    if (root.document) root.document.dispatchEvent(new root.Event('cv-time-format'));
+  }
+  /** "21:30" -> "21:30" (24) or "9:30 PM" (12); anything else as it is. */
+  function display(hhmm, mode = getMode()) {
+    const m = /^(\d{2}):(\d{2})$/.exec(hhmm || '');
+    if (!m || mode !== '12') return hhmm || '';
+    const h = Number(m[1]);
+    return `${h % 12 || 12}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
+  }
+
   let openPicker = null;
   function closeOpen() { if (openPicker) openPicker(); }
 
@@ -46,11 +64,11 @@
     input.inputMode = 'numeric';
     input.autocomplete = 'off';
     input.maxLength = 11;
-    input.placeholder = 'HH:MM';
+    input.placeholder = getMode() === '12' ? 'H:MM AM' : 'HH:MM';
     input.className = 'time-text';
     if (opts.label) input.setAttribute('aria-label', opts.label);
     if (opts.required) input.required = true;
-    input.value = parse(opts.value) || '';
+    input.value = display(parse(opts.value)) || '';
     const btn = doc.createElement('button');
     btn.type = 'button';
     btn.className = 'icon-btn time-btn';
@@ -62,7 +80,25 @@
     sr.className = 'sr-only';
     sr.textContent = 'Pick a time';
     btn.append(sr);
-    wrap.append(input, btn);
+    // 24h / 12h: switches every time box between military and regular time.
+    const mode = doc.createElement('button');
+    mode.type = 'button';
+    mode.className = 'time-mode';
+    let seen = false;
+    const showMode = () => {
+      if (!wrap.isConnected && seen) { doc.removeEventListener('cv-time-format', showMode); return; } // box gone
+      if (wrap.isConnected) seen = true;
+      const m = getMode();
+      mode.textContent = m === '12' ? '12h' : '24h';
+      mode.title = m === '12' ? 'Regular time (9:30 PM). Click for military time (21:30).' : 'Military time (21:30). Click for regular time (9:30 PM).';
+      input.placeholder = m === '12' ? 'H:MM AM' : 'HH:MM';
+      const t = parse(input.value);
+      if (t) input.value = display(t, m);
+    };
+    showMode();
+    mode.addEventListener('click', (e) => { e.preventDefault(); setMode(getMode() === '12' ? '24' : '12'); });
+    doc.addEventListener('cv-time-format', showMode);
+    wrap.append(input, mode, btn);
 
     const fire = () => {
       wrap.dispatchEvent(new root.Event('input', { bubbles: true }));
@@ -70,13 +106,13 @@
     };
     Object.defineProperty(wrap, 'value', {
       get() { return parse(input.value) || (input.value.trim() ? input.value.trim() : ''); },
-      set(v) { input.value = parse(v) || ''; },
+      set(v) { input.value = display(parse(v)) || ''; },
     });
     // The typed text is tidied when you leave the box: "930" becomes "09:30".
     input.addEventListener('input', (e) => { if (e.target === input) { e.stopPropagation(); fire(); } });
     input.addEventListener('blur', () => {
       const t = parse(input.value);
-      if (t && t !== input.value) { input.value = t; fire(); }
+      if (t && display(t) !== input.value) { input.value = display(t); fire(); }
       input.setCustomValidity(input.value.trim() && !t ? 'Type a time such as 09:30 or 9:30 pm.' : '');
     });
     // Label clicks focus the typing box, not the button.
@@ -112,7 +148,7 @@
       actions.append(
         button('Now', 'ghost', () => { const d = new Date(); hour.value = pad(d.getHours()); minute.value = pad(d.getMinutes()); }),
         button('Clear', 'ghost', () => { input.value = ''; fire(); close(); input.focus(); }),
-        button('Set time', 'primary time-set', () => { input.value = `${hour.value}:${minute.value}`; input.setCustomValidity(''); fire(); close(); input.focus(); }));
+        button('Set time', 'primary time-set', () => { input.value = display(`${hour.value}:${minute.value}`); input.setCustomValidity(''); fire(); close(); input.focus(); }));
       pop.append(row, actions);
       wrap.append(pop);
       btn.setAttribute('aria-expanded', 'true');
@@ -140,7 +176,7 @@
     return wrap;
   }
 
-  const api = { parse, create };
+  const api = { parse, create, display, getMode, setMode };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVTimeField = api;
 })(this);
