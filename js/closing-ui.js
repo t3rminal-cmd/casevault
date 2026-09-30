@@ -270,7 +270,8 @@
       const d = K2.disposition(c.closure.disposition);
       return `Closed ${c.closure.date || ''}: ${d ? d.label : ''}${c.closure.reason ? ` (${c.closure.reason})` : ''}.`;
     }
-    return K2.STATUS_HELP[c.status] || '';
+    // Open needs no explaining on the Details tab (v1.24).
+    return c.status === 'Open' ? '' : K2.STATUS_HELP[c.status] || '';
   }
 
   function init(kit) { ui = kit; }

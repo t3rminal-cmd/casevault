@@ -40,6 +40,10 @@
     const html = doc.documentElement;
     const z = getZoom();
     html.style.zoom = z === 100 ? '' : String(z / 100);
+    // A zoomed page counts viewport units zoomed too (100vh becomes 125% of the window at 125%), so
+    // boxes sized to the window (the PDF viewer, the Vault, the chat) are divided back by this (v1.24).
+    const zoomWorks = !!(root.CSS && CSS.supports && CSS.supports('zoom', '1.25'));
+    if (z === 100 || !zoomWorks) html.style.removeProperty('--z'); else html.style.setProperty('--z', String(z / 100));
     const b = getBrightness();
     html.style.setProperty('--cv-brightness', String(b / 100));
     html.classList.toggle('bright-adjusted', b !== 100);

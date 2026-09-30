@@ -68,7 +68,7 @@
     searchFiles.addEventListener('change', () => { mem.searchFiles = searchFiles.checked; });
 
     const thread = h('div', { class: 'chat-thread', 'aria-live': 'polite' });
-    const input = h('textarea', { class: 'chat-input', rows: 3, placeholder: 'Ask anything. Enter sends · Shift+Enter: new line', 'aria-label': 'Your question' });
+    const input = h('textarea', { class: 'chat-input', rows: 3, spellcheck: 'true', placeholder: 'Ask anything. Enter sends · Shift+Enter: new line', 'aria-label': 'Your question' });
     const sendBtn = h('button', { class: 'btn primary chat-send', type: 'button', icon: 'send', title: 'Send (Enter)' }, 'Send');
     const stopBtn = h('button', { class: 'btn chat-send', type: 'button', icon: 'x-circle', hidden: true, title: 'Stop the answer; what is written so far is kept.' }, 'Stop');
 

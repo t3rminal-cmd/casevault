@@ -116,7 +116,7 @@
   const DIALOG_SIZES = [
     ['panel', '.vault-panel'],
     ['full', '.preview, .doc-view, .lib-preview, .pdf-view'],
-    ['wide', '.type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form, .suspect-info'],
+    ['wide', '.type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
   ];
 
   function openDialog(build) {
@@ -460,6 +460,8 @@
     $('#vault-name').textContent = MODE === 'helper' && state.drive ? CVFormat.pathText(`${state.drive.replace(/[\\/]+$/, '')}\\${dir.name}`) : dir.name;
     hideGate();
     setSidebar(!!(Vault.data.settings && Vault.data.settings.sidebarCollapsed), { save: false });
+    if (Vault.data.settings && Vault.data.settings.sidebarWidth) setSidebarWidth(Vault.data.settings.sidebarWidth, { save: false });
+    setSidebarLock(!!(Vault.data.settings && Vault.data.settings.sidebarLocked), { save: false });
     Save.render();
     if (sameVault) await Save.retryFailed();
     else { state.caseId = null; state.caseObj = null; CVOutbound.goOffline('vault changed'); CVOnlineUI.reset(); CVApiKey.forget(); }
@@ -475,6 +477,7 @@
     CVOutbound.goOffline('drive disconnected');
     CVApiKey.forget();
     CVChatUI.reset();
+    CVNotesFloat.reset();
     renderNetStatus();
     Save.render();
     gateLost();
@@ -810,7 +813,6 @@
   }
   // The case notes' place in Reports (a draft's name never starts with a dot).
   const NOTES_SUB = '.notes';
-  const TAB_ICONS = { details: 'info-circle', arrest: 'person-vcard', timeline: 'clock-history', files: 'files', mail: 'envelope', reports: 'journal-text', checks: 'clipboard2-check' };
   const tabsFor = (c) => (CVClosingUI.hasArrestTab(c) ? [TABS[0], ['arrest', 'Arrest details'], ...TABS.slice(1)] : TABS);
 
   async function showCase(id, tab, sub = null) {
@@ -852,7 +854,7 @@
         h('h1', { id: 'case-title' }, c.title || 'Untitled case'),
         h('div', { class: 'case-sub muted', id: 'case-sub' }, caseSubtitle(c))),
       h('nav', { class: 'tabs', role: 'tablist' }, tabs.map(([t, label]) =>
-        h('a', { href: `#/case/${encodeURIComponent(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab), icon: TAB_ICONS[t] }, label))),
+        h('a', { href: `#/case/${encodeURIComponent(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab) }, label))),
       panel));
     // Read-only: everything in the tab that could change the case is switched off, now and as
     // the tab redraws. (vault.js refuses the writes too.)
@@ -1003,9 +1005,8 @@
           field('Name', input('name', { maxlength: 120, 'aria-label': `${who} name` })),
           field('DOB', dob),
           h('div', { class: 'field' }, h('span', {}, 'Age'), age),
-          field('Residence', input('residence', { maxlength: 200, 'aria-label': `${who} residence` })),
+          field('Residence', input('residence', { maxlength: 200, 'aria-label': `${who} residence`, title: s.residence || '' })),
           field('Role', role),
-          h('button', { class: 'btn small suspect-more', type: 'button', icon: 'person-vcard', title: 'Gender, race, height, hair, tattoos… as on the report. Can fill Report Fields → Offenders.', onclick: () => suspectMoreInfo(c, s, i, save) }, 'More Info'),
           h('button', { class: 'icon-btn danger-icon contact-remove', type: 'button', title: 'Remove this suspect', onclick: () => { c.suspects.splice(i, 1); draw(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Remove ${who}`)));
       }) : [h('p', { class: 'muted small suspect-empty' }, 'No suspects yet.')]));
     };
@@ -1019,60 +1020,6 @@
         const last = rows.lastElementChild && rows.lastElementChild.querySelector('input');
         if (last) last.focus();
       } }, 'Add suspect')));
-  }
-
-  /* A suspect's More Info (v1.23): the demographics the report asks for (Report Fields → Offenders),
-   * kept on the suspect as s.info. "Fill in Report Fields" copies the suspect into the report's
-   * Offenders: the offender with the same name, or a new one. */
-  async function suspectMoreInfo(c, s, i, save) {
-    const RF = window.CVReportFields;
-    if (!RF) return;
-    const info = { ...(s.info || {}) };
-    const who = s.name || `Suspect ${i + 1}`;
-    const els = {};
-    const boxes = RF.SUSPECT_INFO.map(([k, label, kind, opts]) => {
-      let el;
-      if (kind === 'select') el = h('select', {}, opts.map((o) => h('option', { value: o, selected: o === (info[k] || '') }, o || '—')));
-      else el = h('input', { type: 'text', autocomplete: 'off', value: info[k] || '' });
-      el.setAttribute('aria-label', `${who} ${label}`);
-      els[k] = el;
-      const box = RF.PICKS[kind] && window.CVCombo ? CVCombo.attach(el, { items: () => RF.PICKS[kind].map((v) => ({ value: v, label: v })) }) : el;
-      return field(label, box, kind === 'wide' ? 'span-all' : '');
-    });
-    const toReport = h('input', { type: 'checkbox', checked: s.toReport !== false });
-    const result = await openDialog((close) => h('form', { class: 'suspect-info', method: 'dialog', onsubmit: (e) => { e.preventDefault(); close(true); } },
-      h('h2', { icon: 'person-vcard' }, `More Info - ${who}`),
-      h('p', { class: 'muted small' }, `The same fields as the report's Offenders.${s.dob ? ` Date of birth ${CVFormat.dateText(s.dob)} and age come from the suspect row.` : ''}`),
-      h('div', { class: 'suspect-info-grid' }, boxes),
-      h('label', { class: 'check-row' }, toReport, h('span', {}, 'Also fill this suspect into Report Fields → Offenders')),
-      h('div', { class: 'dialog-actions' },
-        h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'),
-        h('button', { class: 'btn primary', type: 'submit' }, 'Save'))));
-    if (!result) return;
-    for (const [k] of RF.SUSPECT_INFO) info[k] = String(els[k].value || '').trim();
-    s.info = info;
-    s.toReport = toReport.checked;
-    save();
-    if (s.toReport) await suspectsToReport(c, [s]);
-  }
-
-  /** Copy suspects into report-fields.json's Offenders (read, change, write back). */
-  async function suspectsToReport(c, list) {
-    const RF = window.CVReportFields;
-    const named = list.filter((s) => String(s.name || '').trim());
-    if (!RF || !named.length) { if (RF && list.length) toast('Give the suspect a name first, then it can go into Report Fields.', 'info'); return; }
-    try {
-      await Save.flushAll(); // an edit still waiting in Report Fields is written first
-      let d = null;
-      try { d = await Vault.readCaseJSON(c.id, 'report-fields.json'); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
-      d = RF.normalize(d);
-      let added = 0;
-      for (const s of named) { const r = RF.suspectToOffender(d, s, Vault.localDay()); if (r && r.added) added++; }
-      await Vault.writeCaseJSON(c.id, 'report-fields.json', d);
-      toast(named.length === 1 ? `${named[0].name} is in Report Fields → Offenders${added ? ' (added)' : ' (updated)'}.` : `${named.length} suspects are in Report Fields → Offenders.`, 'success');
-    } catch (err) {
-      toast(`Couldn't fill Report Fields: ${err.message || err}`, 'error');
-    }
   }
 
   /* Contacts on the Details tab: the case officer, the prosecutor (ASA or AUSA) and anyone else
@@ -1289,7 +1236,19 @@
     const key = `notes:${c.id}`;
     const status = h('span', { class: 'note-save-status small muted', role: 'status', 'aria-live': 'polite' }, text ? '✓ Saved on the SSD' : '');
     const markSaved = () => { status.className = 'note-save-status small ok-text'; status.textContent = `✓ Saved ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`; };
-    const saveNotes = (value) => async () => { await Vault.saveNotes(c.id, value); if (ta.value === value) markSaved(); };
+    const saveNotes = (value) => async () => {
+      await Vault.saveNotes(c.id, value);
+      if (ta.value === value) markSaved();
+      window.dispatchEvent(new CustomEvent('cv-notes-changed', { detail: { caseId: c.id, text: value, from: 'page' } }));
+    };
+    // Written in the floating Field Notes box (v1.24): shown here too, unless you're typing here.
+    const onFloat = (e) => {
+      const d = e.detail || {};
+      if (!panel.isConnected) { window.removeEventListener('cv-notes-changed', onFloat); return; }
+      if (d.from !== 'float' || d.caseId !== c.id || panel.contains(document.activeElement)) return;
+      ta.value = d.text; updateCount(); markSaved();
+    };
+    window.addEventListener('cv-notes-changed', onFloat);
     ta.addEventListener('input', () => {
       updateCount();
       status.className = 'note-save-status small warn-text';
@@ -2204,6 +2163,7 @@
     if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === '\\' || e.code === 'Backslash')) {
       if (!state.connected || document.querySelector('#dialog[open]')) return;
       e.preventDefault();
+      if (document.body.classList.contains('sidebar-locked')) { toast('The case list is locked. Unlock it with the padlock at its top.'); return; }
       setSidebar(!document.body.classList.contains('sidebar-collapsed'), { focus: true });
     }
   });
@@ -2229,25 +2189,51 @@
       Save.track('settings', () => Vault.updateSettings({ sidebarCollapsed: collapsed })).catch(() => {});
     }
   }
+  // Lock (v1.24): the case list stays exactly as it is, shown or hidden and at its width, until
+  // it's unlocked with the padlock. Remembered in vault.json.
+  let setSidebarWidth = () => {};
+  const lockBtn = h('button', { id: 'btn-sidebar-lock', class: 'icon-btn', type: 'button', 'aria-pressed': 'false' });
+  function setSidebarLock(locked, { save = true } = {}) {
+    document.body.classList.toggle('sidebar-locked', locked);
+    lockBtn.setAttribute('aria-pressed', String(locked));
+    const label = locked ? 'Unlock the case list (it can then be hidden or resized)' : 'Lock the case list as it is (size and shown or hidden)';
+    lockBtn.title = label;
+    lockBtn.replaceChildren(I(locked ? 'lock-fill' : 'unlock'), h('span', { class: 'sr-only' }, label));
+    $('#btn-sidebar-collapse').disabled = locked;
+    $('#btn-sidebar-expand').disabled = locked;
+    if (save && state.connected && !!Vault.data.settings.sidebarLocked !== locked) {
+      Save.track('settings', () => Vault.updateSettings({ sidebarLocked: locked })).catch(() => {});
+    }
+  }
+  lockBtn.addEventListener('click', () => setSidebarLock(!document.body.classList.contains('sidebar-locked')));
+  $('#btn-sidebar-collapse').before(lockBtn);
+  setSidebarLock(false, { save: false });
+
   // Drag the case list's right edge to make it wider or narrower (or focus it and use ← →).
   // Double-click puts it back. The width is kept in this browser, like the theme.
   (function sidebarResizer() {
     const side = $('#sidebar');
     const KEY = 'casevault-sidebar-width';
     const MIN = 200; const MAX = 520; const DEF = 300;
+    // keep: remember it in this browser and in the vault (vault.json on the SSD), so it stays the
+    // same in Edge and Firefox and on another PC until it's dragged again (v1.24).
     const setW = (w, keep = true) => {
       const px = Math.round(Math.min(MAX, Math.max(MIN, w)));
       document.documentElement.style.setProperty('--sidebar-w', `${px}px`);
       grip.setAttribute('aria-valuenow', String(px));
-      if (keep) { try { if (px === DEF) localStorage.removeItem(KEY); else localStorage.setItem(KEY, String(px)); } catch { /* this session only */ } }
+      if (keep) {
+        try { if (px === DEF) localStorage.removeItem(KEY); else localStorage.setItem(KEY, String(px)); } catch { /* this session only */ }
+        if (state.connected && Vault.data.settings.sidebarWidth !== px) Save.track('settings', () => Vault.updateSettings({ sidebarWidth: px })).catch(() => {});
+      }
     };
+    setSidebarWidth = (w, { save = true } = {}) => setW(w, save);
     const grip = h('div', { class: 'sidebar-resizer', role: 'separator', 'aria-orientation': 'vertical', 'aria-label': 'Case list width', 'aria-valuemin': MIN, 'aria-valuemax': MAX, tabindex: 0, title: 'Drag to make the case list wider or narrower. Double-click to reset.' });
     side.append(grip);
     let saved = DEF;
     try { saved = Number(localStorage.getItem(KEY)) || DEF; } catch { /* default */ }
     setW(saved, false);
     grip.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0) return;
+      if (e.button !== 0 || document.body.classList.contains('sidebar-locked')) return;
       e.preventDefault();
       grip.setPointerCapture(e.pointerId);
       const left = side.getBoundingClientRect().left;
@@ -2257,8 +2243,9 @@
       grip.addEventListener('pointermove', move);
       grip.addEventListener('pointerup', up);
     });
-    grip.addEventListener('dblclick', () => setW(DEF));
+    grip.addEventListener('dblclick', () => { if (!document.body.classList.contains('sidebar-locked')) setW(DEF); });
     grip.addEventListener('keydown', (e) => {
+      if (document.body.classList.contains('sidebar-locked')) return;
       const cur = side.getBoundingClientRect().width;
       if (e.key === 'ArrowLeft') { e.preventDefault(); setW(cur - 20); } else if (e.key === 'ArrowRight') { e.preventDefault(); setW(cur + 20); }
     });
@@ -2309,6 +2296,7 @@
   CVReferenceUI.init(window.CaseVaultUI);
   CVLibraryUI.init(window.CaseVaultUI);
   CVChatUI.init(window.CaseVaultUI);
+  CVNotesFloat.init(window.CaseVaultUI);
 
   // Privacy screen: the "Hide" button or the idle timer. See js/privacy.js.
   CVPrivacy.init({

@@ -158,8 +158,8 @@
         const last = box.lastElementChild && box.lastElementChild.querySelector('input, select');
         if (last) last.focus();
       } }, `Add ${L.item}`);
-      // Offenders can be filled from Details → Suspects (name, date of birth and More Info; v1.23).
-      const fromSuspects = key === 'offendersList' && !archived ? h('button', { class: 'btn small', type: 'button', icon: 'person-exclamation', title: 'Adds each suspect from Details (or updates the offender with the same name) with the suspect\'s More Info.', onclick: () => {
+      // Offenders can be filled from Details → Suspects (name, date of birth, age); the description is entered here.
+      const fromSuspects = key === 'offendersList' && !archived ? h('button', { class: 'btn small', type: 'button', icon: 'person-exclamation', title: 'Adds each suspect from Details (or updates the offender with the same name). The description of the day is entered here.', onclick: () => {
         const list = (c.suspects || []).filter((s) => String(s.name || '').trim());
         if (!list.length) { toast('No named suspects on the Details tab yet.'); return; }
         for (const s of list) F().suspectToOffender(data, s, Vault.localDay());
