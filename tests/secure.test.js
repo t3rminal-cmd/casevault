@@ -121,8 +121,8 @@ test('mail: addresses and the department domain rules', () => {
 });
 
 test('mail: flags attachments that carry another case number', () => {
-  const names = ['Arrest Report/2026-00123 Arrest Report.pdf', 'Other/2026-00999 Case Report.pdf', 'Maps/area.png', 'Email/2026-00123-2 Email - x.eml'];
-  assert.deepStrictEqual(M.otherCaseFiles(names, '2026-00123', CF.prefixInName), ['Other/2026-00999 Case Report.pdf']);
+  const names = ['Arrest Report/2026-00123 Arrest Report.pdf', 'Other/2026-00999 Case Report.pdf', 'Maps/area.png', 'Email/2026-00123-2 Email - x.eml', 'Other/2026-00123-bank.pdf', 'Other/2026-00999-bank.pdf'];
+  assert.deepStrictEqual(M.otherCaseFiles(names, '2026-00123', CF.prefixInName), ['Other/2026-00999 Case Report.pdf', 'Other/2026-00999-bank.pdf']);
   assert.deepStrictEqual(M.otherCaseFiles(names, null, CF.prefixInName), []);
 });
 

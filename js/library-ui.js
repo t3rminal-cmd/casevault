@@ -180,7 +180,7 @@
             try { await saveAll(settings().aiBehaviors || [], pick.value); toast(`${current().name} is the default.`, 'success'); draw(pick.value); } catch { /* reported */ }
           } }, 'Make Default'),
           restoreBtn, delBtn, h('div', { class: 'spacer' }),
-          h('button', { class: 'btn small primary', type: 'button', icon: 'save', onclick: async () => {
+          h('button', { class: 'btn primary vault-save', type: 'button', icon: 'save', onclick: async () => {
             const b = current();
             const saved = (settings().aiBehaviors || []).filter((x) => x.id !== b.id);
             saved.push({ id: b.id, name: name.value.trim() || b.name, prompt: prompt.value });

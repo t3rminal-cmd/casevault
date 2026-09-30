@@ -91,7 +91,9 @@
         h('label', { class: 'inline' }, 'Subject marking ', marking),
         h('label', { class: 'check-row' }, requireMarking, h('span', {}, 'Required on every email')),
         h('label', { class: 'inline' }, 'Attachment limit ', maxMB, ' MB')),
-      ui.field('Footer added to new messages', footer));
+      ui.field('Footer added to new messages', footer),
+      h('div', { class: 'row vault-save-row' }, h('div', { class: 'spacer' }),
+        h('button', { class: 'btn primary vault-save', type: 'button', icon: 'save', title: 'Save the department mail settings to vault.json on the SSD. Each box also saves when you leave it.', onclick: () => { commit(); ui.toast('Department mail settings saved to the SSD.', 'success', 2500); } }, 'Save changes')));
   }
 
   function logSection() {

@@ -5,6 +5,9 @@
  * Pick a model and, optionally, a case to ask about. Until the first question, the case follows
  * the case you have open. The conversation stays in this window until you save it to a case (as a
  * draft) or start a new chat. See js/ai/chat.js.
+ *
+ * v1.18: every conversation is kept on the SSD (CaseVault-Data/chats) after each answer, so
+ * History can open it again or delete it. Clear empties the one on screen and deletes its copy.
  */
 'use strict';
 
@@ -65,11 +68,13 @@
     const iconBtn = (icon, label, onclick, extra = {}) => h('button', { class: 'icon-btn', type: 'button', title: label, onclick, ...extra }, ui.icon(icon), h('span', { class: 'sr-only' }, label));
     const sizeBtn = iconBtn('arrows-angle-expand', 'Bigger', () => setSize(mem.size === 'big' ? 'normal' : 'big'));
     const minBtn = iconBtn('dash-lg', 'Minimize: keep the chat, out of the way', () => setSize(mem.size === 'min' ? 'normal' : 'min'));
-    const newBtn = iconBtn('plus-lg', 'New chat. The current conversation is cleared unless you saved it.', () => { if (ctrl) ctrl.abort(); mem.turns = []; mem.casePicked = false; followOpenCase(); draw(); input.focus(); });
+    const newBtn = iconBtn('plus-lg', 'New chat. The current one stays in History.', () => { if (ctrl) ctrl.abort(); startNew(); input.focus(); });
+    const historyBtn = iconBtn('clock-history', 'History: open or delete earlier chats', () => showHistory());
+    const clearBtn = iconBtn('eraser', 'Clear this chat: empties it and deletes its saved copy', () => clearChat());
     const saveBtn = iconBtn('save', 'Save the conversation to a case as a draft, on the SSD.', () => saveToCase());
     const closeBtn = iconBtn('x-lg', 'Close. The conversation is kept until you start a new chat or close CaseVault.', () => toggle(false));
     const title = h('div', { class: 'chat-float-title' }, ui.icon('robot'), h('strong', {}, 'Ask AI'));
-    const head = h('div', { class: 'chat-float-head', title: 'Drag to move' }, title, h('div', { class: 'spacer' }), newBtn, saveBtn, sizeBtn, minBtn, closeBtn);
+    const head = h('div', { class: 'chat-float-head', title: 'Drag to move' }, title, h('div', { class: 'spacer' }), newBtn, historyBtn, clearBtn, saveBtn, sizeBtn, minBtn, closeBtn);
     const box = h('section', { class: 'chat-float', id: 'chat-float', role: 'dialog', 'aria-label': 'Ask AI', hidden: true },
       head,
       h('div', { class: 'chat-float-body' },
@@ -244,10 +249,81 @@
       ctrl = null;
       sendBtn.hidden = false; stopBtn.hidden = true;
       draw();
+      keep();
       // Don't pull the cursor out of the draft you went back to while it answered.
       if (els.box.contains(document.activeElement) || document.activeElement === document.body) input.focus();
     }
   }
+
+  /* ---- history on the SSD ---- */
+
+  const newId = () => `chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  function startNew() {
+    mem.turns = []; mem.chatId = ''; mem.casePicked = false;
+    followOpenCase();
+    draw();
+  }
+  // Keep this conversation on the SSD (after each answer).
+  function keep() {
+    const turns = mem.turns.filter((t) => t.content && !t.error);
+    if (!turns.length) return;
+    if (!mem.chatId) mem.chatId = newId();
+    const first = (turns.find((t) => t.role === 'user') || {}).content || 'Chat';
+    ui.Save.track(`chat:${mem.chatId}`, () => Vault.saveChat({ id: mem.chatId, title: first.replace(/\s+/g, ' ').slice(0, 80), caseId: els.caseSel.value, model: els.modelSel.value, turns: turns.map((t) => ({ role: t.role, content: t.content })) })).catch(() => {});
+  }
+  async function clearChat() {
+    if (!mem.turns.length) return;
+    if (!(await ui.confirmDialog({ title: 'Clear this chat?', message: 'The conversation on screen is emptied and its saved copy is deleted from the SSD.', confirmText: 'Clear', danger: true }))) return;
+    if (ctrl) ctrl.abort();
+    const id = mem.chatId;
+    startNew();
+    if (id) { try { await Vault.deleteChat(id); } catch { /* already gone */ } }
+    els.input.focus();
+  }
+  async function showHistory() {
+    const { h } = ui;
+    let list = [];
+    try { list = await Vault.listChats(); } catch (err) { if (FS.isDisconnectError(err)) return ui.onDriveLost(); }
+    const caseName = (id) => { const c = (Vault.data.cases || []).find((x) => x.id === id); return c ? c.title || c.number : ''; };
+    await ui.openDialog((close) => {
+      const body = h('div', { class: 'chat-history' });
+      const draw = () => {
+        body.replaceChildren(list.length ? h('ul', { class: 'plain-list chat-history-list' }, list.map((c) => h('li', {},
+          h('button', { class: 'linkish chat-history-open', type: 'button', onclick: async () => {
+            const chat = await Vault.readChat(c.id);
+            if (!chat) return ui.toast('That chat is no longer on the SSD.', 'error');
+            if (ctrl) ctrl.abort();
+            mem.turns = (chat.turns || []).map((t) => ({ role: t.role, content: t.content }));
+            mem.chatId = chat.id; mem.casePicked = true;
+            if (chat.caseId && [...els.caseSel.options].some((o) => o.value === chat.caseId)) { els.caseSel.value = chat.caseId; els.syncCase(); }
+            draw_(); close();
+          } }, c.title),
+          h('span', { class: 'muted small' }, [ui.fmtDateTime(Date.parse(c.updated)), `${c.turns} message${c.turns === 1 ? '' : 's'}`, caseName(c.caseId)].filter(Boolean).join(' · ')),
+          h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Delete this chat from the SSD', onclick: async () => {
+            try { await Vault.deleteChat(c.id); } catch { /* gone */ }
+            if (mem.chatId === c.id) mem.chatId = '';
+            list = list.filter((x) => x.id !== c.id); draw();
+          } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, 'Delete'))))) : h('p', { class: 'muted' }, 'No saved chats.'));
+      };
+      draw();
+      return h('div', { class: 'chat-history-form' },
+        h('h2', { icon: 'clock-history' }, 'Ask AI history'),
+        h('p', { class: 'muted small' }, 'Kept on the SSD in CaseVault-Data\\chats. Open one to carry on, or delete it.'),
+        body,
+        h('div', { class: 'dialog-actions' },
+          // Two clicks: the first asks, the second deletes (one dialog at a time in CaseVault).
+          list.length ? h('button', { class: 'btn danger-ghost', type: 'button', onclick: async (e) => {
+            const b = e.currentTarget;
+            if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = `Click again to delete all ${list.length}`; return; }
+            for (const c of list) { try { await Vault.deleteChat(c.id); } catch { /* gone */ } }
+            mem.chatId = ''; list = []; draw(); b.remove();
+            ui.toast('All saved chats deleted from the SSD.', 'success');
+          } }, 'Delete all') : null,
+          h('div', { class: 'spacer' }),
+          h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done')));
+    });
+  }
+  const draw_ = () => draw();
 
   async function saveToCase() {
     if (!mem.turns.some((t) => t.content)) return ui.toast('Nothing to save yet.', 'error');
@@ -290,7 +366,7 @@
   /** The SSD was disconnected or the vault closed: hide the chat and forget the conversation. */
   function reset() {
     if (ctrl) ctrl.abort();
-    mem.turns = []; mem.caseId = ''; mem.casePicked = false;
+    mem.turns = []; mem.caseId = ''; mem.casePicked = false; mem.chatId = '';
     if (els) { els.box.hidden = true; draw(); }
     mem.open = false;
     document.body.classList.remove('chat-open');

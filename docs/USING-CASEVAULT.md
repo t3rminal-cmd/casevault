@@ -114,9 +114,9 @@ OSINT and LEO links open the website **in a new browser tab**, outside CaseVault
 
 ## Cases
 
-- **New case** asks for a title (required), the **file number**, the **case number**, the **agency case number** (your agency's own internal number), the client (**State**, **Federal** or **Other**), status, opened date, and tags. A client typed in before v1.14 is kept as its own choice in the list. One file number can hold several cases: the File number box offers the file numbers you already use. The case folder and file names use the case number.
+- **New case** asks for a **Title or Operation Name** (required: an operation can hold several case numbers, so put each case under the operation's name and the same agency case number), the **file number**, the **case number**, the **agency case number** (your agency's own internal number), the client (**State**, **Federal** or **Other**), status, opened date, and tags. A client typed in before v1.14 is kept as its own choice in the list. One file number can hold several cases: the File number box offers the file numbers you already use. The case folder and file names use the case number.
 - The case list and the case's header show both, for example *File F-2026-01 · Case 00123*, and the search box finds either. Templates can use `{{case.fileNumber}}` and `{{case.number}}`.
-- The **left list** shows open and pending cases, most recently changed first. Each case shows its status in words (**Open**, **Pending**, **Closed** or **Archived**) and its title, with just the numbers under it: file number | case number | client, for example `100 | JH123456 | State`. A **red bell** at the right means the case has an open deadline on its Timeline (it gently rings when the deadline is overdue or due within a week). The selected case is shown in grey. Point at a case to see the deadline, and for a Pending case what it's waiting on. Use the search box (title, any of the numbers, client, or tag) and the filter to find others.
+- The **left list** shows every case: open and pending first, most recently changed first, then closed ones. Each case shows its status in words (**Open**, **Pending**, **Closed** or **Archived**) and its title, with just the numbers under it: file number | case number | client, for example `100 | JH123456 | State`. A **red bell** at the right means the case has an open deadline on its Timeline (it gently rings when the deadline is overdue or due within a week). The selected case is shown in grey. Point at a case to see the deadline, and for a Pending case what it's waiting on. Use the search box (title, any of the numbers, client, status or tag) to find one.
 - **Make the list wider or narrower:** drag its right edge (or click the edge and use ← →). Double-click the edge to reset it. Each PC remembers its own width.
 - **Details** tab: edit any field. A short note under **Status** says what the status means and, for a Pending case, what you're waiting on.
 - **Suspects** (on the Details tab): **Add suspect** for each person the case is about: name, date of birth (the **age** is worked out for you), residence, and role (**Main**, **Secondary** or **Other**). The first one is Main, later ones Secondary. They save with the case, go to **Ask AI** and **Draft with AI** with the case, and templates can use `{{suspect.name}}`, `{{suspect.dob}}`, `{{suspect.age}}`, `{{suspect.residence}}` and `{{suspect.role}}` (the main suspect) and `{{suspects}}` (all of them, one per line).
@@ -177,7 +177,7 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 ## Reports (case notes and drafts)
 
-The **Reports** tab has everything you write for a case in one list: **Case notes** is always at the top, followed by every report and draft (including Draft with AI's). **New report** above the list starts one: Blank, from a **Template**, or **Draft with AI** (see *Drafts* below). Click a name to open it; **← All reports** goes back to the list. Old links to the Notes or Drafts tab open the same place.
+The **Reports** tab has everything you write for a case in one list: **Case notes** is always at the top, followed by every report and draft (including Draft with AI's). **New report** above the list starts one: pick **Blank**, **Template** or **Draft with AI** from the *Start from* dropdown (see *Drafts* below). **Report Fields**, pinned under Case notes, holds the facts of the case's reports (see below). Click a name to open it; **← All reports** goes back to the list. Old links to the Notes or Drafts tab open the same place.
 
 **Tab indents** in the case notes and in every report, like in Word: **Tab** puts in an indent (with several lines selected, it indents each one) and **Shift+Tab** takes one off. Indents show in Preview and become tab stops in the Word export. When an AI suggestion is showing in a report, Tab accepts it instead. To leave the box with the keyboard, press **Esc**, then **Tab**.
 
@@ -199,7 +199,15 @@ The **Reports** tab has everything you write for a case in one list: **Case note
 
 The **formatting bar** above the text does this for you: **B** bold, *I* italic, U underline (or **Ctrl+B / Ctrl+I / Ctrl+U**), heading, bulleted and numbered list (on the selected lines; click again to take it off), and **table** (pick the size on the grid, then type into the cells). Ctrl+Z undoes. Drafts have the same bar, and tables and underline come through in the Word export.
 
-Notes save on their own as you type. The **Save** button next to Preview writes them straight away, and the text beside it shows *✓ Saved 14:02* once they're on the SSD.
+Notes save on their own as you type. The **Save** button next to Preview writes them straight away, and the text beside it shows *✓ Saved 14:02* once they're on the SSD. **Delete** on the Case notes row empties the notes after you confirm.
+
+### Report Fields
+
+**Report Fields** is a form for the facts an incident or case report asks for: case number, offense classification, UCR code and location code (type a few characters and pick from the Reference lists), address, location type, date, time, beat of occurrence and beat assigned, activity (Purchase, Surveillance, Investigation, Correction), operation/mission, method assigned (Field, Supervisor, On View, OEMC), unit; victims and offenders (number, name, relation code), number arrested, arrest unit, adults, juveniles, fire and gang (yes/no), persons not arrested, police personnel on scene; total weight, street value, purchase price, fund sheet, evidence officer; vehicle information and impound/tow; court branch and date, charges, judge, search warrant, ASA approving, notifications; and a **Narrative**.
+
+- **Evidence inventoried:** **Add exhibit** gives the next exhibit number by itself. Every case with the same **agency case number** shares one count (an operation with several case numbers doesn't start again at 1), and a removed exhibit's number isn't given out again. Pick the type: narcotic, personal property, personal currency, currency, recording (audio/video), photograph, other.
+- Fields save as you type (and with **Save changes**), in the case folder as `report-fields.json`.
+- They fill `{{report.…}}` placeholders in templates (for example `{{report.ucr}}`, `{{report.evidence}}`, `{{report.narrative}}`), go to **Draft with AI**, and **Create report from fields** turns them into a new report you can edit and export.
 
 ## Timeline
 
@@ -235,12 +243,12 @@ Affidavits are kept with their warrants, in **Warrant Drafts** and **Warrant Fin
 - **Sort:** click a column heading (Name, Type, Size, Added) to sort by it; click again to reverse.
 - **Your own order:** in a folder, click **Custom** and drag the rows into the order you want. It's kept for that folder in the case (`file-order.json`).
 
-The table has one row per file with clear lines: **Name** (with the folder underneath in *All documents*; a long name ends in "…", and pointing at it shows the whole name), **Type** (PDF, Word, Video (MP4)…), **Size**, **Added**, and the **Open**, **Move / rename** and **Delete** buttons.
+The table has one row per file with clear lines: **Name** (with the folder underneath in *All documents*; a long name ends in "…", and pointing at it shows the whole name), **Document** (the folder: Arrest Report, Case Report…; pointing at it shows the file format), **Size**, **Added**, and the **Open**, **Move / rename** and **Delete** buttons.
 
 ### Naming convention
 
 - A **new case folder** is named `<year>-<case no.>`, for example `2026-00123` for case 00123 opened in 2026 (the year comes from the **Opened** date). If that name is taken, CaseVault adds `-2`. A case created without a number gets a dated name; add the number on **Details**, then use **Rename folder to 2026-…** there. Every file is copied and checked before the old folder is removed.
-- **Every file** you save is named `<year>-<case no.> <document type>`, for example `2026-00123 Arrest Report.pdf`, `2026-00123 Supplementary Report.pdf`, `2026-00123 Recording.mp3`. A second one becomes `2026-00123 Arrest Report (2).pdf`. You can add a short description: `2026-00123 Supplementary Report - Det. Doe.pdf`.
+- **Every file** you save is named `<year>-<case no.>-<file name>`, for example `2026-00123-scan0001.pdf` or `2026-00123-bank records.pdf`. The file name is the original's unless you type another in **File name**; the folder it's in shows as its **Document** type in the table. A second file with the same name gets ` (2)`. Files named the older way (`2026-00123 Arrest Report.pdf`) still count as following the convention.
 - A case number that already starts with the year (`2026-00123`) isn't doubled.
 
 ### Adding files
@@ -280,12 +288,12 @@ Some agency forms are *XFA* PDFs, made with Adobe LiveCycle Designer. In Chrome,
 
 **Ask AI** in the header opens a chat, like claude.ai, with the AI **on this computer**: nothing you type leaves the PC, and it works offline. It opens in a **floating box** in the corner, so you can keep writing a draft or your notes, or move between tabs and cases, while it answers.
 
-- **The box:** drag its title bar to move it and its bottom-right corner to resize it. The buttons on the title bar are **New chat**, **Save to case**, **Bigger** (a large box in the middle of the screen; click again for the normal size), **Minimize** (just the title bar; Esc does the same) and **Close**. Closing keeps the conversation; **Ask AI** brings it back.
+- **The box:** drag its title bar to move it and its bottom-right corner to resize it. The buttons on the title bar are **New chat**, **History** (your saved chats: open one to carry on, or delete it; **Delete all** asks twice), **Clear** (empties this chat and deletes its saved copy), **Save to case**, **Bigger** (a large box in the middle of the screen; click again for the normal size), **Minimize** (just the title bar; Esc does the same) and **Close**. Closing keeps the conversation; **Ask AI** brings it back.
 - **Model:** every AI model installed in Ollama on W: (and the in-browser model, if that's what's running). Your choice is remembered in the vault. See *Other models* in [AI-SETUP.md](AI-SETUP.md) to add one, including a less-filtered model.
 - **Case:** until you ask your first question, it follows the case you have open. Or pick any case, or *No case* for general questions. The case's details, contacts, timeline and notes go with each question, and the AI is told to answer from them and say where each fact comes from. **Search the case files** also reads the case's documents and sends the passages that answer your question (slower the first time a document is read).
 - Type and press **Enter** (Shift+Enter for a new line). **Stop** ends an answer early and keeps what's written. Earlier questions and answers go along, so you can ask follow-ups; the oldest drop off when the AI's window is full.
 - Answers are formatted (lists, tables). Under each answer: **Copy**, and **Insert**, which puts the answer where your cursor was in the draft or notes you were last typing in (click in it first). It saves like your own typing.
-- The conversation stays in this window only. **Save to case** saves it as a draft in a case (on the SSD); **New chat** clears it. Unplugging the SSD clears it too.
+- Each chat is saved on the SSD (`CaseVault-Data\chats\`) after every answer, never on the PC, and listed under **History**. **Save to case** also saves it as a report in a case; **New chat** starts a fresh one.
 - If a check or Draft with AI is running, the question waits for it (the AI does one thing at a time).
 - AI answers can be wrong. Check anything you use against the case.
 
@@ -423,6 +431,7 @@ Then:
 
 Every hand-off is listed under **Mail prepared from this case** (saved in `mail-log.json` in the case folder) and in the outbound log.
 
+- **Save changes** under the mail settings saves them to the SSD at once (they also save as you leave each box).
 - **Discard draft** clears the message you're writing (after asking, if you typed anything).
 - **Delete draft** next to an Outlook draft in the list deletes its `.eml` file from the Email folder. The line stays in the list as *Draft deleted*, so the record of what was prepared is kept. Mail already sent from Outlook isn't affected.
 
@@ -545,7 +554,7 @@ Model names change over time. If one stops working, click **List models** on the
 
 ## Memory indicator
 
-The header shows memory use, for example `RAM 44% · App 180 MB · AI 5.1 GB`. Hover over it (or tab to it) for details:
+The memory icon in the header is a small **green wave** while memory is fine. It shows memory use, for example `RAM 44% · App 180 MB · AI 5.1 GB`. Hover over it (or tab to it) for details:
 
 - **App**: CaseVault's own memory in this tab (Chrome and Edge report it).
 - **AI**: the local model Ollama has loaded, how much of it is on the graphics card and how much in RAM. The Quick profile on the Beelink should show 100% GPU; Thorough is split.
@@ -564,6 +573,8 @@ Give it a title and a type (Case summary, Affidavit, Subpoena, Memo, Other), the
 - **Blank.**
 - **Template.** Your agency's formats, stored in `CaseVault-Data\templates\` (see *Templates* below). Case details such as the case number are filled in for you.
 - **Draft with AI.** Writes a first draft from this case's material (needs the AI model in the header, not **AI: Offline**).
+
+Pick the start from the **Start from** dropdown; the template list shows when you choose Template.
 
 The editor understands simple Markdown (`#` headings, `**bold**`, `1.` numbered paragraphs, `-` bullets). **Preview** shows it formatted.
 
@@ -594,6 +605,8 @@ Click **Draft with AI…** in the editor (or pick it when creating a draft) and 
 - **Library:** the examples to write like and the directives to follow (see *The Library*). Examples of the document type you chose are ticked for you, and so are your "always use" directives.
 - **Reference** (optional): the **narcotics street values** and the **incident location and UCR codes**, for values and codes.
 - The AI uses the Library and Reference only for **how** to write (format, headings, tone, wording) and for rules, values and codes, **never as facts of this case**; the names and events in your examples belong to other cases and are never copied. The draft's sources list what was used.
+- **Header:** unticked (the default), the draft starts straight at the summary (SYNOPSIS). Tick it to start with a header block listing the case officer, the ASA or AUSA, the file, case and agency case numbers and the date.
+- The case's **Report Fields** go along with the case details.
 - Optional **instructions**, such as "focus on the events of March 14".
 - **Replace** the current text, or **add** below it.
 
@@ -631,6 +644,11 @@ Read an AI draft as a starting point. It can still misstate things, so check eve
 
 **Vault → AI writing behavior** holds the instruction prompts that tell the AI how to write. Pick one to read or edit it, **Save behavior**, **Make default** (the one Draft with AI starts with; DEA-6 style unless you change it), **New (copy of this)** to make your own, and **Restore original** for a built-in one you've edited.
 
+### Re-phrase and Review
+
+- **Re-phrase:** select a sentence or paragraph and click **Re-phrase**. The AI rewrites it to DEA writing standards (third person, past tense, plain and exact, no opinion, facts and numbers unchanged). You see both side by side; **Replace the selection** puts it in, or close to keep yours.
+- **Review:** checks the whole report. First the arithmetic, straight away: every total (money and weights, in a sentence or a table's Total row) is added up, for example *Line 3: says $3,000.00, but $1,200 + $1,500 = $2,700.00 (off by $300.00)*. Then the AI reads it for consistency: names, dates, times, exhibit numbers and amounts that don't match each other or the case details.
+
 ### Checking a draft
 
 On an **Affidavit** draft, **Run consistency check** checks the draft against every document attached to the case, using the same checker as the Checks tab (rules, plus AI review when connected). Click a flag to see the sentence in the draft, and **Open draft** to go back and fix it. The draft's own exported copies are left out, so the draft is never compared with itself.
@@ -642,6 +660,7 @@ On an **Affidavit** draft, **Run consistency check** checks the draft against ev
 - **Save .docx to case files (SSD).** A Word file is added to the case's Files tab. Recommended: it stays on the encrypted SSD.
 - **Save .docx to this computer…** Chrome/Edge ask where to save it. Firefox uses its normal download. Choose a folder on the SSD if you don't want a copy on the PC.
 - **Copy as plain text.** Copies the text without Markdown symbols, to paste into another program.
+- **Save as a template…** Saves this report as a template in **Vault → Templates** (put placeholders in it there).
 
 The Word file keeps headings, paragraphs, bold and italic, bullet and numbered lists. Any `[CONFIRM: ...]` left in the text is highlighted yellow in Word so it can't be missed.
 
@@ -655,6 +674,8 @@ A template is your document format (an affidavit, an arrest report, a subpoena�
    *Tip:* type the placeholders in Word before you import, for example `{{case.number}}` or `«case.number»`: both come through as `{{case.number}}`.
 2. **New template**: paste or type the text and add placeholders.
 3. **Add starter templates**: Affidavit, Subpoena, Case Summary and Arrest Report. They're **examples, not legal forms**; use them as a starting point and replace them with your agency's approved formats.
+
+**Using a template:** in **Vault → Templates** each one has **Use** (makes a report from it in the case you have open and opens it), **Download** (a Word .docx of the template), **Edit** and **Delete**. On the Reports tab, pick **Template** under *Start from*.
 
 There's no required layout. Plain text works; to format it, `# ` at the start of a line makes a heading (the first heading is the template's name), `**bold**`, `*italic*`, `- ` a bullet, `1. ` a numbered line. **Edit / Delete** change or remove a template. Old `.doc` files: open them in Word and *Save As* `.docx` first.
 
@@ -675,6 +696,7 @@ There's no required layout. Plain text works; to format it, `# ` at the start of
 | `{{arrest.date}}`, `{{arrest.time}}`, `{{arrest.location}}`, `{{arrest.bookingNumber}}`, `{{arrest.facility}}`, `{{arrest.miranda}}`… | Any arrest detail by its name (the editor's list has them all) |
 | `{{arrest.2.name}}`, `{{arrest.2.charges}}`… | The second arrestee (and so on); `{{arrest.names}}` lists them all |
 | `{{closure.disposition}}`, `{{closure.reason}}`, `{{closure.date}}`, `{{closure.note}}` | How the case was closed |
+| `{{report.offense}}`, `{{report.ucr}}`, `{{report.date}}`, `{{report.evidence}}`, `{{report.narrative}}`… | Any **Report Fields** entry by its name (the editor's list has them all) |
 | `{{confirm: badge number}}` | `[CONFIRM: badge number]` |
 
 A placeholder with no value (for example a case without a client) becomes `[CONFIRM: case.client]`, so nothing missing slips through.

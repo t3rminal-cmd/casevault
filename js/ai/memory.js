@@ -85,7 +85,7 @@
     const bar = document.createElement('span');
     bar.className = 'mem-icon';
     bar.setAttribute('aria-hidden', 'true');
-    bar.innerHTML = '<i></i><i></i><i></i>';
+    bar.innerHTML = '<i></i><i></i><i></i><i></i><i></i>';
     const free = document.createElement('button');
     free.type = 'button';
     free.className = 'btn small';

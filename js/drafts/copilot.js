@@ -98,7 +98,9 @@
    *   write like (never their facts); directives are Library rules; behavior is the writing
    *   instruction prompt (DEA-6 style by default, js/library.js).
    */
-  function draftMessages({ type = 'other', template = '', instructions = '', caseObj = {}, timeline = { events: [] }, notes = '', passages = [], references = [], examples = [], directives = [], behavior = '', numCtx = 8192 }) {
+  // header: true starts the draft with a header block (officer, ASA/AUSA, numbers); false (the
+  // default) starts straight with the summary. fields: the case's Report Fields as text.
+  function draftMessages({ type = 'other', template = '', instructions = '', caseObj = {}, timeline = { events: [] }, notes = '', passages = [], references = [], examples = [], directives = [], behavior = '', numCtx = 8192, header = false, fields = '' }) {
     const t = D.DOC_TYPES[type] || D.DOC_TYPES.other;
     const c = caseObj || {};
     const d = c.dates || {};
@@ -107,6 +109,7 @@
       `Status: ${c.status || '(none)'}`, `Opened: ${d.opened || '(none)'}`, c.tags && c.tags.length ? `Tags: ${c.tags.join(', ')}` : null,
       c.agencyNumber ? `Agency case number: ${c.agencyNumber}` : null,
       ...(Array.isArray(c.suspects) ? c.suspects : []).filter((x) => x && x.name).map((x) => `Suspect (${x.role || 'Main'}): ${[x.name, x.dob ? `DOB ${x.dob}` : '', x.residence].filter(Boolean).join(', ')}`),
+      ...contactLines(c.contacts),
     ].filter(Boolean).join('\n');
     const events = (timeline.events || []).map((e) => `- ${e.date}${e.time ? ` ${e.time}` : ''} [${e.kind === 'deadline' ? 'deadline' : 'event'}${e.done ? ', done' : ''}] ${e.title}${e.note ? ` (${e.note.replace(/\s+/g, ' ')})` : ''}`).join('\n');
     // Room for the case material: the context window, less the answer (~1/3 of it), the rules,
@@ -145,6 +148,7 @@
     const material = [
       `## Case details\n${facts}`,
       `## Timeline\n${events || '(no timeline entries)'}`,
+      fields ? `## Report fields (entered by the investigator)\n${fields}` : null,
       `## Notes\n${clip(notes, notesChars(numCtx)) || '(no notes)'}`,
       `## Passages from attached documents\n${docs.join('\n\n') || '(no documents)'}`,
       dirText ? `## Directives to follow (rules; cite them where relevant)\n${dirText}` : null,
@@ -155,11 +159,51 @@
       `Write a first draft of: ${t.label}.`,
       t.guide,
       template ? `Follow this template's structure and wording. Replace every [CONFIRM: ...] you can fill from the material with the fact; leave the rest as [CONFIRM: ...]:\n\n${template}` : '',
+      header
+        ? 'Start with a header block that lists the case officer, the prosecutor (ASA or AUSA), the file number, case number and agency case number, and the date, taken from the case details (write [CONFIRM: ...] for any that are missing).'
+        : 'Do not write a header block of names, officers or numbers. Begin directly with the summary (SYNOPSIS) of the report.',
       instructions ? `Extra instructions from the user: ${instructions}` : '',
     ].filter(Boolean).join('\n\n');
     return [
       { role: 'system', content: behavior ? `${DRAFT_RULES}\n\nHOW TO WRITE\n${behavior}` : DRAFT_RULES },
       { role: 'user', content: `CASE MATERIAL\n\n${material}\n\n---\n\nTASK\n\n${task}` },
+    ];
+  }
+
+  // "Case officer: Name, email, phone" lines from the Details tab's contacts.
+  function contactLines(k) {
+    if (!k) return [];
+    const line = (role, p) => { const bits = p ? [p.name, p.email, p.phone].map((x) => String(x || '').trim()).filter(Boolean) : []; return bits.length ? `${role}: ${bits.join(', ')}` : null; };
+    return [line('Case officer', k.officer), line((k.prosecutor && k.prosecutor.title) || 'Prosecutor', k.prosecutor),
+      ...(Array.isArray(k.others) ? k.others : []).map((o) => line(String(o.role || '').trim() || 'Contact', o))].filter(Boolean);
+  }
+
+  /** Re-phrase a passage the way DEA reports are written (Reports → Re-phrase). */
+  const DEA_STANDARD = [
+    'Rewrite the text the way a DEA Report of Investigation (DEA-6) is written:',
+    '- past tense, third person ("SA Doe observed…"); no "I" unless the text is an affidavit;',
+    '- short, factual sentences; one fact per sentence; no opinions, adjectives or speculation;',
+    '- exact dates (month day, year), 24-hour times, full names on first use and surnames after;',
+    '- agents and officers by title (SA, TFO, Det.); defendants and subjects in capitals as SURNAME, First where the original does;',
+    '- amounts written exactly as in the original (never change a number, weight, date or name).',
+    'Keep every fact, number, name and [CONFIRM: ...] marker exactly. Do not add facts. Output only the rewritten text.',
+  ].join('\n');
+  function rephraseMessages(text, behavior = '') {
+    return [
+      { role: 'system', content: behavior ? `${DEA_STANDARD}\n\nHOUSE STYLE\n${behavior}` : DEA_STANDARD },
+      { role: 'user', content: text },
+    ];
+  }
+
+  /** Review a report for consistency (Reports → Review). math: the arithmetic check's findings as text. */
+  function reviewMessages(text, { facts = '', math = '' } = {}) {
+    return [
+      { role: 'system', content: [
+        'You review a law-enforcement report before it is filed. Report problems only; do not rewrite the report.',
+        'Check: names spelled the same way throughout; dates, times and the order of events agree; the same amounts, weights, exhibit numbers and case numbers everywhere; totals that add up (money especially); statements that contradict each other or the case details; missing who/what/when/where; leftover [CONFIRM: ...] markers.',
+        'Answer as a short Markdown list, one problem per line, quoting the words concerned. If you find nothing, say "No problems found." Never invent facts.',
+      ].join('\n') },
+      { role: 'user', content: `${facts ? `CASE DETAILS\n${facts}\n\n` : ''}${math ? `ARITHMETIC CHECK (already done by CaseVault)\n${math}\n\n` : ''}REPORT\n\n${text}` },
     ];
   }
 
@@ -223,7 +267,7 @@
     return full;
   }
 
-  const api = { KEEP_ALIVE, fastModel, numCtxForModel, isSmallModel, suggest, suggestPrompt, draftMessages, relevantPassages, streamChat, DRAFT_RULES };
+  const api = { contactLines, rephraseMessages, reviewMessages, DEA_STANDARD, KEEP_ALIVE, fastModel, numCtxForModel, isSmallModel, suggest, suggestPrompt, draftMessages, relevantPassages, streamChat, DRAFT_RULES };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVCopilot = api;
 })(this);

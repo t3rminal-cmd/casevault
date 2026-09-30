@@ -13,6 +13,7 @@
  *   archive/<case-id>/    archived cases (same layout, read-only in the app)
  *   templates/            document templates
  *   library/              samples and directives the AI learns from (Report examples, Warrant examples, Directives, Other)
+ *   chats/                Ask AI conversations you keep (delete them in Ask AI → History)
  *   backups/              dated snapshots of vault.json
  *   logs/                 outbound-YYYY-MM.json: everything that left this computer (never its content)
  *   secrets/              optional online AI key (only if the user ticks "Remember on SSD")
@@ -23,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.17.0';
+  const APP_VERSION = '1.18.0';
   const SCHEMA = 1;
   const DATA_DIR = 'CaseVault-Data';
   const STATUSES = ['Open', 'Pending', 'Closed', 'Archived'];
@@ -808,6 +809,33 @@ const Vault = (() => {
     await FS.writeJSON(dir, `${name}.json`, value);
   }
 
+  /* ---------- Ask AI conversations (CaseVault-Data/chats/<id>.json, v1.18) ---------- */
+
+  const chatName = (id) => { if (!/^[a-z0-9-]{4,64}$/i.test(String(id))) throw new Error(`Not a chat id: ${id}`); return `${id}.json`; };
+
+  /** Saved conversations, newest first: [{ id, title, caseId, model, updated, turns }]. */
+  async function listChats() {
+    const dir = await FS.getDir(root, 'chats');
+    if (!dir) return [];
+    const out = [];
+    for (const e of await FS.list(dir)) {
+      if (e.kind !== 'file' || !/\.json$/i.test(e.name)) continue;
+      try { const c = await FS.readJSON(dir, e.name); if (c && c.id) out.push({ id: c.id, title: c.title || 'Chat', caseId: c.caseId || '', model: c.model || '', updated: c.updated || '', turns: (c.turns || []).length }); } catch { /* skip a damaged file */ }
+    }
+    return out.sort((a, b) => String(b.updated).localeCompare(String(a.updated)));
+  }
+  async function readChat(id) {
+    const dir = await FS.getDir(root, 'chats');
+    return dir ? FS.readJSON(dir, chatName(id)).catch(() => null) : null;
+  }
+  function saveChat(chat) {
+    return serial(`chat:${chat.id}`, async () => FS.writeJSON(await FS.getDir(root, 'chats', true), chatName(chat.id), { ...chat, updated: nowISO() }));
+  }
+  async function deleteChat(id) {
+    const dir = await FS.getDir(root, 'chats');
+    if (dir && await FS.exists(dir, chatName(id))) await FS.remove(dir, chatName(id));
+  }
+
   /* ---------- consistency checks (cases/<id>/checks/) ---------- */
 
   async function checksDir(id) {
@@ -1084,7 +1112,7 @@ const Vault = (() => {
     backupNow, listBackups, rebuildIndex, updateSettings,
     createCase, getCase, saveCase, deleteCase,
     archiveCase, restoreCase, isArchived, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
-    getNotes, saveNotes,
+    getNotes, saveNotes, listChats, readChat, saveChat, deleteChat,
     getTimeline, saveTimeline, sortEvents,
     listFiles, addFile, readFile, deleteFile, moveFile, ensureFolders, renameCaseFolder, conventionalId, RENAME_MARKER,
     readCaseJSON, writeCaseJSON, appendLog, readLogs, readSecret, writeSecret,

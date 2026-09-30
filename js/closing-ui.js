@@ -23,7 +23,9 @@
   /** {{arrest.*}} and {{closure.*}} values for templates. */
   async function templateExtra(c) {
     const arrest = await Vault.readCaseJSON(c.id, 'arrest.json').catch(() => null);
-    return { ...K().arrestContext(arrest || { arrestees: [] }), ...K().closureContext(c.closure) };
+    // {{report.*}} from Reports → Report Fields (v1.18).
+    const fields = root.CVReportFields ? await Vault.readCaseJSON(c.id, 'report-fields.json').catch(() => null) : null;
+    return { ...K().arrestContext(arrest || { arrestees: [] }), ...K().closureContext(c.closure), ...(fields ? CVReportFields.context(fields) : {}) };
   }
 
   /* ---------------- Arrest details tab ---------------- */
