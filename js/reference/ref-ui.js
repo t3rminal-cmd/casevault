@@ -16,7 +16,7 @@
     { key: 'narcotics', title: 'Narcotic Calculator', icon: 'calculator-fill', blurb: 'Street value calculator and value chart, HIDTA 2022.' },
     { key: 'incident', title: 'Location Codes', icon: 'geo-alt', blurb: 'Location codes by place type. Click a code to copy it.' },
     { key: 'ucr', title: 'Common UCR', icon: 'journal-text', blurb: 'UCR codes by category. Search by code or offense.' },
-    { key: 'charges', title: 'Charges', icon: 'bank2', blurb: 'Illinois statutes for narcotics and weapons charges. Search by statute or wording.' },
+    { key: 'charges', title: 'Charges', icon: 'bank2', blurb: 'Illinois and federal statutes for narcotics, mail and weapons charges. Search by statute or wording.' },
   ];
 
   // This window only.
@@ -228,7 +228,7 @@
     const draw = () => {
       const groups = K().searchCodes(list, q.value, cat.value);
       out.replaceChildren(...(groups.length ? groups.map((g) => h('section', { class: 'code-group' }, h('h3', {}, g.title),
-        h('ul', { class: 'code-grid' }, g.codes.map(([code, desc]) => h('li', {}, h('button', { class: 'code-card', type: 'button', title: `Copy ${code}`, onclick: () => copy(code, `Copied ${what} ${code}.`) },
+        h('ul', { class: 'code-grid' }, g.codes.map(([code, desc]) => h('li', {}, h('button', { class: `code-card${code.length > 6 ? ' code-card-long' : ''}`, type: 'button', title: `Copy ${code}`, onclick: () => copy(code, `Copied ${what} ${code}.`) },
           h('span', { class: 'code-card-code' }, code), h('span', { class: 'code-card-desc' }, desc), h('span', { class: 'code-card-copy' }, ui.icon('copy')))))))) : [h('p', { class: 'muted' }, 'No codes match.')]));
     };
     q.addEventListener('input', draw);

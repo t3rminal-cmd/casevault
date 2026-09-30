@@ -526,7 +526,7 @@
 
   // A case in the left list: [Open] Title [bell], then file | case | client. A red bell means a
   // deadline is overdue or due within a week; the details are in the hover box.
-  function caseItem(c) {
+  function caseItem(c, inGroup = false) {
     const due = c.nextDeadline && !isArchivedEntry(c) ? dueLabel(c.nextDeadline.date) : null;
     // Any open deadline on the case's Timeline rings the red bell (right of the title).
     const alarm = !!due;
@@ -544,12 +544,65 @@
       },
       // Title on the left; the status and the red bell together on the right (v1.20).
       h('div', { class: 'case-item-top' },
-        h('span', { class: 'case-item-title' }, c.title || 'Untitled case'),
+        h('span', { class: 'case-item-title' }, inGroup ? (c.number || 'No case number yet') : (c.title || 'Untitled case')),
         h('span', { class: 'case-item-flags' },
           h('span', { class: `case-status status-${String(c.status).toLowerCase()}` }, c.status),
           alarm ? h('span', { class: `case-bell ${due.cls}`, 'aria-label': `Deadline ${due.text}` }, I('bell-fill')) : null)),
       // Just the numbers: file number | case number | client, e.g. "100 | JH123456 | State".
-      h('div', { class: 'case-item-meta muted' }, [c.fileNumber, c.number, c.client].filter(Boolean).join(' | ') || '\u00a0')));
+      h('div', { class: 'case-item-meta muted' }, (inGroup ? [c.fileNumber, c.agencyNumber, c.client] : [c.fileNumber, c.number, c.client]).filter(Boolean).join(' | ') || '\u00a0')));
+  }
+
+  /* Operations (v1.26): the Title or Operation Name ties several case numbers together. Cases that
+   * share one are grouped in the case list under the operation, most recent first. */
+  const opKey = (t) => String(t || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  /** Active cases of the same operation as c (c included), most recently changed first. */
+  function operationCases(title) {
+    const k = opKey(title);
+    return k ? (Vault.data?.cases || []).filter((x) => !isArchivedEntry(x) && opKey(x.title) === k).sort((a, b) => (b.updated || '').localeCompare(a.updated || '')) : [];
+  }
+  /** Every operation with its case count: [{ name, count, latest }], busiest first. */
+  function operationList() {
+    const m = new Map();
+    for (const x of (Vault.data?.cases || []).filter((y) => !isArchivedEntry(y))) {
+      const k = opKey(x.title);
+      if (!k) continue;
+      const cur = m.get(k) || { name: String(x.title).trim(), count: 0, latest: x };
+      cur.count += 1;
+      if ((x.updated || '') > (cur.latest.updated || '')) cur.latest = x;
+      m.set(k, cur);
+    }
+    return [...m.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }
+  const OP_CLOSED_KEY = 'casevault-op-closed';
+  const closedOps = () => { try { return new Set(JSON.parse(localStorage.getItem(OP_CLOSED_KEY) || '[]')); } catch { return new Set(); } };
+  function operationGroup(group) {
+    const k = opKey(group[0].title);
+    const hasActive = group.some((c) => c.id === state.caseId);
+    const open = hasActive || !closedOps().has(k);
+    const bell = group.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date));
+    const det = h('details', { class: 'op-group', open },
+      h('summary', { class: 'op-head', title: `${group[0].title}: ${group.length} case numbers` },
+        I('folder2-open'), h('span', { class: 'op-name' }, group[0].title), h('span', { class: 'op-count' }, String(group.length)), bell ? I('bell-fill') : null),
+      h('ul', { class: 'op-cases' }, group.map((c) => caseItem(c, true))));
+    det.addEventListener('toggle', () => {
+      const set = closedOps();
+      if (det.open) set.delete(k); else set.add(k);
+      try { localStorage.setItem(OP_CLOSED_KEY, JSON.stringify([...set])); } catch { /* this session */ }
+    });
+    return h('li', { class: 'op-item' }, det);
+  }
+  function groupedItems(cases) {
+    const byOp = new Map();
+    for (const c of cases) { const k = opKey(c.title); if (k) byOp.set(k, [...(byOp.get(k) || []), c]); }
+    const out = []; const done = new Set();
+    for (const c of cases) {
+      const k = opKey(c.title);
+      if (!k || byOp.get(k).length < 2) { out.push(caseItem(c)); continue; }
+      if (done.has(k)) continue;
+      done.add(k);
+      out.push(operationGroup(byOp.get(k)));
+    }
+    return out;
   }
 
   function renderCaseList() {
@@ -558,7 +611,7 @@
     if (!Vault.data) { list.replaceChildren(); section.hidden = true; return; }
     const cases = filteredCases();
     const activeCount = Vault.data.cases.filter((c) => !isArchivedEntry(c)).length;
-    list.replaceChildren(...(cases.length ? cases.map(caseItem) : [h('li', { class: 'empty muted' },
+    list.replaceChildren(...(cases.length ? groupedItems(cases) : [h('li', { class: 'empty muted' },
       activeCount ? 'No cases match.' : Vault.data.cases.length ? 'No active cases.' : 'No cases yet. Click "New case".')]));
 
     // Archived cases: a collapsible section, searched with the same box.
@@ -718,8 +771,9 @@
    * New case
    * ===================================================================== */
 
-  async function newCase() {
+  async function newCase(prefill = {}) {
     if (!state.connected) return;
+    if (prefill instanceof Event) prefill = {};
     const result = await openDialog((close) => {
       const numberIn = h('input', { name: 'number', maxlength: 100 });
       // One file number can hold several cases: offer the file numbers already in use.
@@ -736,6 +790,24 @@
       numberIn.addEventListener('input', showFolder);
       openedIn.addEventListener('input', showFolder);
       showFolder();
+      // v1.26: the operation can be picked from the ones in use; its file number, agency case
+      // number and client are filled in (still editable).
+      const titleIn = h('input', { name: 'title', required: true, autofocus: true, maxlength: 200, autocomplete: 'off', value: prefill.title || '' });
+      const fileIn = h('input', { name: 'fileNumber', maxlength: 100, list: 'file-numbers', title: 'The investigation file. Several cases can share one file number.' });
+      const agencyIn = h('input', { name: 'agencyNumber', maxlength: 100, title: 'Your agency\'s own internal number for this case.' });
+      const clientIn = clientSelect('', { name: 'client' });
+      const opNote = h('p', { class: 'muted small span-2 op-note' });
+      const fillFrom = (name) => {
+        const sib = operationCases(name)[0];
+        opNote.textContent = sib ? `Adds a case number to ${sib.title} (${operationCases(name).length} so far: ${operationCases(name).map((x) => x.number).filter(Boolean).join(', ') || 'no numbers yet'}).` : '';
+        if (!sib) return;
+        if (!fileIn.value) fileIn.value = sib.fileNumber || '';
+        if (!agencyIn.value) agencyIn.value = sib.agencyNumber || '';
+        if (!clientIn.value && sib.client) { if (![...clientIn.options].some((o) => o.value === sib.client)) clientIn.append(h('option', { value: sib.client }, sib.client)); clientIn.value = sib.client; }
+      };
+      const titleBox = window.CVCombo ? CVCombo.attach(titleIn, { label: 'Show the operations', items: () => operationList().map((o) => ({ value: o.name, label: o.name, hint: `${o.count} case${o.count === 1 ? '' : 's'}` })), onPick: (it) => fillFrom(it.value) }) : titleIn;
+      titleIn.addEventListener('change', () => fillFrom(titleIn.value));
+      if (prefill.title) setTimeout(() => fillFrom(prefill.title), 0);
       const form = h('form', { class: 'form-grid', onsubmit: (e) => {
         e.preventDefault();
         const fd = new FormData(form);
@@ -745,12 +817,13 @@
         });
       } },
       h('h2', { class: 'span-2' }, 'New case'),
-      field('Title or Operation Name', h('input', { name: 'title', required: true, autofocus: true, maxlength: 200 }), 'span-2'),
-      field('File number', h('input', { name: 'fileNumber', maxlength: 100, list: 'file-numbers', title: 'The investigation file. Several cases can share one file number.' })),
+      field('Title or Operation Name', titleBox, 'span-2', 'Pick an operation to add another case number to it, or type a new name.'),
+      opNote,
+      field('File number', fileIn),
       field('Original Case Number', numberIn, '', 'The first report number of the case. An operation with several case numbers keeps its first one here.'),
       fileList,
-      field('Agency Case Number', h('input', { name: 'agencyNumber', maxlength: 100, title: 'Your agency\'s own internal number for this case.' })),
-      field('Client', clientSelect('', { name: 'client' })),
+      field('Agency Case Number', agencyIn),
+      field('Client', clientIn),
       field('Status', h('select', { name: 'status' }, Vault.STATUSES.map((s) => h('option', {}, s)))),
       field('Opened', openedIn),
       h('p', { class: 'muted small span-2' }, folderNote),
@@ -932,6 +1005,7 @@
     panel.replaceChildren(
       h('form', { class: 'form-grid details-grid', onsubmit: (e) => e.preventDefault() },
         field('Title or Operation Name', bind(h('input', { value: c.title, maxlength: 200 }), (v) => { c.title = v; }), 'span-2', 'The case title, or the operation\'s name. An operation can hold several case numbers: give each its own case here with the same operation name and file number.'),
+        operationLine(c),
         field('File number', bind(h('input', { value: c.fileNumber || '', maxlength: 100, title: 'The investigation file. Several cases can share one file number.' }), (v) => { c.fileNumber = v; })),
         field('Original Case Number', bind(h('input', { value: c.number, maxlength: 100 }), (v) => { c.number = v; })),
         field('Agency Case Number', bind(h('input', { value: c.agencyNumber || '', maxlength: 100, title: 'Your agency\'s own internal number for this case.' }), (v) => { c.agencyNumber = v; })),
@@ -945,6 +1019,7 @@
           + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),
       suspectsSection(c, save),
       contactsSection(c, save),
+      partnersSection(c, save),
       deconflictionSection(c, save),
       // Everything saves by itself as you type; the button saves now and says so.
       archived ? null : h('div', { class: 'details-save' },
@@ -1020,6 +1095,69 @@
         const last = rows.lastElementChild && rows.lastElementChild.querySelector('input');
         if (last) last.focus();
       } }, 'Add suspect')));
+  }
+
+  /* The operation this case belongs to (v1.26): its other case numbers, and a button to add one. */
+  function operationLine(c) {
+    const others = operationCases(c.title).filter((x) => x.id !== c.id);
+    const archived = Vault.isArchived(c.id);
+    return h('div', { class: 'span-2 op-line' },
+      others.length ? h('span', { class: 'muted small' }, `${others.length + 1} case numbers in this operation:`) : h('span', { class: 'muted small' }, 'Only case number in this operation so far.'),
+      others.length ? h('span', { class: 'op-chips' }, [c, ...others].sort((a, b) => String(a.number).localeCompare(String(b.number))).map((x) => (x.id === c.id
+        ? h('span', { class: 'op-chip current', title: 'This case' }, x.number || 'This case')
+        : h('a', { class: 'op-chip', href: `#/case/${encodeURIComponent(x.id)}`, title: `${x.title} · ${x.status}` }, x.number || 'No number')))) : null,
+      archived ? null : h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', title: 'A new case under the same operation name, with its file number, agency case number and client', onclick: () => { Save.flushAll(); newCase({ title: c.title }); } }, 'Add Case Number to This Operation'));
+  }
+
+  /* LEO partners on the Details tab (v1.26): the agencies working the case with you. Local PD and
+   * Sheriff Dept ask which department. Kept in case.json as c.partners [{ agency, name }];
+   * {{case.partners}} fills templates. */
+  const DEPT_QUESTION = { 'Local PD': 'Which police department?', 'Sheriff Dept': 'Which sheriff\'s department?' };
+  function askDepartment(agency, current = '') {
+    return openDialog((close) => {
+      const inp = h('input', { type: 'text', value: current, autofocus: true, maxlength: 300, placeholder: agency === 'Local PD' ? 'e.g. Evanston Police Department' : 'e.g. Cook County Sheriff\'s Office', 'aria-label': DEPT_QUESTION[agency] });
+      return h('form', { class: 'partner-form', onsubmit: (e) => { e.preventDefault(); close(inp.value.trim()); } },
+        h('h2', { icon: 'building' }, DEPT_QUESTION[agency]),
+        h('p', { class: 'muted small' }, 'More than one? Separate them with a semicolon (;).'),
+        field(agency, inp),
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'OK')));
+    });
+  }
+  function partnersSection(c, save) {
+    if (!Array.isArray(c.partners)) c.partners = [];
+    const box = h('div', { class: 'partner-chips' });
+    const setNames = (agency, text) => {
+      c.partners = c.partners.filter((p) => p.agency !== agency);
+      const names = String(text || '').split(/\s*;\s*/).map((x) => x.trim()).filter(Boolean);
+      for (const name of names) c.partners.push({ agency, name });
+      return names.length;
+    };
+    const draw = () => box.replaceChildren(...CVDraft.PARTNER_AGENCIES.map((agency) => {
+      const mine = c.partners.filter((p) => p.agency === agency);
+      const on = mine.length > 0;
+      const names = mine.map((p) => p.name).filter(Boolean).join('; ');
+      const cb = h('input', { type: 'checkbox', checked: on, 'aria-label': agency });
+      cb.addEventListener('change', async () => {
+        if (cb.checked && DEPT_QUESTION[agency]) {
+          const text = await askDepartment(agency);
+          if (!text || !setNames(agency, text)) { cb.checked = false; return; }
+        } else if (cb.checked) c.partners.push({ agency });
+        else c.partners = c.partners.filter((p) => p.agency !== agency);
+        draw(); save();
+      });
+      const edit = on && DEPT_QUESTION[agency] ? h('button', { class: 'icon-btn partner-edit', type: 'button', title: `Change the ${agency === 'Local PD' ? 'police' : 'sheriff\'s'} department`, onclick: async () => {
+        const text = await askDepartment(agency, names);
+        if (text == null) return;
+        if (!setNames(agency, text)) c.partners = c.partners.filter((p) => p.agency !== agency);
+        draw(); save();
+      } }, I('pencil'), h('span', { class: 'sr-only' }, `Change ${agency}`)) : null;
+      return h('div', { class: `partner-chip${on ? ' on' : ''}` },
+        h('label', { class: 'check-row' }, cb, h('span', {}, agency)), names ? h('span', { class: 'partner-name' }, names) : null, edit);
+    }));
+    draw();
+    return h('section', { class: 'contacts partners', 'aria-labelledby': 'partners-title' },
+      h('h3', { id: 'partners-title', icon: 'shield-check', title: 'The agencies working this case with you. Templates can use {{case.partners}}.' }, 'LEO Partners'),
+      box);
   }
 
   /* Contacts on the Details tab: the case officer, the prosecutor (ASA or AUSA) and anyone else

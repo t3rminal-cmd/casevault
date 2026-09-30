@@ -19,6 +19,10 @@
       label: 'Case Summary',
       guide: 'A case summary: an overview paragraph, the parties involved, a dated chronology of key events, the evidence and documents, and open questions.',
     },
+    supplemental: {
+      label: 'Supplemental Report',
+      guide: 'A police supplemental (supplementary) report: the case, event and report numbers, the offense and where and when it happened, the victims and offenders with their descriptions, the charges, then the narrative in the first person and in time order (what was done, seen and recovered), the evidence inventoried with exhibit and inventory numbers, narcotics with type, weight, purchase price and street value, the personnel on scene, notifications, and the reporting officer. Use [CONFIRM: ...] for anything not in the case material.',
+    },
     affidavit: {
       label: 'Affidavit',
       guide: 'A sworn affidavit written in the first person by the affiant, with numbered paragraphs that state the facts in time order. Every fact must come from the case material. End with signature and jurat placeholders.',
@@ -95,6 +99,22 @@
 
   /* ---------------- templates ---------------- */
 
+  /* ---------------- LEO partners (v1.26) ---------------- */
+
+  const PARTNER_AGENCIES = ['DEA', 'FBI', 'IRS', 'USPIS', 'CBP', 'HSI', 'Local PD', 'Sheriff Dept'];
+  /** "DEA, USPIS, Local PD (Evanston Police Department)" from [{ agency, name }]. */
+  function partnersText(list) {
+    const out = [];
+    const agencies = [...new Set([...PARTNER_AGENCIES, ...(list || []).map((p) => p && p.agency).filter(Boolean)])];
+    for (const a of agencies) {
+      const mine = (list || []).filter((p) => p && p.agency === a);
+      if (!mine.length) continue;
+      const names = mine.map((p) => String(p.name || '').trim()).filter(Boolean);
+      out.push(names.length ? `${a} (${names.join(', ')})` : a);
+    }
+    return out.join(', ');
+  }
+
   function longDate(d) {
     return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   }
@@ -127,6 +147,7 @@
     const ctx = {
       'case.title': c.title, 'case.number': c.number, 'case.fileNumber': c.fileNumber, 'case.agencyNumber': c.agencyNumber, 'case.client': c.client, 'case.status': c.status,
       'case.tags': (c.tags || []).join(', '), 'case.opened': d.opened, 'case.closed': d.closed,
+      'case.partners': partnersText(c.partners),
       today: longDate(now), 'today.iso': isoDate(now),
     };
     // Contacts from the Details tab.
@@ -157,7 +178,7 @@
   function placeholderGroups(arrestKeys = [], reportKeys = []) {
     const g = (title, keys) => ({ title, keys });
     return [
-      g('Case', ['case.fileNumber', 'case.number', 'case.agencyNumber', 'case.title', 'case.client', 'case.status', 'case.opened', 'case.closed', 'case.tags']),
+      g('Case', ['case.fileNumber', 'case.number', 'case.agencyNumber', 'case.title', 'case.client', 'case.status', 'case.opened', 'case.closed', 'case.tags', 'case.partners']),
       g('Suspects', ['suspect.name', 'suspect.dob', 'suspect.age', 'suspect.residence', 'suspect.role', 'suspects']),
       g('Contacts', ['case.officer.name', 'case.officer.email', 'case.officer.phone', 'case.prosecutor.title', 'case.prosecutor.name', 'case.prosecutor.email', 'case.prosecutor.phone']),
       g('Date', ['today', 'today.iso']),
@@ -294,6 +315,53 @@ ${GENERIC_NOTE}
 ______________________________
 {{affiant.name}}, {{affiant.title}}, {{confirm: badge number}}
 `,
+    'generic-supplemental-report.md': `# Supplemental Report
+
+${GENERIC_NOTE}
+
+**Case:** {{case.title}}
+**Original Case Number:** {{case.number}}
+**Agency Case Number:** {{case.agencyNumber}}
+**Date of Occurrence:** {{report.date}} {{report.time}}
+**Location:** {{report.address}}
+**Offense:** {{report.offense}} ({{report.ucr}})
+
+## Victims
+
+{{report.victimsList}}
+
+## Offenders
+
+{{report.offendersList}}
+
+## Charges
+
+{{report.charges}}
+
+## Narrative
+
+{{report.narrative}}
+
+## Narcotics Recovered
+
+{{report.narcotics}}
+
+## Evidence Inventoried
+
+{{report.evidence}}
+
+## Personnel on Scene
+
+{{report.personnel}}
+
+## Notifications
+
+{{report.notifications}}
+
+______________________________
+{{affiant.name}}, {{affiant.title}}, {{confirm: star number}}
+Prepared {{today}}
+`,
     'generic-case-summary.md': `# Case Summary
 
 ${GENERIC_NOTE}
@@ -351,7 +419,7 @@ ${GENERIC_NOTE}
   }
 
   const api = {
-    DOC_TYPES, STARTER_TEMPLATES, parseDraft, serializeDraft, slugify, extractPlaceholders,
+    DOC_TYPES, STARTER_TEMPLATES, PARTNER_AGENCIES, partnersText, parseDraft, serializeDraft, slugify, extractPlaceholders,
     AFFIANT_FIELDS, SUSPECT_ROLES, ageOn, placeholderGroups, templateContext, fillTemplate, templateTitle, stripMarkdown,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

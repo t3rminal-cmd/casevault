@@ -129,7 +129,7 @@ test('v1.22: searchable lists and the charges from LE Cyber-Docs', () => {
   const all = RD.CHARGES.flatMap((g) => g.codes);
   assert.ok(all.length >= 50);
   assert.ok(all.some(([s, d]) => s === '720 ILCS 570/401(a)(2)(A)' && /Cocaine, 15 to 100 grams/.test(d)));
-  assert.ok(all.every(([s]) => /^720 ILCS \d+\//.test(s)));
+  assert.ok(all.every(([s]) => /^(720 ILCS \d+\/|21 U\.S\.C\. §|18 U\.S\.C\. §)/.test(s)), 'Illinois and federal statutes only');
   const { pathText } = require('../js/formats.js');
   assert.strictEqual(pathText('cases\\2024-JH123456'), 'cases | 2024-JH123456');
 });
@@ -217,4 +217,35 @@ test('v1.25: narcotics recovered, one line each; older single lines move into th
   // The four narcotic boxes share one row.
   const R = require('../js/reference/reference.js');
   assert.strictEqual(R.streetValue('Cocaine (Powder)', 28, 'gram').value, 3500);
+});
+
+test('v1.26: Illinois and federal charges, grouped, with the mail-related narcotics statutes', () => {
+  const RD = require('../js/reference/ref-data.js');
+  const titles = RD.CHARGES.map((g) => g.title);
+  assert.ok(titles.every((t) => /^(Illinois|Federal): /.test(t)), 'every group says whose law it is');
+  const all = RD.CHARGES.flatMap((g) => g.codes);
+  for (const s of ['21 U.S.C. § 841(a)(1)', '21 U.S.C. § 846', '21 U.S.C. § 843(b)', '18 U.S.C. § 1716', '18 U.S.C. § 1952', '18 U.S.C. § 924(c)', '720 ILCS 570/401.1', '720 ILCS 570/405.1']) {
+    assert.ok(all.some(([c]) => c === s), s);
+  }
+  assert.match(all.find(([c]) => c === '21 U.S.C. § 843(b)')[1], /mail/);
+  const keys = RD.CHARGES.map((g) => g.key);
+  assert.strictEqual(new Set(keys).size, keys.length, 'group keys are unique');
+});
+
+test('v1.26: LEO partners text, Supplemental Report type and template, mail signature and preloaded domains', () => {
+  const D = require('../js/drafts/draft-core.js');
+  assert.deepStrictEqual(D.PARTNER_AGENCIES, ['DEA', 'FBI', 'IRS', 'USPIS', 'CBP', 'HSI', 'Local PD', 'Sheriff Dept']);
+  assert.strictEqual(D.partnersText([{ agency: 'USPIS' }, { agency: 'DEA' }, { agency: 'Local PD', name: 'Example Police Department' }, { agency: 'Sheriff Dept', name: 'Example County Sheriff' }]),
+    'DEA, USPIS, Local PD (Example Police Department), Sheriff Dept (Example County Sheriff)');
+  assert.strictEqual(D.partnersText([]), '');
+  assert.strictEqual(D.DOC_TYPES.supplemental.label, 'Supplemental Report');
+  assert.ok(D.STARTER_TEMPLATES['generic-supplemental-report.md'].includes('{{report.narcotics}}'));
+  const M = require('../js/secure/mail.js');
+  assert.deepStrictEqual(M.settingsOf({}).domains, ['chicagopolice.org', 'dea.gov', 'uspis.gov']);
+  assert.deepStrictEqual(M.settingsOf({ domains: ['agency.gov'] }).domains, ['agency.gov'], 'your own list wins');
+  assert.ok(M.checkRecipients([{ email: 'a.b@dea.gov' }], M.settingsOf({}).domains).ok);
+  assert.strictEqual(M.closing({ signature: 'Det. Example\nNarcotics', footer: 'NOTICE' }), 'Det. Example\nNarcotics\n\n--\nNOTICE');
+  assert.strictEqual(M.closing({ signature: '', footer: 'NOTICE' }), '--\nNOTICE');
+  assert.strictEqual(M.signatureFrom({ name: 'Det. Example', title: 'Detective', agency: 'Example PD', phone: '555-010-0100', email: 'det@example.gov' }),
+    'Det. Example\nDetective\nExample PD\nPhone: 555-010-0100\ndet@example.gov');
 });

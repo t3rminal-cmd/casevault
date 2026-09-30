@@ -36,6 +36,7 @@
       c.client ? `Client: ${c.client}` : null, `Status: ${c.status || ''}`, d.opened ? `Opened: ${d.opened}` : null,
       c.tags && c.tags.length ? `Tags: ${c.tags.join(', ')}` : null,
       c.agencyNumber ? `Agency case number: ${c.agencyNumber}` : null,
+      Array.isArray(c.partners) && c.partners.length && root.CVDraft ? `LEO partners: ${root.CVDraft.partnersText(c.partners)}` : null,
       ...(Array.isArray(c.suspects) ? c.suspects : []).filter((x) => x && x.name).map((x) => `Suspect (${x.role || 'Main'}): ${[x.name, x.dob ? `DOB ${x.dob}` : '', x.residence].filter(Boolean).join(', ')}`),
       ...contactLines(c.contacts),
     ].filter(Boolean).join('\n');
