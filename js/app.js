@@ -810,16 +810,29 @@
       if (my !== tlToken) return;
       const rows = CVOperation.mergeEvents(tls);
       tlBox.hidden = false;
+      // v1.33: a timeline you can click, left to right in date order; each event opens it on the
+      // Timeline tab. Deadlines are diamonds (red when overdue), done ones are faded, today is marked.
+      const todayIso = today();
+      const track = h('ol', { class: 'htl', 'aria-label': `Timeline of ${open.name}` });
+      let todayShown = false;
+      for (const { caseId, number, ev } of rows) {
+        if (!todayShown && (ev.date || '') > todayIso) { track.append(h('li', { class: 'htl-today', 'aria-label': 'Today' }, h('span', {}, 'Today'))); todayShown = true; }
+        const due = ev.kind === 'deadline' && !ev.done ? dueLabel(ev.date) : null;
+        track.append(h('li', { class: `htl-item ${ev.kind === 'deadline' ? 'deadline' : 'event'}${ev.done ? ' done' : ''}${due ? ` ${due.cls}` : ''}` },
+          h('a', { class: 'htl-link', href: `#/case/${encodeURIComponent(caseId)}/timeline`, title: [ev.title, ev.note].filter(Boolean).join('\n') },
+            h('span', { class: 'htl-date' }, fmtDate(ev.date), ev.time ? h('span', { class: 'htl-time' }, ev.time) : null),
+            h('span', { class: 'htl-dot', 'aria-hidden': 'true' }),
+            h('span', { class: 'htl-card' },
+              h('span', { class: 'htl-title' }, ev.title || (ev.kind === 'deadline' ? 'Deadline' : 'Event')),
+              h('span', { class: 'htl-meta' }, [ev.kind === 'deadline' ? (ev.done ? 'Done' : due ? due.text : 'Deadline') : '', number && open.group.length > 1 ? number : ''].filter(Boolean).join(' · '))))));
+      }
+      if (!todayShown && rows.length) track.append(h('li', { class: 'htl-today', 'aria-label': 'Today' }, h('span', {}, 'Today')));
       tlBox.replaceChildren(
-        h('div', { class: 'section-head' }, h('h2', { class: 'section-title' }, `Timeline: ${open.name}`), h('div', { class: 'spacer' }),
-          h('a', { class: 'op-word', href: `#/case/${encodeURIComponent(open.group[0].id)}/timeline` }, 'Open Timeline')),
-        rows.length ? h('ul', { class: 'plain-list op-tl' }, rows.map(({ caseId, number, ev }) => {
-          const due = ev.kind === 'deadline' && !ev.done ? dueLabel(ev.date) : null;
-          return h('li', {}, h('a', { class: 'row-link', href: `#/case/${encodeURIComponent(caseId)}/timeline` },
-            h('span', { class: `op-tl-date ${due ? `due ${due.cls}` : ''}` }, `${fmtDate(ev.date)}${ev.time ? ` ${ev.time}` : ''}`),
-            h('span', { class: 'op-tl-title' }, ev.kind === 'deadline' ? `${ev.done ? 'Done: ' : 'Deadline: '}${ev.title || ''}` : ev.title || ''),
-            number && open.group.length > 1 ? h('span', { class: 'tl-case' }, number) : h('span', {})));
-        })) : h('p', { class: 'muted' }, 'No events yet. Add them on a case\'s Timeline tab.'));
+        h('div', { class: 'section-head' }, h('h2', { class: 'section-title' }, `Timeline: ${open.name}`)),
+        rows.length ? h('div', { class: 'htl-wrap' }, track) : h('p', { class: 'muted' }, 'No events yet. Add them on a case\'s Timeline tab.'));
+      // Start at today's place.
+      const mark = track.querySelector('.htl-today');
+      if (mark) requestAnimationFrame(() => { const w = track.parentElement; w.scrollLeft = Math.max(0, mark.offsetLeft - w.clientWidth / 2); });
     }
     draw();
     return box;
@@ -1283,6 +1296,23 @@
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'OK')));
     });
   }
+  /* LEO Partners as badges (v1.33): a colour and a plain icon for each agency (no agency seals),
+   * the Chicago six-pointed star for Local PD and a police shield for the Sheriff. */
+  const CHICAGO_STAR = 'M12.00 1.00 L9.70 8.02 L2.47 6.50 L7.40 12.00 L2.47 17.50 L9.70 15.98 L12.00 23.00 L14.30 15.98 L21.53 17.50 L16.60 12.00 L21.53 6.50 L14.30 8.02 Z';
+  const emblem = (d) => { const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('class', 'bi'); const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); p.setAttribute('d', d); p.setAttribute('fill', 'currentColor'); svg.append(p); return svg; };
+  const PARTNER_BADGES = {
+    DEA: { name: 'Drug Enforcement Administration', icon: 'capsule-pill', color: '#1f6f43' },
+    FBI: { name: 'Federal Bureau of Investigation', icon: 'fingerprint', color: '#1f3a6b' },
+    IRS: { name: 'IRS Criminal Investigation', icon: 'cash-coin', color: '#22636b' },
+    CBP: { name: 'Customs and Border Protection', icon: 'globe-americas', color: '#1d4f91' },
+    HSI: { name: 'Homeland Security Investigations', icon: 'shield-fill-check', color: '#2d4b73' },
+    ICE: { name: 'Immigration and Customs Enforcement', icon: 'shield-shaded', color: '#3b4f63' },
+    USSS: { name: 'U.S. Secret Service', icon: 'star-fill', color: '#7a5a12' },
+    USPIS: { name: 'U.S. Postal Inspection Service', icon: 'envelope-paper', color: '#2b5aa6' },
+    'Local PD': { name: 'Police Department', svg: CHICAGO_STAR, color: '#1b74c5' },
+    'Sheriff Dept': { name: 'Sheriff\'s Office', icon: 'shield-fill', color: '#6b4f1d' },
+    Other: { name: 'Another agency', icon: 'building', color: '#5c6670' },
+  };
   function partnersSection(c, save) {
     if (!Array.isArray(c.partners)) c.partners = [];
     const box = h('div', { class: 'partner-chips' });
@@ -1311,8 +1341,14 @@
         if (!setNames(agency, text)) c.partners = c.partners.filter((p) => p.agency !== agency);
         draw(); save();
       } }, I('pencil'), h('span', { class: 'sr-only' }, `Change ${agency}`)) : null;
-      return h('div', { class: `partner-chip${on ? ' on' : ''}` },
-        h('label', { class: 'check-row' }, cb, h('span', {}, agency)), names ? h('span', { class: 'partner-name' }, names) : null, edit);
+      const b = PARTNER_BADGES[agency] || PARTNER_BADGES.Other;
+      const tile = h('div', { class: `partner-chip partner-badge${on ? ' on' : ''}` },
+        h('label', { class: 'partner-pick', title: on ? `${b.name}: working this case. Click to take it off.` : `${b.name}: click if working this case.` }, cb,
+          h('span', { class: 'partner-emblem', 'aria-hidden': 'true' }, b.svg ? emblem(b.svg) : I(b.icon)),
+          h('span', { class: 'partner-words' }, h('strong', {}, agency === 'Sheriff Dept' ? 'Sheriff' : agency), h('span', { class: 'partner-full' }, names || b.name))),
+        edit);
+      tile.style.setProperty('--agency', b.color); // set from script: the page's CSP allows no inline style attributes
+      return tile;
     }));
     draw();
     return h('section', { class: 'contacts partners', 'aria-labelledby': 'partners-title' },
@@ -1373,7 +1409,8 @@
   const DECON_SYSTEMS = ['RISSafe', 'HIDTA Deconfliction', 'DICE', 'Case Explorer', 'SAFETNet', 'Department Deconfliction'];
   function deconflictionSection(c, save) {
     c.deconfliction = Array.isArray(c.deconfliction) ? c.deconfliction : [];
-    const rows = h('tbody', {});
+    // v1.33: a card per check, the boxes in rows that wrap, so nothing is cut off (long dates too).
+    const rows = h('div', { class: 'decon-list' });
     const cellInput = (row, key, attrs) => {
       const el = h('input', { value: row[key] || '', autocomplete: 'off', ...attrs });
       el.addEventListener('input', () => { row[key] = el.value.trim(); save(); });
@@ -1382,30 +1419,33 @@
     };
     const draw = () => {
       rows.replaceChildren(...(c.deconfliction.length ? c.deconfliction.map((r, i) => {
-        const conflict = h('select', { 'aria-label': `Row ${i + 1} conflict`, class: r.conflict === 'Yes' ? 'decon-yes' : '' }, ['', 'No', 'Yes'].map((o) => h('option', { value: o, selected: o === (r.conflict || '') }, o || '—')));
-        conflict.addEventListener('change', () => { r.conflict = conflict.value; conflict.className = r.conflict === 'Yes' ? 'decon-yes' : ''; save(); });
-        return h('tr', {},
-          h('td', {}, cellInput(r, 'date', { type: 'date', 'aria-label': `Row ${i + 1} date` })),
-          h('td', {}, cellInput(r, 'event', { 'aria-label': `Row ${i + 1} event or location`, placeholder: 'Buy at 100 N Example St' })),
-          h('td', {}, cellInput(r, 'system', { list: 'decon-systems', 'aria-label': `Row ${i + 1} system` })),
-          h('td', {}, cellInput(r, 'number', { 'aria-label': `Row ${i + 1} deconfliction number` })),
-          h('td', {}, conflict),
-          h('td', {}, cellInput(r, 'notes', { 'aria-label': `Row ${i + 1} notes` })),
-          h('td', {}, h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Delete this row', onclick: () => { c.deconfliction.splice(i, 1); draw(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Delete row ${i + 1}`))));
-      }) : [h('tr', {}, h('td', { colspan: 7, class: 'muted small' }, 'No deconfliction yet.'))]));
+        const conflict = h('select', { 'aria-label': `Check ${i + 1} conflict`, class: r.conflict === 'Yes' ? 'decon-yes' : '' }, ['', 'No', 'Yes'].map((o) => h('option', { value: o, selected: o === (r.conflict || '') }, o || '—')));
+        const card = h('div', { class: `decon-card${r.conflict === 'Yes' ? ' conflict' : ''}` });
+        conflict.addEventListener('change', () => { r.conflict = conflict.value; conflict.className = r.conflict === 'Yes' ? 'decon-yes' : ''; card.classList.toggle('conflict', r.conflict === 'Yes'); save(); });
+        card.append(
+          h('div', { class: 'decon-card-head' }, h('strong', {}, `Check ${i + 1}`), h('div', { class: 'spacer' }),
+            h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Delete this check', onclick: () => { c.deconfliction.splice(i, 1); draw(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Delete check ${i + 1}`))),
+          h('div', { class: 'decon-grid' },
+            field('Date', cellInput(r, 'date', { type: 'date', 'aria-label': `Check ${i + 1} date` })),
+            field('Event / Location', cellInput(r, 'event', { 'aria-label': `Check ${i + 1} event or location` }), 'decon-wide'),
+            field('System', cellInput(r, 'system', { list: 'decon-systems', 'aria-label': `Check ${i + 1} system` })),
+            field('Deconfliction Number', cellInput(r, 'number', { 'aria-label': `Check ${i + 1} deconfliction number` })),
+            field('Conflict', conflict),
+            field('Notes', cellInput(r, 'notes', { 'aria-label': `Check ${i + 1} notes` }), 'decon-wide')));
+        return card;
+      }) : [h('p', { class: 'muted small' }, 'No deconfliction yet.')]));
     };
     draw();
     const add = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', onclick: () => {
       c.deconfliction.push({ date: today(), event: '', system: '', number: '', conflict: '', notes: '' });
       draw(); save();
-      const last = rows.lastElementChild && rows.lastElementChild.querySelector('input:not([type=date]), .date-text');
+      const last = rows.lastElementChild && rows.lastElementChild.querySelector('.decon-wide input');
       if (last) last.focus();
     } }, 'Add Deconfliction');
     return h('section', { class: 'contacts deconfliction', 'aria-labelledby': 'decon-title' },
       h('h3', { id: 'decon-title', icon: 'shield-exclamation', title: 'Each deconfliction check for this case, and whether it showed a conflict.' }, 'Deconfliction'),
       h('datalist', { id: 'decon-systems' }, DECON_SYSTEMS.map((x) => h('option', { value: x }))),
-      h('div', { class: 'table-wrap' }, h('table', { class: 'files decon-table' },
-        h('thead', {}, h('tr', {}, ['Date', 'Event / Location', 'System', 'Deconfliction Number', 'Conflict', 'Notes', ''].map((t) => h('th', {}, t)))), rows)),
+      rows,
       h('div', { class: 'contact-add' }, add));
   }
 

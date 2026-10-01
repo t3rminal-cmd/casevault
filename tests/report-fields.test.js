@@ -235,7 +235,7 @@ test('v1.26: Illinois and federal charges, grouped, with the mail-related narcot
 
 test('v1.26: LEO partners text, Supplemental Report type and template, mail signature and preloaded domains', () => {
   const D = require('../js/drafts/draft-core.js');
-  assert.deepStrictEqual(D.PARTNER_AGENCIES, ['DEA', 'FBI', 'IRS', 'CBP', 'HSI', 'USPIS', 'Local PD', 'Sheriff Dept', 'Other']);
+  assert.deepStrictEqual(D.PARTNER_AGENCIES, ['DEA', 'FBI', 'IRS', 'CBP', 'HSI', 'ICE', 'USSS', 'USPIS', 'Local PD', 'Sheriff Dept', 'Other']);
   assert.strictEqual(D.partnersText([{ agency: 'USPIS' }, { agency: 'DEA' }, { agency: 'Local PD', name: 'Example Police Department' }, { agency: 'Sheriff Dept', name: 'Example County Sheriff' }]),
     'DEA, USPIS, Local PD (Example Police Department), Sheriff Dept (Example County Sheriff)');
   assert.strictEqual(D.partnersText([]), '');

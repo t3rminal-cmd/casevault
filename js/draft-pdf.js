@@ -3,7 +3,7 @@
  * Draws the report's Markdown in the same style as the Supplementary Report PDF: the title across
  * the top, each "## Heading" as a grey band, a two-line table (labels, then entries) as a row of
  * boxes like the form, other tables as grids, and paragraphs and lists as text. So a report made
- * with Create Report (on the Draft tab) prints like the form it came from, and any other report
+ * with Send Draft to Reports (on the Draft tab) prints like the form it came from, and any other report
  * prints cleanly too. Uses the PDF writer of js/report-pdf.js; nothing fetched, runs under Node.
  */
 'use strict';

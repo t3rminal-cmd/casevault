@@ -10,7 +10,7 @@ Double-click **`Check-For-Updates.bat`** in `V:\CaseVault-App\updater\`. The **C
 window opens and shows which version the SSD has.
 
 1. **Check for Updates**: it checks GitHub, compares every file on the SSD and downloads only the
-   ones that changed. The progress bar moves; nothing in CaseVault is changed yet.
+   ones that changed. The progress bar moves, and a little 8-bit dinosaur runs along above it to the finish flag (it hops when the update is installed); nothing in CaseVault is changed yet.
 2. If there is an update, it says what will change (the list of files) and offers **Install Now** or
    **Not Now**. Not Now keeps the download, so installing later is quick.
 3. **Install Now**: it closes the CaseVault helper window if it runs (Firefox), backs up the files it

@@ -54,6 +54,10 @@
    * Reports, and the PDF saved from either place is the same file, made from the form. ---- */
   const LINKED = 'supplementary-report';
   const PDF_NAME = 'Supplementary Report.pdf';
+  const BASE_TITLE = 'Supplementary Report';
+  // v1.33: each draft sent from the Draft tab is its own report: "Supplementary Report", then
+  // (after Clear All) "Supplementary Report 2", and so on.
+  const titleOf = (slug) => { const m = /^supplementary-report-(\d+)$/.exec(slug || ''); return m ? `${BASE_TITLE} ${m[1]}` : BASE_TITLE; };
   // (Spacing and table marks don't count: the Formatted view may lay a table out again.)
   const sigOf = (text) => { const t = String(text || '').replace(/[\s|:\-]+/g, ''); let n = 5381; for (let i = 0; i < t.length; i++) n = ((n * 33) ^ t.charCodeAt(i)) >>> 0; return `${t.length}:${n.toString(36)}`; };
 
@@ -65,30 +69,37 @@
   }
 
   /** Saves the PDF in the case's Supplementary Report folder, in place of the one saved before. */
-  async function savePdfToCase(c, data, bytes) {
+  async function savePdfToCase(c, data, bytes, title = BASE_TITLE) {
     const b = bytes || await pdfFor(c, data);
-    const file = new File([b], PDF_NAME, { type: 'application/pdf' });
-    const path = await ui.Save.track(`report-pdf:${c.id}`, () => Vault.addFile(c.id, file, { folder: 'Supplementary Report', description: PDF_NAME.replace(/\.pdf$/, ''), replace: true }));
+    const file = new File([b], `${title}.pdf`, { type: 'application/pdf' });
+    const path = await ui.Save.track(`report-pdf:${c.id}`, () => Vault.addFile(c.id, file, { folder: 'Supplementary Report', description: title, replace: true }));
     return { path, bytes: b };
   }
 
   /** The linked report under Reports: { slug, edited } (edited: its text was changed in Reports). */
-  async function linkedReport(c) {
-    const d = await Vault.readDraft(c.id, LINKED).catch(() => null);
+  async function linkedReport(c, slug = LINKED) {
+    const d = await Vault.readDraft(c.id, slug).catch(() => null);
     if (!d || !d.meta.fromFields) return null;
-    return { slug: LINKED, edited: sigOf(d.body) !== d.meta.fieldsSig, meta: d.meta, body: d.body };
+    return { slug, edited: sigOf(d.body) !== d.meta.fieldsSig, meta: d.meta, body: d.body };
+  }
+
+  /** The report the form on the Draft tab goes to now ('' before it's first sent). */
+  async function sentSlugOf(c, data) {
+    const d = data || await load(c);
+    if (typeof d.sentSlug === 'string') return d.sentSlug; // '' after Clear All: the next send makes a new report
+    return (await linkedReport(c, LINKED)) ? LINKED : ''; // sent with v1.32
   }
 
   /** Writes the form into the linked report (made the first time). An edited one is replaced only
    * when force is set. -> { slug, kept } */
-  async function syncLinked(c, data, { force = false } = {}) {
-    const cur = await linkedReport(c);
-    if (cur && cur.edited && !force) return { slug: LINKED, kept: true };
-    const title = 'Supplementary Report';
+  async function syncLinked(c, data, { force = false, slug = LINKED } = {}) {
+    const cur = await linkedReport(c, slug);
+    if (cur && cur.edited && !force) return { slug, kept: true };
+    const title = titleOf(slug);
     const body = F().toMarkdown(data, title);
     const meta = { ...(cur ? cur.meta : { created: new Date().toISOString() }), title, type: 'supplemental', ai: false, fromFields: true, fieldsSig: sigOf(body) };
-    await ui.Save.track(`draft:${c.id}:${LINKED}`, () => Vault.saveDraft(c.id, LINKED, meta, body));
-    return { slug: LINKED, kept: false };
+    await ui.Save.track(`draft:${c.id}:${slug}`, () => Vault.saveDraft(c.id, slug, meta, body));
+    return { slug, kept: false };
   }
 
   async function render(panel, c, token) {
@@ -435,55 +446,59 @@
     const pdfBytes = () => pdfFor(c, data);
     async function showPdf(bytes) {
       // Our own viewer (pdf.js): the whole report always scrolls into view; zoom in percent (v1.25).
-      const viewer = CVPdfViewer.create(bytes, { h, icon: ui.icon, title: 'Supplementary Report', fileName: pdfName() });
+      const viewer = CVPdfViewer.create(bytes, { h, icon: ui.icon, title: 'Supplementary Report', fileName: data.sentSlug ? `${titleOf(data.sentSlug)}.pdf` : PDF_NAME });
       await ui.openDialog((close) => h('div', { class: 'pdf-view' },
         h('h2', { icon: 'printer' }, 'Supplementary Report'),
         viewer,
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
       viewer.destroy();
     }
-    const pdfName = () => PDF_NAME; // no date in the name (v1.32)
-    // Saving the PDF also brings the linked report under Reports up to date, so both are the same.
-    let lastPdf = null;
-    async function savePdf() {
-      save(0);
-      await Save.flushAll();
-      const r = await savePdfToCase(c, data);
-      const sync = await syncLinked(c, data);
-      if (sync.kept) toast('The Supplementary Report under Reports was changed there, so it was left as it is. Create Report replaces it with this form.', 'info', 9000);
-      lastPdf = r;
-      return r.path;
-    }
     const printBtn = h('button', { 'data-ro-ok': 'true', class: 'btn', type: 'button', icon: 'printer', title: 'Opens the report. Print it, or save it as a PDF.', onclick: async () => {
       save(0);
       await Save.flushAll();
       await showPdf(await pdfBytes());
     } }, 'Print / PDF');
-    const pdfCaseBtn = h('button', { class: 'btn', type: 'button', icon: 'file-earmark-pdf-fill', title: 'Saves the PDF in this case\'s Supplementary Report folder.', onclick: async () => {
-      let path;
-      try { path = await savePdf(); } catch { return; }
-      toast(`Saved to the case files: ${path.split('/').pop()}`, 'success', 5000);
-      await showPdf(lastPdf.bytes); // the saved report, to look at straight away
-    } }, 'Save PDF to Case');
-    // (Email for E-Sign was taken off the Draft tab in v1.31; the PDF can be attached from Mail.)
-    const makeBtn = h('button', { class: 'btn', type: 'button', icon: 'file-earmark-plus', title: 'Opens this form as the Supplementary Report under Reports (laid out like the PDF), to change the wording. Its PDF is the same as this one.', onclick: async () => {
+    // v1.33: one button sends the draft to Reports (an editable report laid out like the PDF) and to
+    // Files (the PDF, in the Supplementary Report folder). Sending again brings both up to date.
+    const sendBtn = h('button', { class: 'btn primary', type: 'button', icon: 'send', title: 'Puts this report under Reports and its PDF under Files (Supplementary Report). Sending again updates both.', onclick: async () => {
       save(0);
       await Save.flushAll();
       try {
-        // One report for the form (v1.32): made the first time, brought up to date after that.
-        const cur = await linkedReport(c);
-        const force = !!(cur && cur.edited) && await ui.confirmDialog({ title: 'Replace the edited report?', message: 'The Supplementary Report under Reports was changed there. Replace its text with this form?', confirmText: 'Replace' });
-        if (cur && cur.edited && !force) { go(c.id, 'reports', LINKED); return; }
-        await syncLinked(c, data, { force });
-        go(c.id, 'reports', LINKED);
+        let slug = await sentSlugOf(c, data);
+        if (slug && !(await Vault.readDraft(c.id, slug).catch(() => null))) slug = ''; // that report was deleted
+        if (!slug) slug = await Vault.newDraftSlug(c.id, BASE_TITLE);
+        const cur = await linkedReport(c, slug);
+        let force = false;
+        if (cur && cur.edited) {
+          force = await ui.confirmDialog({ title: 'Replace the edited report?', message: `${titleOf(slug)} was changed under Reports. Replace its text with this draft? (Its PDF in Files is replaced too.)`, confirmText: 'Replace' });
+          if (!force) return;
+        }
+        await syncLinked(c, data, { force, slug });
+        if (data.sentSlug !== slug) { data.sentSlug = slug; save(0); await Save.flushAll(); }
+        const r = await savePdfToCase(c, data, null, titleOf(slug));
+        toast(`Sent: Reports → ${titleOf(slug)}, and Files → ${r.path.split('/').pop()}`, 'success', 7000);
       } catch { /* reported by Save */ }
-    } }, 'Create Report');
+    } }, 'Send Draft to Reports');
+    // Clear All (v1.33): an empty form, to draft another report. What was sent stays in Reports and
+    // Files; the next send makes a new report.
+    const clearBtn = h('button', { class: 'btn danger-ghost', type: 'button', title: 'Empties the form to draft another report. Reports and Files keep what was already sent.', onclick: async () => {
+      if (!(await ui.confirmDialog({ title: 'Clear the whole draft?', message: 'Every entry on this form is emptied, to draft another report. What you already sent stays under Reports and Files. A draft not sent yet is lost.', confirmText: 'Clear All', danger: true }))) return;
+      const fresh = F().normalize({});
+      for (const k of Object.keys(data)) delete data[k];
+      Object.assign(data, fresh);
+      if (c.agencyNumber || c.number) data.caseNumber = c.agencyNumber || c.number;
+      data.sentSlug = '';
+      save(0);
+      await Save.flushAll();
+      toast('The form is empty: ready for another report.', 'success', 4000);
+      ui.refresh();
+    } }, 'Clear All');
 
     panel.replaceChildren(
       h('div', { class: 'notes-head rf-head-bar' },
         h('h2', {}, 'Supplementary Report'), h('div', { class: 'spacer' }), archived ? null : saveBtn),
-      h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case: fill it in here, then Print / PDF, Save PDF to Case, or Create Report to turn it into an editable report under Reports. Saved as report-fields.json.'),
-      h('div', { class: 'rf-actions' }, printBtn, archived ? null : pdfCaseBtn, archived ? null : makeBtn, h('div', { class: 'spacer' }),
+      h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case: fill it in, then Send Draft to Reports puts it under Reports and its PDF under Files. Clear All starts another one. Saved as report-fields.json.'),
+      h('div', { class: 'rf-actions' }, archived ? null : sendBtn, printBtn, archived ? null : clearBtn, h('div', { class: 'spacer' }),
         h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-down', title: 'Open every part on screen', onclick: () => foldAll(false) }, 'Show All'),
         h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-right', title: 'Fold every part away on screen (they stay in the PDF). Open one with its arrow.', onclick: () => foldAll(true) }, 'Hide All')),
       ...sections.slice(0, -1),
@@ -498,5 +513,5 @@
 
   function init(kit) { ui = kit; }
 
-  root.CVReportFieldsUI = { init, load, render, numbersInUse, pdfFor, savePdfToCase, linkedReport, syncLinked, LINKED, PDF_NAME };
+  root.CVReportFieldsUI = { init, load, render, numbersInUse, pdfFor, savePdfToCase, linkedReport, syncLinked, sentSlugOf, titleOf, LINKED, PDF_NAME };
 })(this);
