@@ -14,7 +14,34 @@
   const plusDays = (n) => { const d = new Date(Date.now() + n * 86400000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
   /** Does this case show the Arrest details tab? */
-  const hasArrestTab = (c) => !!(c && (c.arrest || (c.closure && c.closure.disposition === 'arrest')));
+  // A case closed by arrest has the tab too, unless its arrest details were deleted (v1.29).
+  const hasArrestTab = (c) => !!(c && (c.arrest || (c.closure && c.closure.disposition === 'arrest' && !c.arrestRemoved)));
+
+  /** Delete the arrest details (v1.29: also on the tab itself, and for a case closed by arrest). */
+  async function deleteArrest(c) {
+    const { Save, toast, confirmDialog } = ui;
+    if (!(await confirmDialog({ title: 'Delete the arrest details?', message: 'The Arrest details tab is taken off this case, and the arrestees, arrest and charges entered there are deleted from the SSD. Arrest report drafts already made are kept.', confirmText: 'Delete', danger: true }))) return false;
+    try {
+      // A save of the tab still waiting would write the details back.
+      const pending = Save.timers && Save.timers.get(`arrest:${c.id}`);
+      if (pending) { clearTimeout(pending.timer); Save.timers.delete(`arrest:${c.id}`); }
+      const fresh = await Vault.getCase(c.id);
+      fresh.arrest = false;
+      fresh.arrestRemoved = true;
+      fresh.people = [];
+      await Save.track(`arrest:${c.id}`, () => Vault.writeCaseJSON(c.id, 'arrest.json', K().emptyArrest()));
+      await Save.track(`case:${c.id}`, () => Vault.saveCase(fresh));
+      Object.assign(c, fresh);
+      toast('Arrest details deleted.', 'success', 2500);
+      location.hash = `#/case/${encodeURIComponent(c.id)}/details`;
+      ui.refresh();
+      return true;
+    } catch { return false; /* reported by Save */ }
+  }
+
+  // Charges to pick from (v1.29): the Reference's Illinois and federal statutes; search by
+  // statute or wording, picking fills both boxes. They can still be typed over.
+  const chargeItems = () => ((root.CVRefData && root.CVRefData.CHARGES) || []).flatMap((g) => g.codes.map(([statute, desc]) => ({ label: `${statute} ${desc}`, hint: g.title, statute, desc })));
 
   async function readArrest(c) {
     return (await Vault.readCaseJSON(c.id, 'arrest.json').catch(() => null)) || K().emptyArrest();
@@ -43,8 +70,9 @@
       await Vault.writeCaseJSON(c.id, 'arrest.json', snapshot);
       // The arrestees' names are always hidden from online AI and flagged in mail (js/secure/pii.js).
       const people = K().peopleOf(snapshot);
-      if (!c.arrest || JSON.stringify(people) !== JSON.stringify(c.people || [])) {
+      if (!c.arrest || c.arrestRemoved || JSON.stringify(people) !== JSON.stringify(c.people || [])) {
         c.arrest = true;
+        delete c.arrestRemoved;
         c.people = people;
         await Vault.saveCase(structuredClone(c));
       }
@@ -73,15 +101,25 @@
     const draw = () => {
       list.replaceChildren(...arrest.arrestees.map((a, i) => {
         const charges = h('tbody', {}, a.charges.map((ch, j) => h('tr', {},
-          K().CHARGE_FIELDS.map((f) => h('td', {}, input(ch, f))),
+          K().CHARGE_FIELDS.map((f) => {
+            const el = input(ch, f);
+            if ((f.key !== 'statute' && f.key !== 'description') || !root.CVCombo) return h('td', {}, el);
+            const box = CVCombo.attach(el, { label: 'Show the charges', items: () => chargeItems().map((x) => ({ ...x, value: f.key === 'statute' ? x.statute : x.desc })), onPick: (x) => {
+              ch.statute = x.statute; ch.description = x.desc;
+              changed(); draw();
+            } });
+            return h('td', { class: `charge-${f.key}` }, box);
+          }),
           h('td', {}, h('button', { class: 'btn small ghost', type: 'button', title: 'Remove this charge', onclick: () => { a.charges.splice(j, 1); if (!a.charges.length) a.charges.push(K().emptyCharge()); changed(); draw(); } }, '✕')))));
         const name = K().arresteeName(a) || `Arrestee ${i + 1}`;
         return h('section', { class: 'card arrestee' },
           h('div', { class: 'row' }, h('h2', {}, name), h('div', { class: 'spacer' }),
-            arrest.arrestees.length > 1 ? h('button', { class: 'btn small ghost danger-text', type: 'button', onclick: async () => {
+            h('button', { class: 'btn small ghost danger-text', type: 'button', onclick: async () => {
               if (!(await ui.confirmDialog({ title: `Remove ${name}?`, message: 'This arrestee and their charges are removed from the arrest details.', confirmText: 'Remove', danger: true }))) return;
-              arrest.arrestees.splice(i, 1); changed(); draw();
-            } }, 'Remove arrestee') : null),
+              arrest.arrestees.splice(i, 1);
+              if (!arrest.arrestees.length) arrest.arrestees.push(K().emptyArrestee());
+              changed(); draw();
+            } }, 'Remove Arrestee')),
           h('h3', {}, 'Arrestee'), fieldset(a, K().ARRESTEE_FIELDS),
           h('h3', {}, 'Arrest'), fieldset(a, K().ARREST_FIELDS),
           h('h3', {}, 'Charges'),
@@ -102,7 +140,8 @@
     panel.replaceChildren(
       h('div', { class: 'toolbar' },
         h('p', { class: 'muted small explain' }, 'These details fill {{arrest.…}} in templates, for the arrest report. Saved in this case\'s folder on the SSD (arrest.json).'),
-        h('div', { class: 'spacer' }), status, saveBtn),
+        h('div', { class: 'spacer' }), status, saveBtn,
+        Vault.isArchived(c.id) ? null : h('button', { class: 'btn small danger-ghost', type: 'button', title: 'Deletes all the arrest details of this case and takes the tab off', onclick: () => deleteArrest(c) }, 'Delete Arrest')),
       list,
       h('div', { class: 'row' },
         h('button', { class: 'btn', type: 'button', onclick: () => { arrest.arrestees.push(K().emptyArrestee()); changed(); draw(); } }, '+ Add another arrestee'),
@@ -202,7 +241,7 @@
           oc.closure = { ...result, at: new Date().toISOString() };
           if (was && was.at) oc.closureHistory = [...(oc.closureHistory || []), was];
           oc.pending = null;
-          if (result.disposition === 'arrest') oc.arrest = true;
+          if (result.disposition === 'arrest') { oc.arrest = true; delete oc.arrestRemoved; }
           await Save.track(`case:${oc.id}`, () => Vault.saveCase(structuredClone(oc)));
           n++;
         } catch { /* reported by Save */ }
@@ -217,7 +256,7 @@
     c.closure = { ...result, at: new Date().toISOString() };
     if (prev && prev.at && prev.at !== c.closure.at) c.closureHistory = [...(c.closureHistory || []), prev];
     c.pending = null;
-    if (result.disposition === 'arrest') c.arrest = true;
+    if (result.disposition === 'arrest') { c.arrest = true; delete c.arrestRemoved; }
     try {
       await Save.track(`case:${c.id}`, () => Vault.saveCase(structuredClone(c)));
       toast(`Case closed: ${K().disposition(result.disposition).label}.`, 'success');
@@ -295,5 +334,5 @@
 
   function init(kit) { ui = kit; }
 
-  root.CVClosingUI = { init, hasArrestTab, renderArrest, closeCaseDialog, reopenCase, pendingDialog, statusLine, templateExtra, startArrestReport };
+  root.CVClosingUI = { init, hasArrestTab, deleteArrest, renderArrest, closeCaseDialog, reopenCase, pendingDialog, statusLine, templateExtra, startArrestReport };
 })(this);

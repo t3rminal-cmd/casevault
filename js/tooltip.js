@@ -67,8 +67,8 @@
 
   function show(el, delay) {
     clearTimeout(timer);
-    // An ⓘ holds a longer explanation: two sentences; any other box: one.
-    const text = el.classList.contains('tip-btn') ? shorten(textOf(el), 2, 240) : shorten(textOf(el));
+    // A heading's explanation (data-tip-long) shows up to three sentences; any other box: one.
+    const text = el.dataset.tipLong ? shorten(textOf(el), 3, 320) : shorten(textOf(el));
     if (!text) return;
     timer = setTimeout(() => {
       if (!el.isConnected) return;
@@ -106,20 +106,9 @@
 
   /* ---------- explanations become hover boxes ----------
    * A paragraph marked .explain (the longer "what this does" sentences) is taken off the page and
-   * its text goes into a hover box behind an ⓘ on the nearest heading or label. Its text stays
-   * available to screen readers (aria-label). */
+   * its text goes into the hover box of the nearest heading or label (v1.29: no ⓘ). Its text
+   * stays available to screen readers (aria-description). */
   const HEAD = 'h1, h2, h3, h4, legend, summary';
-  function tipButton(text) {
-    const b = doc.createElement('span');
-    b.className = 'tip-btn';
-    b.tabIndex = 0;
-    b.setAttribute('role', 'img');
-    b.setAttribute('aria-label', `About this: ${text}`);
-    b.dataset.tip = text;
-    if (root.CVIcons) b.append(root.CVIcons.icon('info-circle'));
-    else b.textContent = 'ⓘ';
-    return b;
-  }
   function anchorFor(el) {
     const prev = el.previousElementSibling;
     if (prev && prev.matches(HEAD)) return prev;
@@ -137,21 +126,18 @@
     el.dataset.explained = '1';
     const text = el.textContent.replace(/\s+/g, ' ').trim();
     if (!text) return;
-    const anchor = anchorFor(el);
-    const existing = anchor && anchor.querySelector(':scope > .tip-btn');
-    if (existing) {
-      existing.dataset.tip = `${existing.dataset.tip}\n${text}`;
-      existing.setAttribute('aria-label', `About this: ${existing.dataset.tip}`);
-      el.remove();
-    } else if (anchor) {
-      anchor.append(tipButton(text));
-      el.remove();
-    } else {
-      const line = doc.createElement('div');
-      line.className = 'tip-line';
-      line.append(tipButton(text));
-      el.replaceWith(line);
-    }
+    // v1.29: no ⓘ. The explanation shows when you point at the heading or label it belongs to
+    // (and its icon); screen readers get it as that element's description.
+    const anchor = anchorFor(el) || el.parentElement;
+    if (!anchor) return;
+    const own = anchor.getAttribute('title') || anchor.dataset.tip || '';
+    anchor.removeAttribute('title');
+    anchor.dataset.tip = own && !own.includes(text) ? `${own}\n${text}` : (own || text);
+    anchor.dataset.tipLong = '1';
+    anchor.classList.add('has-tip');
+    if (anchor.matches(HEAD) && !anchor.hasAttribute('tabindex') && !anchor.closest('summary, button, a')) anchor.tabIndex = 0;
+    anchor.setAttribute('aria-description', anchor.dataset.tip);
+    el.remove();
   }
   const scan = (node) => {
     if (!(node instanceof Element)) return;

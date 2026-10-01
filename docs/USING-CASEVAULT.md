@@ -86,7 +86,7 @@ The header has three parts:
 - **Theme:** *automatic* follows Windows' light or dark setting. Each PC remembers its own choice in the browser; it's a display preference, not case data.
 - Icons mark every tab, button and document folder, and each file in a case shows an icon for its type (PDF, Word, Excel, picture, audio, video, email).
 - **Point at a button** (or reach it with Tab) to see what it does in a hover box. Buttons show just an icon and a short name; the explanation is in the hover box.
-- Labels have no brackets, and the longer explanations aren't printed on the page: an **ⓘ** next to a heading, label or box holds them. Point at it (or Tab to it) to read it. In the Vault, pointing at a section's heading shows what that section is for, and pointing at a box in **My Profile** shows which `{{affiant.…}}` placeholder it fills.
+- Labels have no brackets, and the longer explanations aren't printed on the page: point at the heading or label they belong to (or its icon, or Tab to it) and they show in a hover box. There are no ⓘ buttons. In the Vault, pointing at a section's heading shows what that section is for, and pointing at a box in **My Profile** shows which `{{affiant.…}}` placeholder it fills.
 - **Opening a file** (the eye button) shows it in a window that fills almost the whole screen, so wide Word tables, spreadsheets and PDFs aren't cut off.
 - **Ask AI** (bottom right, next to Notes) opens a floating chat with the AI on this computer that stays open while you work (see *Ask AI*).
 - The page is centred and uses the width of the screen, from a phone up to 1920×1080 and larger. Case actions are same-size buttons in one row.
@@ -100,12 +100,12 @@ The header has three parts:
 At the bottom of the Overview, in three tabs:
 
 - **Reference:** Location Codes, Common UCR, **Charges** and the Narcotic Calculator (CaseVault's own pages, see *Reference*). **Charges** asks **Federal Statute** or **State Statute** and opens that set; the Charges page can switch between State, Federal and Both.
-- **OSINT:** MaxMind IP (where an IP address is), Fingerprint (browser and device fingerprint), NumLookup (free reverse phone lookup), Blockchair, Mempool and Chainalysis (crypto addresses and transactions), TinEye, Google and Google Images (search and reverse image search).
+- **OSINT:** MaxMind IP (where an IP address is), Fingerprint (browser and device fingerprint), NumLookup (free reverse phone lookup), Blockchair, Mempool and Chainalysis (crypto addresses and transactions), TinEye, Google, Google Maps and Google Images (search, maps and reverse image search).
 - **LEO:** Accurint, Kodex Portal, Chicago HIDTA, **Snapchat LE Portal** (Snap's Law Enforcement Service Portal), **Meta LE Portal** (Meta's Law Enforcement Online Request System for Facebook, Instagram and WhatsApp) and Chicago Police Directives, plus any you add. Both portals need your agency account.
 
 OSINT and LEO links open the website **in a new browser tab**, outside CaseVault. CaseVault never contacts those sites itself and sends them nothing (not even which page you came from), so CaseVault stays offline: the **Offline** badge doesn't change when you click one. The website itself needs the PC's internet connection, like any site you open in the browser. Don't paste case details into outside websites unless your policy allows it.
 
-- **Show / hide** lets you hide the buttons you don't use (click the eye on each), and bring them back.
+- **Arrange** lets you put the buttons in your own order (the ‹ › arrows on each, or drag one onto another) and hide the ones you don't use (the eye on each). **Done** finishes. The order is kept in `vault.json` on the SSD.
 - Quick links sit in a slim strip at the bottom of the Overview: small buttons in rows, so they take little room.
 - **Vault → Quick links** (which also has a **Save changes** button) changes a link's name or web address, and adds your own, for example your agency's portals. Chicago HIDTA has no address until you add your portal's. Changes save when you leave the box, in `vault.json` on the SSD.
 
@@ -113,7 +113,7 @@ OSINT and LEO links open the website **in a new browser tab**, outside CaseVault
 
 With no case open, CaseVault shows the **Overview**: a welcome banner with the date and time, how many cases are open, whether a deadline is due soon (and the next one, one click away), and buttons for **New Case**, **Ask AI**, **Reference**, **Library** and the **Vault**. Below it are the case counts, your operations, upcoming deadlines, recently updated cases and the quick links.
 
-**Operations:** every Title or Operation Name is a blue folder with its name under it (a number on the folder shows how many case numbers it holds; a red bell, a deadline due). Click a folder to open it: each case number in it is a card with its status and one-click links to its **Reports**, **Field Notes**, **Files and Photos** and **Timeline** (click the case number for its Details). **Add Case Number** adds another one to the operation. Click the folder again to close it.
+**Operations:** every Title or Operation Name is a blue folder with its name under it (a number on the folder shows how many case numbers it holds; a red bell, a deadline due). Click a folder to open it: each case number in it is a card with its status and, in a row, **Field Notes**, **Reports**, **Photos** (every picture in the case) and **Files** (click the case number for its Details). **Timeline** is next to the operation's name, since it covers all its case numbers. **Add Case Number** adds another one to the operation. Click the folder again to close it.
 
 ## Cases
 
@@ -129,7 +129,7 @@ With no case open, CaseVault shows the **Overview**: a welcome banner with the d
 - **Save changes** at the bottom of the Details tab saves the case to the SSD now and confirms it. Changes also save by themselves a moment after you type.
 - **Deconfliction** (on the Details tab, under Contacts): a table with a row for each deconfliction check: date, event or location, the system checked (RISSafe, HIDTA, DICE… or type one), the deconfliction number, **Conflict** Yes / No (a Yes shows in red) and notes. **Add Deconfliction** adds a row; the bin deletes one.
 - **Contacts** (on the Details tab, under Suspects): the **Case Officer**, the **prosecutor** (choose **ASA** or **AUSA**), each with name, email and phone, and **Add contact** for anyone else on the case: the Team Supervisor, a Team Member, Finance, Asset Forfeiture and so on (pick a role from the list or type your own). The bin button removes one. They save with the case on the SSD, go to **Ask AI** with the case, and templates can use `{{case.officer.name}}`, `{{case.prosecutor.title}}`, `{{case.prosecutor.email}}` and so on.
-- **Case actions** (at the bottom of Details) has **Close Case** (or **Reopen case**), **Close Operation** (when the operation has more than one open case number), **Add arrest details** (or **Remove Arrest Details**), **Archive Case** and **Delete case…**.
+- **Case actions** (at the bottom of Details) has **Close Case** (or **Reopen case**), **Close Operation** (when the operation has more than one open case number), **Add arrest details** (or **Delete Arrest**), **Archive Case** and **Delete case…**.
 
 ### Open, Pending, Closed, Archived: which one?
 
@@ -162,12 +162,12 @@ The **Arrest details** tab (after Details) appears once you choose **Add arrest 
 
 - **Arrestee**: name, date of birth, sex, race, height, weight, hair, eyes, address, phone, DL/ID number.
 - **Arrest**: date, time, location, type (on-view, warrant, summons, turned self in), warrant number, arresting and assisting officers, Miranda and its time, booking number, facility, bond.
-- **Charges**: statute/code, charge, level (felony, misdemeanor…), degree/class, counts. **+ Add charge** for more.
+- **Charges**: statute/code, charge, level (felony, misdemeanor…), degree/class, counts. Typing in **Statute / code** or **Charge** suggests the Illinois and federal statutes from Reference → Charges; picking one fills both. **+ Add charge** for more.
 - **Property** and **notes**.
 
 It saves on its own as you type (and with the **Save** button) to `arrest.json` in the case folder. **Start an arrest report draft** makes a new draft from your arrest report template with all of this filled in (see *Templates*). Arrestees' names are added to the names the privacy scan always hides from online AI and flags in mail.
 
-**Remove Arrest Details** (under Case actions, after confirming) empties the arrest details and hides the tab again. It isn't offered for a case closed *Cleared by arrest*.
+**Delete Arrest** (on the Arrest details tab, or under Case actions) deletes the arrest details after you confirm and takes the tab off, also for a case closed *Cleared by arrest*. Arrest report drafts already made are kept. **Remove Arrestee** removes one person and their charges.
 
 ### Archive a case
 
@@ -295,7 +295,7 @@ Affidavits are kept with their warrants, in **Warrant Drafts** and **Warrant Fin
 - **Sort:** click a column heading (Name, Document, File, Size, Added) to sort by it; click again to reverse.
 - **Your own order:** in a folder, click **Custom** and drag the rows into the order you want. It's kept for that folder in the case (`file-order.json`).
 
-The table has one row per file with clear lines: **Name** shown as `2024-JH123456 | scan0001` (the case prefix, then the file name; with the folder underneath in *All documents*; a long name ends in "…", and pointing at it shows the whole name), **Document** (the folder: Arrest Report, Case Report…), **File** (the format, for example `.docx`), **Size**, **Added** (month.day hour.minute, for example `09.30 08.57`), and the **Open**, **Move / rename** and **Delete** buttons.
+The table has one row per file with clear lines: **Name** shown as `2024-JH123456 | scan0001` (the case prefix, then the file name; with the folder underneath in *All documents* and *Photos*; a long name ends in "…", and pointing at it shows the whole name), **Document** (the folder: Arrest Report, Case Report…), **File** (the format, for example `.docx`), **Size**, **Added** (month.day hour.minute, for example `09.30 08.57`), and the **Open**, **Move / rename** and **Delete** buttons.
 
 ### Naming convention
 
@@ -304,6 +304,8 @@ The table has one row per file with clear lines: **Name** shown as `2024-JH12345
 - A case number that already starts with the year (`2026-00123`) isn't doubled.
 
 ### Adding files
+
+**Photos**, under *All documents* on the left, lists every picture in the case (JPG, PNG, HEIC…), whatever folder it's in.
 
 Pick a folder on the left and drop files onto the box (or click **choose files**). With **All documents** selected, CaseVault asks the document type for each file, with a guess from its name (for example `supp 2.pdf` → Supplementary Report, `search warrant signed.pdf` → Warrant Final, `PC affidavit draft.docx` → Warrant Drafts, `case overview.docx` → Case Overview, `interview.mp3` → Recordings › Audio, `bodycam.mp4` → Recordings › Video), and shows the name it will be saved under. Files are **copied**; your originals aren't changed.
 
@@ -485,7 +487,7 @@ Every hand-off is listed under **Mail prepared from this case** (saved in `mail-
 
 CaseVault is offline by default. If your agency allows it, you can ask Claude research and drafting questions, with personal details hidden first.
 
-1. **Vault → Online features → Allow going online** (one time).
+1. **Vault → Online features → Allow Going Online** (one time).
 2. Click **Offline** in the header (it becomes **Online · 15 min** once you go online). CaseVault goes offline again after 15 minutes without use (changeable), whenever it starts, and when the SSD is unplugged.
 3. Choose the **service**, the **purpose** (Research or Drafting) and, optionally, the **case**. With a case, its client, number and drafts are available: **Insert a draft from this case**.
 

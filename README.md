@@ -15,7 +15,15 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.28)
+## Features (v1.29)
+
+- **Delete Arrest** on the Arrest details tab and under Case actions (also for a case closed by arrest); the arrest charges suggest the Illinois and federal statutes
+- Operations on the Overview: Field Notes, Reports, Photos and Files as words under each case number; the Timeline next to the operation; a muted folder colour. Files has a **Photos** view
+- Quick links: **Arrange** (arrows or drag) and Google Maps; tabs no longer cut off
+- No ⓘ icons: explanations show when you point at a heading or label. No placeholders in the Timeline title/note or the mail To box; a wider Document column
+- Fixed: the drive icon blinking (the case list saved on every redraw); the sidebar search box is squarer
+
+## Earlier (v1.28)
 
 - **Operations on the Overview:** a blue folder for each Title or Operation Name; open one for its case numbers, each with Reports, Field Notes, Files and Photos and Timeline
 - **Dev Tools:** the **Document Anonymizer** (one Anonymize button runs the rules and then the local AI; bigger Original box with the result under it; Clear) and an **Emergency Purge** that empties CaseVault-Data. Deleting a case also removes it from older vault.json backups and its Ask AI chats

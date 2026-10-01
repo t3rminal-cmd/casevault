@@ -44,7 +44,7 @@
     drafts.set(c.id, d);
 
     const book = h('datalist', { id: 'cv-address-book' }, (st.addressBook || []).map((a) => h('option', { value: a.name ? `${a.name} <${a.email}>` : a.email })));
-    const to = h('input', { type: 'text', value: d.to, list: 'cv-address-book', placeholder: 'name@department.gov; …', autocomplete: 'off' });
+    const to = h('input', { type: 'text', value: d.to, list: 'cv-address-book', autocomplete: 'off', 'aria-label': 'To' });
     const cc = h('input', { type: 'text', value: d.cc, list: 'cv-address-book', autocomplete: 'off' });
     const subject = h('input', { type: 'text', value: d.subject, maxlength: 250 });
     const body = h('textarea', { rows: 12, class: 'mail-body' });
