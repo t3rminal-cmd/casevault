@@ -1,4 +1,4 @@
-/* CaseVault — styles. The LE Cyber-Docs look: Poppins (bundled in vendor/poppins), a blue accent,
+/* CaseVault — styles. The LE Cyber-Docs look: Consolas everywhere (v1.33; built into Windows), a blue accent,
    rounded cards, and light and dark themes. The theme follows Windows unless it's set with the
    sun/moon button (js/theme.js puts data-theme="light" or "dark" on <html>). */
 
@@ -28,7 +28,7 @@
   --topbar-bg: rgba(255, 255, 255, .85);
   --radius: 1rem;
   --radius-sm: .5rem;
-  --font: "Poppins", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font: Consolas, "Cascadia Mono", "Liberation Mono", "DejaVu Sans Mono", Menlo, monospace;
   --mono: "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace;
   color-scheme: light;
 }
@@ -1739,7 +1739,7 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 .fmt-bar { flex-wrap: wrap; max-width: 100%; }
 
 /* ---------- v1.20: Report Fields as the Supplementary Report ---------- */
-.rf-page { --font-doc: "Segoe UI", Calibri, system-ui, Arial, sans-serif; }
+.rf-page { --font-doc: var(--font); }
 .rf-section, .rf-actions { font-family: "Segoe UI", Calibri, system-ui, Arial, sans-serif; }
 .rf-section .field > span, .rf-section label.field > span:first-child { font-size: .8rem; font-weight: 600; letter-spacing: .01em; color: var(--muted); white-space: normal; overflow-wrap: anywhere; }
 .rf-section input, .rf-section select, .rf-section textarea { font-family: "Segoe UI", Calibri, system-ui, Arial, sans-serif; font-size: 15px; }
@@ -2273,7 +2273,7 @@ body.gated .fab-dock { display: none; }
 .new-report-form { min-width: min(34rem, 90vw); }
 .rf-photo-add svg { width: 1.05rem; height: 1.05rem; }
 
-/* v1.31: one font everywhere, the text editor's (Poppins): Report Fields, Dev Tools, templates,
+/* v1.31: one font everywhere (Consolas since v1.33): Report Fields, Dev Tools, templates,
    the Word preview, code marks and AI answers. (The PDF viewer's invisible text layer keeps the
    fonts pdf.js measured, so selecting text there still lines up.) */
 :root { --mono: var(--font); }
@@ -2298,3 +2298,55 @@ body *:not(svg):not(svg *):not(.textLayer *):not(.xfaLayer *):not(.textLayer):no
 .dev-drop { padding: .7rem 1rem; text-align: center; font-size: .9rem; }
 /* Operation case cards: the status word only, no folder icon (v1.32). */
 .op-case-top .pill svg { display: none; }
+
+/* v1.33: LEO Partners as agency badges. */
+.partner-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); gap: .55rem; }
+.partner-badge { position: relative; display: flex; align-items: center; gap: .3rem; padding: 0; border: 1px solid var(--border); border-radius: .8rem; background: var(--surface); transition: border-color .15s, box-shadow .15s, background-color .15s; }
+.partner-badge:hover { border-color: color-mix(in srgb, var(--agency) 55%, var(--border)); box-shadow: 0 2px 8px rgb(0 0 0 / .06); }
+.partner-badge.on { border-color: var(--agency); background: color-mix(in srgb, var(--agency) 9%, var(--surface)); }
+.partner-pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: .65rem; padding: .55rem .65rem; cursor: pointer; }
+.partner-pick input[type="checkbox"] { position: absolute; opacity: 0; pointer-events: none; }
+.partner-pick:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: .8rem; }
+.partner-emblem { flex: 0 0 auto; display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 50%; background: color-mix(in srgb, var(--agency) 14%, var(--surface)); color: color-mix(in srgb, var(--agency) 45%, var(--muted)); filter: grayscale(.6); transition: filter .15s, background-color .15s, color .15s; }
+.partner-emblem svg { width: 1.3rem; height: 1.3rem; order: 0 !important; }
+.partner-badge.on .partner-emblem { background: var(--agency); color: #fff; filter: none; box-shadow: inset 0 0 0 2px rgb(255 255 255 / .35); }
+.partner-words { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.partner-words strong { font-size: .92rem; letter-spacing: .02em; }
+.partner-full { font-size: .74rem; line-height: 1.25; color: var(--muted); overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.partner-badge.on .partner-full { color: var(--text); }
+.partner-badge .partner-edit { margin-right: .35rem; }
+/* Deconfliction (v1.33): a card per check; the boxes wrap, nothing is cut off. */
+.decon-list { display: grid; gap: .6rem; margin-top: .4rem; }
+.decon-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .55rem .75rem .75rem; background: var(--surface); }
+.decon-card.conflict { border-color: var(--danger); box-shadow: inset 3px 0 0 var(--danger); }
+.decon-card-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .2rem; }
+.decon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr)); gap: .5rem .75rem; }
+.decon-grid .decon-wide { grid-column: span 2; }
+.decon-grid .date-field { min-width: 12.5rem; }
+.decon-grid select.decon-yes { border-color: var(--danger); color: var(--danger); font-weight: 600; }
+@media (max-width: 700px) { .decon-grid .decon-wide { grid-column: 1 / -1; } }
+/* The operation's Timeline on the Overview (v1.33): left to right, click an event to open it. */
+.htl-wrap { overflow-x: auto; padding: .4rem 0 .8rem; scroll-behavior: smooth; }
+.htl { list-style: none; margin: 0; padding: 0 1rem; display: flex; align-items: stretch; gap: .75rem; position: relative; min-width: max-content; }
+.htl::before { content: ""; position: absolute; left: 0; right: 0; top: 2.55rem; height: 3px; border-radius: 3px; background: linear-gradient(90deg, var(--border), color-mix(in srgb, var(--accent) 45%, var(--border)), var(--border)); }
+.htl-item { position: relative; width: 12.5rem; flex: 0 0 auto; }
+.htl-link { display: grid; grid-template-rows: 1.9rem 1.3rem auto; justify-items: center; text-decoration: none; color: var(--text); }
+.htl-date { font-size: .78rem; color: var(--muted); text-align: center; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.htl-time { display: block; font-size: .72rem; }
+.htl-dot { align-self: center; width: .95rem; height: .95rem; border-radius: 50%; background: var(--surface); border: 3px solid var(--accent); z-index: 1; transition: transform .15s; }
+.htl-item.deadline .htl-dot { border-radius: 3px; transform: rotate(45deg); border-color: var(--warn); }
+.htl-item.deadline.overdue .htl-dot { border-color: var(--danger); background: var(--danger); }
+.htl-item.done { opacity: .55; }
+.htl-item.done .htl-title { text-decoration: line-through; }
+.htl-card { margin-top: .45rem; width: 100%; display: grid; gap: .15rem; padding: .55rem .7rem; border: 1px solid var(--border); border-radius: .7rem; background: var(--surface); box-shadow: var(--shadow); transition: border-color .15s, transform .15s, box-shadow .15s; }
+.htl-title { font-weight: 600; font-size: .88rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.htl-meta { font-size: .74rem; color: var(--muted); }
+.htl-item.overdue .htl-meta { color: var(--danger); font-weight: 600; }
+.htl-item.soon .htl-meta { color: var(--warn); font-weight: 600; }
+.htl-link:hover .htl-card, .htl-link:focus-visible .htl-card { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.htl-link:hover .htl-dot, .htl-link:focus-visible .htl-dot { transform: scale(1.25); }
+.htl-item.deadline .htl-link:hover .htl-dot { transform: rotate(45deg) scale(1.25); }
+.htl-link:focus-visible { outline: none; }
+.htl-today { flex: 0 0 auto; position: relative; width: 2px; margin: 0 .3rem; background: var(--danger); border-radius: 2px; align-self: stretch; }
+.htl-today span { position: absolute; top: -.2rem; left: 50%; transform: translateX(-50%); font-size: .68rem; font-weight: 700; color: var(--danger); background: var(--bg, var(--surface)); padding: 0 .25rem; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .htl-card, .htl-dot { transition: none; } }

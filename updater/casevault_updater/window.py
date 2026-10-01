@@ -17,12 +17,14 @@ from typing import Optional
 
 from . import __version__, config
 from .controller import Controller, local_text
+from .dino import Runner
 
 BLUE = "#0d6efd"
 GREEN = "#198754"
 RED = "#b02a37"
 MUTED = "#5c6670"
-BG = "#f6f8fb"
+FONT = "Consolas"
+BG = "#eef2f7"
 CARD = "#ffffff"
 BORDER = "#dfe3e8"
 
@@ -57,26 +59,29 @@ class UpdaterWindow:
         if self.logo is not None:
             badge = tk.Label(head, image=self.logo, bg=BG, bd=0)
         else:
-            badge = tk.Label(head, text="CV", bg=BLUE, fg="white", font=("Segoe UI", 12, "bold"), width=3, pady=4)
+            badge = tk.Label(head, text="CV", bg=BLUE, fg="white", font=(FONT, 12, "bold"), width=3, pady=4)
         badge.pack(side="left")
         titles = tk.Frame(head, bg=BG, padx=12)
         titles.pack(side="left", fill="x", expand=True)
-        tk.Label(titles, text="CaseVault Updater", bg=BG, font=("Segoe UI", 15, "bold"), anchor="w").pack(fill="x")
-        self.local = tk.Label(titles, text=local_text(settings), bg=BG, fg=MUTED, font=("Segoe UI", 9), anchor="w", justify="left", wraplength=480)
+        tk.Label(titles, text="CaseVault Updater", bg=BG, font=(FONT, 15, "bold"), anchor="w").pack(fill="x")
+        self.local = tk.Label(titles, text=local_text(settings), bg=BG, fg=MUTED, font=(FONT, 9), anchor="w", justify="left", wraplength=480)
         self.local.pack(fill="x")
 
         card = tk.Frame(outer, bg=CARD, highlightbackground=BORDER, highlightthickness=1, padx=16, pady=14)
         card.pack(fill="both", expand=True, pady=(14, 12))
         self.status = tk.Label(card, text="Press Check for Updates to see whether a newer CaseVault is on GitHub. Nothing is changed until you say Install.",
-                               bg=CARD, font=("Segoe UI", 10), anchor="w", justify="left", wraplength=520)
+                               bg=CARD, font=(FONT, 10), anchor="w", justify="left", wraplength=520)
         self.status.pack(fill="x")
+        # v1.33: an 8-bit dinosaur runs along above the bar while the update works.
+        self.runner = Runner(card, bg=CARD)
+        self.runner.pack(fill="x", pady=(12, 0))
         self.bar = ttk.Progressbar(card, mode="determinate", maximum=1000, style="CV.Horizontal.TProgressbar")
-        self.bar.pack(fill="x", pady=(12, 4))
+        self.bar.pack(fill="x", pady=(2, 4))
         row = tk.Frame(card, bg=CARD)
         row.pack(fill="x")
-        self.detail = tk.Label(row, text="", bg=CARD, fg=MUTED, font=("Segoe UI", 8), anchor="w")
+        self.detail = tk.Label(row, text="", bg=CARD, fg=MUTED, font=(FONT, 8), anchor="w")
         self.detail.pack(side="left", fill="x", expand=True)
-        self.pct = tk.Label(row, text="", bg=CARD, fg=MUTED, font=("Segoe UI", 8), anchor="e")
+        self.pct = tk.Label(row, text="", bg=CARD, fg=MUTED, font=(FONT, 8), anchor="e")
         self.pct.pack(side="right")
 
         listbox = tk.Frame(card, bg=CARD)
@@ -100,7 +105,7 @@ class UpdaterWindow:
         self._undo_state(self.ctl.can_undo())
 
         self.footer = tk.Label(outer, text=f"Updater {__version__} · reads github.com/{settings.repo_slug} · CaseVault-Data is never touched",
-                 bg=BG, fg=MUTED, font=("Segoe UI", 7))
+                 bg=BG, fg=MUTED, font=(FONT, 7))
         self.footer.pack(anchor="w", pady=(8, 0), side="bottom", before=foot)  # packed first = lowest
 
         root.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -115,9 +120,9 @@ class UpdaterWindow:
         elif "clam" in s.theme_names():
             s.theme_use("clam")
         s.configure("CV.Horizontal.TProgressbar", troughcolor="#e9edf2", background=BLUE, thickness=14, borderwidth=0)
-        s.configure("Primary.TButton", font=("Segoe UI", 10, "bold"), padding=(14, 6))
-        s.configure("TButton", font=("Segoe UI", 10), padding=(12, 6))
-        s.configure("Link.TButton", font=("Segoe UI", 9), padding=(4, 4), relief="flat")
+        s.configure("Primary.TButton", font=(FONT, 10, "bold"), padding=(14, 6))
+        s.configure("TButton", font=(FONT, 10), padding=(12, 6))
+        s.configure("Link.TButton", font=(FONT, 9), padding=(4, 4), relief="flat")
         if self.root.tk.call("tk", "windowingsystem") != "win32":
             s.configure("Primary.TButton", foreground="white", background=BLUE)
             s.map("Primary.TButton", background=[("disabled", "#9ec5fe"), ("active", "#0b5ed7")])
@@ -172,6 +177,7 @@ class UpdaterWindow:
     def on_check(self) -> None:
         self._show_files([])
         self.bar["value"] = 0
+        self.runner.reset()
         self.pct.configure(text="")
         self.detail.configure(text="")
         self._buttons("busy")
@@ -219,6 +225,7 @@ class UpdaterWindow:
         if kind == "busy":
             self._say(data["text"])
         elif kind == "progress":
+            self.runner.run(data["fraction"])
             self._say(data["text"])
             self.bar["value"] = int(1000 * data["fraction"])
             self.pct.configure(text=f"{int(100 * data['fraction'])}%")
@@ -230,12 +237,16 @@ class UpdaterWindow:
             self._say(f"Ready to install: {data['summary']}\nDownloaded and checked; nothing has been changed yet. {how}", BLUE)
             self.detail.configure(text="")
             self._show_files(data["files"])
+            self.runner.stand()
             self._buttons("confirm")
             self.install_btn.focus_set()
         elif kind == "done":
             self.bar["value"] = 1000 if data.get("installed") else self.bar["value"]
             if data.get("installed"):
                 self.pct.configure(text="100%")
+                self.runner.finish()
+            else:
+                self.runner.stand()
             self.detail.configure(text="")
             notes = "\n".join(f"• {n}" for n in data.get("notes", []))
             self._say(data["text"] + (f"\n{notes}" if notes else ""), GREEN if data.get("ok") else "#212529")
@@ -244,6 +255,7 @@ class UpdaterWindow:
         elif kind == "error":
             self.detail.configure(text="")
             self._say(data["text"], RED)
+            self.runner.stand()
             self._show_files([])
             self._buttons("idle")
         elif kind == "local":

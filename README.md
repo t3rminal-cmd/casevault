@@ -15,7 +15,15 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.32)
+## Features (v1.33)
+
+- **Send Draft to Reports** on the Draft tab puts the report under Reports and its PDF under Files in one click (Save PDF to Case and Create Report are gone); **Clear All** empties the form for another report, and the next send makes a new one
+- **Field Notes** have their own section at the top of Reports, always there
+- The Overview's operation **Timeline** is a clickable sideways timeline with a Today marker (no separate Open Timeline link)
+- **LEO Partners** as agency badges with icons and colors (Local PD star, Sheriff shield), adding **ICE** and **USSS** (Secret Service); **Deconfliction** as cards so no field is cut off
+- **Consolas** everywhere; the updater shows an 8-bit dinosaur running while it updates
+
+## Earlier (v1.32)
 
 - **One report, one PDF:** the Draft tab keeps one Supplementary Report under Reports; its PDF View and the Draft tab's PDF are the same file, saved once in Files (replaced, not copied)
 - Dates in full everywhere (September 30, 2026); no "Updated" dates on pages and no dates in saved file names
@@ -24,7 +32,7 @@ The app detects the browser and picks the mode by itself. The data format on the
 
 ## Earlier (v1.31)
 
-- **Draft** tab (between Timeline and Reports): the Supplementary Report form, with Print / PDF, Save PDF to Case and **Create Report**, which makes an editable report laid out like the PDF; **PDF View** in the report editor shows any report as a PDF in the same style and saves it to the case
+- **Draft** tab (between Timeline and Reports): the Supplementary Report form, with Print / PDF and **Create Report** (Send Draft to Reports since v1.33), which makes an editable report laid out like the PDF; **PDF View** in the report editor shows any report as a PDF in the same style and saves it to the case
 - **Reports**: Field Notes and the reports, with **New…** (Notes or Report) in place of the New report box
 - Officer's Report lines in the new order with AUSA, IR and CB numbers; UCO; no reclassification row; Federal Jacket Number; Find my Beat quick link; one font (the editor's) everywhere; the updater shows the CaseVault logo
 

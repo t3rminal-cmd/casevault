@@ -352,7 +352,7 @@
 
   /** A report (Markdown) made from the fields: a table per section, the evidence, the summary. */
   /**
-   * The report as Markdown for the editor (Create Report), laid out like the PDF (v1.31): each row
+   * The report as Markdown for the editor (Send Draft to Reports), laid out like the PDF (v1.31): each row
    * of boxes on the PDF is a small table, labels on top and the entries under them, in the same
    * order and sections, so the editable report reads like the form.
    */

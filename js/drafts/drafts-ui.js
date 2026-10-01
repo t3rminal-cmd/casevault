@@ -22,7 +22,7 @@
   async function render(panel, c, token, sub) {
     if (sub) return renderEditor(panel, c, token, decodeURIComponent(sub));
     const { h, state, fmtDateTime, toast, go, Save, confirmDialog } = ui;
-    const [drafts, templates] = await Promise.all([Vault.listDrafts(c.id), Vault.listTemplates()]);
+    const [drafts, templates, notesText] = await Promise.all([Vault.listDrafts(c.id), Vault.listTemplates(), Vault.getNotes(c.id).catch(() => '')]);
     if (token !== state.renderToken) return;
     Engine().refresh().then(() => { if (token === state.renderToken) drawStart(); });
 
@@ -102,7 +102,7 @@
         h('td', { class: 'actions' }, h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
           if (!(await confirmDialog({ title: `Delete "${d.title}"?`, message: 'The report is permanently deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
           try { await Save.track(`draft-del:${c.id}:${d.slug}`, () => Vault.deleteDraft(c.id, d.slug)); ui.refresh(); } catch { /* reported */ }
-        } }, 'Delete')))) : [h('tr', {}, h('td', { colspan: 3, class: 'muted' }, 'No reports yet. Fill in the Draft tab and click Create Report, or use New Report.'))]));
+        } }, 'Delete')))) : [h('tr', {}, h('td', { colspan: 3, class: 'muted' }, 'No reports yet. Fill in the Draft tab and click Send Draft to Reports, or use New Report.'))]));
 
     const archived = Vault.isArchived(c.id);
     const newReport = () => ui.openDialog((close) => {
@@ -114,7 +114,20 @@
         h('div', { class: 'dialog-actions span-2' }, h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Cancel'), create));
     }).then(() => { closeNew = null; });
     const newBtn = h('button', { class: 'btn small primary new-report-btn', type: 'button', onclick: () => newReport() }, 'New Report');
+    // Field Notes (v1.33): their own section at the top, always there; what you save in the notes
+    // (here or in the Notes box) shows here.
+    const notesPlain = String(notesText || '').replace(/\*\*|\+\+|__|[#>*_`]/g, '').replace(/\n{3,}/g, '\n\n').trim();
+    const words = (notesPlain.match(/\S+/g) || []).length;
+    const notesUrl = `#/case/${encodeURIComponent(c.id)}/reports/.notes`;
+    const notesSection = h('section', { class: 'notes-section' },
+      h('div', { class: 'reports-head' }, h('h2', { class: 'section-title' }, 'Field Notes'), h('div', { class: 'spacer' }),
+        h('span', { class: 'muted small' }, words ? `${words} word${words === 1 ? '' : 's'}` : 'Empty'),
+        h('a', { class: 'btn small', href: notesUrl }, archived ? 'Open' : 'Open and Edit')),
+      h('a', { class: 'notes-card', href: notesUrl, title: 'Open the Field Notes' },
+        notesPlain ? h('div', { class: 'notes-card-text' }, notesPlain.length > 900 ? `${notesPlain.slice(0, 900).replace(/\s+\S*$/, '')}…` : notesPlain)
+          : h('div', { class: 'muted' }, 'No field notes yet. Click to write them; they save as you type.')));
     panel.replaceChildren(
+      notesSection,
       h('div', { class: 'reports-head' }, h('h2', { class: 'section-title' }, 'Reports'), h('div', { class: 'spacer' }),
         // An archived case is read-only: its reports can be read and exported, not added to.
         archived ? null : newBtn),
@@ -560,14 +573,15 @@
       const opts = { agency: p.agency || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' \u00b7 '), printed: '', title: meta.title || '' };
       // The report made from the Draft tab, unchanged here: the same PDF as the Draft tab's (v1.32).
       const RFU = root.CVReportFieldsUI;
-      const linked = RFU && slug === RFU.LINKED && meta.fromFields && await RFU.linkedReport(c).then((r) => r && !r.edited).catch(() => false);
+      // (Only the report the form now goes to: one sent before a Clear All prints from its text.)
+      const linked = RFU && meta.fromFields && slug === await RFU.sentSlugOf(c).catch(() => '') && await RFU.linkedReport(c, slug).then((r) => r && !r.edited).catch(() => false);
       const bytes = linked ? await RFU.pdfFor(c) : CVDraftPdf.build(ta.value, opts);
       const viewer = CVPdfViewer.create(bytes, { h, icon: ui.icon, title: meta.title || 'Report', fileName: name });
       const folder = /supplement/i.test(`${meta.type} ${meta.title}`) ? 'Supplementary Report' : /arrest/i.test(`${meta.type} ${meta.title}`) ? 'Arrest Report' : 'Case Report';
       const saveCase = Vault.isArchived(c.id) ? null : h('button', { class: 'btn', type: 'button', title: `Saves the PDF in this case's ${folder} folder.`, onclick: async () => {
         try {
           const path = linked
-            ? (await RFU.savePdfToCase(c, null, bytes)).path
+            ? (await RFU.savePdfToCase(c, null, bytes, RFU.titleOf(slug))).path
             : await ui.Save.track(`draft-pdf:${c.id}`, () => Vault.addFile(c.id, new File([bytes], name, { type: 'application/pdf' }), { folder, description: name.replace(/\.pdf$/, ''), replace: true }));
           toast(`Saved to the case files: ${path.split('/').pop()}`, 'success', 5000);
           saveCase.disabled = true;

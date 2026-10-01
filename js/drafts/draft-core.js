@@ -101,7 +101,8 @@
 
   /* ---------------- LEO partners (v1.26) ---------------- */
 
-  const PARTNER_AGENCIES = ['DEA', 'FBI', 'IRS', 'CBP', 'HSI', 'USPIS', 'Local PD', 'Sheriff Dept', 'Other'];
+  // v1.33: Secret Service (USSS) and ICE added; USPIS stays just before Local PD and Sheriff.
+  const PARTNER_AGENCIES = ['DEA', 'FBI', 'IRS', 'CBP', 'HSI', 'ICE', 'USSS', 'USPIS', 'Local PD', 'Sheriff Dept', 'Other'];
   /** "DEA, USPIS, Local PD (Evanston Police Department)" from [{ agency, name }]. */
   function partnersText(list) {
     const out = [];
