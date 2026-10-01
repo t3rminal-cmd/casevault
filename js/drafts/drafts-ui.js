@@ -512,7 +512,7 @@
         fetchImpl: Engine().fetchImpl(), base: det.base, model: choice.model, signal: ctrl.signal, numCtx: CVAI.numCtxFor(choice.profile),
         messages: CVCopilot.rephraseMessages(text, CVLibrary.behaviorById(Vault.data.settings, meta.behavior || CVLibrary.defaultBehaviorId(Vault.data.settings)).prompt),
         onText: (piece) => { result += piece; out.textContent = result; },
-      }), { label: 'Re-phrasing…', model: choice.model })
+      }), { label: 'Re-phrasing…', model: CVAI.modelName(choice.model) })
         .then(() => { use.disabled = !result.trim(); })
         .catch((err) => { if (!ctrl.signal.aborted) out.textContent = `Could not re-phrase: ${err.message}`; });
       const chosen = await done;
@@ -553,7 +553,7 @@
           fetchImpl: Engine().fetchImpl(), base: det.base, model: choice.model, signal: ctrl.signal, numCtx: CVAI.numCtxFor(choice.profile),
           messages: CVCopilot.reviewMessages(ta.value, { facts, math: mathText }),
           onText: (piece) => { result += piece; aiBox.innerHTML = Markdown.render(result); },
-        }), { label: 'Reviewing…', model: choice.model });
+        }), { label: 'Reviewing…', model: CVAI.modelName(choice.model) });
       })().catch((err) => { if (!ctrl.signal.aborted) aiBox.textContent = `Could not finish the review: ${err.message}`; });
       await dlg;
       ctrl.abort();
@@ -698,14 +698,14 @@
           banner.hidden = false;
           typeSelect.value = meta.type;
           checkBtn.hidden = meta.type !== 'affidavit';
-          msg.textContent = `Writing with ${choice.model}…`;
+          msg.textContent = `Writing with ${CVAI.modelName(choice.model)}…`;
           show();
           await CVCopilot.streamChat({
             fetchImpl: Engine().fetchImpl(),
             base: det.base, model: choice.model, messages, signal: ctrl.signal, numCtx,
             onText: (piece) => { text += piece; show(); saveNow(1500); schedulePlaceholders(); },
           });
-        }, { label: 'Drafting…', model: choice.model });
+        }, { label: 'Drafting…', model: CVAI.modelName(choice.model) });
         saveNow(0);
         toast('Draft written. Check every [CONFIRM: ...] and verify each fact against the source.', 'success', 8000);
       } catch (err) {

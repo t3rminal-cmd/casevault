@@ -24,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.27.0';
+  const APP_VERSION = '1.28.0';
   const SCHEMA = 1;
   const DATA_DIR = 'CaseVault-Data';
   const STATUSES = ['Open', 'Pending', 'Closed', 'Archived'];
@@ -112,6 +112,7 @@ const Vault = (() => {
   }
 
   function close() {
+    retiredChecked = false;
     root = null;
     vault = null;
   }
@@ -369,7 +370,55 @@ const Vault = (() => {
       if (await FS.exists(parent, id, 'directory')) await FS.remove(parent, id, true);
       vault.cases = vault.cases.filter((c) => c.id !== id);
       await saveVault();
+      await scrubCase(id);
     });
+  }
+
+  /** v1.28: a deleted case leaves no trace elsewhere in the vault: its line in the older copies of
+   * vault.json (backups/) and the Ask AI chats about it go too. */
+  async function scrubCase(id) {
+    try {
+      const backups = await FS.getDir(root, 'backups');
+      if (backups) {
+        for (const e of await FS.list(backups)) {
+          if (e.kind !== 'file' || !/\.json$/i.test(e.name)) continue;
+          let v = null;
+          try { v = await FS.readJSON(backups, e.name); } catch { continue; }
+          if (!v || !Array.isArray(v.cases) || !v.cases.some((c) => c && c.id === id)) continue;
+          v.cases = v.cases.filter((c) => !c || c.id !== id);
+          await FS.writeJSON(backups, e.name, v);
+        }
+      }
+      const chats = await FS.getDir(root, 'chats');
+      if (chats) {
+        for (const e of await FS.list(chats)) {
+          if (e.kind !== 'file' || !/\.json$/i.test(e.name)) continue;
+          let ch = null;
+          try { ch = await FS.readJSON(chats, e.name); } catch { continue; }
+          if (ch && ch.caseId === id) await FS.remove(chats, e.name);
+        }
+      }
+    } catch (err) { if (FS.isDisconnectError(err)) throw err; console.warn('Could not tidy up after the deleted case', err); }
+  }
+
+  /** Emergency Purge (v1.28): delete everything in CaseVault-Data (cases, archive, drafts, files,
+   * backups, chats, logs, templates, library, API keys, vault.json). The CaseVault-Data folder
+   * itself is left, empty. progress(done, total, name). There is no undo. */
+  async function purgeAll(progress = () => {}) {
+    if (!root) throw new Error('No vault is open.');
+    const entries = await FS.list(root);
+    let done = 0;
+    const failed = [];
+    for (const e of entries) {
+      progress(done, entries.length, e.name);
+      try { await FS.remove(root, e.name, e.kind === 'directory'); } catch (err) { if (FS.isDisconnectError(err)) throw err; failed.push(e.name); }
+      done += 1;
+    }
+    progress(done, entries.length, '');
+    retiredChecked = false;
+    root = null;
+    vault = null;
+    return { removed: done - failed.length, failed };
   }
 
   /* ---------- archive: move a case folder between cases/ and archive/ ---------- */
@@ -974,8 +1023,23 @@ const Vault = (() => {
     return FS.getDir(root, 'templates', true);
   }
 
+  // v1.28: the retired generic templates leave the SSD, unless you changed one (it no longer
+  // carries the "Generic example" line).
+  let retiredChecked = false;
+  async function removeRetiredTemplates(dir) {
+    if (retiredChecked) return;
+    retiredChecked = true;
+    for (const file of CVDraft.RETIRED_TEMPLATES || []) {
+      try {
+        if (!(await FS.exists(dir, file))) continue;
+        if (/Generic example, not a legal form/.test(await FS.readText(dir, file))) await FS.remove(dir, file);
+      } catch { /* left as it is */ }
+    }
+  }
+
   async function listTemplates() {
     const dir = await templatesDir();
+    await removeRetiredTemplates(dir);
     const out = [];
     for (const e of await FS.list(dir)) {
       if (e.kind !== 'file' || !/\.md$/i.test(e.name)) continue;
@@ -1118,7 +1182,7 @@ const Vault = (() => {
     readCaseJSON, writeCaseJSON, appendLog, readLogs, readSecret, writeSecret,
     listChecks, newCheckName, readCheck, saveCheck, deleteCheck, readTextCache, writeTextCache,
     listDrafts, readDraft, newDraftSlug, saveDraft, deleteDraft,
-    listTemplates, readTemplate, saveTemplate, deleteTemplate, addStarterTemplates,
+    listTemplates, readTemplate, saveTemplate, deleteTemplate, addStarterTemplates, purgeAll,
     listLibrary, readLibraryFile, saveLibraryFile, deleteLibraryFile, moveLibraryFile, readLibraryMeta, writeLibraryMeta, readLibraryText, writeLibraryText,
   };
 })();

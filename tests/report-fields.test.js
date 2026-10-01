@@ -242,7 +242,8 @@ test('v1.26: LEO partners text, Supplemental Report type and template, mail sign
   assert.ok(D.STARTER_TEMPLATES['generic-supplemental-report.md'].includes('{{report.narcotics}}'));
   const M = require('../js/secure/mail.js');
   assert.deepStrictEqual(M.settingsOf({}).domains, ['chicagopolice.org', 'dea.gov', 'uspis.gov']);
-  assert.deepStrictEqual(M.settingsOf({ domains: ['agency.gov'], preloaded: true }).domains, ['agency.gov'], 'your own list wins once saved');
+  assert.deepStrictEqual(M.settingsOf({ domains: ['agency.gov'], preloaded: 2 }).domains, ['agency.gov'], 'your own list wins once saved');
+  assert.deepStrictEqual(M.settingsOf({ domains: ['agency.gov'], preloaded: true }).domains, ['chicagopolice.org', 'dea.gov', 'uspis.gov', 'agency.gov'], 'v1.28: a list saved in v1.27 gets chicagopolice.org once more');
   assert.deepStrictEqual(M.settingsOf({ domains: ['agency.gov'] }).domains, ['chicagopolice.org', 'dea.gov', 'uspis.gov', 'agency.gov'], 'an older list gets the preloaded domains once');
   assert.ok(M.checkRecipients([{ email: 'a.b@dea.gov' }], M.settingsOf({}).domains).ok);
   assert.strictEqual(M.closing({ signature: 'Det. Example\nNarcotics', footer: 'NOTICE' }), 'Det. Example\nNarcotics\n\n--\nNOTICE');
@@ -281,7 +282,10 @@ test('v1.27: State of Illinois victim, compact Local AI box', () => {
   assert.match(s, /VICTIM 1 - OFFICER NAME/);
   assert.doesNotMatch(s, /VICTIM 1 - RACE/);
   const M = require('../js/ai/memory.js');
-  assert.deepStrictEqual(M.compact({ drive: 'V:\\', vaultBytes: 3 * 1024 * 1024, diskTotal: 4 * 1024 ** 3, model: 'qwen2.5:7b', ramTotal: 16 * 1024 ** 3 }),
-    [['Drive', 'V'], ['Vault', '3 MB of 4.0 GB'], ['Model', 'qwen2.5:7b'], ['RAM', '16 GB']]);
-  assert.deepStrictEqual(M.compact({ vaultBytes: 2048 * 1024, model: '' }), [['Vault', '2 MB'], ['Model', 'none selected']]);
+  // v1.28: Local AI, RAM in use of total, RAM free, the drive's free space.
+  const G = 1024 ** 3;
+  assert.deepStrictEqual(M.compact({ ramTotal: 32 * G, ramFree: 24.4 * G, diskFree: 779 * G }), ['Local AI', '7.6 GB of 32 GB', '24 GB Free', 'Drive: 779 GB Free']);
+  assert.deepStrictEqual(M.compact({ deviceMemory: 8 }), ['Local AI', '8 GB or more RAM']);
+  const AI = require('../js/checker/ai.js');
+  assert.deepStrictEqual(['qwen3:8b', 'gemma3:12b', 'llama3.1:8b:latest', 'Qwen2.5', ''].map(AI.modelName), ['Qwen3:8b', 'Gemma3:12b', 'Llama3.1:8b', 'Qwen2.5', '']);
 });

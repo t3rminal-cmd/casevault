@@ -74,13 +74,10 @@ The header has three parts:
 - **Left:** the CaseVault logo and, under it, where your data is being saved (for example `W:\CaseVault-Data` in Firefox, or `CaseVault-Data` in Chrome and Edge, which don't tell CaseVault the drive letter). Click it for the Overview.
 - **Middle:** status icons. Point at one for the details.
   - **Shield or globe:** green shield means offline (nothing leaves the computer). A red globe means online AI is on, and CaseVault may send reviewed text to the internet. Click it for online research.
-  - **Robot:** the AI engine. Blue means it's running, and pointing at it shows the model, for example *AI: Quick · qwen2.5:7b*. Red means it isn't running. Click it for AI settings.
+  - **Robot:** the AI engine. Blue means it's running, and pointing at it shows the model, for example *AI: Quick · Qwen2.5:7b* (model names are shown with a capital first letter everywhere). Red means it isn't running. Click it for AI settings.
   - Moving bars show while the AI is working, and a **memory** icon turns amber or red when memory runs short.
   - **Drive:** green means everything is saved to the SSD, amber means saving, and red with words means something isn't saved (reconnect the SSD).
-- **Right:** two square buttons: **Hide** (the crossed-out eye, privacy screen) and the **menu** (⋮, three dots). Point at one for its name. **Ask AI** and **Notes** are the two square blue buttons at the bottom right of every screen. The menu holds (names on the left, icons in one column on the right):
-  - **Reference**;
-  - **Library**, which opens the Vault at the Library, where you add files the AI learns from;
-  - **Vault**;
+- **Right:** two square buttons: **Hide** (the crossed-out eye, privacy screen) and the **menu** (⋮, three dots). Point at one for its name. **Ask AI** and **Notes** are the two square blue buttons at the bottom right of every screen. The menu holds (names on the left, icons in one column on the right). **Reference**, **Library** and **Vault** are on the Overview's banner instead:
   - **Theme**, which switches between automatic, light and dark each time you click it (the menu stays open while you choose);
   - **Options** and **Contact Dev** (see below).
 
@@ -93,7 +90,7 @@ The header has three parts:
 - **Opening a file** (the eye button) shows it in a window that fills almost the whole screen, so wide Word tables, spreadsheets and PDFs aren't cut off.
 - **Ask AI** (bottom right, next to Notes) opens a floating chat with the AI on this computer that stays open while you work (see *Ask AI*).
 - The page is centred and uses the width of the screen, from a phone up to 1920×1080 and larger. Case actions are same-size buttons in one row.
-- The **Overview** shows your case counts, then, each under a line: **Upcoming deadlines**, **Recently updated**, and **Quick links** (see below).
+- The **Overview** shows your case counts, then, each under a line: **Operations** (a blue folder for each), **Upcoming deadlines**, **Recently updated**, and **Quick links** (see below).
 - On a narrow window the header buttons shrink to their icons.
 - **Hide the case list** is the button at the top of the list (or Ctrl+\\). The list shrinks to a thin strip with the same button to bring it back. On a phone-width window the list hides completely and the button moves to the header.
 - **Vault** opens the settings. The list on its left (This vault, Backups, Privacy screen, My Profile, Templates, Library, AI writing behavior, Quick links, Online features, Always hide, Department mail, Outbound log, Maintenance) jumps to each section, and follows along as you scroll. **Done** is at the top right.
@@ -102,27 +99,29 @@ The header has three parts:
 
 At the bottom of the Overview, in three tabs:
 
-- **Reference:** Location Codes, Common UCR and the Narcotic Calculator (CaseVault's own pages, see *Reference*).
-- **OSINT:** MaxMind IP (where an IP address is), Fingerprint (browser and device fingerprint), NumLookup (free reverse phone lookup), Blockchair and Mempool (crypto addresses and transactions), TinEye and Google Images (reverse image search).
-- **LEO:** Accurint, Kodex Portal and Chicago HIDTA, plus any you add.
+- **Reference:** Location Codes, Common UCR, **Charges** and the Narcotic Calculator (CaseVault's own pages, see *Reference*). **Charges** asks **Federal Statute** or **State Statute** and opens that set; the Charges page can switch between State, Federal and Both.
+- **OSINT:** MaxMind IP (where an IP address is), Fingerprint (browser and device fingerprint), NumLookup (free reverse phone lookup), Blockchair, Mempool and Chainalysis (crypto addresses and transactions), TinEye, Google and Google Images (search and reverse image search).
+- **LEO:** Accurint, Kodex Portal, Chicago HIDTA, **Snapchat LE Portal** (Snap's Law Enforcement Service Portal), **Meta LE Portal** (Meta's Law Enforcement Online Request System for Facebook, Instagram and WhatsApp) and Chicago Police Directives, plus any you add. Both portals need your agency account.
 
 OSINT and LEO links open the website **in a new browser tab**, outside CaseVault. CaseVault never contacts those sites itself and sends them nothing (not even which page you came from), so CaseVault stays offline: the **Offline** badge doesn't change when you click one. The website itself needs the PC's internet connection, like any site you open in the browser. Don't paste case details into outside websites unless your policy allows it.
 
 - **Show / hide** lets you hide the buttons you don't use (click the eye on each), and bring them back.
 - Quick links sit in a slim strip at the bottom of the Overview: small buttons in rows, so they take little room.
-- **Edit links** (or **Vault → Quick links**, which also has a **Save changes** button) changes a link's name or web address, and adds your own, for example your agency's portals. Chicago HIDTA has no address until you add your portal's. Changes save when you leave the box, in `vault.json` on the SSD.
+- **Vault → Quick links** (which also has a **Save changes** button) changes a link's name or web address, and adds your own, for example your agency's portals. Chicago HIDTA has no address until you add your portal's. Changes save when you leave the box, in `vault.json` on the SSD.
 
 ## The Overview
 
-With no case open, CaseVault shows the **Overview**: a welcome banner with the date and time, how many cases are open, whether a deadline is due soon (and the next one, one click away), and buttons for **New Case**, **Ask AI**, **Reference** and the **Vault**. Below it are the case counts, upcoming deadlines, recently updated cases and the quick links.
+With no case open, CaseVault shows the **Overview**: a welcome banner with the date and time, how many cases are open, whether a deadline is due soon (and the next one, one click away), and buttons for **New Case**, **Ask AI**, **Reference**, **Library** and the **Vault**. Below it are the case counts, your operations, upcoming deadlines, recently updated cases and the quick links.
+
+**Operations:** every Title or Operation Name is a blue folder with its name under it (a number on the folder shows how many case numbers it holds; a red bell, a deadline due). Click a folder to open it: each case number in it is a card with its status and one-click links to its **Reports**, **Field Notes**, **Files and Photos** and **Timeline** (click the case number for its Details). **Add Case Number** adds another one to the operation. Click the folder again to close it.
 
 ## Cases
 
-- **New case** asks for a **Title or Operation Name** (required). To add another case number to an operation you already have, pick the operation from the list (the ▾ button, or start typing): its file number, agency case number and client fill in, and the box under it lists the case numbers it already has. A new name starts a new operation. the **file number**, the **Original Case Number** (the first report number of the case: an operation with several case numbers keeps its first one here), the **agency case number** (your agency's own internal number), the client (**State**, **Federal** or **Other**), status, opened date, and tags. A client typed in before v1.14 is kept as its own choice in the list. One file number can hold several cases: the File number box offers the file numbers you already use. The case folder and file names use the case number.
+- **New Case** is on the Overview's banner (and the **+** on the folded case list). It asks for a **Title or Operation Name** (required). To add another case number to an operation you already have, pick the operation from the list (the ▾ button, or start typing): its file number, agency case number and client fill in, and the box under it lists the case numbers it already has. A new name starts a new operation. the **file number**, the **Original Case Number** (the first report number of the case: an operation with several case numbers keeps its first one here), the **agency case number** (your agency's own internal number), the client (**State**, **Federal** or **Other**), status, opened date, and tags. A client typed in before v1.14 is kept as its own choice in the list. One file number can hold several cases: the File number box offers the file numbers you already use. The case folder and file names use the case number.
 - The case list and the case's header show both, for example *File F-2026-01 · Case 00123*, and the search box finds either. Templates can use `{{case.fileNumber}}` and `{{case.number}}`.
 - **Operations in the case list:** cases that share an operation name are grouped under it: the operation's name with the number of cases and a folder icon, and under it each case by its case number (with file number, agency case number and client). Click the operation's name to fold the group; CaseVault remembers which are folded. On a case's **Details** tab, at the top, are the **Title or Operation Name**, **Status**, **Opened** and **Closed** dates, and a folder tile for each case number of the operation (the case number and its status under the folder; click one to open it). **Add Case Number** opens New case with the operation filled in. Renaming the title renames it for every case of the operation.
 - **LEO Partners** (on the Details tab): tick the agencies working the case with you: DEA, FBI, IRS, CBP, HSI, USPIS, Local PD, Sheriff Dept, Other. **Local PD** and **Sheriff Dept** ask which department, **Other** asks which agency (several: separate them with a semicolon); the pencil changes it. Templates can use `{{case.partners}}` (for example *DEA, USPIS, Local PD (Example Police Department)*), and Ask AI and Draft with AI get them with the case.
-- The **left list** shows every case, with its status and the red deadline bell together on the right,: open and pending first, most recently changed first, then closed ones. Each case shows its status in words (**Open**, **Pending**, **Closed** or **Archived**) and its title, with just the numbers under it: file number | case number | client, for example `100 | JH123456 | State`. A **red bell** at the right means the case has an open deadline on its Timeline (it gently rings when the deadline is overdue or due within a week). The selected case is shown in grey. Point at a case to see the deadline, and for a Pending case what it's waiting on. Use the search box (title, any of the numbers, client, status or tag) to find one.
+- The **left list** shows every case as a card: open and pending first, most recently changed first, then closed ones. Each case shows its status in words (**Open**, **Pending**, **Closed** or **Archived**) and its title, with just the numbers under it: file number | case number | client, for example `100 | JH123456 | State`. A **red bell** right after the title (or the operation's name, for an operation's case numbers) means the case has an open deadline on its Timeline (it gently rings when the deadline is overdue or due within a week). The selected case is shown in grey. Point at a case to see the deadline, and for a Pending case what it's waiting on. Use the search box (title, any of the numbers, client, status or tag) to find one.
 - **Make the list wider or narrower:** drag its right edge (or click the edge and use ← →). Double-click the edge to reset it. Each PC remembers its own width.
 - **Case Overview** (the bottom half of the Details tab, under a line): **Suspects**, **Contacts** and **Deconfliction**. They belong to the whole operation: every case number of the operation shows the same lists, and a change in one case is saved to the others. (Cases made before v1.27 each had their own lists; they are joined the first time you open one.)
 - **Details** tab: edit any field. A short note under **Status** says what the status means and, for a Pending case, what you're waiting on.
@@ -181,7 +180,7 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 ### Delete a case
 
-**Delete case…** permanently deletes the case from the SSD: notes, timeline, files, drafts and checks. There is no trash. To confirm, type the case number (or the title, if the case has no number). The same window offers **Archive instead**. Archived cases can be deleted too.
+**Delete case…** permanently deletes the case from the SSD: notes, timeline, files, drafts and checks. Its line in the older copies of `vault.json` (`backups\`) and the Ask AI chats about it are removed too. There is no trash. To confirm, type the case number (or the title, if the case has no number). The same window offers **Archive instead**. Archived cases can be deleted too.
 
 **Hide the case list** with the button at the top of the list (or `Ctrl + \`) to give the page more room. The list shrinks to a thin strip with **Show the case list** and **+** (new case); the same **Show** button also appears at the left of the header. On a phone-sized window the list hides completely. CaseVault remembers the choice in `vault.json`.
 
@@ -563,14 +562,14 @@ Model names change over time. If one stops working, click **List models** on the
 **Menu → Options** has two tabs:
 
 - **Display:** **Zoom** (70–160 %) makes everything bigger or smaller, and **Brightness** (50–130 %) darkens or lightens CaseVault, for example in a dark room. Use the slider or the − and + buttons; **Reset** goes back to 100 %. They're kept in the browser on this PC, like the theme, so each PC has its own.
-- **Dev Tools → Make it fictitious:** turns a real template, report or reference into a fictitious one you can keep as a template or give the AI to learn from.
-  1. Paste the text, or click **Open a file…** (Word, PDF, text). Only its text is used; the file isn't changed.
+- **Dev Tools → Document Anonymizer:** turns a real template, report or reference into a fictitious one you can keep as a template or give the AI to learn from.
+  1. Paste the text into **Original** (the big box), or click the **folder** button at its top right to open a Word, PDF or text file. Only its text is used; the file isn't changed.
   2. Optionally, under **Other names to replace**, type names the rules might not recognise, such as nicknames.
-  3. Click **Replace with fillers**. Names become John Doe, Jane Doe, Richard Roe and so on. The same person always gets the same filler, and it's written the same way, for example *DOE, Jane* or *JOHN DOE*. Phone numbers become (555) 555-01xx, addresses 100 Main Street, Anytown, and dates of birth, case numbers, emails, plates, VINs and ID numbers get fillers too. `{{placeholders}}` and `[CONFIRM: …]` stay as they are. The list under the buttons shows what was replaced.
-  4. **Also check with local AI** has the AI on this computer look for anything the rules missed. Then the rules run over its version once more.
-  5. Read it through and edit the result if needed, then **Copy** it, **Save as template** (Vault → Templates), or **Add to Library** in the folder you pick.
+  3. Click **Anonymize**. First the rules swap the details: names become John Doe, Jane Doe, Richard Roe and so on (the same person always gets the same filler, written the same way, for example *DOE, Jane* or *JOHN DOE*); phone numbers become (555) 555-01xx, addresses 100 Main Street, Anytown; dates of birth, case numbers, emails, plates, VINs and ID numbers get fillers too. `{{placeholders}}` and `[CONFIRM: …]` stay as they are. Then, when the local AI is running, it reads the result for anything the rules missed, and the rules run over its version once more. **Stop** keeps the rules' version. The line under the buttons lists what was replaced.
+  4. The result appears in **Fictitious**, under the original. Read it through and edit it if needed, type a **Name**, then **Copy** it, **Save Template** (Vault → Templates) or **Add to Library** (Report Examples). **Clear** empties both boxes.
 
-  Everything happens on this computer. Detection is a safety net, not a guarantee, so always read the result before you save it. **Ask AI** can do a one-off version of this too ("rewrite this with fictitious names"), but Dev Tools is quicker and saves the result directly.
+  Everything happens on this computer: the rules run in the browser, and the AI is Ollama on `127.0.0.1`. Nothing goes online. Detection is a safety net, not a guarantee, so always read the result before you save it.
+- **Dev Tools → Emergency Purge:** deletes everything CaseVault keeps on the SSD at once: every case and archived case (files, photos, drafts, notes, timelines), the backups of `vault.json`, Ask AI chats, logs, templates, the Library, saved API keys and `vault.json`. CaseVault's preferences in this browser and the remembered vault folder are cleared too. Type **PURGE** to confirm. There is no undo. See *What deleting leaves behind* below.
 
 ## Contact Dev
 
@@ -601,24 +600,20 @@ Model names change over time. If one stops working, click **List models** on the
 
 ## Memory indicator
 
-The memory icon in the header is a small **green wave** while memory is fine. It shows memory use, for example `RAM 44% · App 180 MB · AI 5.1 GB`. Hover over it (or tab to it) for details:
-
-- **App**: CaseVault's own memory in this tab (Chrome and Edge report it).
-- **AI**: the local model Ollama has loaded, how much of it is on the graphics card and how much in RAM. The Quick profile on the Beelink should show 100% GPU; Thorough is split.
-- **RAM** and **CASEVAULT drive** free space: shown when CaseVault runs through Start-CaseVault.bat (the browser can't read them on its own).
-
-Pointing at it shows a short summary:
+The memory icon in the header is a small **green wave** while memory is fine; it turns amber, then red, when memory or disk space is running low. Point at it (or Tab to it) for a short black box:
 
 ```
-Drive: V
-Vault: 3 MB of 4 GB
-Model: Qwen…
-RAM: 16 GB
+Local AI
+7.6 GB of 32 GB
+24 GB Free
+Drive: 779 GB Free
 ```
 
-**Model** is the model picked in Ask AI, and changes as soon as you pick another one there.
+The second line is this PC's RAM in use of its total, the third how much is free, and the last the free space on the CASEVAULT drive. The PC's RAM and the drive are read through Start-CaseVault.bat (the helper); without it, the browser only knows roughly how much RAM there is (*8 GB or more RAM*).
 
-It turns amber, then red, when memory or disk space is running low. **Free AI memory** unloads the local model now instead of after 10 idle minutes. It loads again the next time it's needed.
+While the local AI has a model in memory, **click the icon** to unload it now instead of after 10 idle minutes. It loads again the next time it's needed.
+
+**Why "no model loaded" with the AI set to Auto?** *Auto* is the setting that picks which model to use (Quick, Light or Thorough for this PC). Ollama only loads that model into memory when the AI is asked something (a check, a draft, Ask AI), and unloads it again after 10 minutes without use, to give the memory back. So between uses there is, correctly, no model loaded. The robot icon shows which model Auto will use.
 
 ## Drafts
 
@@ -733,7 +728,9 @@ A template is your document format (an affidavit, an arrest report, a subpoena�
 1. **Import your agency's Word form** (easiest): **Import Word, .md or .txt…** and pick the `.docx`. CaseVault turns it into text: headings, bold/italic, lists and tables are kept; fonts, logos and exact spacing aren't (the draft exports to Word with CaseVault's plain layout). Check the text in the editor, put placeholders where case details go, and **Save template**.
    *Tip:* type the placeholders in Word before you import, for example `{{case.number}}` or `«case.number»`: both come through as `{{case.number}}`.
 2. **New template**: paste or type the text and add placeholders.
-3. **Add starter templates**: Affidavit, Subpoena, Case Summary, Arrest Report and Supplemental Report. They're **examples, not legal forms**; use them as a starting point and replace them with your agency's approved formats.
+3. **Add starter templates**: the Supplemental Report. It's an **example, not a legal form**; use it as a starting point and replace it with your agency's approved format. (The generic affidavit, subpoena, arrest report and case summary were removed in v1.28; a copy still marked *Generic example* is removed from the SSD, one you changed is kept. **Start an arrest report draft** uses your own arrest template, or a built-in outline when you have none.)
+
+**Templates are Markdown (`.md`) files** on the SSD, but you don't need to work in Markdown: import a Word `.docx` to make one, and every draft made from a template exports as **Word (.docx)** (Export → *Save .docx to case files* or *to this computer*, or *Copy for Word*), and a template itself downloads as `.docx` from Vault → Templates.
 
 **Using a template:** in **Vault → Templates** each one has **Use** (makes a report from it in the case you have open and opens it), **Download** (a Word .docx of the template), **Edit** and **Delete**. On the Reports tab, pick **Template** under *Start from*.
 
@@ -775,11 +772,18 @@ A placeholder with no value (for example a case without a client) becomes `[CONF
 |---|---|
 | **SSD, `V:\CaseVault-Data\`** | All case data: details, notes, timelines, files (in their document folders), drafts, consistency checks and the text read from documents, mail logs, templates, the **Library** for the AI (`library\`), settings (including the AI writing behaviors and Quick links, (including the privacy-screen PIN hash, **My details**, mail settings and the PII watch list), backups, the outbound log (`logs\`) and, only if you ask, the online AI key (`secrets\`). Active cases are in `cases\<case>\`, archived cases in `archive\<case>\` (same contents). |
 | **SSD, `W:\`** | The launcher, the helper, the AI engine and its models. No case data. |
-| **The browser on this PC** | The CaseVault app files (so it opens offline), in Chrome/Edge a *pointer* to the vault folder so it can offer **Reconnect**, and two display preferences (the theme and the AI profile). No case data. |
+| **The browser on this PC** | The CaseVault app files (so it opens offline), in Chrome/Edge a *pointer* to the vault folder so it can offer **Reconnect**, and display preferences (theme, zoom, brightness, time format, the AI profile). No case data. (Which operations are folded in the case list is kept in `vault.json` on the SSD, since v1.28.) |
 | **GitHub** | Only the app's code. Case data can never be committed; the repository blocks it. |
 | **The internet** | Nothing, unless you go online. Normally CaseVault only talks to the AI engine (and, in Firefox, the helper) on this same computer, at `127.0.0.1`. When you go online for research or drafting, reviewed and redacted text goes to `api.anthropic.com` (API), or you paste it into claude.ai yourself. Department mail is sent by Outlook, not by CaseVault. |
 
 To make a PC forget the vault folder, open **Vault → Disconnect**.
+
+### What deleting leaves behind
+
+- **Delete a file, draft or case:** it's removed from `CaseVault-Data`; a deleted case also leaves the older `vault.json` copies in `backups\` and its Ask AI chats. Nothing is kept in a trash or a log of what was in it. The **outbound log** (`logs\`) keeps a line for each online AI request (when, which service, a fingerprint of the text), not the text itself.
+- **On the SSD itself:** like any file deleted in Windows, the space is marked free, not overwritten, and an SSD decides on its own when to erase it. No app can guarantee it's gone. What protects it is **BitLocker** on V:: everything left in that free space is encrypted, and unreadable without your BitLocker password. To retire the SSD completely, use **Emergency Purge**, then format the drive with BitLocker turned on (or have IT wipe it).
+- **The AI engine** (`W:\logs\ollama.log`) logs that a request was made and how long it took, not what was asked.
+- **The PC:** CaseVault keeps no case data there (see the table above). Windows itself may: a file you opened in Word or Acrobat can leave a recent-files entry or a temporary copy, and a file you downloaded or exported sits in the PC's Downloads folder until you delete it.
 
 ## Updating CaseVault
 

@@ -353,7 +353,11 @@
     return { flags, stats, complete: true };
   }
 
-  const api = { PROFILES, KEEP_ALIVE, DEFAULT_CTX, numCtxFor, tokensOf, fitPassages, userPrompt, detect, choose, review, statementsOf, passagesOf, parseAnswer, sizeB };
+  /** A model's name as shown on screen: first letter capital, no ":latest" (v1.28). The real name
+   * (qwen3:8b) is still what is sent to Ollama. */
+  const modelName = (m) => { const s = String(m || '').replace(/:latest$/, ''); return s ? s[0].toUpperCase() + s.slice(1) : s; };
+
+  const api = { modelName, PROFILES, KEEP_ALIVE, DEFAULT_CTX, numCtxFor, tokensOf, fitPassages, userPrompt, detect, choose, review, statementsOf, passagesOf, parseAnswer, sizeB };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVAI = api;
 })(this);

@@ -163,7 +163,7 @@
     const choice = Engine().choice();
     const fallback = choice && choice.model;
     if (!mem.model || !list.includes(mem.model)) mem.model = (Vault.data.settings.chatModel && list.includes(Vault.data.settings.chatModel)) ? Vault.data.settings.chatModel : fallback || list[0] || '';
-    modelSel.replaceChildren(...(list.length ? list.map((m) => h('option', { value: m, selected: m === mem.model }, m)) : [h('option', { value: '' }, 'No AI engine found')]));
+    modelSel.replaceChildren(...(list.length ? list.map((m) => h('option', { value: m, selected: m === mem.model }, CVAI.modelName(m))) : [h('option', { value: '' }, 'No AI engine found')]));
     const cases = activeCases();
     if (mem.caseId && !cases.some((c) => c.id === mem.caseId)) mem.caseId = '';
     caseSel.replaceChildren(h('option', { value: '' }, 'General Questions'), ...cases.map((c) => h('option', { value: c.id, selected: c.id === mem.caseId }, caseLabel(c))));
@@ -248,7 +248,7 @@
       await CVActivity.exclusive('chat', () => CVCopilot.streamChat({
         fetchImpl: Engine().fetchImpl(), base: det.base, model: modelSel.value, messages, signal: my.signal, numCtx,
         onText: (piece) => { answer.content += piece; if (!pending) { pending = true; requestAnimationFrame(paint); } },
-      }), { label: 'Answering…', model: modelSel.value });
+      }), { label: 'Answering…', model: CVAI.modelName(modelSel.value) });
       paint();
     } catch (err) {
       if (my.signal.aborted) { if (!answer.content) answer.content = '_Stopped._'; } else answer.error = FS.isDisconnectError(err) ? 'The SSD was disconnected.' : `Could not answer: ${err.message}`;
