@@ -3,7 +3,7 @@
  * Options:
  *   Display   zoom and brightness for this PC (kept in the browser like the theme: a display
  *             preference, never case data).
- *   Dev Tools "Make it fictitious": takes a real template, report or reference and swaps the
+ *   Dev Tools "Document Anonymizer" (was "Make it fictitious"): takes a real template, report or reference and swaps the
  *             personal details (names, phone numbers, addresses, dates of birth, case numbers…)
  *             for made-up fillers such as John Doe and 555-0100, so it can be kept as a template or
  *             given to the AI in the Library. Rules first, then optionally the local AI for anything
@@ -207,12 +207,15 @@
 
   function devPanel() {
     const { h, toast } = ui;
-    const src = h('textarea', { class: 'dev-src', rows: 9, placeholder: 'Paste a template, report or reference here, or open a file.', 'aria-label': 'Original text' });
-    const outBox = h('textarea', { class: 'dev-out', rows: 9, placeholder: 'The fictitious version appears here. You can edit it.', 'aria-label': 'Fictitious text' });
+    // v1.28: Document Anonymizer. The original on top (bigger), the anonymized text under it; one
+    // Anonymize button runs the rules and then, when it's running, the local AI over the result
+    // (then the rules once more). Everything runs on this PC: the AI is Ollama on 127.0.0.1.
+    const src = h('textarea', { class: 'dev-src', rows: 12, placeholder: 'Paste a template, report or reference here, or open a file with the folder button.', 'aria-label': 'Original text' });
+    const outBox = h('textarea', { class: 'dev-out', rows: 10, placeholder: 'The anonymized version appears here. You can edit it.', 'aria-label': 'Fictitious text' });
     const extra = h('input', { type: 'text', placeholder: 'Other names to replace, separated by commas', 'aria-label': 'Other names to replace', title: 'Names the rules might not recognise, such as nicknames or one-word names.' });
     const report = h('div', { class: 'dev-report muted small', 'aria-live': 'polite' });
     const file = h('input', { type: 'file', hidden: true, accept: '.txt,.md,.docx,.pdf' });
-    const aiBtn = h('button', { class: 'btn', type: 'button', icon: 'robot', title: 'Let the AI on this computer look for anything the rules missed. Nothing leaves this PC.' }, 'Also check with local AI');
+    const runBtn = h('button', { class: 'btn primary dev-btn', type: 'button', title: 'Swaps names, phone numbers, addresses, dates of birth and case numbers for made-up ones, then lets the local AI look for anything missed. Nothing leaves this PC.' }, 'Anonymize');
     let ctrl = null;
 
     file.addEventListener('change', async () => {
@@ -236,85 +239,127 @@
       for (const c of (Vault.data && Vault.data.cases) || []) k.push(c.client && c.client.length > 8 ? c.client : null);
       return k.filter(Boolean);
     };
-    const runRules = () => {
-      if (!src.value.trim()) { toast('Paste some text or open a file first.', 'error'); return null; }
+    const swapsText = (r) => (r.map.length
+      ? h('span', {}, `${r.replaced} detail${r.replaced === 1 ? '' : 's'} replaced: `, r.map.slice(0, 40).map((m, i) => h('span', { class: 'dev-swap' }, i ? ', ' : '', `${m.label.toLowerCase()} → ${m.to}`)), r.map.length > 40 ? ' …' : '')
+      : h('span', {}, 'The rules found nothing personal.'));
+
+    const idle = () => { ctrl = null; runBtn.textContent = 'Anonymize'; runBtn.classList.add('primary'); };
+    runBtn.addEventListener('click', async () => {
+      if (ctrl) { ctrl.abort(); return; }
+      if (!src.value.trim()) { toast('Paste some text or open a file first.', 'error'); return; }
+      // 1. The rules: instant.
       const r = fictitious(src.value, { known: known() });
       outBox.value = r.text;
-      report.replaceChildren(r.map.length
-        ? h('span', {}, `${r.replaced} detail${r.replaced === 1 ? '' : 's'} replaced: `, r.map.slice(0, 40).map((m, i) => h('span', { class: 'dev-swap' }, i ? ', ' : '', `${m.label.toLowerCase()} → ${m.to}`)), r.map.length > 40 ? ' …' : '')
-        : 'The rules found nothing personal. Try "Also check with local AI", and read it through yourself.');
-      return r;
-    };
-    aiBtn.addEventListener('click', async () => {
-      if (ctrl) { ctrl.abort(); return; }
-      const base = outBox.value.trim() || (runRules() || {}).text;
-      if (!base) return;
+      // 2. The local AI over the rules' result, when it's running.
       const Engine = root.CVChecks && root.CVChecks.Engine;
-      await Engine.refresh().catch(() => {});
-      const det = Engine.detected;
-      const choice = Engine.choice();
-      if (!det || !choice || !choice.model) { toast('No AI engine is running. Start Start-CaseVault.bat on the CV-AI drive, or use the rules only.', 'error', 8000); return; }
+      if (Engine) await Engine.refresh().catch(() => {});
+      const det = Engine && Engine.detected;
+      const choice = Engine && Engine.choice();
+      if (!det || !choice || !choice.model || !root.CVCopilot) {
+        report.replaceChildren(swapsText(r), ' The local AI isn\'t running, so only the rules were used. Read it through yourself.');
+        return;
+      }
       ctrl = new AbortController();
       const my = ctrl;
-      aiBtn.replaceChildren(ui.icon('x-circle'), 'Stop');
-      report.textContent = 'The local AI is reading it…';
+      runBtn.textContent = 'Stop';
+      runBtn.classList.remove('primary');
+      report.replaceChildren(swapsText(r), ` Now the local AI (${CVAI.modelName(choice.model)}) is reading it…`);
       let text = '';
       try {
         const numCtx = CVCopilot.numCtxForModel(det, choice.model);
         await CVActivity.exclusive('draft', () => CVCopilot.streamChat({
           fetchImpl: Engine.fetchImpl(), base: det.base, model: choice.model, signal: my.signal, numCtx,
-          messages: [{ role: 'system', content: AI_PROMPT }, { role: 'user', content: base }],
+          messages: [{ role: 'system', content: AI_PROMPT }, { role: 'user', content: r.text }],
           onText: (piece) => { text += piece; outBox.value = text; },
-        }), { label: 'Making it fictitious…', model: choice.model });
-        // Rules once more over the AI's version, in case it put a real detail back.
+        }), { label: 'Anonymizing…', model: CVAI.modelName(choice.model) });
+        // 3. The rules once more over the AI's version, in case it put a real detail back.
         const again = fictitious(text, { known: known() });
         outBox.value = again.text;
-        report.textContent = `Checked with ${choice.model}. Read it through before you use it: neither the rules nor the AI are perfect.`;
+        report.replaceChildren(swapsText(r), ` Checked with ${CVAI.modelName(choice.model)}. Read it through before you use it: neither the rules nor the AI are perfect.`);
       } catch (err) {
         if (!my.signal.aborted) toast(`The AI could not finish: ${err.message}`, 'error');
-        else report.textContent = 'Stopped.';
-      } finally {
-        ctrl = null;
-        aiBtn.replaceChildren(ui.icon('robot'), 'Also check with local AI');
-      }
+        outBox.value = r.text;
+        report.replaceChildren(swapsText(r), my.signal.aborted ? ' Stopped: the rules\' version is shown.' : ' The AI could not finish: the rules\' version is shown.');
+      } finally { idle(); }
     });
 
-    const name = h('input', { type: 'text', maxlength: 80, placeholder: 'Name, e.g. DEA 6 sample', 'aria-label': 'Name to save it under' });
-    const libCat = h('select', { 'aria-label': 'Library folder' }, (root.CVLibrary ? root.CVLibrary.CATEGORIES : []).map((c) => h('option', { value: c.folder }, c.label)));
-    const text = () => { const t = outBox.value.trim(); if (!t) toast('Make it fictitious first.', 'error'); return t; };
-    const fileName = (ext) => `${(name.value.trim() || 'Fictitious document').replace(/\.(md|txt)$/i, '')}.${ext}`;
+    const clear = () => {
+      if (ctrl) ctrl.abort();
+      src.value = ''; outBox.value = ''; extra.value = ''; name.value = ''; report.textContent = '';
+      src.focus();
+    };
+    const name = h('input', { type: 'text', class: 'dev-name', maxlength: 80, placeholder: 'Name, e.g. DEA 6 sample', 'aria-label': 'Name to save it under' });
+    const text = () => { const t = outBox.value.trim(); if (!t) toast('Anonymize it first.', 'error'); return t; };
+    const fileName = (ext) => `${(name.value.trim() || 'Anonymized document').replace(/\.(md|txt)$/i, '')}.${ext}`;
+    const libFolder = (root.CVLibrary && root.CVLibrary.CATEGORIES[0] && root.CVLibrary.CATEGORIES[0].folder) || 'Report examples';
 
     return h('section', { class: 'opt-panel dev-panel' },
-      h('h3', { icon: 'eraser', title: 'Turns a real document into a fictitious one you can keep as a template or give the AI to learn from. Runs on this computer only.' }, 'Make it fictitious'),
-      h('div', { class: 'dev-cols' },
-        h('div', { class: 'dev-col' },
-          h('div', { class: 'dev-col-head' }, h('strong', {}, 'Original'), h('div', { class: 'spacer' }),
-            h('button', { class: 'btn small', type: 'button', icon: 'folder2-open', onclick: () => file.click() }, 'Open a file…')),
-          src, extra),
-        h('div', { class: 'dev-col' },
-          h('div', { class: 'dev-col-head' }, h('strong', {}, 'Fictitious')), outBox)),
+      h('h3', { title: 'Turns a real document into a fictitious one you can keep as a template or give the AI to learn from. Runs on this computer only: nothing goes online.' }, 'Document Anonymizer'),
+      h('div', { class: 'dev-col' },
+        h('div', { class: 'dev-col-head' }, h('strong', {}, 'Original'), h('div', { class: 'spacer' }),
+          h('button', { class: 'icon-btn dev-open', type: 'button', title: 'Open a file (.docx, .pdf, .txt, .md)', onclick: () => file.click() }, ui.icon('folder2-open'), h('span', { class: 'sr-only' }, 'Open a file'))),
+        src, extra),
+      h('div', { class: 'dev-col' },
+        h('div', { class: 'dev-col-head' }, h('strong', {}, 'Fictitious')), outBox),
       file,
-      h('div', { class: 'row wrap dev-actions' },
-        h('button', { class: 'btn primary', type: 'button', icon: 'magic', title: 'Swap names, phone numbers, addresses, dates of birth, case numbers and more for made-up ones.', onclick: runRules }, 'Replace with fillers'),
-        aiBtn),
+      h('div', { class: 'dev-actions' },
+        runBtn,
+        h('button', { class: 'btn dev-btn', type: 'button', title: 'Empty both boxes', onclick: clear }, 'Clear')),
       report,
-      h('div', { class: 'row wrap dev-save' },
+      h('div', { class: 'dev-save' },
         name,
-        h('button', { class: 'btn', type: 'button', icon: 'copy', onclick: async () => { const t = text(); if (!t) return; try { await navigator.clipboard.writeText(t); toast('Copied.', 'success', 1500); } catch { toast('Could not copy.', 'error'); } } }, 'Copy'),
-        h('button', { class: 'btn', type: 'button', icon: 'file-earmark-ruled', title: 'Save it to Vault → Templates on the SSD.', onclick: async () => {
+        h('button', { class: 'btn dev-btn', type: 'button', onclick: async () => { const t = text(); if (!t) return; try { await navigator.clipboard.writeText(t); toast('Copied.', 'success', 1500); } catch { toast('Could not copy.', 'error'); } } }, 'Copy'),
+        h('button', { class: 'btn dev-btn', type: 'button', title: 'Save it to Vault → Templates on the SSD.', onclick: async () => {
           const t = text(); if (!t) return;
           const file = fileName('md');
-          try { await ui.Save.track(`template:${file}`, () => Vault.saveTemplate(file, t)); toast(`Saved as the template "${file}".`, 'success'); } catch { /* reported by Save */ }
-        } }, 'Save as template'),
-        libCat,
-        h('button', { class: 'btn', type: 'button', icon: 'bookshelf', title: 'Add it to the Library so the AI can learn from it.', onclick: async () => {
+          try { await ui.Save.track(`template:${file}`, () => Vault.saveTemplate(file, t)); toast(`Saved as the template "${file.replace(/\.md$/i, '')}".`, 'success'); } catch { /* reported by Save */ }
+        } }, 'Save Template'),
+        h('button', { class: 'btn dev-btn', type: 'button', title: 'Add it to the Library (Report Examples) so the AI can learn from it.', onclick: async () => {
           const t = text(); if (!t) return;
           try {
-            const path = await ui.Save.track('library', () => Vault.saveLibraryFile(libCat.value, fileName('md'), new Blob([t], { type: 'text/markdown' })));
-            toast(`Added to the Library: ${path}`, 'success');
+            const path = await ui.Save.track('library', () => Vault.saveLibraryFile(libFolder, fileName('md'), new Blob([t], { type: 'text/markdown' })));
+            toast(`Added to the Library: ${path.replace(/\.md$/i, '')}`, 'success');
           } catch { /* reported by Save */ }
         } }, 'Add to Library')),
-      h('p', { class: 'muted small explain' }, 'Detection is a safety net, not a guarantee. Read the result before you save it; anything you add to the Library is read by the AI.'));
+      h('p', { class: 'muted small explain' }, 'Detection is a safety net, not a guarantee. Read the result before you save it; anything you add to the Library is read by the AI.'),
+      purgeSection());
+  }
+
+  /* ---------- Dev Tools: Emergency Purge (v1.28) ---------- */
+
+  function purgeSection() {
+    const { h, openDialog, toast } = ui;
+    const go = async () => {
+      if (!Vault.data) { toast('Open the vault first.', 'error'); return; }
+      const ok = await openDialog((close) => {
+        const word = h('input', { type: 'text', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Type PURGE to confirm', placeholder: 'PURGE' });
+        const btn = h('button', { class: 'btn danger', type: 'submit', disabled: true }, 'Purge Everything');
+        word.addEventListener('input', () => { btn.disabled = word.value.trim() !== 'PURGE'; });
+        return h('form', { class: 'form-grid purge-form', onsubmit: (e) => { e.preventDefault(); if (word.value.trim() === 'PURGE') close(true); } },
+          h('h2', { class: 'span-2' }, 'Emergency Purge'),
+          h('p', { class: 'span-2' }, 'Deletes everything CaseVault keeps on the SSD: every case and archived case with its files, drafts, notes, photos and timeline; the backups of vault.json; Ask AI chats; logs; templates; the Library; saved API keys; and vault.json. CaseVault\'s own settings in this browser are cleared too.'),
+          h('p', { class: 'span-2 danger-text' }, 'There is no undo and no trash. Make sure you have what you need elsewhere.'),
+          h('label', { class: 'field span-2' }, h('span', {}, 'Type PURGE to confirm'), word),
+          h('div', { class: 'dialog-actions span-2' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), btn));
+      });
+      if (!ok) return;
+      try {
+        if (root.CaseVaultUI && root.CaseVaultUI.Save) await root.CaseVaultUI.Save.flushAll().catch(() => {});
+        const r = await Vault.purgeAll();
+        // This browser: CaseVault's preferences and the remembered SSD folder.
+        try { root.localStorage.clear(); } catch { /* nothing kept */ }
+        try { root.sessionStorage.clear(); } catch { /* nothing kept */ }
+        try { if (typeof HandleStore !== 'undefined') await HandleStore.clear(); } catch { /* nothing kept */ }
+        alert(r.failed.length
+          ? `Purged, except: ${r.failed.join(', ')}. Delete those in File Explorer (CaseVault-Data on the SSD).`
+          : 'Purged. CaseVault-Data on the SSD is now empty. CaseVault will start again.');
+        // Start again at the folder screen (a hash change would draw the empty vault first).
+        location.replace(location.pathname + location.search);
+      } catch (err) { toast(`The purge stopped: ${err.message || err}. Run it again, or delete CaseVault-Data in File Explorer.`, 'error', 12000); }
+    };
+    return h('div', { class: 'purge-box' },
+      h('div', {}, h('strong', {}, 'Emergency Purge'), h('p', { class: 'muted small' }, 'Deletes all case data CaseVault keeps on the SSD, at once.')),
+      h('button', { class: 'btn danger dev-btn', type: 'button', onclick: go }, 'Emergency Purge'));
   }
 
   /* ---------- Contact Dev ---------- */

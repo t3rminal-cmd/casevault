@@ -217,64 +217,12 @@
   const GENERIC_NOTE = '> **Generic example, not a legal form.** Replace this template with your agency\'s approved format before use. Delete this line in your own copy.';
 
   // Shipped with the app; copied into CaseVault-Data/templates/ when the user asks for them.
-  const STARTER_TEMPLATES = {
-    'generic-affidavit.md': `# Affidavit
-
-${GENERIC_NOTE}
-
-**{{confirm: Court name}}**
-**{{confirm: State}}, County of {{confirm: County}}**
-
-Case No. {{case.number}}
-
-## AFFIDAVIT IN SUPPORT OF {{confirm: type of application, e.g. SEARCH WARRANT}}
-
-I, {{affiant.name}}, {{affiant.title}}, being first duly sworn, depose and state as follows:
-
-1. I am employed by {{affiant.agency}} and have been so employed for {{confirm: years}} years. My duties include {{confirm: duties}}.
-2. On {{confirm: date}}, at approximately {{confirm: time}}, ...
-3. ...
-
-## Probable cause
-
-...
-
-Based on the facts above, I respectfully request that the Court {{confirm: relief requested}}.
-
-______________________________
-{{affiant.name}}, {{affiant.title}}, {{confirm: badge number}}
-{{affiant.agency}}
-{{affiant.address}}
-{{affiant.phone}} · {{affiant.email}}
-
-Sworn to and subscribed before me on {{confirm: date}}.
-
-______________________________
-{{confirm: judge or notary name and title}}
-`,
-    'generic-subpoena.md': `# Subpoena
-
-${GENERIC_NOTE}
-
-**{{confirm: Court name}}**
-
-{{case.title}}
-Case No. {{case.number}}
-
-## SUBPOENA {{confirm: TO APPEAR / DUCES TECUM (to produce records)}}
-
-**To:** {{confirm: name and address of the person or records custodian}}
-
-YOU ARE COMMANDED to {{confirm: appear and testify / produce the following records}}:
-
-- {{confirm: description of records or testimony}}
-
-**Date and time:** {{confirm: date and time}}
-**Place:** {{confirm: address}}
-
-Issued on {{today}} by {{confirm: issuing attorney or clerk, with contact details}}.
-`,
-    'generic-arrest-report.md': `# Arrest Report
+  // v1.28: only the Supplemental Report is built in. The generic affidavit, subpoena, arrest report
+  // and case summary were taken out; an unchanged copy of one on the SSD is removed (Vault).
+  const RETIRED_TEMPLATES = ['generic-affidavit.md', 'generic-subpoena.md', 'generic-arrest-report.md', 'generic-case-summary.md'];
+  // Start an arrest report draft (Arrest details tab) uses your own arrest template; without one,
+  // this built-in outline (v1.28: no longer listed under Templates).
+  const ARREST_OUTLINE = `# Arrest Report
 
 ${GENERIC_NOTE}
 
@@ -314,7 +262,8 @@ ${GENERIC_NOTE}
 
 ______________________________
 {{affiant.name}}, {{affiant.title}}, {{confirm: badge number}}
-`,
+`;
+  const STARTER_TEMPLATES = {
     'generic-supplemental-report.md': `# Supplemental Report
 
 ${GENERIC_NOTE}
@@ -362,37 +311,6 @@ ______________________________
 {{affiant.name}}, {{affiant.title}}, {{confirm: star number}}
 Prepared {{today}}
 `,
-    'generic-case-summary.md': `# Case Summary
-
-${GENERIC_NOTE}
-
-**Case:** {{case.title}}
-**Number:** {{case.number}}
-**Client:** {{case.client}}
-**Status:** {{case.status}}
-**Opened:** {{case.opened}}
-**Prepared:** {{today}}
-
-## Overview
-
-...
-
-## Parties
-
-- ...
-
-## Key dates
-
-- ...
-
-## Evidence and documents
-
-- ...
-
-## Open questions
-
-- ...
-`,
   };
 
   /* ---------------- plain text ---------------- */
@@ -419,7 +337,7 @@ ${GENERIC_NOTE}
   }
 
   const api = {
-    DOC_TYPES, STARTER_TEMPLATES, PARTNER_AGENCIES, partnersText, parseDraft, serializeDraft, slugify, extractPlaceholders,
+    DOC_TYPES, STARTER_TEMPLATES, RETIRED_TEMPLATES, ARREST_OUTLINE, PARTNER_AGENCIES, partnersText, parseDraft, serializeDraft, slugify, extractPlaceholders,
     AFFIANT_FIELDS, SUSPECT_ROLES, ageOn, placeholderGroups, templateContext, fillTemplate, templateTitle, stripMarkdown,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

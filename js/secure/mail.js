@@ -147,6 +147,7 @@
 
   // Filled in until you set your own (v1.26): Chicago Police, DEA and the Postal Inspection Service.
   const PRELOADED_DOMAINS = ['chicagopolice.org', 'dea.gov', 'uspis.gov'];
+  const PRELOAD_ROUND = 2; // saved as settings.mail.preloaded
   const DEFAULTS = {
     domains: PRELOADED_DOMAINS,
     signature: '',          // put above the footer of every new message (v1.26)
@@ -161,9 +162,9 @@
   function settingsOf(saved) {
     const st = { ...DEFAULTS, ...(saved || {}) };
     if (!Array.isArray(st.domains) || !st.domains.length) st.domains = [...PRELOADED_DOMAINS];
-    // v1.27: a list saved before the preloaded domains existed gets them added once (after that,
-    // removing one from the list sticks).
-    else if (!st.preloaded) st.domains = [...new Set([...PRELOADED_DOMAINS, ...st.domains])];
+    // A list saved before the preloaded domains existed gets them added once (v1.27), and once more
+    // in v1.28 for chicagopolice.org. After that, removing one from the list sticks.
+    else if ((Number(st.preloaded) || 0) < PRELOAD_ROUND) st.domains = [...new Set([...PRELOADED_DOMAINS, ...st.domains])];
     return st;
   }
   /** The end of a new message: the signature, then the footer after "--". */
@@ -177,7 +178,7 @@
     return [a.name, a.title, a.agency, a.phone && `Phone: ${a.phone}`, a.email].map((x) => String(x || '').trim()).filter(Boolean).join('\n');
   }
 
-  const api = { EMAIL_RE, DEFAULTS, PRELOADED_DOMAINS, settingsOf, closing, signatureFrom, parseAddresses, parseDomains, domainAllowed, checkRecipients, otherCaseFiles, buildEml, mailtoUrl, encodeHeader, rfc2822Date };
+  const api = { EMAIL_RE, DEFAULTS, PRELOADED_DOMAINS, PRELOAD_ROUND, settingsOf, closing, signatureFrom, parseAddresses, parseDomains, domainAllowed, checkRecipients, otherCaseFiles, buildEml, mailtoUrl, encodeHeader, rfc2822Date };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVMail = api;
 })(this);

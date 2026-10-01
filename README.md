@@ -15,7 +15,15 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.27)
+## Features (v1.28)
+
+- **Operations on the Overview:** a blue folder for each Title or Operation Name; open one for its case numbers, each with Reports, Field Notes, Files and Photos and Timeline
+- **Dev Tools:** the **Document Anonymizer** (one Anonymize button runs the rules and then the local AI; bigger Original box with the result under it; Clear) and an **Emergency Purge** that empties CaseVault-Data. Deleting a case also removes it from older vault.json backups and its Ask AI chats
+- Case list: cards, case numbers not bold, the deadline bell next to the title or operation; New Case on the Overview only. Reference, Library and Vault on the Overview, not the menu
+- Memory box: Local AI, RAM in use of total, RAM free, drive free (click the icon to unload the AI model). Model names start with a capital letter
+- Quick links: Charges asks Federal or State Statute; Chainalysis in OSINT with Google; Snapchat and Meta LE portals in LEO; no Edit Links button. Only the Supplemental Report starter template remains; chicagopolice.org is added to existing mail domain lists
+
+## Earlier (v1.27)
 
 - **Operations:** the Details tab shows the Title or Operation Name, Status, Opened and Closed at the top with a folder tile for each case number; a shared **Case Overview** (Suspects, Contacts, Deconfliction) below a line, the same in every case of the operation; **Close Operation** or close each case number on its own
 - **One Timeline per operation:** the events of all its case numbers together, each marked with its case number

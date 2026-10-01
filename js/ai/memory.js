@@ -70,22 +70,23 @@
   }
 
   /**
-   * The pop-up's four lines (v1.27): Drive, Vault, Model, RAM. r = { drive, vaultBytes, diskTotal,
-   * model, ramTotal, deviceMemory }. A line whose value isn't known is left out.
+   * The hover box (v1.28): "Local AI", then this PC's RAM (in use of total, and free) and the
+   * CASEVAULT drive's free space. r = { ramTotal, ramFree, diskFree, deviceMemory }.
+   * -> lines; a reading the browser can't get (no helper) is left out.
    */
   function compact(r) {
-    const rows = [];
-    if (r.drive) rows.push(['Drive', String(r.drive).replace(/[:\\/]+$/, '')]);
-    if (r.vaultBytes != null) rows.push(['Vault', r.diskTotal ? `${fmt(r.vaultBytes)} of ${fmt(r.diskTotal)}` : fmt(r.vaultBytes)]);
-    rows.push(['Model', r.model || 'none selected']);
-    if (r.ramTotal) rows.push(['RAM', fmt(r.ramTotal)]);
-    else if (r.deviceMemory) rows.push(['RAM', `${r.deviceMemory} GB or more`]);
+    const rows = ['Local AI'];
+    if (r.ramTotal) {
+      rows.push(`${fmt(r.ramTotal - (r.ramFree || 0))} of ${fmt(r.ramTotal)}`);
+      if (r.ramFree != null) rows.push(`${fmt(r.ramFree)} Free`);
+    } else if (r.deviceMemory) rows.push(`${r.deviceMemory} GB or more RAM`);
+    if (r.diskFree != null) rows.push(`Drive: ${fmt(r.diskFree)} Free`);
     return rows;
   }
 
   /* ---------- in the page ---------- */
 
-  function mount(el, { isHelper = () => false, engineConnected = () => false, drive = () => '', model = () => '', vaultBytes = async () => null } = {}) {
+  function mount(el, { isHelper = () => false, engineConnected = () => false } = {}) {
     if (!el) return;
     let sys = null;
     let sysAt = 0;
@@ -100,31 +101,26 @@
     bar.className = 'mem-icon';
     bar.setAttribute('aria-hidden', 'true');
     bar.innerHTML = '<i></i><i></i><i></i><i></i><i></i>';
-    const free = document.createElement('button');
-    free.type = 'button';
-    free.className = 'btn small';
-    free.textContent = 'Free AI memory';
-    free.addEventListener('click', async (e) => {
-      e.stopPropagation();
+    // Clicking the icon unloads the local model now instead of after its 10 idle minutes.
+    async function freeAi() {
+      if (!(models && models.length)) return;
       if (typeof CVActivity !== 'undefined' && CVActivity.state()) {
         if (root.CaseVaultUI) root.CaseVaultUI.toast('The AI is busy. Free its memory when the check or draft has finished.', 'error');
         return;
       }
-      free.disabled = true;
       try {
         for (const m of models || []) {
           await fetch(`${OLLAMA}/api/generate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: m.name, keep_alive: 0 }) });
         }
-        if (root.CaseVaultUI) root.CaseVaultUI.toast('The local AI model was unloaded. It loads again the next time it\'s needed.', 'success');
+        if (root.CaseVaultUI) root.CaseVaultUI.toast('The local AI model was unloaded from memory. It loads again the next time it\'s needed.', 'success');
       } catch { /* Ollama not running */ }
-      free.disabled = false;
       tick();
-    });
+    }
+    el.addEventListener('click', freeAi);
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); freeAi(); } });
     const popText = document.createElement('span');
     popText.className = 'mem-rows';
-    pop.append(popText, free);
-    let vaultSize = null;
-    let vaultAt = 0;
+    pop.append(popText);
     el.replaceChildren(bar, label, pop);
     el.tabIndex = 0;
 
@@ -161,17 +157,14 @@
       const s = summarize({ heap, models, webllm, sys, deviceMemory: navigator.deviceMemory || null });
       label.textContent = s.text;
       el.className = `mem-status ${s.level}`;
-      if (Date.now() - vaultAt > 120000) { vaultAt = Date.now(); vaultBytes().then((n) => { vaultSize = n; tick(); }).catch(() => {}); }
-      const rows = compact({ drive: drive(), vaultBytes: vaultSize, diskTotal: sys && sys.diskTotal, model: model() || (models && models[0] && models[0].name) || webllm, ramTotal: sys && sys.ramTotal, deviceMemory: navigator.deviceMemory || null });
-      popText.replaceChildren(...rows.flatMap(([k, v]) => { const a = document.createElement('span'); a.className = 'mem-k'; a.textContent = `${k}:`; const b = document.createElement('span'); b.className = 'mem-v'; b.textContent = v; return [a, b]; }));
-      free.hidden = !(models && models.length);
+      const rows = compact({ ramTotal: sys && sys.ramTotal, ramFree: sys && sys.ramFree, diskFree: sys && sys.diskTotal ? sys.diskFree : null, deviceMemory: navigator.deviceMemory || null });
+      popText.replaceChildren(...rows.map((t, i) => { const d = document.createElement('span'); d.className = i ? 'mem-v' : 'mem-k'; d.textContent = t; return d; }));
+      el.classList.toggle('can-free', !!(models && models.length));
       el.setAttribute('aria-label', `Memory: ${s.lines.join('. ')}`);
     }
 
     setInterval(tick, 5000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
-    // A model picked in Ask AI (or the AI profile) shows here straight away.
-    document.addEventListener('cv-model-changed', () => tick());
     tick();
     return { tick };
   }

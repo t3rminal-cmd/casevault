@@ -35,10 +35,13 @@ async function roundTrip(Vault, rootHandle) {
   assert.deepStrictEqual(list.map((d) => [d.slug, d.title, d.ai]), [[slug, 'Affidavit -- search warrant', true]]);
 
   // Templates
-  assert.deepStrictEqual((await Vault.addStarterTemplates()).length, 5, 'affidavit, subpoena, arrest report, supplemental report, case summary');
+  // v1.28: the retired generic templates go from the SSD unless they were changed.
+  await Vault.saveTemplate('generic-affidavit.md', '# Affidavit\n\n> **Generic example, not a legal form.** x\n');
+  await Vault.saveTemplate('generic-subpoena.md', '# Subpoena\n\nMy own wording, kept.\n');
+  assert.deepStrictEqual((await Vault.addStarterTemplates()).length, 1, 'supplemental report');
   assert.deepStrictEqual((await Vault.addStarterTemplates()).length, 0, 'never overwrites');
   const templates = await Vault.listTemplates();
-  assert.deepStrictEqual(templates.map((t) => t.title), ['Affidavit', 'Arrest Report', 'Case Summary', 'Subpoena', 'Supplemental Report']);
+  assert.deepStrictEqual(templates.map((t) => t.title), ['Subpoena', 'Supplemental Report']);
   await Vault.saveTemplate('agency-affidavit.md', '# Agency affidavit\n\nCase {{case.number}}');
   assert.strictEqual(await Vault.readTemplate('agency-affidavit.md'), '# Agency affidavit\n\nCase {{case.number}}');
 
@@ -65,7 +68,7 @@ test('drafts round-trip: direct mode (Chrome/Edge File System Access handles)', 
   const data = await ssd.getDirectoryHandle('CaseVault-Data');
   const draftsDir = await (await (await data.getDirectoryHandle('cases')).getDirectoryHandle(c.id)).getDirectoryHandle('drafts');
   assert.deepStrictEqual([...draftsDir.children.keys()], []);
-  assert.ok((await data.getDirectoryHandle('templates')).children.has('generic-affidavit.md'));
+  assert.ok((await data.getDirectoryHandle('templates')).children.has('generic-supplemental-report.md'));
   Vault.close();
 });
 
@@ -89,7 +92,7 @@ test('drafts round-trip: helper mode (Firefox, through the helper HTTP API)', as
     // Same files and format as direct mode.
     const draftsDir = path.join(dir, 'CaseVault-Data', 'cases', c.id, 'drafts');
     assert.deepStrictEqual(fs.readdirSync(draftsDir), []);
-    assert.ok(fs.existsSync(path.join(dir, 'CaseVault-Data', 'templates', 'generic-subpoena.md')));
+    assert.ok(fs.existsSync(path.join(dir, 'CaseVault-Data', 'templates', 'generic-supplemental-report.md')));
   }
   Vault.close();
 });
@@ -148,7 +151,7 @@ test('templates: {{affiant.*}} comes from "My details"; empty values become [CON
   const none = D.fillTemplate('{{affiant.name}} {{affiant.email}}', D.templateContext({}, new Date()));
   assert.strictEqual(none, '[CONFIRM: affiant.name] [CONFIRM: affiant.email]');
   assert.deepStrictEqual(D.AFFIANT_FIELDS, ['name', 'title', 'agency', 'address', 'phone', 'email']);
-  assert.match(D.STARTER_TEMPLATES['generic-affidavit.md'], /\{\{affiant\.name\}\}/);
+  assert.deepStrictEqual(Object.keys(D.STARTER_TEMPLATES), ['generic-supplemental-report.md'], 'v1.28: only the Supplemental Report is built in');
 });
 
 test('stripMarkdown gives clean plain text', () => {
@@ -254,4 +257,28 @@ test('template titles drop the old "(generic example)" suffix', () => {
   assert.strictEqual(D.templateTitle('# Affidavit (generic example)\n\ntext', 'generic-affidavit.md'), 'Affidavit');
   assert.strictEqual(D.templateTitle('# My warrant\n', 'x.md'), 'My warrant');
   assert.strictEqual(D.DOC_TYPES.dea202.label, 'DEA 202');
+});
+
+test('v1.28: deleting a case tidies its backups and chats; Emergency Purge empties CaseVault-Data', async () => {
+  const { Vault } = app();
+  const ssd = new MemDirectoryHandle('V');
+  await Vault.load(await Vault.create(ssd));
+  const a = await Vault.createCase({ title: 'Operation Example', number: 'TEST-0001' });
+  const b = await Vault.createCase({ title: 'Other Example', number: 'TEST-0002' });
+  await Vault.backupNow();
+  await Vault.saveChat({ id: 'chat-0001', title: 'About A', caseId: a.id, turns: [] });
+  await Vault.saveChat({ id: 'chat-0002', title: 'About B', caseId: b.id, turns: [] });
+  await Vault.deleteCase(a.id);
+  const data = await ssd.getDirectoryHandle('CaseVault-Data');
+  const backups = await data.getDirectoryHandle('backups');
+  for (const [name] of backups.children) {
+    const v = JSON.parse(await (await (await backups.getFileHandle(name)).getFile()).text());
+    assert.ok(!v.cases.some((c) => c.id === a.id), `${name} no longer lists the deleted case`);
+    if (/-\d{6}\.json$/.test(name)) assert.ok(v.cases.some((c) => c.id === b.id), `${name} keeps the other case`);
+  }
+  assert.deepStrictEqual((await Vault.listChats()).map((c) => c.title), ['About B'], 'chats about the deleted case go too');
+  const r = await Vault.purgeAll();
+  assert.deepStrictEqual(r.failed, []);
+  assert.deepStrictEqual([...data.children.keys()], [], 'CaseVault-Data is empty');
+  assert.strictEqual(Vault.data, null);
 });

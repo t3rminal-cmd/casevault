@@ -114,16 +114,12 @@
     const { Save, toast } = ui;
     await Save.flushAll();
     try {
-      let templates = await Vault.listTemplates();
-      let tpl = templates.find((t) => /arrest/i.test(`${t.file} ${t.title}`));
-      if (!tpl) {
-        await Vault.addStarterTemplates();
-        templates = await Vault.listTemplates();
-        tpl = templates.find((t) => /arrest/i.test(`${t.file} ${t.title}`));
-      }
-      if (!tpl) return toast('Add an arrest report template first (Vault → Templates).', 'error');
+      // Your own arrest report template (Vault → Templates), else the built-in outline (v1.28).
+      const found = (await Vault.listTemplates()).find((t) => /arrest/i.test(`${t.file} ${t.title}`));
+      const tpl = found || { file: '', title: 'Arrest Report outline' };
       const caseObj = await Vault.getCase(c.id);
-      const body = CVDraft.fillTemplate(await Vault.readTemplate(tpl.file), CVDraft.templateContext(caseObj, new Date(), Vault.data.settings.affiant, await templateExtra(caseObj)));
+      const text = found ? await Vault.readTemplate(found.file) : CVDraft.ARREST_OUTLINE;
+      const body = CVDraft.fillTemplate(text, CVDraft.templateContext(caseObj, new Date(), Vault.data.settings.affiant, await templateExtra(caseObj)));
       const title = `Arrest report${caseObj.people && caseObj.people[0] ? ` - ${caseObj.people[0]}` : ''}`;
       const slug = await Vault.newDraftSlug(c.id, title);
       await Save.track(`draft:${c.id}:${slug}`, () => Vault.saveDraft(c.id, slug, { title, type: 'other', ai: false, template: tpl.file, created: new Date().toISOString() }, body));

@@ -529,7 +529,9 @@
   function caseItem(c, inGroup = false) {
     const due = c.nextDeadline && !isArchivedEntry(c) ? dueLabel(c.nextDeadline.date) : null;
     // Any open deadline on the case's Timeline rings the red bell (right of the title).
-    const alarm = !!due;
+    // v1.28: the bell sits right after the title; a case number inside an operation leaves it to
+    // the operation's name.
+    const alarm = !!due && !inGroup;
     const tip = [
       `${c.title || 'Untitled case'} · ${c.status}`,
       c.status === 'Pending' && c.pending ? `Waiting on ${c.pending.reason}${c.pending.followUp ? `, follow up ${fmtDate(c.pending.followUp)}` : ''}` : null,
@@ -544,10 +546,10 @@
       },
       // Title on the left; the status and the red bell together on the right (v1.20).
       h('div', { class: 'case-item-top' },
-        h('span', { class: 'case-item-title' }, inGroup ? (c.number || 'No case number yet') : (c.title || 'Untitled case')),
+        h('span', { class: `case-item-title${inGroup ? ' is-number' : ''}` }, inGroup ? (c.number || 'No case number yet') : (c.title || 'Untitled case')),
+        alarm ? h('span', { class: `case-bell ${due.cls}`, 'aria-label': `Deadline ${due.text}` }, I('bell-fill')) : null,
         h('span', { class: 'case-item-flags' },
-          h('span', { class: `case-status status-${String(c.status).toLowerCase()}` }, c.status),
-          alarm ? h('span', { class: `case-bell ${due.cls}`, 'aria-label': `Deadline ${due.text}` }, I('bell-fill')) : null)),
+          h('span', { class: `case-status status-${String(c.status).toLowerCase()}` }, c.status))),
       // Just the numbers: file number | case number | client, e.g. "100 | JH123456 | State".
       h('div', { class: 'case-item-meta muted' }, (inGroup ? [c.fileNumber, c.agencyNumber, c.client] : [c.fileNumber, c.number, c.client]).filter(Boolean).join(' | ') || '\u00a0')));
   }
@@ -573,8 +575,11 @@
     }
     return [...m.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   }
-  const OP_CLOSED_KEY = 'casevault-op-closed';
-  const closedOps = () => { try { return new Set(JSON.parse(localStorage.getItem(OP_CLOSED_KEY) || '[]')); } catch { return new Set(); } };
+  // Which operations are folded is kept in vault.json on the SSD (v1.28): operation names are case
+  // data, so they never go in the browser's storage on the PC. (v1.26–1.27 kept them there; that
+  // copy is removed.)
+  try { localStorage.removeItem('casevault-op-closed'); } catch { /* nothing kept */ }
+  const closedOps = () => new Set(((Vault.data && Vault.data.settings && Vault.data.settings.foldedOps) || []).filter((x) => typeof x === 'string'));
   function operationGroup(group) {
     const k = opKey(group[0].title);
     const hasActive = group.some((c) => c.id === state.caseId);
@@ -582,12 +587,14 @@
     const bell = group.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date));
     const det = h('details', { class: 'op-group', open },
       h('summary', { class: 'op-head', title: `${group[0].title}: ${group.length} case numbers` },
-        I('folder2-open'), h('span', { class: 'op-name' }, group[0].title), h('span', { class: 'op-count' }, String(group.length)), bell ? I('bell-fill') : null),
+        h('span', { class: 'op-folder' }, I('folder-fill')), h('span', { class: 'op-name' }, group[0].title),
+        bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null,
+        h('span', { class: 'op-count' }, String(group.length))),
       h('ul', { class: 'op-cases' }, group.map((c) => caseItem(c, true))));
     det.addEventListener('toggle', () => {
       const set = closedOps();
       if (det.open) set.delete(k); else set.add(k);
-      try { localStorage.setItem(OP_CLOSED_KEY, JSON.stringify([...set])); } catch { /* this session */ }
+      Save.track('settings', () => Vault.updateSettings({ foldedOps: [...set] })).catch(() => {});
     });
     return h('li', { class: 'op-item' }, det);
   }
@@ -708,24 +715,69 @@
         ...Vault.STATUSES.map((s) => h('div', { class: `stat stat-${s.toLowerCase()}` },
           h('span', { class: 'stat-icon' }, I(STATUS_ICONS[s])),
           h('div', {}, h('div', { class: 'stat-num' }, count(s)), h('div', { class: 'stat-label' }, s))))),
-      h('div', { class: 'dash-section' }, h('h2', { class: 'section-title', icon: 'calendar-event' }, 'Upcoming deadlines'),
+      operationFolders(cases),
+      h('div', { class: 'dash-section' }, h('h2', { class: 'section-title' }, 'Upcoming deadlines'),
       deadlines.length
         ? h('ul', { class: 'plain-list' }, deadlines.map((c) => {
           const due = dueLabel(c.nextDeadline.date);
           return h('li', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/timeline`, class: 'row-link' },
             h('span', { class: `due ${due.cls}` }, `${fmtDate(c.nextDeadline.date)}${c.nextDeadline.time ? ' ' + c.nextDeadline.time : ''}`),
-            h('span', {}, h('strong', {}, c.nextDeadline.title || 'Deadline'), ' — ', c.title),
+            h('span', {}, c.nextDeadline.title || 'Deadline', ' — ', c.title),
             h('span', { class: `due ${due.cls}` }, due.text)));
         }))
         : h('p', { class: 'muted' }, 'No open deadlines. Add them from a case\'s Timeline tab.')),
-      h('div', { class: 'dash-section' }, h('h2', { class: 'section-title', icon: 'clock-history' }, 'Recently updated'),
+      h('div', { class: 'dash-section' }, h('h2', { class: 'section-title' }, 'Recently updated'),
       recent.length
         ? h('ul', { class: 'plain-list' }, recent.map((c) => h('li', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}`, class: 'row-link recent-row' },
           h('span', { class: 'recent-title' }, h('strong', {}, c.title || 'Untitled case'), h('span', { class: 'muted' }, [c.fileNumber && ` · File ${c.fileNumber}`, c.number && ` · Case ${c.number}`].filter(Boolean).join(''))),
           statusPill(c.status),
           h('span', { class: 'muted' }, c.updated ? fmtDateTime(Date.parse(c.updated)) : '')))))
         : h('p', { class: 'muted' }, 'Create your first case with "New case".')),
-      h('div', { class: 'dash-section dash-quick' }, h('h2', { class: 'section-title', icon: 'lightning-charge' }, 'Quick links'), CVReferenceUI.quickLinks())));
+      h('div', { class: 'dash-section dash-quick' }, h('h2', { class: 'section-title' }, 'Quick links'), CVReferenceUI.quickLinks())));
+  }
+
+  /* Operations on the Overview (v1.28): a blue folder for each operation (Title or Operation Name),
+   * its name under it. Click one to open it: its case numbers, each with its Reports, Field Notes,
+   * Files (photos, documents) and Timeline. Which one is open is remembered for this visit. */
+  const opFolderState = { open: '' };
+  function operationFolders(cases) {
+    const active = cases.filter((c) => !isArchivedEntry(c));
+    const ops = new Map();
+    for (const c of active) {
+      const k = opKey(c.title) || `#${c.id}`;
+      ops.set(k, [...(ops.get(k) || []), c]);
+    }
+    const list = [...ops.entries()].map(([k, group]) => ({ k, name: String(group[0].title || 'Untitled case').trim(), group: group.sort((a, b) => String(a.number || '').localeCompare(String(b.number || ''), undefined, { numeric: true })), updated: group.reduce((m, c) => ((c.updated || '') > m ? c.updated : m), '') }))
+      .sort((a, b) => b.updated.localeCompare(a.updated));
+    const box = h('div', { class: 'dash-section op-folders-section' });
+    const draw = () => {
+      const open = list.find((o) => o.k === opFolderState.open);
+      const tiles = h('div', { class: 'op-folders', role: 'list' }, list.map((o) => {
+        const bell = o.group.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date) && c.status !== 'Closed');
+        return h('button', { type: 'button', role: 'listitem', class: `op-folder-tile ${open === o ? 'open' : ''}`, 'aria-expanded': String(open === o),
+          title: `${o.name}: ${o.group.length} case number${o.group.length === 1 ? '' : 's'}`,
+          onclick: () => { opFolderState.open = open === o ? '' : o.k; draw(); } },
+        h('span', { class: 'op-folder-art' }, I(open === o ? 'folder2-open' : 'folder-fill'), o.group.length > 1 ? h('span', { class: 'op-folder-count' }, String(o.group.length)) : null),
+        h('span', { class: 'op-folder-name' }, o.name, bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null));
+      }));
+      const inside = open ? h('div', { class: 'op-open' },
+        h('div', { class: 'op-open-head' }, h('strong', {}, open.name), h('span', { class: 'muted small' }, `${open.group.length} case number${open.group.length === 1 ? '' : 's'}`), h('div', { class: 'spacer' }),
+          h('button', { type: 'button', class: 'btn small', onclick: () => newCase({ title: open.name }) }, 'Add Case Number')),
+        h('div', { class: 'op-open-cases' }, open.group.map((c) => {
+          const to = (tab, sub) => `#/case/${encodeURIComponent(c.id)}/${tab}${sub ? `/${sub}` : ''}`;
+          return h('div', { class: 'op-case-card' },
+            h('a', { class: 'op-case-top', href: to('details') }, I('folder-fill'), h('span', { class: 'op-case-num' }, c.number || 'No case number yet'), statusPill(c.status)),
+            h('div', { class: 'op-case-links' },
+              h('a', { href: to('reports') }, 'Reports'),
+              h('a', { href: to('reports', '.notes') }, 'Field Notes'),
+              h('a', { href: to('files') }, 'Files and Photos'),
+              h('a', { href: to('timeline') }, 'Timeline')));
+        }))) : null;
+      box.replaceChildren(...[h('h2', { class: 'section-title' }, 'Operations'),
+        list.length ? tiles : h('p', { class: 'muted' }, 'Create a case with New Case: its operation appears here as a folder.'), inside].filter(Boolean));
+    };
+    draw();
+    return box;
   }
 
   /* The landing page's welcome banner (v1.21): a greeting, the date and time, what needs you
@@ -763,6 +815,7 @@
           action('New Case', 'plus-lg', () => newCase(), true),
           action('Ask AI', 'chat-dots-fill', () => { const b = document.getElementById('btn-chat'); if (b) b.click(); }),
           action('Reference', 'book', () => { location.hash = '#/reference'; }),
+          action('Library', 'bookshelf', () => showVaultPanel('library')),
           action('Vault', 'safe2', () => showVaultPanel()))),
       clock);
   }
@@ -2353,8 +2406,7 @@
       h('p', { class: 'hint' }, 'For real security when you leave, press ', h('kbd', {}, 'Windows key'), ' + ', h('kbd', {}, 'L'), ' to lock the PC. The privacy screen only hides what is on screen.'));
   }
 
-  $('#btn-vault').addEventListener('click', () => showVaultPanel());
-  $('#btn-library').addEventListener('click', () => showVaultPanel('library'));
+  // v1.28: Vault, Library and Reference are on the Overview, not in the menu.
   $('#btn-options').addEventListener('click', () => CVOptions.open(window.CaseVaultUI));
   $('#btn-contact-dev').addEventListener('click', () => CVOptions.contactDev(window.CaseVaultUI));
 
@@ -2378,7 +2430,6 @@
     else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
   });
   document.addEventListener('pointerdown', (e) => { if (!menu.hidden && !e.target.closest('.menu-wrap')) setMenu(false); }, true);
-  $('#btn-reference').addEventListener('click', () => { location.hash = '#/reference'; });
   $('#btn-chat').addEventListener('click', () => CVChatUI.toggle());
 
   // Theme: automatic -> light -> dark. The button shows what's in effect.
@@ -2531,22 +2582,6 @@
   CVMemory.mount($('#mem-status'), {
     isHelper: () => MODE === 'helper',
     engineConnected: () => CVChecks.Engine.status() === 'connected' && !CVChecks.Engine.inBrowser(),
-    drive: () => (MODE === 'helper' ? state.drive : ''),
-    // The model picked in Ask AI, else the one the checks and drafts use (v1.27).
-    model: () => {
-      const s = Vault.data && Vault.data.settings;
-      if (s && s.chatModel) return s.chatModel;
-      try { const ch = CVChecks.Engine.choice(); return ch ? ch.model : ''; } catch { return ''; }
-    },
-    // What the vault holds: every file in the cases (counted every 2 minutes).
-    vaultBytes: async () => {
-      if (!state.connected || !Vault.data) return null;
-      let n = 0;
-      for (const c of Vault.data.cases || []) {
-        try { for (const f of await Vault.listFiles(c.id)) n += f.size || 0; } catch { /* archived or missing */ }
-      }
-      return n;
-    },
   });
   CVActivityLib.mount(CVActivity, $('#ai-activity'));
   CVDraftsUI.init(window.CaseVaultUI);

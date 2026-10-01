@@ -96,9 +96,9 @@
 
   function profileLabel(choice) {
     if (!choice) return '';
-    if (Engine.inBrowser()) return `In-browser · ${choice.model.replace(/-q4f16_1-MLC$|-MLC$/, '')}`;
+    if (Engine.inBrowser()) return `In-browser · ${CVAI.modelName(choice.model.replace(/-q4f16_1-MLC$|-MLC$/, ''))}`;
     const p = CVAI.PROFILES[choice.profile];
-    return `${p ? p.label : 'Custom'} · ${choice.model}`;
+    return `${p ? p.label : 'Custom'} · ${CVAI.modelName(choice.model)}`;
   }
 
   function renderPill() {
@@ -139,7 +139,7 @@
       // Quick/Thorough/Light describe Ollama models; the in-browser engine has just its one model.
       if (d.engine !== 'webllm') {
         for (const [key, p] of Object.entries(CVAI.PROFILES)) {
-          if (d.profiles[key]) options.push([key, p.label, `${p.hint}. Uses ${d.profiles[key]}.`]);
+          if (d.profiles[key]) options.push([key, p.label, `${p.hint}. Uses ${CVAI.modelName(d.profiles[key])}.`]);
         }
       }
       options.push(['rules-only', 'Rules-only', 'No AI. Only the rule-based checks run. Always available.']);
@@ -157,7 +157,7 @@
         h('h2', {}, 'AI engine'),
         d.status === 'connected' && d.engine === 'webllm'
           ? h('p', {}, h('span', { class: 'pill status-closed' }, 'Connected'), ' Ollama is not running, so CaseVault uses the ', h('strong', {}, 'in-browser engine'),
-            ` with ${d.webllm.model}. It runs on this PC's graphics chip; the first use loads it from the SSD, which can take a minute.`)
+            ` with ${CVAI.modelName(d.webllm.model)}. It runs on this PC's graphics chip; the first use loads it from the SSD, which can take a minute.`)
           : d.status === 'connected'
           ? h('p', {}, h('span', { class: 'pill status-closed' }, 'Connected'), ' Ollama is running on this computer',
             choice ? ['. Checks will use ', h('strong', {}, profileLabel(choice)), choice.fallback ? ' (the chosen profile has no model installed)' : '', '.'] : ', but no chat model is installed.')
@@ -243,7 +243,7 @@
     CVWebLLM.available().then((a) => {
       if (!a.ok) { box.replaceChildren(h('p', { class: 'muted small' }, a.reason)); return; }
       const current = (Vault.data.settings.webllmModel) || (Engine.detected && Engine.detected.webllm && Engine.detected.webllm.model) || '';
-      const select = h('select', { 'aria-label': 'In-browser model' }, a.models.map((m) => h('option', { value: m.id, selected: m.id === current }, `${m.id} · ${(m.bytes / 1e9).toFixed(1)} GB`)));
+      const select = h('select', { 'aria-label': 'In-browser model' }, a.models.map((m) => h('option', { value: m.id, selected: m.id === current }, `${CVAI.modelName(m.id)} · ${(m.bytes / 1e9).toFixed(1)} GB`)));
       select.addEventListener('change', async () => {
         try {
           await Save.track('settings', () => Vault.updateSettings({ webllmModel: select.value }));
@@ -505,7 +505,7 @@
             const perItem = doneCount > 0 ? (timing.startedAt - timing.firstAt) / doneCount : 0;
             const left = perItem ? Math.max(0, perItem * (timing.total - doneCount) - (t - timing.startedAt)) : 0;
             activity.replaceChildren(
-              `Reviewing statement ${shown} of ${timing.total} with ${choice.model}…`,
+              `Reviewing statement ${shown} of ${timing.total} with ${CVAI.modelName(choice.model)}…`,
               h('span', { class: 'block timing' }, `This statement: ${CVActivityLib.fmtElapsed(t - timing.startedAt)}`,
                 perItem ? ` · about ${CVActivityLib.fmtElapsed(left)} left` : ' · estimating the time left…'));
           };
@@ -538,7 +538,7 @@
                   if (p.total) bar.value = 35 + Math.round((p.done / p.total) * 60);
                 },
               });
-            }, { label: 'Checking…', model: choice.model });
+            }, { label: 'Checking…', model: CVAI.modelName(choice.model) });
             done(aiStep, ai.complete ? 'done' : 'done warn');
           } catch (err) {
             done(aiStep, 'failed');
@@ -670,7 +670,7 @@
       h('div', { class: 'card result-head' },
         h('h2', {}, data.affidavit ? `Check of ${data.affidavit}` : 'Reports cross-check'),
         h('p', { class: 'muted' }, `${data.created ? fmtDateTime(Date.parse(data.created)) : ''} · `,
-          data.engine && data.engine.mode === 'ai' ? `Rules + AI (${data.engine.model})` : 'Rules only', ' · ', summaryOpen),
+          data.engine && data.engine.mode === 'ai' ? `Rules + AI (${CVAI.modelName(data.engine.model)})` : 'Rules only', ' · ', summaryOpen),
         h('ul', { class: 'doc-list' }, docsLine),
         st ? h('p', { class: 'small' },
           `AI reviewed ${st.reviewed} of ${st.statements} statements: ${st.supported} supported, ${st.contradicted} contradicted, ${st.notFound} not found.`,

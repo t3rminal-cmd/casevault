@@ -59,8 +59,8 @@
     if (p.measured && typeof p.measured.gpuShare === 'number') {
       const pct = Math.round(p.measured.gpuShare * 100);
       return p.measured.gpuShare < 0.5
-        ? `${p.measured.model} ran ${pct}% on the graphics card here, so this PC does AI on its processor: Auto uses Light first.`
-        : `${p.measured.model} ran ${pct}% on the graphics card here: Auto uses Quick.`;
+        ? `${root.CVAI ? CVAI.modelName(p.measured.model) : p.measured.model} ran ${pct}% on the graphics card here, so this PC does AI on its processor: Auto uses Light first.`
+        : `${root.CVAI ? CVAI.modelName(p.measured.model) : p.measured.model} ran ${pct}% on the graphics card here: Auto uses Quick.`;
     }
     if (p.gpu === 'dedicated') return `Graphics: ${p.gpuName || 'a dedicated graphics card'}. Auto uses Quick (checked again once a model has loaded).`;
     if (p.gpu === 'integrated') return `Graphics: ${p.gpuName || 'integrated graphics'}, not enough for the Quick model. Auto uses Light first.`;

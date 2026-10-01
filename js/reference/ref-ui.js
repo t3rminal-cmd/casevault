@@ -36,6 +36,20 @@
     const inner = [h('span', { class: `ql-icon ql-${l.tab}` }, ui.icon(l.icon)), h('span', { class: 'ql-name' }, l.name)];
     const tip = `${l.note || l.name}${l.url ? `\n${l.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}` : ''}${l.url ? '\nOpens in a new browser tab.' : ''}`;
     let tile;
+    // Charges asks which (v1.28): Federal Statute or State Statute.
+    if (l.choices && !editing) {
+      const menu = h('div', { class: 'ql-choices', role: 'menu', hidden: true }, l.choices.map(([label, hash]) => h('a', { class: 'ql-choice', role: 'menuitem', href: hash }, label)));
+      const btn = h('button', { type: 'button', class: 'quick-link', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title: tip }, ...inner);
+      const close = (e) => { if (!wrap.contains(e.target)) { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); document.removeEventListener('pointerdown', close, true); } };
+      btn.addEventListener('click', () => {
+        menu.hidden = !menu.hidden;
+        btn.setAttribute('aria-expanded', String(!menu.hidden));
+        if (!menu.hidden) { document.addEventListener('pointerdown', close, true); menu.querySelector('a').focus(); }
+      });
+      menu.addEventListener('keydown', (e) => { if (e.key === 'Escape') { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); btn.focus(); } });
+      const wrap = h('div', { class: 'ql-choice-wrap' }, btn, menu);
+      return wrap;
+    }
     if (l.hash) tile = h('a', { class: 'quick-link', href: l.hash, title: tip }, ...inner);
     else if (l.url) tile = h('a', { class: 'quick-link', href: l.url, target: '_blank', rel: 'noopener noreferrer', referrerpolicy: 'no-referrer', title: tip }, ...inner, h('span', { class: 'ql-ext' }, ui.icon('box-arrow-up-right')));
     else tile = h('button', { type: 'button', class: 'quick-link needs-url', title: `${l.note || ''} No web address yet: click to add it.`, onclick: () => ui.showVaultPanel('links') }, ...inner, h('span', { class: 'ql-ext' }, ui.icon('pencil')));
@@ -67,8 +81,7 @@
           }, t.label))),
           h('div', { class: 'spacer' }),
           !editing && hiddenCount ? h('span', { class: 'small muted' }, `${hiddenCount} hidden`) : null,
-          h('button', { type: 'button', class: `btn small ${editing ? 'primary' : 'ghost'}`, icon: editing ? 'check2' : 'eye-slash', title: editing ? 'Finish' : 'Choose which buttons to show', onclick: () => { mem.editLinks = !mem.editLinks; draw(); } }, editing ? 'Done' : 'Show/Hide'),
-          h('button', { type: 'button', class: 'btn small ghost', icon: 'pencil', title: 'Change addresses and add your own links (Vault → Quick links)', onclick: () => ui.showVaultPanel('links') }, 'Edit Links')),
+          h('button', { type: 'button', class: `btn small ${editing ? 'primary' : 'ghost'}`, icon: editing ? 'check2' : 'eye-slash', title: editing ? 'Finish' : 'Choose which buttons to show. Addresses and your own links: Vault → Quick links.', onclick: () => { mem.editLinks = !mem.editLinks; draw(); } }, editing ? 'Done' : 'Show/Hide')),
         tab !== 'reference' ? h('p', { class: 'muted small ql-note' }, ui.icon('info-circle'), ' These open outside CaseVault, in a new browser tab. Never paste case details into outside websites unless your policy allows it.') : null,
         shown.length ? h('div', { class: 'quick-links' }, shown.map((l) => linkTile(l, { editing, redraw: draw })))
           : h('p', { class: 'muted small' }, inTab.length ? 'All the links here are hidden. Click Show/Hide to bring them back.' : 'No links here yet. Add one in Vault → Quick links.')].filter(Boolean));
@@ -151,6 +164,9 @@
 
   async function render(main, section) {
     const { h } = ui;
+    // charges-federal / charges-state (v1.28): the Charges page with one set of statutes.
+    const scope = /^charges-(federal|state)$/.test(section || '') ? section.slice(8) : null;
+    if (scope) section = 'charges';
     const sec = SECTIONS.find((s) => s.key === section) || SECTIONS[0];
     const body = h('div', { class: 'ref-body' });
     main.replaceChildren(h('section', { class: 'reference' },
@@ -163,7 +179,12 @@
     if (sec.key === 'narcotics') return body.replaceChildren(h('div', { class: 'ref-grid' }, calculator(), card(`Street value chart (${RD().NARCOTIC_SOURCE})`, 'table', valueChartEl())));
     if (sec.key === 'incident') return body.replaceChildren(codeBrowser(RD().LOCATION_CODES, 'Search location codes', 'location code'));
     if (sec.key === 'ucr') return body.replaceChildren(codeBrowser(RD().UCR_CODES, 'Search UCR codes or offenses', 'UCR code'));
-    if (sec.key === 'charges') return body.replaceChildren(codeBrowser(RD().CHARGES, 'Search statutes or charges', 'statute'));
+    if (sec.key === 'charges') {
+      const groups = scope ? RD().CHARGES.filter((g) => (scope === 'federal' ? /^us-/ : /^il-/).test(g.key)) : RD().CHARGES;
+      const pick = h('div', { class: 'segmented charges-scope', role: 'tablist', 'aria-label': 'Statutes' },
+        [['state', 'State Statute'], ['federal', 'Federal Statute'], ['', 'Both']].map(([k, label]) => h('a', { class: `btn small ${(scope || '') === k ? 'active' : ''}`, role: 'tab', 'aria-selected': String((scope || '') === k), href: `#/reference/charges${k ? `-${k}` : ''}` }, label)));
+      return body.replaceChildren(pick, codeBrowser(groups, scope === 'federal' ? 'Search federal statutes' : scope === 'state' ? 'Search state statutes' : 'Search statutes or charges', 'statute'));
+    }
   }
 
   const card = (title, icon, ...kids) => ui.h('section', { class: 'ref-card' }, ui.h('h2', { class: 'ref-card-title', icon }, title), ...kids);
