@@ -74,6 +74,8 @@
       // Nothing to choose when the text already is the one match.
       const exact = !all && shown.length === 1 && shown[0].value.toLowerCase() === input.value.trim().toLowerCase();
       list.hidden = !shown.length || exact;
+      // A hover box already showing for this box steps aside for the list (v1.38).
+      if (!list.hidden) { const t = doc.getElementById('cv-tip'); if (t) t.hidden = true; }
       input.setAttribute('aria-expanded', String(!list.hidden));
       active = -1;
     }
@@ -99,7 +101,42 @@
     return wrap;
   }
 
-  const api = { attach, filter };
+  /* v1.38: the browser's own suggestion pop-ups (a <datalist>, and the history of what was typed
+   * before) are drawn by the browser with round corners and can't be styled. So, everywhere:
+   * - a box with a list of choices (<input list="…">) gets this square list instead, filled from
+   *   its <datalist> each time it opens (so a list that changes stays current);
+   * - every other text box has the browser's history pop-up turned off (autocomplete="off"). */
+  const TEXTY = /^(text|search|email|tel|url|number|)$/;
+  function upgrade(el) {
+    const doc = root.document;
+    if (el.tagName !== 'INPUT' || el.dataset.cvUpgraded) return;
+    el.dataset.cvUpgraded = '1';
+    if (!el.hasAttribute('autocomplete') && TEXTY.test(el.getAttribute('type') || '')) el.setAttribute('autocomplete', 'off');
+    const listId = el.getAttribute('list');
+    if (!listId || el.closest('.combo')) return;
+    const mark = doc.createComment('');
+    el.before(mark);
+    const items = () => {
+      const dl = doc.getElementById(listId);
+      return dl ? [...dl.querySelectorAll('option')].filter((o) => o.value).map((o) => ({ value: o.value, label: o.value, hint: o.label && o.label !== o.value ? o.label : '' })) : [];
+    };
+    const wrap = attach(el, { items, onPick: () => el.dispatchEvent(new Event('change', { bubbles: true })) });
+    mark.replaceWith(wrap);
+  }
+  function upgradeAll(node) {
+    if (!node || node.nodeType !== 1) return;
+    if (node.tagName === 'INPUT') upgrade(node);
+    else node.querySelectorAll('input').forEach(upgrade);
+  }
+  if (root.document && root.MutationObserver) {
+    const start = () => {
+      upgradeAll(root.document.body);
+      new root.MutationObserver((muts) => { for (const m of muts) m.addedNodes.forEach(upgradeAll); }).observe(root.document.body, { childList: true, subtree: true });
+    };
+    if (root.document.body) start(); else root.document.addEventListener('DOMContentLoaded', start);
+  }
+
+  const api = { attach, filter, upgrade };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVCombo = api;
 })(this);

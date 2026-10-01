@@ -72,6 +72,8 @@
     if (!text) return;
     timer = setTimeout(() => {
       if (!el.isConnected) return;
+      // Never over an open suggestion list (v1.38): the list is what you're looking at.
+      if (el.getAttribute('aria-expanded') === 'true' || el.closest('.combo-list') || doc.querySelector('.combo-list:not([hidden])')) return;
       current = el;
       box().textContent = text;
       el.setAttribute('aria-describedby', 'cv-tip');
