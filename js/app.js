@@ -785,7 +785,17 @@
   /* Operations on the Overview (v1.28): a blue folder for each operation (Title or Operation Name),
    * its name under it. Click one to open it: its case numbers, each with its Reports, Field Notes,
    * Files (photos, documents) and Timeline. Which one is open is remembered for this visit. */
-  const opFolderState = { open: '' };
+  const opFolderState = { open: '', close: null };
+  // Empty space: anything that isn't a control, a link, a folder, the open folder's cases or the
+  // timeline, and nothing inside a dialog or the sidebar.
+  document.addEventListener('click', (e) => {
+    if (!opFolderState.open || !opFolderState.close) return;
+    const t = e.target;
+    if (!(t instanceof Element) || !t.closest('#main')) return;
+    if (t.closest('a, button, input, select, textarea, label, summary, details, [role="button"], [contenteditable], .op-folder-tile, .op-open, .op-timeline-section, .htl-wrap, .dialog')) return;
+    if (window.getSelection && String(window.getSelection())) return; // selecting text isn't a click away
+    opFolderState.close();
+  });
   function operationFolders(cases, tlBox = null) {
     const active = cases.filter((c) => !isArchivedEntry(c));
     const ops = new Map();
@@ -859,6 +869,8 @@
       const mark = track.querySelector('.htl-today');
       if (mark) requestAnimationFrame(() => { const w = track.parentElement; w.scrollLeft = Math.max(0, mark.offsetLeft - w.clientWidth / 2); });
     }
+    // v1.38: a click on empty space on the Overview closes the open folder.
+    opFolderState.close = () => { if (opFolderState.open && box.isConnected) { opFolderState.open = ''; draw(); } };
     draw();
     return box;
   }
@@ -914,7 +926,9 @@
       const numberIn = h('input', { name: 'number', maxlength: 100 });
       // One file number can hold several cases: offer the file numbers already in use.
       const fileNumbers = [...new Set((Vault.data.cases || []).map((x) => x.fileNumber).filter(Boolean))].sort();
-      const fileList = h('datalist', { id: 'file-numbers' }, fileNumbers.map((n) => h('option', { value: n })));
+      // Each with the operation it belongs to, shown on the right of the list (v1.38).
+      const opOfFile = (n) => [...new Set((Vault.data.cases || []).filter((x) => x.fileNumber === n).map((x) => String(x.title || '').trim()).filter(Boolean))].join(', ');
+      const fileList = h('datalist', { id: 'file-numbers' }, fileNumbers.map((n) => h('option', { value: n, label: opOfFile(n) || n })));
       const openedIn = h('input', { name: 'opened', type: 'date', value: today() });
       const folderNote = h('span', {});
       const showFolder = () => {
@@ -955,7 +969,7 @@
       h('h2', { class: 'span-2' }, 'New case'),
       field('Title or Operation Name', titleBox, 'span-2', 'Pick an operation to add another case number to it, or type a new name.'),
       opNote,
-      field('File number', fileIn),
+      field('File Number', fileIn),
       field('Original Case Number', numberIn, '', 'The first report number of the case. An operation with several case numbers keeps its first one here.'),
       fileList,
       field('Federal Jacket Number', agencyIn),
@@ -1184,7 +1198,7 @@
       miniTimeline(c, members),
       // ---- this case number
       h('form', { class: 'form-grid details-grid', onsubmit: (e) => e.preventDefault() },
-        field('File number', bind(h('input', { value: c.fileNumber || '', maxlength: 100, title: 'The investigation file. Several cases can share one file number.' }), (v) => { c.fileNumber = v; })),
+        field('File Number', bind(h('input', { value: c.fileNumber || '', maxlength: 100, title: 'The investigation file. Several cases can share one file number.' }), (v) => { c.fileNumber = v; })),
         field('Original Case Number', bind(h('input', { value: c.number, maxlength: 100 }), (v) => { c.number = v; })),
         field('Federal Jacket Number', bind(h('input', { value: c.agencyNumber || '', maxlength: 100, title: 'The federal jacket number for this case.' }), (v) => { c.agencyNumber = v; })),
         field('Client', (() => { const sel = clientSelect(c.client); sel.addEventListener('change', () => { c.client = sel.value; save(); }); return sel; })()),
