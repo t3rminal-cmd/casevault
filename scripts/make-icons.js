@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 const NAMES = `
-camera-fill floppy pc-display folder-plus file-earmark-word file-earmark-pdf award-fill patch-check-fill bookmark-plus
+arrows-collapse arrows-expand camera-fill floppy pc-display folder-plus file-earmark-word file-earmark-pdf award-fill patch-check-fill bookmark-plus
 shield-lock-fill shield-check shield-fill-check shield-fill-exclamation safe2 gear sliders
 folder folder-fill folder2-open plus-lg plus-circle search funnel eye eye-slash eye-slash-fill
 layout-sidebar layout-sidebar-inset info-circle journal-text journal-bookmark clock-history

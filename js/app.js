@@ -584,8 +584,9 @@
   const closedOps = () => new Set(((Vault.data && Vault.data.settings && Vault.data.settings.foldedOps) || []).filter((x) => typeof x === 'string'));
   function operationGroup(group) {
     const k = opKey(group[0].title);
-    const hasActive = group.some((c) => c.id === state.caseId);
-    const open = hasActive || !closedOps().has(k);
+    // v1.37: a folded operation stays folded (only its title shows), even with one of its cases open;
+    // a search shows every match.
+    const open = !!$('#case-search').value.trim() || !closedOps().has(k);
     const bell = group.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date));
     const det = h('details', { class: 'op-group', open },
       h('summary', { class: 'op-head', title: `${group[0].title}: ${group.length} case numbers` },
@@ -595,7 +596,8 @@
             bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
           // v1.32: the operation's file number, original case number and client, once.
           (() => { const o = opInfo(group); const t = [o.fileNumber, o.number, o.client].filter(Boolean).join(' | '); return t ? h('span', { class: 'op-meta muted' }, t) : null; })()),
-        group.length > 1 ? h('span', { class: 'op-count' }, String(group.length)) : null),
+        group.length > 1 ? h('span', { class: 'op-count' }, String(group.length)) : null,
+        h('span', { class: 'op-chev', 'aria-hidden': 'true' }, I('chevron-down'))),
       h('ul', { class: 'op-cases' }, group.map((c) => caseItem(c, true))));
     det.addEventListener('toggle', () => {
       // A <details> drawn open fires "toggle" too: save only a real change (v1.29: saving on
@@ -603,7 +605,7 @@
       const set = closedOps();
       if (det.open === !set.has(k)) return;
       if (det.open) set.delete(k); else set.add(k);
-      Save.track('settings', () => Vault.updateSettings({ foldedOps: [...set] })).catch(() => {});
+      Save.track('settings', () => Vault.updateSettings({ foldedOps: [...set] })).then(() => drawTitlesOnly()).catch(() => {});
     });
     return h('li', { class: 'op-item' }, det);
   }
@@ -629,6 +631,7 @@
 
   function renderCaseList() {
     const list = $('#case-list');
+    if ($('#btn-titles-only')) drawTitlesOnly();
     const section = $('#archived-cases');
     if (!Vault.data) { list.replaceChildren(); section.hidden = true; return; }
     const cases = filteredCases();
@@ -648,6 +651,28 @@
   }
 
   $('#case-search').addEventListener('input', debounce(renderCaseList, 120));
+
+  // Titles only (v1.37): one button folds every operation so only the titles show, and unfolds them
+  // again. Each operation also folds on its own: click its title.
+  function allOpKeys() { return [...new Set((Vault.data?.cases || []).filter((c) => !isArchivedEntry(c)).map((c) => opKey(c.title)).filter(Boolean))]; }
+  const titlesOnlyBtn = h('button', { id: 'btn-titles-only', class: 'icon-btn', type: 'button' });
+  function drawTitlesOnly() {
+    if (!Vault.data) return;
+    const keys = allOpKeys();
+    const folded = keys.length > 0 && keys.every((k) => closedOps().has(k));
+    const label = folded ? 'Show the case numbers under each title' : 'Titles only: hide the case numbers under each title';
+    titlesOnlyBtn.title = label;
+    titlesOnlyBtn.dataset.tip = label;
+    titlesOnlyBtn.setAttribute('aria-pressed', String(folded));
+    titlesOnlyBtn.replaceChildren(I(folded ? 'arrows-expand' : 'arrows-collapse'), h('span', { class: 'sr-only' }, label));
+  }
+  titlesOnlyBtn.addEventListener('click', async () => {
+    const keys = allOpKeys();
+    const folded = keys.length > 0 && keys.every((k) => closedOps().has(k));
+    try { await Save.track('settings', () => Vault.updateSettings({ foldedOps: folded ? [] : keys })); } catch { return; }
+    renderCaseList();
+  });
+  $('.sidebar-tools .search-wrap').after(titlesOnlyBtn);
 
   /* =====================================================================
    * Routing: #/  or  #/case/<id>/<tab>
@@ -1156,6 +1181,7 @@
           field('Opened', bind(h('input', { type: 'date', value: c.dates.opened || '' }), (v) => { c.dates.opened = v; })),
           field('Closed', bind(closedInput, (v) => { c.dates.closed = v; }))),
         caseTiles(c, members, archived)),
+      miniTimeline(c, members),
       // ---- this case number
       h('form', { class: 'form-grid details-grid', onsubmit: (e) => e.preventDefault() },
         field('File number', bind(h('input', { value: c.fileNumber || '', maxlength: 100, title: 'The investigation file. Several cases can share one file number.' }), (v) => { c.fileNumber = v; })),
@@ -1283,6 +1309,42 @@
       } }, 'Add suspect')));
   }
 
+  /* A slim timeline on the Details tab (v1.37): a line with a small dot for each event of the
+   * operation (every case number), in date order, and a Today mark. Point at a dot for its date,
+   * title and note; click it to open that case's Timeline tab. */
+  function miniTimeline(c, members) {
+    const box = h('section', { class: 'mini-tl', 'aria-label': 'Timeline' });
+    (async () => {
+      const tls = [];
+      for (const m of members) { try { tls.push({ caseId: m.id, number: m.number || '', events: ((await Vault.getTimeline(m.id)) || {}).events || [] }); } catch { /* moved */ } }
+      const rows = CVOperation.mergeEvents(tls).filter((r) => r.ev && r.ev.date);
+      if (!rows.length) { box.replaceChildren(h('div', { class: 'mini-tl-head' }, h('span', { class: 'mini-tl-title' }, 'Timeline'), h('a', { class: 'muted small', href: `#/case/${encodeURIComponent(c.id)}/timeline` }, 'No events yet. Add them on the Timeline tab.'))); return; }
+      const t = (d) => new Date(`${d}T12:00:00`).getTime();
+      const todayIso = today();
+      const first = Math.min(t(rows[0].ev.date), t(todayIso));
+      const last = Math.max(t(rows[rows.length - 1].ev.date), t(todayIso));
+      const span = Math.max(last - first, 864e5);
+      const pos = (d) => `${(3 + 94 * (t(d) - first) / span).toFixed(2)}%`;
+      const line = h('div', { class: 'mini-tl-line' });
+      const tip = (ev, number) => [`${fmtDate(ev.date)}${ev.time ? ` ${ev.time}` : ''}`, ev.title || (ev.kind === 'deadline' ? 'Deadline' : 'Event'),
+        ev.kind === 'deadline' ? (ev.done ? 'Deadline: done' : `Deadline: ${dueLabel(ev.date).text}`) : '', number && members.length > 1 ? `Case ${number}` : '', ev.note || ''].filter(Boolean).join('\n');
+      for (const { caseId, number, ev } of rows) {
+        const due = ev.kind === 'deadline' && !ev.done ? dueLabel(ev.date) : null;
+        const dot = h('a', { class: `mini-tl-dot${ev.kind === 'deadline' ? ' deadline' : ''}${ev.done ? ' done' : ''}${due ? ` ${due.cls}` : ''}`, href: `#/case/${encodeURIComponent(caseId)}/timeline`, 'data-tip': tip(ev, number), 'aria-label': tip(ev, number).replace(/\n/g, ', ') });
+        dot.style.setProperty('left', pos(ev.date));
+        line.append(dot);
+      }
+      const now = h('span', { class: 'mini-tl-today', 'data-tip': `Today, ${fmtDate(todayIso)}`, 'aria-label': 'Today' });
+      now.style.setProperty('left', pos(todayIso));
+      line.append(now);
+      box.replaceChildren(
+        h('div', { class: 'mini-tl-head' }, h('span', { class: 'mini-tl-title' }, 'Timeline'), h('span', { class: 'muted small' }, `${rows.length} event${rows.length === 1 ? '' : 's'}`), h('div', { class: 'spacer' }),
+          h('span', { class: 'muted small' }, `${fmtDate(new Date(first).toISOString().slice(0, 10))} – ${fmtDate(new Date(last).toISOString().slice(0, 10))}`)),
+        line);
+    })();
+    return box;
+  }
+
   /* The operation's case numbers (v1.27): a folder for each, its number under it; the one on
    * screen is highlighted. Click one to open it; + adds a case number to the operation. */
   function caseTiles(c, members, archived) {
@@ -1290,8 +1352,8 @@
     return h('div', { class: 'case-tiles', role: 'list', 'aria-label': 'Case numbers in this operation' },
       sorted.map((x) => {
         const cur = x.id === c.id;
-        const tag = cur ? 'div' : 'a';
-        return h(tag, { class: `case-tile${cur ? ' current' : ''} status-${String(x.status).toLowerCase()}`, role: 'listitem', href: cur ? null : `#/case/${encodeURIComponent(x.id)}`, title: `${x.number || 'No case number'} · ${x.status}${cur ? ' (this one)' : ''}` },
+        // v1.37: every case number's folder opens that case's Reports tab (this one's too).
+        return h('a', { class: `case-tile${cur ? ' current' : ''} status-${String(x.status).toLowerCase()}`, role: 'listitem', href: `#/case/${encodeURIComponent(x.id)}/reports`, title: `${x.number || 'No case number'} · ${x.status}${cur ? ' (this one)' : ''}: open its Reports` },
           I(cur ? 'folder2-open' : 'folder-fill'), h('span', { class: 'case-tile-num' }, x.number || 'No number'), h('span', { class: 'case-tile-status' }, x.status));
       }),
       archived ? null : h('button', { class: 'case-tile add', type: 'button', title: 'Add a case number to this operation: a new case with the same operation name, file number, federal jacket number and client', onclick: () => { Save.flushAll(); newCase({ title: c.title }); } },
