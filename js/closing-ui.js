@@ -41,7 +41,11 @@
 
   // Charges to pick from (v1.29): the Reference's Illinois and federal statutes; search by
   // statute or wording, picking fills both boxes. They can still be typed over.
-  const chargeItems = () => ((root.CVRefData && root.CVRefData.CHARGES) || []).flatMap((g) => g.codes.map(([statute, desc]) => ({ label: `${statute} ${desc}`, hint: g.title, statute, desc })));
+  // v1.32: the charges on the case's Supplementary Report (Draft tab) come first.
+  const chargeItems = (fromReport = []) => [
+    ...fromReport.map((x) => ({ label: `${x.statute || ''} ${x.description || ''}`.trim(), hint: 'On the Supplementary Report', statute: x.statute || '', desc: x.description || '' })),
+    ...((root.CVRefData && root.CVRefData.CHARGES) || []).flatMap((g) => g.codes.map(([statute, desc]) => ({ label: `${statute} ${desc}`, hint: g.title, statute, desc }))),
+  ];
 
   async function readArrest(c) {
     return (await Vault.readCaseJSON(c.id, 'arrest.json').catch(() => null)) || K().emptyArrest();
@@ -71,6 +75,7 @@
     for (const a of arrest.arrestees) if (!a.rdNumber && c.number) a.rdNumber = c.number;
     const archived = Vault.isArchived(c.id);
     const images = archived ? [] : (await Vault.listFiles(c.id).catch(() => [])).filter((f) => IMAGE_RE.test(f.name));
+    const reportCharges = root.CVReportFieldsUI ? await CVReportFieldsUI.load(c).then((d) => (d.charges || []).filter((x) => (x.statute || x.description))).catch(() => []) : [];
     if (token !== ui.state.renderToken) return;
 
     const status = h('span', { class: 'note-save-status small muted', role: 'status', 'aria-live': 'polite' }, '✓ Saved on the SSD');
@@ -163,7 +168,7 @@
           K().CHARGE_FIELDS.map((f) => {
             const el = input(ch, f);
             if ((f.key !== 'statute' && f.key !== 'description') || !root.CVCombo) return h('td', { class: `charge-${f.key}` }, el);
-            const box = CVCombo.attach(el, { label: 'Show the charges', items: () => chargeItems().map((x) => ({ ...x, value: f.key === 'statute' ? x.statute : x.desc })), onPick: (x) => {
+            const box = CVCombo.attach(el, { label: 'Show the charges', items: () => chargeItems(reportCharges).map((x) => ({ ...x, value: f.key === 'statute' ? x.statute : x.desc })), onPick: (x) => {
               ch.statute = x.statute; ch.description = x.desc;
               changed(); draw();
             } });
@@ -190,7 +195,15 @@
           section('Charges',
             h('div', { class: 'table-scroll' }, h('table', { class: 'files charges-table' },
               h('thead', {}, h('tr', {}, K().CHARGE_FIELDS.map((f) => h('th', {}, f.label)), h('th', {}, ''))), charges)),
-            archived ? null : h('button', { class: 'btn small', type: 'button', onclick: () => { a.charges.push(K().emptyCharge()); changed(); draw(); } }, '+ Add Charge')),
+            archived ? null : h('div', { class: 'row' },
+              h('button', { class: 'btn small', type: 'button', onclick: () => { a.charges.push(K().emptyCharge()); changed(); draw(); } }, '+ Add Charge'),
+              reportCharges.length ? h('button', { class: 'btn small', type: 'button', title: 'Adds the charges from the Supplementary Report (Draft tab) that aren\'t here yet', onclick: () => {
+                const have = new Set(a.charges.map((x) => `${(x.statute || '').trim()}|${(x.description || '').trim()}`));
+                a.charges = a.charges.filter((x) => (x.statute || '').trim() || (x.description || '').trim());
+                for (const x of reportCharges) if (!have.has(`${(x.statute || '').trim()}|${(x.description || '').trim()}`)) a.charges.push({ ...K().emptyCharge(), statute: x.statute || '', description: x.description || '' });
+                if (!a.charges.length) a.charges.push(K().emptyCharge());
+                changed(); draw();
+              } }, 'Use Report Charges') : null)),
           section('Recovered Narcotics', listEditor(a, 'narcotics', 'No narcotics recovered.', '+ Add Narcotic')),
           section('Warrant', listEditor(a, 'warrants', 'No warrant identified.', '+ Add Warrant')),
           section('Victim and Complainant', listEditor(a, 'nonOffenders', 'None added.', '+ Add Victim or Complainant')),
@@ -218,9 +231,9 @@
       const p = Vault.data.settings.affiant || {};
       const photos = {};
       for (const [i, a] of arrest.arrestees.entries()) { if (a.photo) { try { photos[i] = await photoJpeg(a.photo); } catch { /* left out */ } } }
-      return CVArrestPdf.build(arrest, { agency: p.agency || '', caseNumber: c.number || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' · '), printed: CVFormat.dateText(Vault.localDay()), photos });
+      return CVArrestPdf.build(arrest, { agency: p.agency || '', caseNumber: c.number || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' · '), printed: '', photos });
     };
-    const pdfName = () => `Arrest Report ${[CVArrestPdf.reportName(arrest.arrestees[0] || {}), CVFormat.dateText(Vault.localDay())].filter(Boolean).join(' ')}.pdf`.replace(/[\\/:*?"<>|]/g, '');
+    const pdfName = () => `Arrest Report ${CVArrestPdf.reportName(arrest.arrestees[0] || {})}.pdf`.replace(/[\\/:*?"<>|]/g, '');
     async function showPdf(bytes) {
       const viewer = CVPdfViewer.create(bytes, { h, icon: ui.icon, title: 'Arrest Report', fileName: pdfName() });
       await ui.openDialog((close) => h('div', { class: 'pdf-view' },
@@ -236,7 +249,7 @@
       if (lastPdf && lastPdf.sig === sig) return lastPdf.path;
       const bytes = await pdfBytes();
       const file = new File([bytes], pdfName(), { type: 'application/pdf' });
-      const path = await Save.track(`arrest-pdf:${c.id}`, () => Vault.addFile(c.id, file, { folder: 'Arrest Report', description: pdfName().replace(/\.pdf$/, '') }));
+      const path = await Save.track(`arrest-pdf:${c.id}`, () => Vault.addFile(c.id, file, { folder: 'Arrest Report', description: pdfName().replace(/\.pdf$/, ''), replace: true }));
       lastPdf = { sig, path, bytes };
       return path;
     }

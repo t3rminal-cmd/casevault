@@ -28,10 +28,10 @@ test('Report Fields: saves from before v1.20 are brought up to date', () => {
 test('Report Fields: placeholders, AI text and a report made from them', () => {
   const d = { ...F.empty(), caseNumber: 'JH123456', offense: 'Delivery of a controlled substance', ucr: '2012 Delv: Cocaine', date: '2026-03-14', fire: 'No', method: 'On View', victimVerified: true,
     evidence: [{ number: 5, inventory: '14000001', description: '3 bags of white powder', type: 'Narcotics', drug: 'Cocaine', weight: '12.4 g' }, { number: 6, type: 'Currency', drug: 'ignored', description: '$300' }],
-    narrative: 'On 03.14.2026 TFO Sample purchased…' };
+    narrative: 'On March 14, 2026 TFO Sample purchased…' };
   const ctx = F.context(d);
   assert.strictEqual(ctx['report.ucr'], '2012 Delv: Cocaine');
-  assert.strictEqual(ctx['report.date'], '03.14.2026');
+  assert.strictEqual(ctx['report.date'], 'March 14, 2026');
   assert.strictEqual(ctx['report.victimVerified'], 'Yes');
   assert.strictEqual(ctx['report.evidence'], 'Exhibit 5, Inventory 14000001: Narcotics, Cocaine, 12.4 g. 3 bags of white powder\nExhibit 6: Currency. $300');
   const t = F.asText(d);
@@ -42,7 +42,7 @@ test('Report Fields: placeholders, AI text and a report made from them', () => {
   assert.match(md, /\| Offense Classification \/ Last Report \| IUCR Code \|\n\|---\|---\|\n\| Delivery of a controlled substance \| 2012 Delv: Cocaine \|/);
   assert.match(md, /\| 5 \| 14000001 \| Narcotics \| Cocaine \| 12\.4 g \| 3 bags of white powder \|/);
   assert.match(md, /\| 6 \|\s+\| Currency \|\s+\|\s+\| \$300 \|/, 'narcotic type and weight only for narcotics');
-  assert.match(md, /## Summary of Investigation\n\nOn 03\.14\.2026/);
+  assert.match(md, /## Summary of Investigation\n\nOn March 14, 2026/);
   assert.ok(F.PLACEHOLDERS.includes('report.narrative'));
 });
 
@@ -50,7 +50,7 @@ test('Report PDF: a valid PDF with the fields, signature fields and page numbers
   const d = { ...F.empty(), caseNumber: 'JH123456', offense: 'Delivery (cocaine)', status: '3 - C/C', victimVerified: true,
     evidence: [{ number: 1, inventory: '14000001', type: 'Narcotics', drug: 'Cocaine', weight: '12.4 g', description: 'Three bags. '.repeat(40) }],
     narrative: `**Bold** start. “Quoted” – dash.\n\n${'Surveillance continued. '.repeat(400)}` };
-  const bytes = P.build(d, { agency: 'Example Police Department', caseLabel: 'Operation Example · Case JH123456', printed: '03.15.2026' });
+  const bytes = P.build(d, { agency: 'Example Police Department', caseLabel: 'Operation Example · Case JH123456', printed: 'March 15, 2026' });
   const s = Buffer.from(bytes).toString('latin1');
   assert.ok(s.startsWith('%PDF-1.7'));
   assert.ok(s.trimEnd().endsWith('%%EOF'));
@@ -84,7 +84,7 @@ test('Report Fields v1.21: lists, parts left out, and v1.20 single entries moved
   assert.ok(!('victimName' in d) && !('vehicle' in d));
   assert.strictEqual(F.normalize(d).victimsList.length, 1, 'normalizing twice does not add again');
   d.offendersList[0].dob = '1990-01-02';
-  assert.match(F.itemLine('offendersList', d.offendersList[0]), /^DOE, John, Relation Code: X, Date of Birth: 01\.02\.1990/);
+  assert.match(F.itemLine('offendersList', d.offendersList[0]), /^DOE, John, Relation Code: X, Date of Birth: January 2, 1990/);
   d.hidden = ['people'];
   assert.doesNotMatch(F.asText(d), /Offender:/);
   assert.doesNotMatch(F.toMarkdown(d), /Victims and Offenders/);
@@ -146,7 +146,7 @@ test('v1.23: Submission and Approval is one row per officer, no Lieutenant', () 
   const s = Buffer.from(P.build({ ...d, secondOfficer: 'P.O. Second', secondDate: '2026-03-15', secondTime: '14:30' }, {})).toString('latin1');
   assert.doesNotMatch(s, /LIEUTENANT|LieutenantSignature/);
   assert.match(s, /SECONDARY REPORTING OFFICER/);
-  assert.match(s, /\(03\.15\.2026\)/);
+  assert.match(s, /\(March 15, 2026\)/);
 });
 
 test('v1.23: a Details suspect fills the report Offenders by name', () => {

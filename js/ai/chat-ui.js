@@ -336,7 +336,7 @@
     if (!mem.turns.some((t) => t.content)) return ui.toast('Nothing to save yet.', 'error');
     const id = els.caseSel.value || (await pickCaseId(activeCases()));
     if (!id) return;
-    const title = `Ask AI ${CVFormat.dateText(Vault.localDay())}`;
+    const title = 'Ask AI';
     try {
       const slug = await Vault.newDraftSlug(id, title);
       await ui.Save.track(`draft:${id}:${slug}`, () => Vault.saveDraft(id, slug, { title, type: 'other', ai: true, created: new Date().toISOString() }, CVChat.transcript(mem.turns.filter((t) => t.content), { title, model: els.modelSel.value })));

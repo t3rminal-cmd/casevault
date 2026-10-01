@@ -210,18 +210,18 @@
     // v1.28: Document Anonymizer. The original on top (bigger), the anonymized text under it; one
     // Anonymize button runs the rules and then, when it's running, the local AI over the result
     // (then the rules once more). Everything runs on this PC: the AI is Ollama on 127.0.0.1.
-    const src = h('textarea', { class: 'dev-src', rows: 12, placeholder: 'Paste a template, report or reference here, or open a file with the folder button.', 'aria-label': 'Original text' });
+    const src = h('textarea', { class: 'dev-src', rows: 12, placeholder: 'Paste a template, report or reference here, or drop a file above.', 'aria-label': 'Original text' });
     const outBox = h('textarea', { class: 'dev-out', rows: 10, placeholder: 'The anonymized version appears here. You can edit it.', 'aria-label': 'Fictitious text' });
     const extra = h('input', { type: 'text', placeholder: 'Other names to replace, separated by commas', 'aria-label': 'Other names to replace', title: 'Names the rules might not recognise, such as nicknames or one-word names.' });
     const report = h('div', { class: 'dev-report muted small', 'aria-live': 'polite' });
-    const file = h('input', { type: 'file', hidden: true, accept: '.txt,.md,.docx,.pdf' });
+    const file = h('input', { type: 'file', hidden: true, accept: '.docx,.md,.txt' });
     const runBtn = h('button', { class: 'btn primary dev-btn', type: 'button', title: 'Swaps names, phone numbers, addresses, dates of birth and case numbers for made-up ones, then lets the local AI look for anything missed. Nothing leaves this PC.' }, 'Anonymize');
     let ctrl = null;
 
-    file.addEventListener('change', async () => {
-      const f = file.files[0];
-      file.value = '';
+    // v1.32: drop a Word (.docx), Markdown (.md) or text (.txt) file, or click to choose one.
+    async function openFile(f) {
       if (!f) return;
+      if (!/\.(docx|md|txt)$/i.test(f.name)) { toast('Drop a Word (.docx), Markdown (.md) or text (.txt) file.', 'error'); return; }
       try {
         if (/\.(txt|md)$/i.test(f.name)) src.value = await f.text();
         else {
@@ -230,7 +230,17 @@
         }
         report.textContent = `Opened ${f.name}. Only the text is used; the file isn't changed.`;
       } catch (err) { toast(`Could not read ${f.name}: ${err.message}`, 'error'); }
-    });
+    }
+    file.addEventListener('change', () => { const f = file.files[0]; file.value = ''; openFile(f); });
+    const drop = h('div', { class: 'dropzone dev-drop', tabindex: '0', role: 'button', 'aria-label': 'Open a file: drop a .docx, .md or .txt file, or press Enter to choose one' },
+      h('strong', {}, 'Drop a file here'), ' (.docx, .md or .txt) or ', h('span', { class: 'link' }, 'choose one'));
+    drop.addEventListener('click', () => file.click());
+    drop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); file.click(); } });
+    for (const el of [drop, src]) {
+      el.addEventListener('dragover', (e) => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); drop.classList.add('over'); } });
+      el.addEventListener('dragleave', () => drop.classList.remove('over'));
+      el.addEventListener('drop', (e) => { if (!e.dataTransfer || !e.dataTransfer.files.length) return; e.preventDefault(); drop.classList.remove('over'); openFile(e.dataTransfer.files[0]); });
+    }
 
     const known = () => {
       const k = extra.value.split(',').map((x) => x.trim()).filter(Boolean);
@@ -296,9 +306,8 @@
     return h('section', { class: 'opt-panel dev-panel' },
       h('h3', { title: 'Turns a real document into a fictitious one you can keep as a template or give the AI to learn from. Runs on this computer only: nothing goes online.' }, 'Document Anonymizer'),
       h('div', { class: 'dev-col' },
-        h('div', { class: 'dev-col-head' }, h('strong', {}, 'Original'), h('div', { class: 'spacer' }),
-          h('button', { class: 'icon-btn dev-open', type: 'button', title: 'Open a file (.docx, .pdf, .txt, .md)', onclick: () => file.click() }, ui.icon('folder2-open'), h('span', { class: 'sr-only' }, 'Open a file'))),
-        src, extra),
+        h('div', { class: 'dev-col-head' }, h('strong', {}, 'Original')),
+        drop, src, extra),
       h('div', { class: 'dev-col' },
         h('div', { class: 'dev-col-head' }, h('strong', {}, 'Fictitious')), outBox),
       file,

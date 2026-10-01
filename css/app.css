@@ -2278,3 +2278,23 @@ body.gated .fab-dock { display: none; }
    fonts pdf.js measured, so selecting text there still lines up.) */
 :root { --mono: var(--font); }
 body *:not(svg):not(svg *):not(.textLayer *):not(.xfaLayer *):not(.textLayer):not(.xfaLayer) { font-family: var(--font) !important; }
+
+/* v1.32 */
+/* Files: a long Document name wraps instead of being cut off. */
+.files-table-wrap td.ftype { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; line-height: 1.3; }
+/* Sidebar: the operation's file number, original case and client under its name. */
+.op-head > .op-text { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; gap: .05rem; }
+.op-name-row { display: flex; align-items: center; gap: .35rem; min-width: 0; }
+.op-name-row .op-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.op-meta { font-size: .74rem; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* Landing: a section heading with a button on the right; the operation's Timeline. */
+.section-head { display: flex; align-items: center; gap: .6rem; }
+.section-head .section-title { margin-bottom: .5rem; }
+.op-tl .row-link { display: grid; grid-template-columns: 13rem minmax(0, 1fr) auto; gap: .8rem; align-items: center; }
+.op-tl-date { font-variant-numeric: tabular-nums; color: var(--muted); }
+.op-tl-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.op-case-top { gap: .6rem; }
+@media (max-width: 700px) { .op-tl .row-link { grid-template-columns: 1fr; gap: .1rem; } }
+.dev-drop { padding: .7rem 1rem; text-align: center; font-size: .9rem; }
+/* Operation case cards: the status word only, no folder icon (v1.32). */
+.op-case-top .pill svg { display: none; }

@@ -20,6 +20,10 @@
 'use strict';
 
 (function (root) {
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  /** "2026-09-30" -> "September 30, 2026" (v1.32: the long date everywhere). */
+  const longDate = (v) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || '')); return m ? `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}, ${m[1]}` : String(v || ''); };
+
   // [key, label, kind, options]. kind: text, number, date, time, select, yesno, textarea, ucr,
   // location, check (a tick box), line (a long one-line entry, label on the left).
   const SECTIONS = [
@@ -238,7 +242,7 @@
   function valueText(list, it, k, kind) {
     let v = String(it[k] == null ? '' : it[k]).trim();
     if (!v) return '';
-    if (kind === 'date') { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v); if (m) v = `${m[2]}.${m[3]}.${m[1]}`; }
+    if (kind === 'date') v = longDate(v);
     if (kind === 'weight') v = withLbs(v);
     if (list === 'narcotics' && k === 'amount' && it.unit) v = `${v} ${it.unit}${/^1(\.0+)?$/.test(v) || it.unit === 'mL' || /s$/.test(it.unit) ? '' : 's'}`;
     return v;
@@ -301,7 +305,7 @@
     const f = FIELDS.find(([k]) => k === key);
     if (!f) return String(v || '');
     if (f[2] === 'check') return v ? 'Yes' : '';
-    if (f[2] === 'date') { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ''); return m ? `${m[2]}.${m[3]}.${m[1]}` : String(v || ''); }
+    if (f[2] === 'date') return longDate(v);
     return String(v == null ? '' : v).trim();
   };
 
