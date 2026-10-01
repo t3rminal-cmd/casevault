@@ -129,6 +129,19 @@
     return true;
   }
 
+  /** The PDF of a report sent from the Draft tab (v1.40), laid out like the Draft tab's Print/PDF:
+   * from the form as it was sent, else the form now when it still goes to this report. null when
+   * neither is there (sent before v1.39) or its text was changed under Reports. */
+  async function sentPdf(c, slug) {
+    const cur = await linkedReport(c, slug);
+    if (!cur || cur.edited) return null;
+    let snap = null;
+    try { snap = await Vault.readCaseJSON(c.id, formFile(slug)); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+    if (snap) return pdfFor(c, F().normalize(snap));
+    const now = await load(c);
+    return (await sentSlugOf(c, now)) === slug ? pdfFor(c, now) : null;
+  }
+
   async function render(panel, c, token) {
     const { h, state, Save, toast, go } = ui;
     const data = await load(c);
@@ -606,5 +619,5 @@
 
   function init(kit) { ui = kit; }
 
-  root.CVReportFieldsUI = { init, load, render, sendBack, numbersInUse, pdfFor, savePdfToCase, linkedReport, syncLinked, sentSlugOf, titleOf, LINKED, PDF_NAME };
+  root.CVReportFieldsUI = { init, load, render, sendBack, sentPdf, numbersInUse, pdfFor, savePdfToCase, linkedReport, syncLinked, sentSlugOf, titleOf, LINKED, PDF_NAME };
 })(this);

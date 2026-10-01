@@ -282,3 +282,9 @@ test('v1.28: deleting a case tidies its backups and chats; Emergency Purge empti
   assert.deepStrictEqual([...data.children.keys()], [], 'CaseVault-Data is empty');
   assert.strictEqual(Vault.data, null);
 });
+
+test('orderReports: arranged order kept, new reports first (v1.40)', () => {
+  const list = [{ slug: 'new' }, { slug: 'b' }, { slug: 'a' }, { slug: 'c' }];
+  assert.deepStrictEqual(D.orderReports(list, ['a', 'gone', 'c', 'b']).map((d) => d.slug), ['new', 'a', 'c', 'b']);
+  assert.deepStrictEqual(D.orderReports(list, null).map((d) => d.slug), ['new', 'b', 'a', 'c']);
+});
