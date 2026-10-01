@@ -2537,3 +2537,45 @@ input[list]::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
 .sidebar-tools .search-wrap { flex: 1; min-width: 0; }
 #btn-titles-only[aria-pressed="true"] { color: var(--accent); }
 .op-group:not([open]) .op-meta { display: none; }
+
+/* v1.39 */
+/* Suspects: the description in even columns (no box stretches, Eye Color included); Race takes two. */
+.suspect-demo { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem .6rem; }
+.suspect-demo .field { flex: none; }
+.suspect-demo .field:has(select[aria-label$="Race"]) { grid-column: span 2; }
+.suspect-demo .suspect-wide { grid-column: 1 / -1; }
+@media (max-width: 1000px) { .suspect-demo { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Sidebar: the arrow folds an operation; its name opens the Details. */
+.op-chev { padding: .3rem; margin: -.3rem -.2rem -.3rem 0; cursor: pointer; }
+.op-chev:hover svg { color: var(--accent) !important; }
+/* Offenders: phone numbers and monikers, one row each, with an Add button under them (v1.39). */
+.rf-multi { display: grid; gap: .4rem; }
+.rf-multi-row { display: grid; grid-template-columns: minmax(0, 1fr) 2rem; gap: .4rem; align-items: center; }
+.rf-multi-socials { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) 2rem; }
+.rf-multi-add { justify-self: start; }
+/* Pre-Recorded Funds: quantity, denomination, serial number and recovered, side by side. */
+.rf-list-funds .rf-item-grid { grid-template-columns: minmax(0, .6fr) minmax(0, .8fr) minmax(0, 1.6fr) minmax(0, 1fr); }
+/* Files (v1.39): the Added date on one line; the Document column gives up the room and wraps. */
+.files-table-wrap col.col-added { width: 12.2rem; }
+.files-table-wrap td.fadded { white-space: nowrap; }
+.files-table-wrap col.col-type { width: 8.5rem; }
+.files-table-wrap col.col-size { width: 5rem; }
+.files-table-wrap col.col-ext { width: 4.2rem; }
+@media (max-width: 1100px) { .files-table-wrap col.col-type { width: 7rem; } }
+/* Close Case (v1.39): the case numbers to close, and the Draft tab's boxes it fills in. */
+.close-picks { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; margin: .2rem 0 .6rem; }
+.close-draft { margin: .4rem 0 .8rem 1.6rem; }
+.close-checks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .3rem .8rem; margin-top: .5rem; }
+@media (max-width: 760px) { .close-checks { grid-template-columns: 1fr 1fr; } }
+/* A report sent from the Draft tab is view only. */
+.view-only-note { display: flex; align-items: center; gap: .45rem; margin: .2rem 0 .6rem; padding: .5rem .8rem; border: 1px solid var(--border); border-left: 4px solid var(--accent); background: var(--accent-soft); font-size: .9rem; }
+/* Files: room for the Name (the file type shows as the icon, so no separate File column). */
+.files-table-wrap col.col-ext { width: 0; }
+.files-table-wrap td.fext, .files-table-wrap th.fext-head { padding: 0 !important; border: 0 !important; font-size: 0; overflow: hidden; visibility: hidden; }
+.files-table-wrap col.col-added { width: 11.8rem; }
+.files-table-wrap col.col-size { width: 4.8rem; }
+.files-table-wrap col.col-actions { width: 6.6rem; }
+.files-table-wrap .fname-link, .fname-folder { overflow-wrap: break-word !important; word-break: normal; }
+.files-layout { grid-template-columns: minmax(12rem, 13.5rem) minmax(0, 1fr); }
+.files-table-wrap col.col-type { width: 9.8rem; }
+.files-table-wrap td.ftype { overflow-wrap: break-word !important; word-break: normal !important; }

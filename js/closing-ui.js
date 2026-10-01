@@ -315,11 +315,25 @@
 
   /* ---------------- Close case ---------------- */
 
+  // v1.39: the Draft tab's Update Information boxes that closing fills in, by disposition.
+  const CLOSE_CODES = {
+    arrest: { status: '3 - C/C', cleared: '1 - Arrest' },
+    exceptional: { status: '4 - C/O', cleared: '5 - Other' },
+    unfounded: { status: '2 - Unf', cleared: '' },
+    inactive: { status: '1 - Sus', cleared: '' },
+    referred: { status: '4 - C/O', cleared: '3 - Ref Pros' },
+    other: { status: '', cleared: '' },
+  };
+
   async function closeCaseDialog(c, { operation = null } = {}) {
-    // v1.27: close every open case number of an operation with one disposition.
-    const opCases = operation ? operation.filter((x) => x.status !== 'Closed' && !Vault.isArchived(x.id)) : null;
     const { h, openDialog, Save, toast } = ui;
     await Save.flushAll();
+    // v1.39: every open case number of the operation is listed; tick the ones to close (this one,
+    // or all of them from Close Operation).
+    const opName = String(c.title || '').trim().toLowerCase();
+    const members = (operation || (Vault.data.cases || []).filter((x) => opName && String(x.title || '').trim().toLowerCase() === opName))
+      .filter((x) => x.id === c.id || (x.status !== 'Closed' && !Vault.isArchived(x.id)));
+    if (!members.some((x) => x.id === c.id)) members.unshift(c);
     // Loose ends, as a reminder.
     const [timeline, checks, drafts] = await Promise.all([
       Vault.getTimeline(c.id).catch(() => ({ events: [] })),
@@ -332,6 +346,8 @@
     const loose = K().closeChecklist({ timeline, checks, drafts });
     const arrest = await readArrest(c);
     const named = K().peopleOf(arrest);
+    const RF = root.CVReportFields;
+    const optsOf = (key) => ((RF && RF.FIELDS.find(([k]) => k === key)) || [, , , ['']])[3];
 
     const result = await openDialog((close) => {
       const radios = K().DISPOSITIONS.map((d) => {
@@ -342,8 +358,28 @@
       const reasonRow = h('label', { class: 'field', hidden: true }, h('span', {}, 'Exceptional clearance reason'), reason);
       const arrestNote = h('p', { class: 'small', hidden: true });
       const date = h('input', { type: 'date', value: (c.dates && c.dates.closed) || today(), required: true });
+      const by = h('input', { type: 'text', maxlength: 120, value: (c.closure && c.closure.closedBy) || ((Vault.data.settings.affiant || {}).name || ''), placeholder: 'Your name and star number', 'aria-label': 'Closed by' });
       const note = h('textarea', { rows: 3, placeholder: 'Optional: how the case ended, where the final report is, who was notified…' });
-      const ok = h('button', { class: 'btn primary', type: 'submit', disabled: true }, opCases ? 'Close Operation' : 'Close Case');
+      // Which case numbers.
+      const picks = members.map((x) => {
+        const cb = h('input', { type: 'checkbox', checked: x.id === c.id || !!operation, 'aria-label': `Close ${x.number || 'no number'}` });
+        return { x, cb, row: h('label', { class: 'check-row close-pick' }, cb, h('span', {}, h('strong', {}, x.number || 'No case number'), x.id === c.id ? h('span', { class: 'muted small' }, ' (this one)') : '')) };
+      });
+      // The Draft tab's boxes.
+      const upd = h('input', { type: 'checkbox', checked: !!RF });
+      const status = h('select', { 'aria-label': 'Status' }, optsOf('status').map((o) => h('option', { value: o }, o || '—')));
+      const cleared = h('select', { 'aria-label': 'How Cleared' }, optsOf('cleared').map((o) => h('option', { value: o }, o || '—')));
+      const CHECKS = ['victimVerified', 'offenderVerified', 'propertyVerified', 'circumstancesVerified', 'victimUpdated', 'offenderUpdated', 'propertyUpdated', 'circumstancesUpdated'];
+      const checkBoxes = CHECKS.map((k) => {
+        const f = RF && RF.FIELDS.find(([kk]) => kk === k);
+        const cb = h('input', { type: 'checkbox', checked: /Verified$/.test(k) });
+        return { k, cb, row: h('label', { class: 'check-row small' }, cb, h('span', {}, f ? f[1] : k)) };
+      });
+      const draftBox = h('div', { class: 'close-draft' },
+        h('div', { class: 'form-grid' }, ui.field('Status', status), ui.field('How Cleared', cleared)),
+        h('div', { class: 'close-checks' }, checkBoxes.map((x) => x.row)));
+      upd.addEventListener('change', () => { draftBox.hidden = !upd.checked; });
+      const ok = h('button', { class: 'btn primary', type: 'submit', disabled: true }, 'Close Case');
       const pick = () => {
         const sel = radios.find((x) => x.r.checked);
         reasonRow.hidden = !(sel && sel.d.key === 'exceptional');
@@ -351,65 +387,73 @@
         arrestNote.textContent = named.length
           ? `Arrest details: ${named.join(', ')}. You can still change them on the Arrest details tab.`
           : 'After closing, the Arrest details tab opens so you can fill in the arrestee, the arrest and the charges.';
-        ok.disabled = !sel || (sel.d.key === 'exceptional' && !reason.value) || !date.value;
+        const n = picks.filter((p) => p.cb.checked).length;
+        ok.textContent = n > 1 ? `Close ${n} Case Numbers` : 'Close Case';
+        ok.disabled = !sel || (sel.d.key === 'exceptional' && !reason.value) || !date.value || !n || !by.value.trim();
       };
-      for (const x of radios) x.r.addEventListener('change', pick);
+      const codes = () => { const sel = radios.find((x) => x.r.checked); const cc = sel && CLOSE_CODES[sel.d.key]; if (cc) { status.value = cc.status; cleared.value = cc.cleared; } };
+      for (const x of radios) x.r.addEventListener('change', () => { codes(); pick(); });
+      for (const p of picks) p.cb.addEventListener('change', pick);
       reason.addEventListener('change', pick);
       date.addEventListener('input', pick);
+      by.addEventListener('input', pick);
+      codes();
       pick();
       return h('form', { class: 'close-form', onsubmit: (e) => {
         e.preventDefault();
         const sel = radios.find((x) => x.r.checked);
         if (!sel) return;
-        close({ disposition: sel.d.key, reason: sel.d.key === 'exceptional' ? reason.value : '', date: date.value, note: note.value.trim() });
+        close({
+          disposition: sel.d.key, reason: sel.d.key === 'exceptional' ? reason.value : '', date: date.value, note: note.value.trim(), closedBy: by.value.trim(),
+          ids: picks.filter((p) => p.cb.checked).map((p) => p.x.id),
+          draft: upd.checked ? { status: status.value, cleared: cleared.value, checks: Object.fromEntries(checkBoxes.map((x) => [x.k, x.cb.checked])) } : null,
+        });
       } },
-      h('h2', {}, opCases ? `Close the operation "${c.title || 'Untitled case'}"` : `Close "${c.title || 'Untitled case'}"${c.number ? ` (${c.number})` : ''}`),
-      opCases ? h('p', { class: 'small' }, `Closes ${opCases.length} case number${opCases.length === 1 ? '' : 's'}: ${opCases.map((x) => x.number || 'no number').join(', ')}. Each can still be reopened on its own.`) : null,
+      h('h2', {}, `Close "${c.title || 'Untitled case'}"${c.number && members.length === 1 ? ` (${c.number})` : ''}`),
       h('p', { class: 'muted small explain' }, 'Close a case when the investigation is finished. Choose how it ended. A closed case stays in the list (filter: Closed) until you archive it, and can be reopened.'),
       loose.length ? h('div', { class: 'card warn-card' }, h('strong', {}, 'Before you close'), h('ul', { class: 'small' }, loose.map((x) => h('li', {}, x.text))),
         h('p', { class: 'small muted' }, 'You can still close the case; this is a reminder.')) : h('p', { class: 'small ok-text' }, '✓ No open deadlines, check flags or [CONFIRM: …] left.'),
+      members.length > 1 ? h('div', {}, h('h3', {}, 'Case numbers to close'), h('p', { class: 'muted small' }, 'Tick each case number of this operation to close with this disposition. Each can still be reopened on its own.'), h('div', { class: 'close-picks' }, picks.map((p) => p.row))) : '',
       h('h3', {}, 'Disposition'),
       h('div', { class: 'radio-list' }, radios.map((x) => x.row)),
       reasonRow, arrestNote,
-      h('div', { class: 'form-grid' }, ui.field('Closed on', date), h('div')),
+      h('div', { class: 'form-grid' }, ui.field('Closed on', date), ui.field('Closed by', by)),
+      RF ? h('div', {}, h('label', { class: 'check-row' }, upd, h('span', {}, h('strong', {}, 'Update the Draft tab'), h('span', { class: 'muted small' }, ': Status, How Cleared and the Update Information boxes of each case number closed'))), draftBox) : '',
       ui.field('Closing note', note),
       h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), ok));
     });
     if (!result) return false;
-    if (opCases) {
-      let n = 0;
-      for (const x of opCases) {
-        try {
-          const oc = x.id === c.id ? c : await Vault.getCase(x.id);
-          const was = oc.closure;
-          oc.status = 'Closed';
-          oc.dates.closed = result.date;
-          oc.closure = { ...result, at: new Date().toISOString() };
-          if (was && was.at) oc.closureHistory = [...(oc.closureHistory || []), was];
-          oc.pending = null;
-          if (result.disposition === 'arrest') { oc.arrest = true; delete oc.arrestRemoved; }
-          await Save.track(`case:${oc.id}`, () => Vault.saveCase(structuredClone(oc)));
-          n++;
-        } catch { /* reported by Save */ }
-      }
-      toast(`Operation closed: ${n} case number${n === 1 ? '' : 's'}, ${K().disposition(result.disposition).label}.`, 'success');
-      ui.refresh();
-      return true;
+    const { ids, draft, ...closure } = result;
+    let n = 0;
+    for (const id of ids) {
+      try {
+        const oc = id === c.id ? c : await Vault.getCase(id);
+        const was = oc.closure;
+        oc.status = 'Closed';
+        oc.dates.closed = closure.date;
+        oc.closure = { ...closure, at: new Date().toISOString() };
+        if (was && was.at && was.at !== oc.closure.at) oc.closureHistory = [...(oc.closureHistory || []), was];
+        oc.pending = null;
+        if (closure.disposition === 'arrest') { oc.arrest = true; delete oc.arrestRemoved; }
+        await Save.track(`case:${oc.id}`, () => Vault.saveCase(structuredClone(oc)));
+        // The Draft tab of each case closed: Status, How Cleared and the boxes ticked (v1.39).
+        if (draft && RF) {
+          let d = null;
+          try { d = await Vault.readCaseJSON(oc.id, 'report-fields.json'); } catch { /* none yet */ }
+          d = RF.normalize(d);
+          if (!d.caseNumber && (oc.agencyNumber || oc.number)) d.caseNumber = oc.agencyNumber || oc.number;
+          if (draft.status) d.status = draft.status;
+          if (draft.cleared) d.cleared = draft.cleared;
+          for (const [k, v] of Object.entries(draft.checks)) if (v) d[k] = true;
+          await Save.track(`report-fields:${oc.id}`, () => Vault.writeCaseJSON(oc.id, 'report-fields.json', d));
+        }
+        n++;
+      } catch { /* reported by Save */ }
     }
-    const prev = c.closure;
-    c.status = 'Closed';
-    c.dates.closed = result.date;
-    c.closure = { ...result, at: new Date().toISOString() };
-    if (prev && prev.at && prev.at !== c.closure.at) c.closureHistory = [...(c.closureHistory || []), prev];
-    c.pending = null;
-    if (result.disposition === 'arrest') { c.arrest = true; delete c.arrestRemoved; }
-    try {
-      await Save.track(`case:${c.id}`, () => Vault.saveCase(structuredClone(c)));
-      toast(`Case closed: ${K().disposition(result.disposition).label}.`, 'success');
-      ui.go(c.id, result.disposition === 'arrest' && !named.length ? 'arrest' : 'details');
-      ui.refresh();
-      return true;
-    } catch { return false; }
+    toast(n > 1 ? `Closed ${n} case numbers: ${K().disposition(closure.disposition).label}.` : `Case closed: ${K().disposition(closure.disposition).label}.`, 'success');
+    if (ids.includes(c.id)) ui.go(c.id, closure.disposition === 'arrest' && !named.length ? 'arrest' : 'details');
+    ui.refresh();
+    return n > 0;
   }
 
   async function reopenCase(c) {
@@ -472,7 +516,7 @@
     if (c.status === 'Pending' && c.pending) return `Waiting on ${c.pending.reason}${c.pending.detail ? ` (${c.pending.detail})` : ''}${c.pending.followUp ? ` · follow up by ${c.pending.followUp}` : ''}.`;
     if (c.status === 'Closed' && c.closure) {
       const d = K2.disposition(c.closure.disposition);
-      return `Closed ${c.closure.date || ''}: ${d ? d.label : ''}${c.closure.reason ? ` (${c.closure.reason})` : ''}.`;
+      return `Closed ${c.closure.date || ''}${c.closure.closedBy ? ` by ${c.closure.closedBy}` : ''}: ${d ? d.label : ''}${c.closure.reason ? ` (${c.closure.reason})` : ''}.`;
     }
     // Open needs no explaining on the Details tab (v1.24).
     return c.status === 'Open' ? '' : K2.STATUS_HELP[c.status] || '';

@@ -15,7 +15,16 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.38)
+## Features (v1.39)
+
+- Sidebar: an operation's name opens its Details (the arrow folds it); Timeline tab: no stray "null"
+- Suspects: IR, FBI and IDOC Numbers and a Phone Number, in even columns; Offenders: phone numbers (Add Another Phone) and monikers with their social media app
+- Draft tab: picking an IUCR code fills Offense Classification ("Delv: Synthetic Drugs"); the heading and the report title follow the Officer Report Type (Supplementary Report - Purchase); **Purchase Price** with each pre-recorded bill (quantity, denomination, serial number, recovered or not); Show All / Hide All at the top, Save Changes with the other buttons
+- Reports sent from the Draft tab are view only, with **Send Back to Draft** for revisions
+- **Close Case** asks who closed it, lists the operation's case numbers to tick, and fills each one's Draft tab (Status, How Cleared, Update Information boxes)
+- Files: exhibit photos named "Exhibit 1"; the Added date on one line
+
+## Earlier (v1.38)
 
 - Overview: a click on empty space closes the open operation folder
 - Every suggestion list is CaseVault's own square one (File Number, Hair and Eye Color, contact roles, mail addresses…), and the browser's round history pop-up is turned off everywhere; **File Number** lists each number with its operation
