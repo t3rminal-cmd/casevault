@@ -19,7 +19,9 @@
   const K = () => (typeof module !== 'undefined' && module.exports ? require('./closing.js') : root.CVClosing);
 
   const clean = (s) => String(s == null ? '' : s).trim();
-  const US = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(clean(iso)); return m ? `${m[2]}.${m[3]}.${m[1]}` : clean(iso); };
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  // The long date, as everywhere in CaseVault (v1.32): "September 30, 2026".
+  const US = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(clean(iso)); return m ? `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}, ${m[1]}` : clean(iso); };
   const when = (d, t) => [US(d), clean(t)].filter(Boolean).join(' ');
 
   /** The arrestee's name as on a report: LAST, First Middle. */

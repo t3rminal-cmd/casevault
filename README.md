@@ -15,7 +15,14 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.31)
+## Features (v1.32)
+
+- **One report, one PDF:** the Draft tab keeps one Supplementary Report under Reports; its PDF View and the Draft tab's PDF are the same file, saved once in Files (replaced, not copied)
+- Dates in full everywhere (September 30, 2026); no "Updated" dates on pages and no dates in saved file names
+- Case list and Overview in File Number order; every operation is a blue folder with its file number, original case and client; the open operation's Timeline on the Overview; Clear for Recently Updated
+- Reports lists reports only (New Report button); arrest charges offer the report's charges; long Document names wrap in Files; the Anonymizer takes dropped .docx, .md and .txt files
+
+## Earlier (v1.31)
 
 - **Draft** tab (between Timeline and Reports): the Supplementary Report form, with Print / PDF, Save PDF to Case and **Create Report**, which makes an editable report laid out like the PDF; **PDF View** in the report editor shows any report as a PDF in the same style and saves it to the case
 - **Reports**: Field Notes and the reports, with **New…** (Notes or Report) in place of the New report box

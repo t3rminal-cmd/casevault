@@ -22,7 +22,7 @@
   async function render(panel, c, token, sub) {
     if (sub) return renderEditor(panel, c, token, decodeURIComponent(sub));
     const { h, state, fmtDateTime, toast, go, Save, confirmDialog } = ui;
-    const [drafts, templates, notesText] = await Promise.all([Vault.listDrafts(c.id), Vault.listTemplates(), Vault.getNotes(c.id).catch(() => '')]);
+    const [drafts, templates] = await Promise.all([Vault.listDrafts(c.id), Vault.listTemplates()]);
     if (token !== state.renderToken) return;
     Engine().refresh().then(() => { if (token === state.renderToken) drawStart(); });
 
@@ -74,7 +74,7 @@
     create.addEventListener('click', async (e) => {
       e.preventDefault();
       if (closeNew) closeNew();
-      const name = title.value.trim() || `${CVDraft.DOC_TYPES[type.value].label} ${CVFormat.dateText(Vault.localDay())}`;
+      const name = title.value.trim() || CVDraft.DOC_TYPES[type.value].label;
       const start = startSel.value;
       let body = `# ${name}\n\n`;
       try {
@@ -92,27 +92,17 @@
       } catch { /* reported by Save */ }
     });
 
-    // Reports: the case notes first (always there), then every draft.
-    const words = (notesText.match(/\S+/g) || []).length;
-    const notesRow = h('tr', { class: 'notes-row' },
-      h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/.notes` }, 'Field Notes')),
-      h('td', { class: 'muted' }, 'Notes'),
-      h('td', { class: 'muted' }, 'General Investigator Notes', h('span', { class: 'small' }, words ? ` · ${words} word${words === 1 ? '' : 's'}` : ' · Empty')),
-      h('td', { class: 'actions' }, words && !Vault.isArchived(c.id) ? h('button', { class: 'btn small ghost', type: 'button', title: 'Empties the Field Notes', onclick: async () => {
-        if (!(await confirmDialog({ title: 'Delete the Field Notes?', message: `All ${words} words of this case's notes are permanently deleted from the SSD.`, confirmText: 'Delete', danger: true }))) return;
-        try { await Save.track(`notes:${c.id}`, () => Vault.saveNotes(c.id, '')); ui.refresh(); } catch { /* reported */ }
-      } }, 'Delete') : null));
-    // (Report Fields moved to the Draft tab in v1.31.)
+    // Reports: every report of the case (v1.32: the Field Notes aren't listed here; they're in the
+    // Notes button at the bottom right). No dates.
     const list = h('table', { class: 'files drafts-table' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Report'), h('th', {}, 'Type'), h('th', {}, 'Updated'), h('th', {}, ''))),
-      h('tbody', {}, notesRow, drafts.map((d) => h('tr', {},
+      h('thead', {}, h('tr', {}, h('th', {}, 'Report'), h('th', {}, 'Type'), h('th', {}, ''))),
+      h('tbody', {}, drafts.length ? drafts.map((d) => h('tr', {},
         h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/${encodeURIComponent(d.slug)}` }, d.title), d.ai ? h('span', { class: 'layer-badge ai-badge' }, 'AI') : null),
         h('td', { class: 'muted' }, (CVDraft.DOC_TYPES[d.type] || CVDraft.DOC_TYPES.other).label),
-        h('td', { class: 'muted' }, d.updated ? fmtDateTime(Date.parse(d.updated)) : ''),
         h('td', { class: 'actions' }, h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
           if (!(await confirmDialog({ title: `Delete "${d.title}"?`, message: 'The report is permanently deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
           try { await Save.track(`draft-del:${c.id}:${d.slug}`, () => Vault.deleteDraft(c.id, d.slug)); ui.refresh(); } catch { /* reported */ }
-        } }, 'Delete'))))));
+        } }, 'Delete')))) : [h('tr', {}, h('td', { colspan: 3, class: 'muted' }, 'No reports yet. Fill in the Draft tab and click Create Report, or use New Report.'))]));
 
     const archived = Vault.isArchived(c.id);
     const newReport = () => ui.openDialog((close) => {
@@ -123,20 +113,13 @@
         h('div', { class: 'field span-2' }, h('span', {}, 'Start from'), startBox),
         h('div', { class: 'dialog-actions span-2' }, h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Cancel'), create));
     }).then(() => { closeNew = null; });
-    const newSel = h('select', { class: 'new-select', 'aria-label': 'New' },
-      h('option', { value: '' }, 'New…'), h('option', { value: 'notes' }, 'Notes'), h('option', { value: 'report' }, 'Report'));
-    newSel.addEventListener('change', () => {
-      const v = newSel.value;
-      newSel.value = '';
-      if (v === 'notes') go(c.id, 'reports', '.notes');
-      if (v === 'report') newReport();
-    });
+    const newBtn = h('button', { class: 'btn small primary new-report-btn', type: 'button', onclick: () => newReport() }, 'New Report');
     panel.replaceChildren(
       h('div', { class: 'reports-head' }, h('h2', { class: 'section-title' }, 'Reports'), h('div', { class: 'spacer' }),
         // An archived case is read-only: its reports can be read and exported, not added to.
-        archived ? null : newSel),
+        archived ? null : newBtn),
       list,
-      h('p', { class: 'muted small explain' }, `Your field notes and every report, draft or AI draft for this case. Saved on the SSD in ${CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}`)}: notes.md and the drafts folder, as Markdown files. Templates live in CaseVault-Data | templates (Vault → Templates).`));
+      h('p', { class: 'muted small explain' }, `Every report, draft or AI draft for this case. Saved on the SSD in ${CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}`)}, in the drafts folder, as Markdown files. Templates live in CaseVault-Data | templates (Vault → Templates).`));
   }
 
   /* =====================================================================
@@ -574,13 +557,18 @@
       await ui.Save.flushAll();
       const p = Vault.data.settings.affiant || {};
       const name = `${(meta.title || 'Report').replace(/[\\/:*?"<>|]/g, '')}.pdf`;
-      const opts = { agency: p.agency || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' \u00b7 '), printed: CVFormat.dateText(Vault.localDay()), title: meta.title || '' };
-      const bytes = CVDraftPdf.build(ta.value, opts);
+      const opts = { agency: p.agency || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' \u00b7 '), printed: '', title: meta.title || '' };
+      // The report made from the Draft tab, unchanged here: the same PDF as the Draft tab's (v1.32).
+      const RFU = root.CVReportFieldsUI;
+      const linked = RFU && slug === RFU.LINKED && meta.fromFields && await RFU.linkedReport(c).then((r) => r && !r.edited).catch(() => false);
+      const bytes = linked ? await RFU.pdfFor(c) : CVDraftPdf.build(ta.value, opts);
       const viewer = CVPdfViewer.create(bytes, { h, icon: ui.icon, title: meta.title || 'Report', fileName: name });
       const folder = /supplement/i.test(`${meta.type} ${meta.title}`) ? 'Supplementary Report' : /arrest/i.test(`${meta.type} ${meta.title}`) ? 'Arrest Report' : 'Case Report';
       const saveCase = Vault.isArchived(c.id) ? null : h('button', { class: 'btn', type: 'button', title: `Saves the PDF in this case's ${folder} folder.`, onclick: async () => {
         try {
-          const path = await ui.Save.track(`draft-pdf:${c.id}`, () => Vault.addFile(c.id, new File([bytes], name, { type: 'application/pdf' }), { folder, description: name.replace(/\.pdf$/, '') }));
+          const path = linked
+            ? (await RFU.savePdfToCase(c, null, bytes)).path
+            : await ui.Save.track(`draft-pdf:${c.id}`, () => Vault.addFile(c.id, new File([bytes], name, { type: 'application/pdf' }), { folder, description: name.replace(/\.pdf$/, ''), replace: true }));
           toast(`Saved to the case files: ${path.split('/').pop()}`, 'success', 5000);
           saveCase.disabled = true;
         } catch { /* reported by Save */ }
@@ -822,7 +810,7 @@
       try {
         const caseObj = await Vault.getCase(id);
         const text = CVDraft.fillTemplate(await Vault.readTemplate(t.file), CVDraft.templateContext(caseObj, new Date(), Vault.data.settings.affiant, await CVClosingUI.templateExtra(caseObj)));
-        const name = `${t.title} ${CVFormat.dateText(Vault.localDay())}`;
+        const name = t.title;
         const hit = Object.keys(CVDraft.DOC_TYPES).find((k) => k !== 'other' && `${t.file} ${t.title}`.toLowerCase().includes(k)) || 'other';
         const slug = await Vault.newDraftSlug(id, name);
         await Save.track(`draft:${id}:${slug}`, () => Vault.saveDraft(id, slug, { title: name, type: hit, ai: false, created: new Date().toISOString(), template: t.file }, text));

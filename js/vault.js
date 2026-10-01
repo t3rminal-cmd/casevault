@@ -24,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.31.0';
+  const APP_VERSION = '1.32.0';
   const SCHEMA = 1;
   const DATA_DIR = 'CaseVault-Data';
   const STATUSES = ['Open', 'Pending', 'Closed', 'Archived'];
@@ -768,7 +768,9 @@ const Vault = (() => {
     const dir = await folderDir(id, folder, true);
     let wanted = file.name;
     if (folder && !opts.keepName) wanted = CVCaseFiles.fileName(await getCase(id), folder, file.name, opts.description || '');
-    const name = await FS.uniqueName(dir, wanted);
+    // opts.replace (v1.32): a generated report saved again takes the place of the one saved before,
+    // under the same name, instead of piling up "(2)", "(3)".
+    const name = opts.replace ? FS.safeName(wanted) : await FS.uniqueName(dir, wanted);
     await FS.writeData(dir, name, file);
     await touchIndex(id);
     return CVCaseFiles.joinPath(folder, name);

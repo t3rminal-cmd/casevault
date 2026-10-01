@@ -18,10 +18,11 @@ test('SSNs are written 123.45.6789', () => {
   assert.strictEqual(F.ssn('1234'), '123.4');
 });
 
-test('dates are shown MM.DD.YYYY and typed several ways', () => {
-  assert.strictEqual(F.dateText('2026-12-01'), '12.01.2026');
+test('dates are shown long (v1.32) and typed several ways', () => {
+  assert.strictEqual(F.dateText('2026-12-01'), 'December 1, 2026');
+  assert.strictEqual(F.dateText('2026-09-30'), 'September 30, 2026');
   for (const [typed, want] of Object.entries({
-    '12.01.2026': '2026-12-01', '12/1/2026': '2026-12-01', '12-01-26': '2026-12-01', '12012026': '2026-12-01', '2026-12-01': '2026-12-01', '1.5.1990': '1990-01-05',
+    '12.01.2026': '2026-12-01', '12/1/2026': '2026-12-01', '12-01-26': '2026-12-01', '12012026': '2026-12-01', '2026-12-01': '2026-12-01', '1.5.1990': '1990-01-05', 'December 1, 2026': '2026-12-01', 'Sep 30 2026': '2026-09-30',
   })) assert.strictEqual(F.parseDate(typed), want, typed);
   for (const bad of ['', '13.01.2026', '02.30.2026', '12.01', 'soon']) assert.strictEqual(F.parseDate(bad), '', bad);
 });

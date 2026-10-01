@@ -52,8 +52,8 @@
     if (!s) return '';
     const d = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(s + 'T00:00:00') : new Date(s);
     if (isNaN(d)) return s;
-    // MM.DD.YYYY everywhere in CaseVault (js/formats.js), like the date boxes.
-    return `${pad(d.getMonth() + 1)}.${pad(d.getDate())}.${d.getFullYear()}`;
+    // The long date everywhere in CaseVault (v1.32): "September 30, 2026".
+    return CVFormat.dateText(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
   }
 
   function fmtDateTime(ms) {
@@ -551,8 +551,9 @@
         h('span', { class: 'case-item-flags' },
           h('span', { class: `case-status status-${String(c.status).toLowerCase()}` }, c.status))),
       // Just the numbers: file number | case number | client, e.g. "100 | JH123456 | State".
-      // (No empty line when there are no numbers to show, v1.29.)
-      (() => { const meta = (inGroup ? [c.fileNumber, c.agencyNumber, c.client] : [c.fileNumber, c.number, c.client]).filter(Boolean).join(' | '); return meta ? h('div', { class: 'case-item-meta muted' }, meta) : null; })()));
+      // (No empty line when there are no numbers to show, v1.29. Inside an operation only the case
+      // number shows, v1.32: the file number, original case and client are on the operation.)
+      (() => { const meta = inGroup ? '' : [c.fileNumber, c.number, c.client].filter(Boolean).join(' | '); return meta ? h('div', { class: 'case-item-meta muted' }, meta) : null; })()));
   }
 
   /* Operations (v1.26): the Title or Operation Name ties several case numbers together. Cases that
@@ -588,9 +589,13 @@
     const bell = group.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date));
     const det = h('details', { class: 'op-group', open },
       h('summary', { class: 'op-head', title: `${group[0].title}: ${group.length} case numbers` },
-        h('span', { class: 'op-folder' }, I('folder-fill')), h('span', { class: 'op-name' }, group[0].title),
-        bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null,
-        h('span', { class: 'op-count' }, String(group.length))),
+        h('span', { class: 'op-folder' }, I('folder-fill')),
+        h('span', { class: 'op-text' },
+          h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, group[0].title),
+            bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
+          // v1.32: the operation's file number, original case number and client, once.
+          (() => { const o = opInfo(group); const t = [o.fileNumber, o.number, o.client].filter(Boolean).join(' | '); return t ? h('span', { class: 'op-meta muted' }, t) : null; })()),
+        group.length > 1 ? h('span', { class: 'op-count' }, String(group.length)) : null),
       h('ul', { class: 'op-cases' }, group.map((c) => caseItem(c, true))));
     det.addEventListener('toggle', () => {
       // A <details> drawn open fires "toggle" too: save only a real change (v1.29: saving on
@@ -602,18 +607,24 @@
     });
     return h('li', { class: 'op-item' }, det);
   }
+  // v1.32: every operation is a folder (one case number or several), in File Number order.
+  const fileKey = (f) => String(f || '').trim();
+  const byFileNumber = (a, b) => {
+    const x = fileKey(a); const y = fileKey(b);
+    if (!x !== !y) return x ? -1 : 1; // no file number last
+    return x.localeCompare(y, undefined, { numeric: true, sensitivity: 'base' });
+  };
+  /** The operation's first case: its file number, original case number and client. */
+  function opInfo(group) {
+    const first = [...group].sort((a, b) => (a.opened || a.dates?.opened || '').localeCompare(b.opened || b.dates?.opened || '') || String(a.number || '').localeCompare(String(b.number || ''), undefined, { numeric: true }))[0] || {};
+    return { fileNumber: group.map((c) => c.fileNumber).filter(Boolean).sort(byFileNumber)[0] || '', number: first.number || '', client: first.client || group.map((c) => c.client).find(Boolean) || '' };
+  }
   function groupedItems(cases) {
     const byOp = new Map();
-    for (const c of cases) { const k = opKey(c.title); if (k) byOp.set(k, [...(byOp.get(k) || []), c]); }
-    const out = []; const done = new Set();
-    for (const c of cases) {
-      const k = opKey(c.title);
-      if (!k || byOp.get(k).length < 2) { out.push(caseItem(c)); continue; }
-      if (done.has(k)) continue;
-      done.add(k);
-      out.push(operationGroup(byOp.get(k)));
-    }
-    return out;
+    for (const c of cases) { const k = opKey(c.title) || `#${c.id}`; byOp.set(k, [...(byOp.get(k) || []), c]); }
+    const groups = [...byOp.values()].map((g) => g.sort((a, b) => String(a.number || '').localeCompare(String(b.number || ''), undefined, { numeric: true })));
+    groups.sort((a, b) => byFileNumber(opInfo(a).fileNumber, opInfo(b).fileNumber) || String(a[0].title || '').localeCompare(String(b[0].title || '')));
+    return groups.map((g) => operationGroup(g));
   }
 
   function renderCaseList() {
@@ -711,7 +722,10 @@
     const count = (s) => cases.filter((c) => c.status === s).length;
     const deadlines = cases.filter((c) => c.nextDeadline && c.status !== 'Closed' && c.status !== 'Archived')
       .sort((a, b) => (a.nextDeadline.date + a.nextDeadline.time).localeCompare(b.nextDeadline.date + b.nextDeadline.time));
-    const recent = [...cases].sort((a, b) => (b.updated || '').localeCompare(a.updated || '')).slice(0, 8);
+    // Recently Updated can be cleared (v1.32): only cases changed after that show again.
+    const clearedAt = (Vault.data.settings && Vault.data.settings.recentClearedAt) || '';
+    const recent = [...cases].filter((c) => (c.updated || '') > clearedAt).sort((a, b) => (b.updated || '').localeCompare(a.updated || '')).slice(0, 8);
+    const tlBox = h('div', { class: 'dash-section op-timeline-section', hidden: true });
 
     $('#main').replaceChildren(h('section', { class: 'dashboard' },
       welcomeHero(cases, deadlines),
@@ -719,7 +733,8 @@
         ...Vault.STATUSES.map((s) => h('div', { class: `stat stat-${s.toLowerCase()}` },
           h('span', { class: 'stat-icon' }, I(STATUS_ICONS[s])),
           h('div', {}, h('div', { class: 'stat-num' }, count(s)), h('div', { class: 'stat-label' }, s))))),
-      operationFolders(cases),
+      operationFolders(cases, tlBox),
+      tlBox,
       h('div', { class: 'dash-section' }, h('h2', { class: 'section-title' }, 'Upcoming deadlines'),
       deadlines.length
         ? h('ul', { class: 'plain-list' }, deadlines.map((c) => {
@@ -730,13 +745,15 @@
             h('span', { class: `due ${due.cls}` }, due.text)));
         }))
         : h('p', { class: 'muted' }, 'No open deadlines. Add them from a case\'s Timeline tab.')),
-      h('div', { class: 'dash-section' }, h('h2', { class: 'section-title' }, 'Recently updated'),
+      h('div', { class: 'dash-section' }, h('div', { class: 'section-head' }, h('h2', { class: 'section-title' }, 'Recently updated'), h('div', { class: 'spacer' }),
+        recent.length ? h('button', { class: 'btn small ghost', type: 'button', title: 'Empties this list. Cases you change after this show here again.', onclick: async () => {
+          try { await Save.track('settings', () => Vault.updateSettings({ recentClearedAt: new Date().toISOString() })); showDashboard(); } catch { /* reported */ }
+        } }, 'Clear') : null),
       recent.length
         ? h('ul', { class: 'plain-list' }, recent.map((c) => h('li', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}`, class: 'row-link recent-row' },
           h('span', { class: 'recent-title' }, h('span', {}, c.title || 'Untitled case'), h('span', { class: 'muted' }, [c.fileNumber && ` · File ${c.fileNumber}`, c.number && ` · Case ${c.number}`].filter(Boolean).join(''))),
-          statusPill(c.status),
-          h('span', { class: 'muted' }, c.updated ? fmtDateTime(Date.parse(c.updated)) : '')))))
-        : h('p', { class: 'muted' }, 'Create your first case with "New case".')),
+          statusPill(c.status)))))
+        : h('p', { class: 'muted' }, cases.length ? 'Nothing changed since you cleared this list.' : 'Create your first case with "New case".')),
       h('div', { class: 'dash-section dash-quick' }, h('h2', { class: 'section-title' }, 'Quick links'), CVReferenceUI.quickLinks())));
   }
 
@@ -744,15 +761,16 @@
    * its name under it. Click one to open it: its case numbers, each with its Reports, Field Notes,
    * Files (photos, documents) and Timeline. Which one is open is remembered for this visit. */
   const opFolderState = { open: '' };
-  function operationFolders(cases) {
+  function operationFolders(cases, tlBox = null) {
     const active = cases.filter((c) => !isArchivedEntry(c));
     const ops = new Map();
     for (const c of active) {
       const k = opKey(c.title) || `#${c.id}`;
       ops.set(k, [...(ops.get(k) || []), c]);
     }
-    const list = [...ops.entries()].map(([k, group]) => ({ k, name: String(group[0].title || 'Untitled case').trim(), group: group.sort((a, b) => String(a.number || '').localeCompare(String(b.number || ''), undefined, { numeric: true })), updated: group.reduce((m, c) => ((c.updated || '') > m ? c.updated : m), '') }))
-      .sort((a, b) => b.updated.localeCompare(a.updated));
+    // In File Number order (v1.32), as in the case list.
+    const list = [...ops.entries()].map(([k, group]) => ({ k, name: String(group[0].title || 'Untitled case').trim(), group: group.sort((a, b) => String(a.number || '').localeCompare(String(b.number || ''), undefined, { numeric: true })), fileNumber: opInfo(group).fileNumber }))
+      .sort((a, b) => byFileNumber(a.fileNumber, b.fileNumber) || a.name.localeCompare(b.name));
     const box = h('div', { class: 'dash-section op-folders-section' });
     const draw = () => {
       const open = list.find((o) => o.k === opFolderState.open);
@@ -766,23 +784,43 @@
       }));
       const inside = open ? h('div', { class: 'op-open' },
         h('div', { class: 'op-open-head' }, h('strong', {}, open.name), h('span', { class: 'muted small' }, `${open.group.length} case number${open.group.length === 1 ? '' : 's'}`),
-          // v1.29: the Timeline belongs to the operation (it shows every case number's events).
-          h('a', { class: 'op-word', href: `#/case/${encodeURIComponent(open.group[0].id)}/timeline` }, 'Timeline'),
           h('div', { class: 'spacer' }),
           h('button', { type: 'button', class: 'btn small', onclick: () => newCase({ title: open.name }) }, 'Add Case Number')),
         h('div', { class: 'op-open-cases' }, open.group.map((c) => {
           const to = (tab, sub) => `#/case/${encodeURIComponent(c.id)}/${tab}${sub ? `/${sub}` : ''}`;
           return h('div', { class: 'op-case-card' },
-            h('a', { class: 'op-case-top', href: to('details') }, I('folder-fill'), h('span', { class: 'op-case-num' }, c.number || 'No case number yet'), statusPill(c.status)),
+            h('a', { class: 'op-case-top', href: to('details') }, h('span', { class: 'op-case-num' }, c.number || 'No case number yet'), statusPill(c.status)),
             h('div', { class: 'op-case-links' },
-              h('a', { class: 'op-word', href: to('reports', '.notes') }, 'Field Notes'),
               h('a', { class: 'op-word', href: to('reports') }, 'Reports'),
               h('a', { class: 'op-word', href: to('files', 'photos') }, 'Photos'),
               h('a', { class: 'op-word', href: to('files') }, 'Files')));
         }))) : null;
       box.replaceChildren(...[h('h2', { class: 'section-title' }, 'Operations'),
         list.length ? tiles : h('p', { class: 'muted' }, 'Create a case with New Case: Its operation appears here as a folder.'), inside].filter(Boolean));
+      if (tlBox) drawTimeline(open);
     };
+    // The open operation's Timeline (v1.32): every case number's events, in its own section above
+    // Upcoming Deadlines.
+    let tlToken = 0;
+    async function drawTimeline(open) {
+      const my = ++tlToken;
+      if (!open) { tlBox.hidden = true; tlBox.replaceChildren(); return; }
+      const tls = [];
+      for (const c of open.group) { try { tls.push({ caseId: c.id, number: c.number || '', events: ((await Vault.getTimeline(c.id)) || {}).events || [] }); } catch { /* moved */ } }
+      if (my !== tlToken) return;
+      const rows = CVOperation.mergeEvents(tls);
+      tlBox.hidden = false;
+      tlBox.replaceChildren(
+        h('div', { class: 'section-head' }, h('h2', { class: 'section-title' }, `Timeline: ${open.name}`), h('div', { class: 'spacer' }),
+          h('a', { class: 'op-word', href: `#/case/${encodeURIComponent(open.group[0].id)}/timeline` }, 'Open Timeline')),
+        rows.length ? h('ul', { class: 'plain-list op-tl' }, rows.map(({ caseId, number, ev }) => {
+          const due = ev.kind === 'deadline' && !ev.done ? dueLabel(ev.date) : null;
+          return h('li', {}, h('a', { class: 'row-link', href: `#/case/${encodeURIComponent(caseId)}/timeline` },
+            h('span', { class: `op-tl-date ${due ? `due ${due.cls}` : ''}` }, `${fmtDate(ev.date)}${ev.time ? ` ${ev.time}` : ''}`),
+            h('span', { class: 'op-tl-title' }, ev.kind === 'deadline' ? `${ev.done ? 'Done: ' : 'Deadline: '}${ev.title || ''}` : ev.title || ''),
+            number && open.group.length > 1 ? h('span', { class: 'tl-case' }, number) : h('span', {})));
+        })) : h('p', { class: 'muted' }, 'No events yet. Add them on a case\'s Timeline tab.'));
+    }
     draw();
     return box;
   }
@@ -1113,7 +1151,7 @@
         field('Client', (() => { const sel = clientSelect(c.client); sel.addEventListener('change', () => { c.client = sel.value; save(); }); return sel; })()),
         field('Tags', bind(h('input', { value: c.tags.join(', '), maxlength: 300 }), (v) => { c.tags = parseTags(v); }), 'span-2', 'Separate tags with commas.'),
         h('p', { class: 'muted span-2 small' },
-          `Created ${c.dates.created ? fmtDateTime(Date.parse(c.dates.created)) : '—'} · Folder: ${CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}`)}`
+          `Folder: ${CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}`)}`
           + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),
       partnersSection(c, save),
       // ---- Case Overview: shared by the operation's case numbers (v1.27)
@@ -1851,7 +1889,7 @@
       }
       return stem || base;
     };
-    const addedText = (ms) => { if (!ms) return '—'; const d = new Date(ms); return `${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${pad(d.getHours())}.${pad(d.getMinutes())}`; };
+    const addedText = (ms) => (ms ? fmtDate(Vault.localDay(new Date(ms))) : '—');
     const cmp = {
       custom: (a, b) => (inOneFolder ? byCustom(a, b) : 0),
       name: (a, b) => a.base.localeCompare(b.base, undefined, { numeric: true }),

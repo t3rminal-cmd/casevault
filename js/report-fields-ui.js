@@ -30,6 +30,67 @@
     return nums;
   }
 
+  async function photoJpegs(c, data) {
+    const out = [];
+    if (F().isHidden(data, 'evidence')) return out;
+    for (const e of data.evidence) {
+      for (const [j, path] of (e.photos || []).entries()) {
+        try {
+          const bmp = await createImageBitmap(await Vault.readFile(c.id, path));
+          const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+          const cv = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
+          const g = cv.getContext('2d');
+          g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+          g.drawImage(bmp, 0, 0, cv.width, cv.height);
+          const blob = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.88));
+          out.push({ jpeg: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height, caption: F().exhibitLine(e).replace(/^Exhibit \S+?(?=[,:])/, `Exhibit ${F().photoLabel(e.number, j)}`) });
+        } catch { /* a photo that can't be read is left out */ }
+      }
+    }
+    return out;
+  }
+
+  /* ---- One report, one PDF (v1.32): the Draft tab keeps a linked "Supplementary Report" under
+   * Reports, and the PDF saved from either place is the same file, made from the form. ---- */
+  const LINKED = 'supplementary-report';
+  const PDF_NAME = 'Supplementary Report.pdf';
+  // (Spacing and table marks don't count: the Formatted view may lay a table out again.)
+  const sigOf = (text) => { const t = String(text || '').replace(/[\s|:\-]+/g, ''); let n = 5381; for (let i = 0; i < t.length; i++) n = ((n * 33) ^ t.charCodeAt(i)) >>> 0; return `${t.length}:${n.toString(36)}`; };
+
+  /** The form as the PDF's bytes (with the exhibit photos). */
+  async function pdfFor(c, data) {
+    const d = data || await load(c);
+    const p = Vault.data.settings.affiant || {};
+    return CVReportPdf.build(d, { agency: p.agency || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' · '), printed: '', photos: await photoJpegs(c, d) });
+  }
+
+  /** Saves the PDF in the case's Supplementary Report folder, in place of the one saved before. */
+  async function savePdfToCase(c, data, bytes) {
+    const b = bytes || await pdfFor(c, data);
+    const file = new File([b], PDF_NAME, { type: 'application/pdf' });
+    const path = await ui.Save.track(`report-pdf:${c.id}`, () => Vault.addFile(c.id, file, { folder: 'Supplementary Report', description: PDF_NAME.replace(/\.pdf$/, ''), replace: true }));
+    return { path, bytes: b };
+  }
+
+  /** The linked report under Reports: { slug, edited } (edited: its text was changed in Reports). */
+  async function linkedReport(c) {
+    const d = await Vault.readDraft(c.id, LINKED).catch(() => null);
+    if (!d || !d.meta.fromFields) return null;
+    return { slug: LINKED, edited: sigOf(d.body) !== d.meta.fieldsSig, meta: d.meta, body: d.body };
+  }
+
+  /** Writes the form into the linked report (made the first time). An edited one is replaced only
+   * when force is set. -> { slug, kept } */
+  async function syncLinked(c, data, { force = false } = {}) {
+    const cur = await linkedReport(c);
+    if (cur && cur.edited && !force) return { slug: LINKED, kept: true };
+    const title = 'Supplementary Report';
+    const body = F().toMarkdown(data, title);
+    const meta = { ...(cur ? cur.meta : { created: new Date().toISOString() }), title, type: 'supplemental', ai: false, fromFields: true, fieldsSig: sigOf(body) };
+    await ui.Save.track(`draft:${c.id}:${LINKED}`, () => Vault.saveDraft(c.id, LINKED, meta, body));
+    return { slug: LINKED, kept: false };
+  }
+
   async function render(panel, c, token) {
     const { h, state, Save, toast, go } = ui;
     const data = await load(c);
@@ -371,29 +432,7 @@
     } }, 'Save Changes');
     // ---- the Supplementary Report as a PDF: look at it and print, keep it, or send it to sign.
     // Exhibit photos as JPEG for the Exhibit Attachments pages (at most 1600 px, readable in print).
-    async function photoJpegs() {
-      const out = [];
-      if (F().isHidden(data, 'evidence')) return out;
-      for (const e of data.evidence) {
-        for (const [j, path] of (e.photos || []).entries()) {
-          try {
-            const bmp = await createImageBitmap(await Vault.readFile(c.id, path));
-            const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
-            const cv = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
-            const g = cv.getContext('2d');
-            g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
-            g.drawImage(bmp, 0, 0, cv.width, cv.height);
-            const blob = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.88));
-            out.push({ jpeg: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height, caption: F().exhibitLine(e).replace(/^Exhibit \S+?(?=[,:])/, `Exhibit ${F().photoLabel(e.number, j)}`) });
-          } catch { /* a photo that can't be read is left out */ }
-        }
-      }
-      return out;
-    }
-    const pdfBytes = async () => {
-      const p = Vault.data.settings.affiant || {};
-      return CVReportPdf.build(data, { agency: p.agency || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' \u00b7 '), printed: CVFormat.dateText(Vault.localDay()), photos: await photoJpegs() });
-    };
+    const pdfBytes = () => pdfFor(c, data);
     async function showPdf(bytes) {
       // Our own viewer (pdf.js): the whole report always scrolls into view; zoom in percent (v1.25).
       const viewer = CVPdfViewer.create(bytes, { h, icon: ui.icon, title: 'Supplementary Report', fileName: pdfName() });
@@ -403,19 +442,17 @@
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
       viewer.destroy();
     }
-    const pdfName = () => `Supplementary Report ${CVFormat.dateText(Vault.localDay())}.pdf`;
-    // Saving twice without changes in between (Save PDF, then Email for E-Sign) keeps one file.
+    const pdfName = () => PDF_NAME; // no date in the name (v1.32)
+    // Saving the PDF also brings the linked report under Reports up to date, so both are the same.
     let lastPdf = null;
     async function savePdf() {
       save(0);
       await Save.flushAll();
-      const sig = JSON.stringify(data);
-      if (lastPdf && lastPdf.sig === sig) return lastPdf.path;
-      const bytes = await pdfBytes();
-      const file = new File([bytes], pdfName(), { type: 'application/pdf' });
-      const path = await Save.track(`report-pdf:${c.id}`, () => Vault.addFile(c.id, file, { folder: 'Supplementary Report', description: pdfName().replace(/\.pdf$/, '') }));
-      lastPdf = { sig, path, bytes };
-      return path;
+      const r = await savePdfToCase(c, data);
+      const sync = await syncLinked(c, data);
+      if (sync.kept) toast('The Supplementary Report under Reports was changed there, so it was left as it is. Create Report replaces it with this form.', 'info', 9000);
+      lastPdf = r;
+      return r.path;
     }
     const printBtn = h('button', { 'data-ro-ok': 'true', class: 'btn', type: 'button', icon: 'printer', title: 'Opens the report. Print it, or save it as a PDF.', onclick: async () => {
       save(0);
@@ -429,14 +466,16 @@
       await showPdf(lastPdf.bytes); // the saved report, to look at straight away
     } }, 'Save PDF to Case');
     // (Email for E-Sign was taken off the Draft tab in v1.31; the PDF can be attached from Mail.)
-    const makeBtn = h('button', { class: 'btn', type: 'button', icon: 'file-earmark-plus', title: 'Makes an editable report from these fields, laid out like the PDF, and opens it in Reports.', onclick: async () => {
+    const makeBtn = h('button', { class: 'btn', type: 'button', icon: 'file-earmark-plus', title: 'Opens this form as the Supplementary Report under Reports (laid out like the PDF), to change the wording. Its PDF is the same as this one.', onclick: async () => {
       save(0);
       await Save.flushAll();
-      const title = `Supplementary Report ${CVFormat.dateText(Vault.localDay())}`;
       try {
-        const slug = await Vault.newDraftSlug(c.id, title);
-        await Save.track(`draft:${c.id}:${slug}`, () => Vault.saveDraft(c.id, slug, { title, type: 'supplemental', ai: false, created: new Date().toISOString() }, F().toMarkdown(data, title)));
-        go(c.id, 'reports', slug);
+        // One report for the form (v1.32): made the first time, brought up to date after that.
+        const cur = await linkedReport(c);
+        const force = !!(cur && cur.edited) && await ui.confirmDialog({ title: 'Replace the edited report?', message: 'The Supplementary Report under Reports was changed there. Replace its text with this form?', confirmText: 'Replace' });
+        if (cur && cur.edited && !force) { go(c.id, 'reports', LINKED); return; }
+        await syncLinked(c, data, { force });
+        go(c.id, 'reports', LINKED);
       } catch { /* reported by Save */ }
     } }, 'Create Report');
 
@@ -459,5 +498,5 @@
 
   function init(kit) { ui = kit; }
 
-  root.CVReportFieldsUI = { init, load, render, numbersInUse };
+  root.CVReportFieldsUI = { init, load, render, numbersInUse, pdfFor, savePdfToCase, linkedReport, syncLinked, LINKED, PDF_NAME };
 })(this);

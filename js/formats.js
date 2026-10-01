@@ -36,10 +36,11 @@
     return d.length <= 3 ? d : d.length <= 5 ? `${d.slice(0, 3)}.${d.slice(3)}` : `${d.slice(0, 3)}.${d.slice(3, 5)}.${d.slice(5)}`;
   }
 
-  /** "2026-12-01" -> "12.01.2026"; anything else as it is. */
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  /** "2026-09-30" -> "September 30, 2026" (v1.32: the long date everywhere); anything else as it is. */
   function dateText(iso) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
-    return m ? `${m[2]}.${m[3]}.${m[1]}` : String(iso || '');
+    return m ? `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}, ${m[1]}` : String(iso || '');
   }
 
   /** What was typed -> "YYYY-MM-DD", or '' if it isn't a real date. Month first, as in the US. */
@@ -48,7 +49,11 @@
     if (!s) return '';
     let y; let mo; let d;
     let m = /^(\d{4})[-./](\d{1,2})[-./](\d{1,2})$/.exec(s);
-    if (m) [y, mo, d] = [m[1], m[2], m[3]];
+    // "September 30, 2026" or "Sep 30 2026", as dates are shown (v1.32).
+    const long = /^([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(\d{4})$/.exec(s);
+    const mi = long ? MONTHS.findIndex((x) => x.toLowerCase().startsWith(long[1].toLowerCase().slice(0, 3))) : -1;
+    if (long && mi >= 0) [y, mo, d] = [long[3], mi + 1, long[2]];
+    else if (m) [y, mo, d] = [m[1], m[2], m[3]];
     else if ((m = /^(\d{1,2})[-./ ](\d{1,2})[-./ ](\d{2}|\d{4})$/.exec(s))) [mo, d, y] = [m[1], m[2], m[3]];
     else if ((m = /^(\d{2})(\d{2})(\d{4}|\d{2})$/.exec(s))) [mo, d, y] = [m[1], m[2], m[3]];
     else return '';
@@ -75,7 +80,7 @@
     text.className = 'date-text';
     text.inputMode = 'numeric';
     text.autocomplete = 'off';
-    text.maxLength = 10;
+    text.maxLength = 24;
     text.placeholder = 'MM.DD.YYYY';
     if (attrs['aria-label']) text.setAttribute('aria-label', attrs['aria-label']);
     if (attrs.required) text.required = true;
