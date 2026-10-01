@@ -235,7 +235,7 @@ test('v1.26: Illinois and federal charges, grouped, with the mail-related narcot
 
 test('v1.26: LEO partners text, Supplemental Report type and template, mail signature and preloaded domains', () => {
   const D = require('../js/drafts/draft-core.js');
-  assert.deepStrictEqual(D.PARTNER_AGENCIES, ['DEA', 'FBI', 'IRS', 'CBP', 'HSI', 'ICE', 'USSS', 'USPIS', 'Local PD', 'Sheriff Dept', 'Other']);
+  assert.deepStrictEqual(D.PARTNER_AGENCIES, ['DEA', 'FBI', 'ATF', 'USMS', 'IRS', 'CBP', 'HSI', 'ICE', 'USSS', 'USPIS', 'State PD', 'Local PD', 'Sheriff Dept', 'Other']);
   assert.strictEqual(D.partnersText([{ agency: 'USPIS' }, { agency: 'DEA' }, { agency: 'Local PD', name: 'Example Police Department' }, { agency: 'Sheriff Dept', name: 'Example County Sheriff' }]),
     'DEA, USPIS, Local PD (Example Police Department), Sheriff Dept (Example County Sheriff)');
   assert.strictEqual(D.partnersText([]), '');
@@ -308,4 +308,24 @@ test('v1.31: Officer\'s Report lines, UCO, no reclassification, and a report dra
   for (const s of ['SUPPLEMENTARY REPORT', 'OFFENSE', 'AGENCY REPORT NUMBER', 'TEST-1', 'Sample summary.', "OFFICER'S REPORT"]) assert.ok(all.includes(s), s);
   const pdf = Buffer.from(DP.build('# A Report\n\nSome **text**.\n\n- one\n- two\n\n| A | B | C |\n|---|---|---|\n| 1 | 2 | 3 |\n| 4 | 5 | 6 |\n')).toString('latin1');
   assert.ok(pdf.startsWith('%PDF-1.7') && pdf.includes('(A REPORT)') && pdf.includes('(Some text.)'));
+});
+
+test('v1.34: every Officer\'s Report line and list can be ticked off', () => {
+  const F = require('../js/report-fields.js');
+  for (const k of ['operation', 'courtBranch', 'courtDate', 'fundSheet', 'evidenceOfficer', 'cbNumber']) assert.ok(F.OPTIONAL_LINES.includes(k), k);
+  assert.deepStrictEqual(F.OPTIONAL_LISTS, ['narcotics', 'charges', 'gangs', 'notArrested', 'personnel', 'vehicles', 'notifications']);
+  const d = F.normalize({ evidenceOfficer: 'Officer Sample', courtBranch: 'Branch 1', courtDate: '2026-10-20', charges: [{ statute: '720 ILCS 570/402(c)', description: 'Possession' }], hidden: ['evidenceOfficer', 'charges', 'courtDate'] });
+  const md = F.toMarkdown(d);
+  assert.ok(!/Officer Sample/.test(md));
+  assert.ok(!/Possession/.test(md));
+  assert.match(md, /Court Branch and Court Officer \| Branch 1 \|/);
+  assert.deepStrictEqual(F.courtLine({ ...d, hidden: ['courtBranch'] }, F.shown), ['Court Date', F.shown('courtDate', '2026-10-20')]);
+  assert.strictEqual(F.courtLine({ ...d, hidden: ['courtBranch', 'courtDate'] }, F.shown), null);
+});
+
+test('v1.34: each evidence photo keeps its label', () => {
+  const F = require('../js/report-fields.js');
+  const d = F.normalize({ evidence: [{ number: 1, photos: ['a.png', 'b.png'], photoLabels: ['Front'] }, { number: 2, photos: ['c.png'] }] });
+  assert.deepStrictEqual(d.evidence[0].photoLabels, ['Front', '']);
+  assert.deepStrictEqual(d.evidence[1].photoLabels, ['']);
 });

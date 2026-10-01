@@ -172,7 +172,7 @@
     const listBlock = (key) => {
       const L = RF.LISTS[key];
       const items = d[key].filter(RF.filled);
-      if (!items.length) return;
+      if (!items.length || RF.isHidden(d, key)) return;
       ensure(40);
       text(M + 2, y - 10, L.title.toUpperCase(), 7.5, true);
       y -= 13;
@@ -250,8 +250,10 @@
           if (d[k].some(RF.filled)) { y -= 4; listBlock(k); }
           continue;
         }
-        if (k === 'courtDate' || RF.isHidden(d, k)) continue;
-        labelled(label, k === 'courtBranch' ? [val('courtBranch'), val('courtDate')].filter(Boolean).join(', ') : val(k));
+        if (k === 'courtDate') continue;
+        if (k === 'courtBranch') { const c = RF.courtLine(d, (kk) => val(kk)); if (c) labelled(c[0], c[1]); continue; }
+        if (RF.isHidden(d, k)) continue;
+        labelled(label, val(k));
       }
       y -= 6;
       for (const key of RF.SECTIONS.find((s) => s.id === 'report').lists) listBlock(key);

@@ -115,7 +115,7 @@
 
   const DIALOG_SIZES = [
     ['panel', '.vault-panel'],
-    ['full', '.preview, .doc-view, .lib-preview, .pdf-view'],
+    ['full', '.preview, .doc-view, .lib-preview, .pdf-view, .word-view'],
     ['wide', '.type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
   ];
 
@@ -1246,21 +1246,37 @@
         const role = h('select', { 'aria-label': `${who} role` }, CVDraft.SUSPECT_ROLES.map((r) => h('option', { value: r, selected: r === (s.role || 'Main') }, r)));
         role.addEventListener('change', () => { s.role = role.value; save(); });
         if (!s.role) s.role = 'Main';
-        return h('div', { class: 'suspect-row' },
+        // Demographics (v1.34), kept in s.info: Add From Suspects on the Draft tab copies them into Offenders.
+        if (!s.info || typeof s.info !== 'object') s.info = {};
+        const PERSON = (k) => CVReportFields.SUSPECT_INFO.find(([key]) => key === k);
+        const infoInput = (k, attrs = {}) => {
+          const [, label, kind, opts] = PERSON(k) || [k, k, 'text'];
+          let el;
+          if (kind === 'select') el = h('select', { 'aria-label': `${who} ${label}` }, opts.map((o) => h('option', { value: o, selected: o === (s.info[k] || '') }, o || '—')));
+          else el = h('input', { value: s.info[k] || '', autocomplete: 'off', maxlength: 200, 'aria-label': `${who} ${label}`, list: kind === 'hair' ? 'suspect-hair' : kind === 'eyes' ? 'suspect-eyes' : null, placeholder: kind === 'height' ? 'e.g. 5 ft 10 in' : kind === 'weight' ? 'e.g. 180 lbs' : '', ...attrs });
+          el.addEventListener(kind === 'select' ? 'change' : 'input', () => { s.info[k] = el.value.trim(); save(); });
+          return field(label, el, kind === 'wide' ? 'suspect-wide' : '');
+        };
+        const demo = h('div', { class: 'suspect-demo' },
+          ['gender', 'race', 'complexion', 'height', 'weight', 'hair', 'eyes', 'marks'].map((k) => infoInput(k)));
+        return h('div', { class: 'suspect-card' }, h('div', { class: 'suspect-row' },
           field('Name', input('name', { maxlength: 120, 'aria-label': `${who} name` })),
           field('DOB', dob),
           h('div', { class: 'field' }, h('span', {}, 'Age'), age),
           field('Residence', input('residence', { maxlength: 200, 'aria-label': `${who} residence`, title: s.residence || '' })),
           field('Role', role),
-          h('button', { class: 'icon-btn danger-icon contact-remove', type: 'button', title: 'Remove this suspect', onclick: () => { c.suspects.splice(i, 1); draw(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Remove ${who}`)));
+          h('button', { class: 'icon-btn danger-icon contact-remove', type: 'button', title: 'Remove this suspect', onclick: () => { c.suspects.splice(i, 1); draw(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Remove ${who}`))),
+          demo);
       }) : [h('p', { class: 'muted small suspect-empty' }, 'No suspects yet.')]));
     };
     draw();
     return h('section', { class: 'contacts suspects', 'aria-labelledby': 'suspects-title' },
       h('h3', { id: 'suspects-title', icon: 'person-exclamation', title: 'The people this case is about. The age is worked out from the date of birth. The main suspect fills {{suspect.name}}, {{suspect.dob}}, {{suspect.age}} and so on in templates; {{suspects}} lists them all.' }, 'Suspects'),
+      h('datalist', { id: 'suspect-hair' }, CVReportFields.PICKS.hair.map((x) => h('option', { value: x }))),
+      h('datalist', { id: 'suspect-eyes' }, CVReportFields.PICKS.eyes.map((x) => h('option', { value: x }))),
       rows,
       h('div', { class: 'contact-add' }, h('button', { class: 'btn small', type: 'button', icon: 'person-plus', onclick: () => {
-        c.suspects.push({ name: '', dob: '', residence: '', role: c.suspects.some((x) => x.role === 'Main') ? 'Secondary' : 'Main' });
+        c.suspects.push({ name: '', dob: '', residence: '', info: {}, role: c.suspects.some((x) => x.role === 'Main') ? 'Secondary' : 'Main' });
         draw();
         const last = rows.lastElementChild && rows.lastElementChild.querySelector('input');
         if (last) last.focus();
@@ -1285,10 +1301,10 @@
   /* LEO partners on the Details tab (v1.26): the agencies working the case with you. Local PD and
    * Sheriff Dept ask which department. Kept in case.json as c.partners [{ agency, name }];
    * {{case.partners}} fills templates. */
-  const DEPT_QUESTION = { 'Local PD': 'Which police department?', 'Sheriff Dept': 'Which sheriff\'s department?', Other: 'Which agency?' };
+  const DEPT_QUESTION = { 'State PD': 'Which state police?', 'Local PD': 'Which police department?', 'Sheriff Dept': 'Which sheriff\'s department?', Other: 'Which agency?' };
   function askDepartment(agency, current = '') {
     return openDialog((close) => {
-      const inp = h('input', { type: 'text', value: current, autofocus: true, maxlength: 300, placeholder: agency === 'Local PD' ? 'e.g. Evanston Police Department' : agency === 'Other' ? 'e.g. ATF, U.S. Marshals, Illinois State Police' : 'e.g. Cook County Sheriff\'s Office', 'aria-label': DEPT_QUESTION[agency] });
+      const inp = h('input', { type: 'text', value: current, autofocus: true, maxlength: 300, placeholder: agency === 'State PD' ? 'e.g. Illinois State Police' : agency === 'Local PD' ? 'e.g. Evanston Police Department' : agency === 'Other' ? 'e.g. Postal Service OIG; Amtrak Police' : 'e.g. Cook County Sheriff\'s Office', 'aria-label': DEPT_QUESTION[agency] });
       return h('form', { class: 'partner-form', onsubmit: (e) => { e.preventDefault(); close(inp.value.trim()); } },
         h('h2', { icon: 'building' }, DEPT_QUESTION[agency]),
         h('p', { class: 'muted small' }, 'More than one? Separate them with a semicolon (;).'),
@@ -1303,12 +1319,15 @@
   const PARTNER_BADGES = {
     DEA: { name: 'Drug Enforcement Administration', icon: 'capsule-pill', color: '#1f6f43' },
     FBI: { name: 'Federal Bureau of Investigation', icon: 'fingerprint', color: '#1f3a6b' },
+    ATF: { name: 'Alcohol, Tobacco, Firearms and Explosives', icon: 'fire', color: '#8a2d1c' },
+    USMS: { name: 'U.S. Marshals Service', icon: 'award-fill', color: '#5a4a1a' },
     IRS: { name: 'IRS Criminal Investigation', icon: 'cash-coin', color: '#22636b' },
     CBP: { name: 'Customs and Border Protection', icon: 'globe-americas', color: '#1d4f91' },
     HSI: { name: 'Homeland Security Investigations', icon: 'shield-fill-check', color: '#2d4b73' },
     ICE: { name: 'Immigration and Customs Enforcement', icon: 'shield-shaded', color: '#3b4f63' },
     USSS: { name: 'U.S. Secret Service', icon: 'star-fill', color: '#7a5a12' },
     USPIS: { name: 'U.S. Postal Inspection Service', icon: 'envelope-paper', color: '#2b5aa6' },
+    'State PD': { name: 'State Police', icon: 'patch-check-fill', color: '#33507a' },
     'Local PD': { name: 'Police Department', svg: CHICAGO_STAR, color: '#1b74c5' },
     'Sheriff Dept': { name: 'Sheriff\'s Office', icon: 'shield-fill', color: '#6b4f1d' },
     Other: { name: 'Another agency', icon: 'building', color: '#5c6670' },
@@ -1335,7 +1354,7 @@
         else c.partners = c.partners.filter((p) => p.agency !== agency);
         draw(); save();
       });
-      const edit = on && DEPT_QUESTION[agency] ? h('button', { class: 'icon-btn partner-edit', type: 'button', title: `Change the ${agency === 'Local PD' ? 'police department' : agency === 'Other' ? 'agency' : 'sheriff\'s department'}`, onclick: async () => {
+      const edit = on && DEPT_QUESTION[agency] ? h('button', { class: 'icon-btn partner-edit', type: 'button', title: `Change the ${agency === 'State PD' ? 'state police' : agency === 'Local PD' ? 'police department' : agency === 'Other' ? 'agency' : 'sheriff\'s department'}`, onclick: async () => {
         const text = await askDepartment(agency, names);
         if (text == null) return;
         if (!setNames(agency, text)) c.partners = c.partners.filter((p) => p.agency !== agency);
@@ -1417,6 +1436,21 @@
       el.addEventListener('change', () => { row[key] = String(el.value).trim(); save(); });
       return el;
     };
+    // System (v1.34): a drop-down of the deconfliction systems; Other asks for its name.
+    const systemPick = (r, i) => {
+      const known = DECON_SYSTEMS.includes(r.system || '');
+      const other = h('input', { class: 'decon-other', value: known ? '' : (r.system || ''), autocomplete: 'off', maxlength: 100, placeholder: 'Which system?', 'aria-label': `Check ${i + 1} other system`, hidden: known || !r.system });
+      const sel = h('select', { 'aria-label': `Check ${i + 1} system` },
+        ['', ...DECON_SYSTEMS, 'Other'].map((o) => h('option', { value: o, selected: o === 'Other' ? (!known && !!r.system) : o === (r.system || '') }, o || '—')));
+      sel.addEventListener('change', () => {
+        other.hidden = sel.value !== 'Other';
+        r.system = sel.value === 'Other' ? other.value.trim() : sel.value;
+        save();
+        if (!other.hidden) other.focus();
+      });
+      other.addEventListener('input', () => { r.system = other.value.trim(); save(); });
+      return h('div', { class: 'decon-system' }, sel, other);
+    };
     const draw = () => {
       rows.replaceChildren(...(c.deconfliction.length ? c.deconfliction.map((r, i) => {
         const conflict = h('select', { 'aria-label': `Check ${i + 1} conflict`, class: r.conflict === 'Yes' ? 'decon-yes' : '' }, ['', 'No', 'Yes'].map((o) => h('option', { value: o, selected: o === (r.conflict || '') }, o || '—')));
@@ -1428,7 +1462,7 @@
           h('div', { class: 'decon-grid' },
             field('Date', cellInput(r, 'date', { type: 'date', 'aria-label': `Check ${i + 1} date` })),
             field('Event / Location', cellInput(r, 'event', { 'aria-label': `Check ${i + 1} event or location` }), 'decon-wide'),
-            field('System', cellInput(r, 'system', { list: 'decon-systems', 'aria-label': `Check ${i + 1} system` })),
+            field('System', systemPick(r, i)),
             field('Deconfliction Number', cellInput(r, 'number', { 'aria-label': `Check ${i + 1} deconfliction number` })),
             field('Conflict', conflict),
             field('Notes', cellInput(r, 'notes', { 'aria-label': `Check ${i + 1} notes` }), 'decon-wide')));
@@ -1444,7 +1478,6 @@
     } }, 'Add Deconfliction');
     return h('section', { class: 'contacts deconfliction', 'aria-labelledby': 'decon-title' },
       h('h3', { id: 'decon-title', icon: 'shield-exclamation', title: 'Each deconfliction check for this case, and whether it showed a conflict.' }, 'Deconfliction'),
-      h('datalist', { id: 'decon-systems' }, DECON_SYSTEMS.map((x) => h('option', { value: x }))),
       rows,
       h('div', { class: 'contact-add' }, add));
   }
@@ -1974,7 +2007,7 @@
             h('td', { class: 'ftype muted', title: fileTypeLabel(f.base) }, docLabel(f)),
             h('td', { class: 'fext muted', title: fileTypeLabel(f.base) }, extOf(f.base) || '—'),
             h('td', { class: 'num muted' }, fmtSize(f.size)),
-            h('td', { class: 'muted nowrap', title: fmtDateTime(f.modified) }, addedText(f.modified)),
+            h('td', { class: 'muted fadded', title: fmtDateTime(f.modified) }, addedText(f.modified)),
             h('td', { class: 'actions' },
               h('button', { 'data-ro-ok': 'true', class: 'icon-btn', type: 'button', title: 'Open', onclick: () => previewFile(c, f.name) }, I('eye'), h('span', { class: 'sr-only' }, `Open ${f.base}`)),
               h('button', { class: 'icon-btn', type: 'button', title: f.folder ? 'Move or rename' : 'File it in a folder', onclick: () => moveFileDialog(c, f, current) }, I('arrow-left-right'), h('span', { class: 'sr-only' }, `Move or rename ${f.base}`)),
@@ -2583,7 +2616,7 @@
     }
   }
   lockBtn.addEventListener('click', () => setSidebarLock(!document.body.classList.contains('sidebar-locked')));
-  $('#btn-sidebar-collapse').before(lockBtn);
+  $('#btn-sidebar-collapse').after(lockBtn); // v1.34: hide button far left, padlock far right
   setSidebarLock(false, { save: false });
 
   // Drag the case list's right edge to make it wider or narrower (or focus it and use ← →).

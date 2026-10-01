@@ -15,7 +15,15 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.33)
+## Features (v1.34)
+
+- Report editor: **Word View** next to **PDF View**, and the buttons in order (Word View, PDF View, Draft with AI, Re-phrase, Review, Export, Save, Delete); Export is just **Save to Case Files**, **Save to PC** and **Save Template**
+- Reports: Field Notes and Reports as cards, the AI tag in its own column; the Draft tab's buttons stay in view
+- Officer's Report: every line and list has its tick box, labels written the same way (not all capitals); evidence photos get a **label** each (printed in the PDF caption) and a big **Add Photos** tile
+- LEO Partners adds **ATF**, **USMS** (U.S. Marshals) and **State PD**, federal first, then state and local, then Other; Suspects get demographics (gender, race, complexion, height, weight, hair, eyes, tattoos / scars); Deconfliction **System** is a drop-down
+- Files: the Added date wraps instead of being cut off; sidebar hide button on the left, padlock on the right; a taller Anonymizer drop box
+
+## Earlier (v1.33)
 
 - **Send Draft to Reports** on the Draft tab puts the report under Reports and its PDF under Files in one click (Save PDF to Case and Create Report are gone); **Clear All** empties the form for another report, and the next send makes a new one
 - **Field Notes** have their own section at the top of Reports, always there
