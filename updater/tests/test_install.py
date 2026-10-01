@@ -82,14 +82,18 @@ class Flow(InstallBase):
         self.assert_new()
         self.assertEqual(apps.calls, ["stop", "start"])
         self.assertTrue(asked[0][1], "told the helper is running")
-        self.assertIn("2 changed, 1 new, 1 to remove", asked[0][0])
-        self.assertIn("Installed 1.23.0 (4 files). CaseVault was started again.", out.message)
+        self.assertIn("2 changed, 2 new, 1 to remove", asked[0][0])
+        self.assertIn("Installed 1.23.0 (5 files). CaseVault was started again.", out.message)
         self.assertFalse(os.path.exists(journal_path(self.settings)))
         self.assertFalse(os.path.exists(staging_root(self.settings)), "staging cleared")
         self.assertTrue(last_backup(self.settings))
-        # tests/ and updater/ in the repository never land on the SSD.
+        # tests/ never land on the SSD; the updater's own new files wait in updater/_next (v1.35)
+        # for Check-For-Updates.bat to move them into place the next time it starts.
         self.assertFalse(os.path.exists(os.path.join(self.app, "tests")))
         self.assertFalse(os.path.exists(os.path.join(self.app, "updater", "casevault_updater", "x.py")))
+        self.assertTrue(os.path.isfile(os.path.join(self.app, "updater", "_next", "casevault_updater", "x.py")))
+        self.assertFalse(os.path.exists(os.path.join(self.app, "updater", "_next", "tests")))
+        self.assertFalse(os.path.exists(os.path.join(self.app, "updater", "_next", "Check-For-Updates.bat")))
 
     def test_saying_no_changes_nothing(self):
         out, apps, _ = self.run_flow(answer=False)

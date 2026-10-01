@@ -22,12 +22,31 @@ UPDATER_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # ...
 DEFAULT_APP_DIR = os.path.dirname(UPDATER_DIR)                             # ...\CaseVault-App
 
 # Repository paths that are never copied into the app folder: they're for developers, and the
-# updater itself (a running program can't safely replace itself; it says when a newer one exists).
+# updater itself (a running program can't safely replace itself; its files go to updater\_next, below).
 EXCLUDE_PREFIXES = (".github/", "tests/", "scripts/", "updater/", "tools/")
 EXCLUDE_FILES = (".gitignore", ".gitattributes")
 
 # The tools on the CV-AI drive (W:) come from the repository's tools/ folder.
 TOOLS_PREFIX = "tools/"
+
+# The updater's own files (v1.35). A running program can't safely replace itself, so its new files
+# are put in updater\_next; Check-For-Updates.bat moves them into place the next time it starts.
+# Never: its tests, its portable Python, or the .bat itself (Windows reads a running .bat as it goes).
+UPDATER_PREFIX = "updater/"
+UPDATER_SKIP = ("updater/tests/", "updater/python/", "updater/Check-For-Updates.bat")
+UPDATER_NEXT = "_next"
+
+
+def updater_live_dir(settings: "Settings") -> str:
+    return os.path.join(settings.app_dir, "updater")
+
+
+def updater_next_dir(settings: "Settings") -> str:
+    return os.path.join(updater_live_dir(settings), UPDATER_NEXT)
+
+
+def is_updater_file(path: str) -> bool:
+    return path.startswith(UPDATER_PREFIX) and not path.startswith(UPDATER_SKIP) and "/__pycache__/" not in path
 
 
 @dataclass(frozen=True)

@@ -12,4 +12,4 @@ Modules
               ui (the window with the button and progress bar)
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"

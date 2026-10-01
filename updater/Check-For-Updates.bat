@@ -26,6 +26,11 @@ if not defined PY (
   pause
   exit /b 1
 )
+rem The updater's own new files from the last update (v1.35) wait in _next: move them into place
+rem now, before Python starts, then remove _next.
+if exist "%HERE%_next\" (
+  xcopy "%HERE%_next\*" "%HERE%." /E /I /Y /Q >nul && rmdir /S /Q "%HERE%_next"
+)
 pushd "%HERE%"
 rem "start" lets this window close at once while the updater window stays open.
 start "" %PY% -m casevault_updater window %*

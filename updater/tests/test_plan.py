@@ -32,7 +32,9 @@ FILES_NEW = {
     "js/new.js": b"// new file\n",
     "tools/Start-CaseVault.bat": b"@echo off\r\necho new\r\n",
     "tests/x.test.js": b"test 2\n",
-    "updater/casevault_updater/x.py": b"# not copied\n",
+    "updater/casevault_updater/x.py": b"# the updater's own new file: goes to updater/_next\n",
+    "updater/tests/test_x.py": b"# never copied\n",
+    "updater/Check-For-Updates.bat": b"@echo off\r\n",
 }
 
 
@@ -111,9 +113,21 @@ class PlanTests(Base):
         plan, _, _ = self.plan()
         got = {(c.action, c.area, c.rel) for c in plan.changes}
         self.assertEqual(got, {(UPDATE, "app", "js/vault.js"), (ADD, "app", "js/new.js"),
-                               (UPDATE, "tools", "Start-CaseVault.bat"), (DELETE, "app", "js/gone.js")})
+                               (UPDATE, "tools", "Start-CaseVault.bat"), (DELETE, "app", "js/gone.js"),
+                               (ADD, "updater", "casevault_updater/x.py")})
         self.assertEqual(plan.unchanged, 1)  # index.html
-        self.assertIn("2 changed, 1 new, 1 to remove", plan.summary())
+        self.assertIn("2 changed, 2 new, 1 to remove", plan.summary())
+        upd = [c for c in plan.changes if c.area == "updater"][0]
+        self.assertEqual(upd.target, os.path.join(self.app, "updater", "_next", "casevault_updater", "x.py"))
+
+    def test_updater_file_already_running_is_unchanged(self):
+        live = os.path.join(self.app, "updater", "casevault_updater", "x.py")
+        os.makedirs(os.path.dirname(live), exist_ok=True)
+        with open(live, "wb") as f:
+            f.write(FILES_NEW["updater/casevault_updater/x.py"])
+        plan, _, _ = self.plan()
+        self.assertFalse(any(c.area == "updater" for c in plan.changes))
+        self.assertEqual(plan.unchanged, 2)
         tools = [c for c in plan.changes if c.area == "tools"][0]
         self.assertEqual(tools.target, os.path.join(self.tools, "Start-CaseVault.bat"))
 
@@ -129,7 +143,7 @@ class PlanTests(Base):
 
     def test_up_to_date(self):
         for p, d in FILES_NEW.items():
-            if p.startswith(("tests/", "updater/")):
+            if p.startswith("tests/") or (p.startswith("updater/") and not config.is_updater_file(p)):
                 continue
             full = os.path.join(self.tools, p[6:]) if p.startswith("tools/") else os.path.join(self.app, *p.split("/"))
             os.makedirs(os.path.dirname(full), exist_ok=True)
@@ -168,14 +182,14 @@ class DownloadTests(Base):
         self.assertEqual(seen[-1], (plan.download_bytes, plan.download_bytes))
         m = read_manifest(root)
         self.assertEqual(m["commit"], NEW)
-        self.assertEqual(len(m["changes"]), 4)
+        self.assertEqual(len(m["changes"]), 5)
         # CaseVault itself is untouched.
         with open(os.path.join(self.app, "js", "vault.js"), "rb") as f:
             self.assertEqual(f.read(), FILES_OLD["js/vault.js"])
         self.assertTrue(os.path.exists(os.path.join(self.app, "js", "gone.js")))
         # Only the changed files were fetched.
         raws = [u for u in t.calls if "raw.githubusercontent" in u]
-        self.assertEqual(len(raws), 3)
+        self.assertEqual(len(raws), 4)
 
     def test_resume_skips_files_already_staged(self):
         plan, gh, t = self.plan()

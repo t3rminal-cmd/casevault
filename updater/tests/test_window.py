@@ -46,7 +46,7 @@ class ControllerTests(InstallBase):
         self.assertFalse(ctl.can_undo())
         ctl.check()
         c = ev.wait_for("confirm")
-        self.assertIn("2 changed, 1 new, 1 to remove", c["summary"])
+        self.assertIn("2 changed, 2 new, 1 to remove", c["summary"])
         self.assertTrue(c["helper"])
         self.assertIn("update  W: Start-CaseVault.bat", c["files"])
         self.assert_old()  # nothing changed while asking

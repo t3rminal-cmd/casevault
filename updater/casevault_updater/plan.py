@@ -21,7 +21,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from .config import TOOLS_PREFIX, Settings, is_app_file
+from .config import TOOLS_PREFIX, UPDATER_PREFIX, Settings, is_app_file, is_updater_file, updater_live_dir, updater_next_dir
 from .errors import UpdaterError
 from .github import GitHub, TreeEntry
 
@@ -115,6 +115,8 @@ def safe_join(root: str, rel: str) -> str:
 
 def _place(entry_path: str, settings: Settings, tools_dir: Optional[str]):
     """(area, rel, root) for a repository path, or None when it doesn't go anywhere."""
+    if is_updater_file(entry_path):
+        return ("updater", entry_path[len(UPDATER_PREFIX):], updater_next_dir(settings))
     if entry_path.startswith(TOOLS_PREFIX):
         return ("tools", entry_path[len(TOOLS_PREFIX):], tools_dir) if tools_dir else None
     if is_app_file(entry_path, settings):
@@ -138,6 +140,10 @@ def make_plan(settings: Settings, new_commit: str, new_tree: List[TreeEntry], ol
         if progress:
             progress(i, len(placed))
         local = file_blob_sha(target)
+        if area == "updater":
+            # The updater's own files are compared with the ones it runs from (or ones already waiting in _next).
+            live = file_blob_sha(safe_join(updater_live_dir(settings), rel))
+            local = e.sha if e.sha in (live, local) else live
         if local == e.sha:
             plan.unchanged += 1
         else:
@@ -154,6 +160,8 @@ def make_plan(settings: Settings, new_commit: str, new_tree: List[TreeEntry], ol
             if not where:
                 continue
             area, rel, root = where
+            if area == "updater":
+                continue  # an old updater file is left alone (it's no longer used)
             target = safe_join(root, rel)
             if os.path.isfile(target):
                 plan.changes.append(Change(DELETE, area, e.path, rel, target))
