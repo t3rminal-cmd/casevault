@@ -30,7 +30,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
-from .config import Settings
+from .config import Settings, updater_next_dir
 from .download import read_manifest, staging_root
 from .errors import UpdaterError
 from .plan import ADD, DELETE, UPDATE, file_blob_sha, safe_join
@@ -128,7 +128,7 @@ def _remove(path: str) -> None:
 
 
 def _roots(settings: Settings, tools_dir: Optional[str]):
-    return {"app": settings.app_dir, "tools": tools_dir}
+    return {"app": settings.app_dir, "tools": tools_dir, "updater": updater_next_dir(settings)}
 
 
 def _undo(steps: List[dict], backup: str, count: int) -> None:
@@ -265,6 +265,8 @@ def install(settings: Settings, commit: str, tools_dir: Optional[str] = None,
     os.remove(jpath)
     shutil.rmtree(staging_root(settings), ignore_errors=True)
     _prune(settings)
+    if any(s["area"] == "updater" for s in steps):
+        notes.append("The updater itself has a newer version: it's used the next time you start Check-For-Updates.bat.")
     return InstallResult(commit, app_version, len(steps), backup, notes)
 
 

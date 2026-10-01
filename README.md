@@ -15,7 +15,12 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.34)
+## Features (v1.35)
+
+- The updater updates itself: its own new files wait in `updater\_next` and are put in place the next time `Check-For-Updates.bat` starts (until now the `updater` folder had to be copied by hand)
+- The updater shows the CaseVault logo (the folder with the padlock) instead of the "CV" square; the 8-bit dinosaur is gone and the plain progress bar is back
+
+## Earlier (v1.34)
 
 - Report editor: **Word View** next to **PDF View**, and the buttons in order (Word View, PDF View, Draft with AI, Re-phrase, Review, Export, Save, Delete); Export is just **Save to Case Files**, **Save to PC** and **Save Template**
 - Reports: Field Notes and Reports as cards, the AI tag in its own column; the Draft tab's buttons stay in view
@@ -29,7 +34,7 @@ The app detects the browser and picks the mode by itself. The data format on the
 - **Field Notes** have their own section at the top of Reports, always there
 - The Overview's operation **Timeline** is a clickable sideways timeline with a Today marker (no separate Open Timeline link)
 - **LEO Partners** as agency badges with icons and colors (Local PD star, Sheriff shield), adding **ICE** and **USSS** (Secret Service); **Deconfliction** as cards so no field is cut off
-- **Consolas** everywhere; the updater shows an 8-bit dinosaur running while it updates
+- **Consolas** everywhere
 
 ## Earlier (v1.32)
 

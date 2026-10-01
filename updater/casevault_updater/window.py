@@ -17,17 +17,39 @@ from typing import Optional
 
 from . import __version__, config
 from .controller import Controller, local_text
-from .dino import Runner
 
 BLUE = "#0d6efd"
 GREEN = "#198754"
 RED = "#b02a37"
 MUTED = "#5c6670"
 FONT = "Consolas"
-BG = "#eef2f7"
+BG = "#f6f8fb"
 CARD = "#ffffff"
 BORDER = "#dfe3e8"
 
+
+
+def draw_logo(parent: tk.Misc, size: int, bg: str) -> tk.Canvas:
+    """CaseVault's logo (icons/icon.svg): a white folder with a blue padlock on a dark blue rounded square."""
+    c = tk.Canvas(parent, width=size, height=size, bg=bg, highlightthickness=0, bd=0)
+    k = size / 512.0
+
+    def rrect(x0, y0, x1, y1, r, fill):
+        x0, y0, x1, y1, r = x0 * k, y0 * k, x1 * k, y1 * k, r * k
+        pts = [x0 + r, y0, x1 - r, y0, x1, y0, x1, y0 + r, x1, y1 - r, x1, y1, x1 - r, y1, x0 + r, y1, x0, y1, x0, y1 - r, x0, y0 + r, x0, y0]
+        c.create_polygon(pts, smooth=True, fill=fill, outline="")
+
+    rrect(0, 0, 512, 512, 112, "#1f3a5f")                                   # the square
+    c.create_polygon([p * k for p in (104, 150, 118, 136, 218, 136, 252, 172, 380, 172, 408, 190, 408, 230, 104, 230)],
+                     fill="#e8eef6", outline="")                             # the folder's back and tab
+    rrect(104, 196, 408, 392, 24, "#ffffff")                                 # the folder's front
+    c.create_arc(230 * k, 218 * k, 282 * k, 270 * k, start=0, extent=180, style="arc", outline="#1f5fa8", width=max(2, round(14 * k)))
+    c.create_line(230 * k, 244 * k, 230 * k, 264 * k, fill="#1f5fa8", width=max(2, round(14 * k)))
+    c.create_line(282 * k, 244 * k, 282 * k, 264 * k, fill="#1f5fa8", width=max(2, round(14 * k)))
+    rrect(214, 262, 298, 334, 12, "#1f5fa8")                                 # the padlock's body
+    c.create_oval(247 * k, 283 * k, 265 * k, 301 * k, fill="#ffffff", outline="")
+    c.create_rectangle(252 * k, 296 * k, 260 * k, 316 * k, fill="#ffffff", outline="")
+    return c
 
 class UpdaterWindow:
     def __init__(self, root: tk.Tk, settings: config.Settings, controller: Optional[Controller] = None):
@@ -48,7 +70,8 @@ class UpdaterWindow:
 
         head = tk.Frame(outer, bg=BG)
         head.pack(fill="x")
-        # The CaseVault logo (the one at the top left of CaseVault), 48 px; "CV" if it can't be read.
+        # The CaseVault logo, the folder with the padlock: the app's own icon when it can be read, else
+        # drawn here (v1.35: never the old "CV" square).
         self.logo = None
         try:
             png = os.path.join(settings.app_dir, "icons", "icon-192.png")
@@ -56,10 +79,7 @@ class UpdaterWindow:
                 self.logo = tk.PhotoImage(file=png).subsample(4, 4)
         except tk.TclError:
             self.logo = None
-        if self.logo is not None:
-            badge = tk.Label(head, image=self.logo, bg=BG, bd=0)
-        else:
-            badge = tk.Label(head, text="CV", bg=BLUE, fg="white", font=(FONT, 12, "bold"), width=3, pady=4)
+        badge = tk.Label(head, image=self.logo, bg=BG, bd=0) if self.logo is not None else draw_logo(head, 48, BG)
         badge.pack(side="left")
         titles = tk.Frame(head, bg=BG, padx=12)
         titles.pack(side="left", fill="x", expand=True)
@@ -72,11 +92,8 @@ class UpdaterWindow:
         self.status = tk.Label(card, text="Press Check for Updates to see whether a newer CaseVault is on GitHub. Nothing is changed until you say Install.",
                                bg=CARD, font=(FONT, 10), anchor="w", justify="left", wraplength=520)
         self.status.pack(fill="x")
-        # v1.33: an 8-bit dinosaur runs along above the bar while the update works.
-        self.runner = Runner(card, bg=CARD)
-        self.runner.pack(fill="x", pady=(12, 0))
         self.bar = ttk.Progressbar(card, mode="determinate", maximum=1000, style="CV.Horizontal.TProgressbar")
-        self.bar.pack(fill="x", pady=(2, 4))
+        self.bar.pack(fill="x", pady=(12, 4))
         row = tk.Frame(card, bg=CARD)
         row.pack(fill="x")
         self.detail = tk.Label(row, text="", bg=CARD, fg=MUTED, font=(FONT, 8), anchor="w")
@@ -177,7 +194,6 @@ class UpdaterWindow:
     def on_check(self) -> None:
         self._show_files([])
         self.bar["value"] = 0
-        self.runner.reset()
         self.pct.configure(text="")
         self.detail.configure(text="")
         self._buttons("busy")
@@ -225,7 +241,6 @@ class UpdaterWindow:
         if kind == "busy":
             self._say(data["text"])
         elif kind == "progress":
-            self.runner.run(data["fraction"])
             self._say(data["text"])
             self.bar["value"] = int(1000 * data["fraction"])
             self.pct.configure(text=f"{int(100 * data['fraction'])}%")
@@ -237,16 +252,12 @@ class UpdaterWindow:
             self._say(f"Ready to install: {data['summary']}\nDownloaded and checked; nothing has been changed yet. {how}", BLUE)
             self.detail.configure(text="")
             self._show_files(data["files"])
-            self.runner.stand()
             self._buttons("confirm")
             self.install_btn.focus_set()
         elif kind == "done":
             self.bar["value"] = 1000 if data.get("installed") else self.bar["value"]
             if data.get("installed"):
                 self.pct.configure(text="100%")
-                self.runner.finish()
-            else:
-                self.runner.stand()
             self.detail.configure(text="")
             notes = "\n".join(f"• {n}" for n in data.get("notes", []))
             self._say(data["text"] + (f"\n{notes}" if notes else ""), GREEN if data.get("ok") else "#212529")
@@ -255,7 +266,6 @@ class UpdaterWindow:
         elif kind == "error":
             self.detail.configure(text="")
             self._say(data["text"], RED)
-            self.runner.stand()
             self._show_files([])
             self._buttons("idle")
         elif kind == "local":

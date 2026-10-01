@@ -10,13 +10,19 @@ Double-click **`Check-For-Updates.bat`** in `V:\CaseVault-App\updater\`. The **C
 window opens and shows which version the SSD has.
 
 1. **Check for Updates**: it checks GitHub, compares every file on the SSD and downloads only the
-   ones that changed. The progress bar moves, and a little 8-bit dinosaur runs along above it to the finish flag (it hops when the update is installed); nothing in CaseVault is changed yet.
+   ones that changed. The progress bar moves; nothing in CaseVault is changed yet.
 2. If there is an update, it says what will change (the list of files) and offers **Install Now** or
    **Not Now**. Not Now keeps the download, so installing later is quick.
 3. **Install Now**: it closes the CaseVault helper window if it runs (Firefox), backs up the files it
    replaces, installs, and starts the helper again. With Edge, close CaseVault first and reload it
    afterwards (the window says which).
 4. The result shows in green, or in red with what went wrong (everything is put back).
+
+**The updater updates itself (v1.35).** Its own new files (the `casevault_updater` folder and this
+README) are put in `updater\_next`, because a running program can't safely replace itself. The next
+time you start `Check-For-Updates.bat`, it moves them into place before the window opens, and
+`_next` is removed. `updater\python`, the tests and `Check-For-Updates.bat` itself are never changed
+this way (copy a new `.bat` from the ZIP if one is ever needed).
 
 **Undo Last Update** (bottom left, after an update) puts the previous version back. The window can't
 be closed while files are being installed. It never runs on its own: only when you open it.
