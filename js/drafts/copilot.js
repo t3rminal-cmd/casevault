@@ -161,7 +161,7 @@
       t.guide,
       template ? `Follow this template's structure and wording. Replace every [CONFIRM: ...] you can fill from the material with the fact; leave the rest as [CONFIRM: ...]:\n\n${template}` : '',
       header
-        ? 'Start with a header block that lists the case officer, the prosecutor (ASA or AUSA), the file number, case number and agency case number, and the date, taken from the case details (write [CONFIRM: ...] for any that are missing).'
+        ? 'Start with a header block that lists the case officer, the prosecutor (ASA or AUSA), the file number, case number and federal jacket number, and the date, taken from the case details (write [CONFIRM: ...] for any that are missing).'
         : 'Do not write a header block of names, officers or numbers. Begin directly with the summary (SYNOPSIS) of the report.',
       instructions ? `Extra instructions from the user: ${instructions}` : '',
     ].filter(Boolean).join('\n\n');

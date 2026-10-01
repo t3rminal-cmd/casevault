@@ -335,7 +335,7 @@
           drawPhotos();
           save(0);
         });
-        const addPhoto = archived ? null : h('button', { class: 'btn small', type: 'button', icon: 'camera', onclick: () => picker.click() }, 'Add Photos');
+        const addPhoto = archived ? null : h('button', { class: 'icon-btn rf-photo-add', type: 'button', title: 'Add photos', onclick: () => picker.click() }, ui.icon('camera'), h('span', { class: 'sr-only' }, 'Add photos'));
         return h('div', { class: 'rf-exhibit-card' },
           h('div', { class: 'rf-exhibit-no', title: 'Given automatically; never reused' }, h('span', { class: 'small muted' }, 'Exhibit No.'), h('strong', { class: 'rf-exhibit' }, String(n))),
           h('div', { class: 'rf-exhibit-body' },
@@ -346,7 +346,7 @@
       }) : [h('p', { class: 'muted small' }, 'No evidence yet.')]));
     };
     drawEvidence();
-    const addExhibit = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', title: c.agencyNumber ? `Numbered on from the last exhibit of any case with agency case number ${c.agencyNumber}.` : 'Numbered on from the last exhibit of this case. Cases with the same agency case number share one sequence.', onclick: async () => {
+    const addExhibit = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', title: c.agencyNumber ? `Numbered on from the last exhibit of any case with federal jacket number ${c.agencyNumber}.` : 'Numbered on from the last exhibit of this case. Cases with the same federal jacket number share one sequence.', onclick: async () => {
       try {
         const n = F().nextExhibit(await numbersInUse(c, data));
         data.evidence.push({ number: n, inventory: '', type: '', drug: '', weight: '', description: '', photos: [] });
@@ -428,36 +428,23 @@
       toast(`Saved to the case files: ${path.split('/').pop()}`, 'success', 5000);
       await showPdf(lastPdf.bytes); // the saved report, to look at straight away
     } }, 'Save PDF to Case');
-    const signBtn = h('button', { class: 'btn', type: 'button', icon: 'envelope-paper', title: 'Saves the PDF to the case and starts an email with it attached, for signing.', onclick: async () => {
-      let path;
-      try { path = await savePdf(); } catch { return; }
-      if (root.CVMailUI) {
-        CVMailUI.prepare(c, {
-          subject: `${c.number || c.title || ''} Supplementary Report for signature`.trim(),
-          body: 'Please review and sign the attached Supplementary Report. The signature boxes can be signed electronically (Adobe Acrobat or Reader: Fill & Sign) or printed and signed in blue ink.',
-          attach: [path],
-        });
-      }
-      go(c.id, 'mail');
-      toast('The PDF is attached. Add the recipients, then check and create the Outlook draft.', 'success', 8000);
-    } }, 'Email for E-Sign');
-
-    const makeBtn = h('button', { class: 'btn', type: 'button', icon: 'file-earmark-plus', title: 'Makes an editable report from these fields.', onclick: async () => {
+    // (Email for E-Sign was taken off the Draft tab in v1.31; the PDF can be attached from Mail.)
+    const makeBtn = h('button', { class: 'btn', type: 'button', icon: 'file-earmark-plus', title: 'Makes an editable report from these fields, laid out like the PDF, and opens it in Reports.', onclick: async () => {
       save(0);
       await Save.flushAll();
       const title = `Supplementary Report ${CVFormat.dateText(Vault.localDay())}`;
       try {
         const slug = await Vault.newDraftSlug(c.id, title);
-        await Save.track(`draft:${c.id}:${slug}`, () => Vault.saveDraft(c.id, slug, { title, type: 'other', ai: false, created: new Date().toISOString() }, F().toMarkdown(data, title)));
+        await Save.track(`draft:${c.id}:${slug}`, () => Vault.saveDraft(c.id, slug, { title, type: 'supplemental', ai: false, created: new Date().toISOString() }, F().toMarkdown(data, title)));
         go(c.id, 'reports', slug);
       } catch { /* reported by Save */ }
     } }, 'Create Report');
 
     panel.replaceChildren(
-      h('div', { class: 'notes-head rf-head-bar' }, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports`, class: 'back-link' }, '← All reports'),
-        h('h2', {}, 'Report Fields'), h('div', { class: 'spacer' }), archived ? null : saveBtn),
-      h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case. Print it, save it as a PDF, or email it to sign. Saved as report-fields.json.'),
-      h('div', { class: 'rf-actions' }, printBtn, archived ? null : pdfCaseBtn, archived ? null : signBtn, archived ? null : makeBtn, h('div', { class: 'spacer' }),
+      h('div', { class: 'notes-head rf-head-bar' },
+        h('h2', {}, 'Supplementary Report'), h('div', { class: 'spacer' }), archived ? null : saveBtn),
+      h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case: fill it in here, then Print / PDF, Save PDF to Case, or Create Report to turn it into an editable report under Reports. Saved as report-fields.json.'),
+      h('div', { class: 'rf-actions' }, printBtn, archived ? null : pdfCaseBtn, archived ? null : makeBtn, h('div', { class: 'spacer' }),
         h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-down', title: 'Open every part on screen', onclick: () => foldAll(false) }, 'Show All'),
         h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-right', title: 'Fold every part away on screen (they stay in the PDF). Open one with its arrow.', onclick: () => foldAll(true) }, 'Hide All')),
       ...sections.slice(0, -1),

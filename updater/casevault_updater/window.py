@@ -46,7 +46,18 @@ class UpdaterWindow:
 
         head = tk.Frame(outer, bg=BG)
         head.pack(fill="x")
-        badge = tk.Label(head, text="CV", bg=BLUE, fg="white", font=("Segoe UI", 12, "bold"), width=3, pady=4)
+        # The CaseVault logo (the one at the top left of CaseVault), 48 px; "CV" if it can't be read.
+        self.logo = None
+        try:
+            png = os.path.join(settings.app_dir, "icons", "icon-192.png")
+            if os.path.isfile(png):
+                self.logo = tk.PhotoImage(file=png).subsample(4, 4)
+        except tk.TclError:
+            self.logo = None
+        if self.logo is not None:
+            badge = tk.Label(head, image=self.logo, bg=BG, bd=0)
+        else:
+            badge = tk.Label(head, text="CV", bg=BLUE, fg="white", font=("Segoe UI", 12, "bold"), width=3, pady=4)
         badge.pack(side="left")
         titles = tk.Frame(head, bg=BG, padx=12)
         titles.pack(side="left", fill="x", expand=True)
