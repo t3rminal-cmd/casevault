@@ -551,7 +551,8 @@
         h('span', { class: 'case-item-flags' },
           h('span', { class: `case-status status-${String(c.status).toLowerCase()}` }, c.status))),
       // Just the numbers: file number | case number | client, e.g. "100 | JH123456 | State".
-      h('div', { class: 'case-item-meta muted' }, (inGroup ? [c.fileNumber, c.agencyNumber, c.client] : [c.fileNumber, c.number, c.client]).filter(Boolean).join(' | ') || '\u00a0')));
+      // (No empty line when there are no numbers to show, v1.29.)
+      (() => { const meta = (inGroup ? [c.fileNumber, c.agencyNumber, c.client] : [c.fileNumber, c.number, c.client]).filter(Boolean).join(' | '); return meta ? h('div', { class: 'case-item-meta muted' }, meta) : null; })()));
   }
 
   /* Operations (v1.26): the Title or Operation Name ties several case numbers together. Cases that
@@ -592,7 +593,10 @@
         h('span', { class: 'op-count' }, String(group.length))),
       h('ul', { class: 'op-cases' }, group.map((c) => caseItem(c, true))));
     det.addEventListener('toggle', () => {
+      // A <details> drawn open fires "toggle" too: save only a real change (v1.29: saving on
+      // every draw redrew the list, which saved again, and the drive icon kept blinking).
       const set = closedOps();
+      if (det.open === !set.has(k)) return;
       if (det.open) set.delete(k); else set.add(k);
       Save.track('settings', () => Vault.updateSettings({ foldedOps: [...set] })).catch(() => {});
     });
@@ -729,7 +733,7 @@
       h('div', { class: 'dash-section' }, h('h2', { class: 'section-title' }, 'Recently updated'),
       recent.length
         ? h('ul', { class: 'plain-list' }, recent.map((c) => h('li', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}`, class: 'row-link recent-row' },
-          h('span', { class: 'recent-title' }, h('strong', {}, c.title || 'Untitled case'), h('span', { class: 'muted' }, [c.fileNumber && ` · File ${c.fileNumber}`, c.number && ` · Case ${c.number}`].filter(Boolean).join(''))),
+          h('span', { class: 'recent-title' }, h('span', {}, c.title || 'Untitled case'), h('span', { class: 'muted' }, [c.fileNumber && ` · File ${c.fileNumber}`, c.number && ` · Case ${c.number}`].filter(Boolean).join(''))),
           statusPill(c.status),
           h('span', { class: 'muted' }, c.updated ? fmtDateTime(Date.parse(c.updated)) : '')))))
         : h('p', { class: 'muted' }, 'Create your first case with "New case".')),
@@ -761,17 +765,20 @@
         h('span', { class: 'op-folder-name' }, o.name, bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null));
       }));
       const inside = open ? h('div', { class: 'op-open' },
-        h('div', { class: 'op-open-head' }, h('strong', {}, open.name), h('span', { class: 'muted small' }, `${open.group.length} case number${open.group.length === 1 ? '' : 's'}`), h('div', { class: 'spacer' }),
+        h('div', { class: 'op-open-head' }, h('strong', {}, open.name), h('span', { class: 'muted small' }, `${open.group.length} case number${open.group.length === 1 ? '' : 's'}`),
+          // v1.29: the Timeline belongs to the operation (it shows every case number's events).
+          h('a', { class: 'op-word', href: `#/case/${encodeURIComponent(open.group[0].id)}/timeline` }, 'Timeline'),
+          h('div', { class: 'spacer' }),
           h('button', { type: 'button', class: 'btn small', onclick: () => newCase({ title: open.name }) }, 'Add Case Number')),
         h('div', { class: 'op-open-cases' }, open.group.map((c) => {
           const to = (tab, sub) => `#/case/${encodeURIComponent(c.id)}/${tab}${sub ? `/${sub}` : ''}`;
           return h('div', { class: 'op-case-card' },
             h('a', { class: 'op-case-top', href: to('details') }, I('folder-fill'), h('span', { class: 'op-case-num' }, c.number || 'No case number yet'), statusPill(c.status)),
             h('div', { class: 'op-case-links' },
-              h('a', { href: to('reports') }, 'Reports'),
-              h('a', { href: to('reports', '.notes') }, 'Field Notes'),
-              h('a', { href: to('files') }, 'Files and Photos'),
-              h('a', { href: to('timeline') }, 'Timeline')));
+              h('a', { class: 'op-word', href: to('reports', '.notes') }, 'Field Notes'),
+              h('a', { class: 'op-word', href: to('reports') }, 'Reports'),
+              h('a', { class: 'op-word', href: to('files', 'photos') }, 'Photos'),
+              h('a', { class: 'op-word', href: to('files') }, 'Files')));
         }))) : null;
       box.replaceChildren(...[h('h2', { class: 'section-title' }, 'Operations'),
         list.length ? tiles : h('p', { class: 'muted' }, 'Create a case with New Case: its operation appears here as a folder.'), inside].filter(Boolean));
@@ -909,7 +916,7 @@
   const TABS = [['details', 'Details'], ['timeline', 'Timeline'], ['reports', 'Reports'], ['files', 'Files'], ['mail', 'Mail'], ['checks', 'Checks']];
   // The Arrest details tab appears once a case has arrest details, or is closed "by arrest".
   const FOLDER_ICONS = {
-    '': 'collection', unsorted: 'folder', 'Case Overview': 'journal-richtext', 'Case Initiation': 'flag', 'Affidavit Drafts': 'pencil-square', 'Affidavit Final': 'file-earmark-ruled', Affidavits: 'file-earmark-ruled',
+    '': 'collection', unsorted: 'folder', photos: 'image', 'Case Overview': 'journal-richtext', 'Case Initiation': 'flag', 'Affidavit Drafts': 'pencil-square', 'Affidavit Final': 'file-earmark-ruled', Affidavits: 'file-earmark-ruled',
     'Warrant Drafts': 'pencil-fill', 'Warrant Final': 'file-earmark-text', 'Warrants Signed': 'shield-fill-check', 'Arrest Report': 'person-badge', 'Supplementary Report': 'file-earmark-text',
     'Case Report': 'journal-bookmark', Deconfliction: 'signpost-split', 'Drug Exhibits': 'capsule-pill', 'Other Exhibits': 'box-seam', Email: 'envelope',
     'Ops Plan': 'map', 'Subpoena Drafts': 'pencil-square', 'Subpoena Sent': 'send', 'Subpoena Response': 'inbox', 'Subject Information': 'person-vcard',
@@ -1137,19 +1144,11 @@
           !archived && members.length > 1 && members.some((x) => x.status !== 'Closed') ? h('button', { class: 'btn action-btn', type: 'button', icon: 'lock-fill', title: `Closes all ${members.filter((x) => x.status !== 'Closed').length} open case numbers of this operation with one disposition.`, onclick: () => CVClosingUI.closeCaseDialog(c, { operation: members }) }, 'Close Operation') : null,
           !archived && !CVClosingUI.hasArrestTab(c) ? h('button', { class: 'btn action-btn', type: 'button', icon: 'person-vcard', title: 'Arrestee, arrest and charges, for the arrest report. Adds an Arrest details tab.', onclick: async () => {
             c.arrest = true;
+            delete c.arrestRemoved;
             try { await Save.track(`case:${c.id}`, () => Vault.saveCase(structuredClone(c))); go(c.id, 'arrest'); } catch { /* reported */ }
           } }, 'Add arrest details') : null,
-          // v1.27: the arrest details can be taken off again (not when the case was closed by arrest).
-          !archived && c.arrest && !(c.closure && c.closure.disposition === 'arrest') ? h('button', { class: 'btn action-btn', type: 'button', icon: 'trash3', title: 'Takes the Arrest details tab off this case and deletes what was entered in it.', onclick: async () => {
-            if (!(await confirmDialog({ title: 'Remove the arrest details?', message: 'The Arrest details tab is taken off this case, and the arrestee, arrest and charges entered there are deleted from the SSD.', confirmText: 'Remove', danger: true }))) return;
-            c.arrest = false;
-            try {
-              await Save.track(`arrest:${c.id}`, () => Vault.writeCaseJSON(c.id, 'arrest.json', CVClosing.emptyArrest()));
-              await Save.track(`case:${c.id}`, () => Vault.saveCase(structuredClone(c)));
-              toast('Arrest details removed.', 'success', 2500);
-              route();
-            } catch { /* reported */ }
-          } }, 'Remove Arrest Details') : null,
+          // The arrest details can be deleted again, also on a case closed by arrest (v1.29).
+          !archived && CVClosingUI.hasArrestTab(c) ? h('button', { class: 'btn action-btn', type: 'button', icon: 'trash3', title: 'Takes the Arrest details tab off this case and deletes what was entered in it.', onclick: () => CVClosingUI.deleteArrest(c) }, 'Delete Arrest') : null,
           !archived && Vault.conventionalId(c) ? h('button', { class: 'btn action-btn', type: 'button', icon: 'folder', title: `Renames this case's folder on the SSD to the <year>-<case no.> convention (${Vault.conventionalId(c)}). Every file is copied and checked first.`, onclick: () => renameCaseFolder(c) }, 'Rename folder') : null,
           !archived ? h('button', { class: 'btn action-btn', type: 'button', icon: 'archive', title: 'Keeps everything, read-only, in CaseVault-Data\\archive. It leaves the case list but can still be opened, searched and restored.', onclick: () => archiveCase(c) }, 'Archive Case') : null,
           h('button', { class: 'btn danger action-btn', type: 'button', icon: 'trash3', title: 'Permanently deletes the case from the SSD. There is no trash to get it back from.', onclick: () => deleteCase(c) }, 'Delete case…'))));
@@ -1552,8 +1551,8 @@
       date: h('input', { type: 'date', required: true, value: today() }),
       time: CVTimeField.create({ label: 'Time' }),
       kind: h('select', {}, h('option', { value: 'event' }, 'Event'), h('option', { value: 'deadline' }, 'Deadline')),
-      title: h('input', { required: true, maxlength: 200, placeholder: 'What happened / what is due' }),
-      note: h('textarea', { rows: 2, maxlength: 4000, placeholder: 'Details, optional' }),
+      title: h('input', { required: true, maxlength: 200, 'aria-label': 'Title', class: 'tl-title-input' }),
+      note: h('textarea', { rows: 2, maxlength: 4000, 'aria-label': 'Note' }),
       caseSel: h('select', { 'aria-label': 'Case number' }, [...tls.keys()].map((id) => h('option', { value: id, selected: id === c.id }, numberOf(id)))),
     };
     const submit = h('button', { class: 'btn primary', type: 'submit' }, 'Add to timeline');
@@ -1672,8 +1671,11 @@
     if (token !== state.renderToken) return;
     const CF = CVCaseFiles;
     try { sub = sub ? decodeURIComponent(sub) : sub; } catch { /* keep as is */ }
-    const current = CF.isCategory(sub) ? sub : (sub === 'unsorted' ? 'unsorted' : '');
-    const inFolder = (f) => (current === 'unsorted' ? !f.folder : !current || f.folder === current);
+    // 'photos' (v1.29): every picture in the case, whatever folder it's in.
+    const current = CF.isCategory(sub) ? sub : (sub === 'unsorted' || sub === 'photos' ? sub : '');
+    const isPhoto = (f) => /\.(jpe?g|png|gif|webp|bmp|heic|heif|tiff?)$/i.test(f.name || '');
+    const special = current === 'unsorted' || current === 'photos';
+    const inFolder = (f) => (current === 'unsorted' ? !f.folder : current === 'photos' ? isPhoto(f) : !current || f.folder === current);
     const shown = files.filter(inFolder);
     const count = (folder) => files.filter((f) => f.folder === folder).length;
     const unsorted = files.filter((f) => !f.folder);
@@ -1681,7 +1683,7 @@
 
     const input = h('input', { type: 'file', multiple: true, hidden: true });
     input.addEventListener('change', () => { addFiles([...input.files]); input.value = ''; });
-    const target = current && current !== 'unsorted' ? current : '';
+    const target = current && !special ? current : '';
     const dropTip = target
       ? `Saved as "${CF.fileName(c, target, 'x.pdf').replace(/\.pdf$/, '')}…" in ${CVFormat.pathText(`files\\${target}`)}. The originals are not changed.`
       : 'You pick the document type for each file next. They are copied to the SSD and named by the case number; the originals are not changed.';
@@ -1731,7 +1733,7 @@
         draggable: top && !archived ? 'true' : null,
       }, h('span', { class: 'folder-name' }, label), h('span', { class: 'folder-count muted' }, n ? String(n) : ''), h('span', { class: 'folder-icon' }, I(FOLDER_ICONS[key] || 'folder')));
       // Drop a file onto a folder to move it there.
-      if (key && key !== 'unsorted' && !archived) {
+      if (key && key !== 'unsorted' && key !== 'photos' && !archived) {
         a.addEventListener('dragover', (e) => { if (e.dataTransfer.types.includes('application/x-casevault-file') || e.dataTransfer.types.includes('application/x-casevault-folder')) { e.preventDefault(); a.classList.add('drop-target'); } });
         a.addEventListener('dragleave', () => a.classList.remove('drop-target'));
         a.addEventListener('drop', async (e) => {
@@ -1777,6 +1779,7 @@
 
     const nav = h('nav', { class: 'folder-nav', 'aria-label': 'Document folders' },
       folderBtn('', 'All documents', files.length),
+      folderBtn('photos', 'Photos', files.filter(isPhoto).length),
       ordered.filter(visible).map((f) => {
         const kids = CF.childrenOf(f);
         const btn = folderBtn(f, f, count(f) + kids.reduce((n, k) => n + count(k), 0), { top: f });
@@ -1825,7 +1828,7 @@
     // ---- file table: Name, Type, Size, Added. Click a heading to sort; "Custom" is your own
     // order (drag the rows), kept per folder in the case's file-order.json.
     const sortPref = settings.filesSort && typeof settings.filesSort === 'object' ? settings.filesSort : { key: 'custom', dir: 1 };
-    const inOneFolder = current && current !== 'unsorted';
+    const inOneFolder = current && !special;
     let fileOrder = {};
     try { fileOrder = (await Vault.readCaseJSON(c.id, 'file-order.json')) || {}; } catch (err) { if (FS.isDisconnectError(err)) throw err; }
     if (token !== state.renderToken) return;
@@ -1934,9 +1937,9 @@
           }
           return tr;
         }))))
-      : h('p', { class: 'muted' }, current ? `No documents in ${current === 'unsorted' ? 'Unsorted' : current.replace('/', ' › ')} yet.` : 'No files attached yet.');
+      : h('p', { class: 'muted' }, current ? (current === 'photos' ? 'No photos in this case yet.' : `No documents in ${current === 'unsorted' ? 'Unsorted' : current.replace('/', ' › ')} yet.`) : 'No files attached yet.');
 
-    const where = CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}\\files${current && current !== 'unsorted' ? `\\${current}` : ''}`);
+    const where = CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}\\files${current && !special ? `\\${current}` : ''}`);
     panel.replaceChildren(...[
       prefix ? null : h('p', { class: 'hint' }, 'This case has no case number yet, so files are named ', h('code', {}, `${new Date().getFullYear()}-NOCASENO …`), '. Add the number on the Details tab first to have them named ', h('code', {}, '2026-<CaseNo> <Type>'), '.'),
       mergeNote,
@@ -2250,12 +2253,12 @@
         sec.classList.add('vault-card');
         const title = sec.querySelector('h3');
         if (title && !title.querySelector('svg')) title.append(' ', I(SECTION_ICONS[key] || 'gear'));
-        // The section's explanation goes into a hover box on its heading (an ⓘ marks it).
+        // The section's explanation goes into a hover box on its heading and icon (v1.29: no ⓘ).
         const intro = title && title.nextElementSibling;
         if (intro && intro.matches('p.muted')) {
           title.dataset.tip = [title.dataset.tip || title.getAttribute('title'), intro.textContent.trim()].filter(Boolean).join('\n');
+          title.dataset.tipLong = '1';
           title.removeAttribute('title');
-          title.append(I('info-circle', { cls: 'tip-icon' }));
           title.tabIndex = 0;
           intro.remove();
         }

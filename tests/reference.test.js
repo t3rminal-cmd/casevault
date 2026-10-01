@@ -67,13 +67,20 @@ test('quick links: tabs, hiding, edits, custom links, and only web addresses', (
   const LK = require('../js/reference/links.js');
   const all = LK.linksOf({});
   assert.deepStrictEqual(all.filter((l) => l.tab === 'reference').map((l) => l.name), ['Location Codes', 'Common UCR', 'Charges', 'Narcotic Calculator']);
-  assert.deepStrictEqual(all.filter((l) => l.tab === 'osint').map((l) => l.name), ['MaxMind IP', 'Fingerprint', 'NumLookup', 'Blockchair', 'Mempool', 'Chainalysis', 'TinEye', 'Google', 'Google Images']);
+  assert.deepStrictEqual(all.filter((l) => l.tab === 'osint').map((l) => l.name), ['MaxMind IP', 'Fingerprint', 'NumLookup', 'Blockchair', 'Mempool', 'Chainalysis', 'TinEye', 'Google', 'Google Maps', 'Google Images']);
   assert.deepStrictEqual(all.filter((l) => l.tab === 'leo').map((l) => l.name), ['Accurint', 'Kodex Portal', 'Chicago HIDTA', 'Snapchat LE Portal', 'Meta LE Portal', 'Chicago Police Directives']);
   for (const l of all) if (l.url) assert.match(l.url, /^https:\/\//, l.name);
   const s = LK.linksOf({ hidden: ['osint-fingerprint'], edits: { 'leo-chicago-hidta': { url: 'portal.example.org/login' } }, custom: [{ id: 'c1', tab: 'leo', name: 'My portal', url: 'https://example.org' }, { id: 'c2', tab: 'reference', name: 'x', url: 'https://example.org' }] });
   assert.ok(s.find((l) => l.id === 'osint-fingerprint').hidden);
   assert.strictEqual(s.find((l) => l.id === 'leo-chicago-hidta').url, 'https://portal.example.org/login');
   assert.deepStrictEqual(s.filter((l) => l.custom).map((l) => [l.tab, l.name]), [['leo', 'My portal']], 'custom links only in OSINT and LEO');
+  // v1.29: your own order; moving within a tab; dropping onto another link.
+  const ord = LK.moveLink({}, 'ref-charges', -1);
+  assert.deepStrictEqual(LK.linksOf({ order: ord }).filter((l) => l.tab === 'reference').map((l) => l.name), ['Location Codes', 'Charges', 'Common UCR', 'Narcotic Calculator']);
+  assert.deepStrictEqual(LK.linksOf({ order: LK.moveLink({ order: ord }, 'ref-incident', -1) }).filter((l) => l.tab === 'reference')[0].name, 'Location Codes', 'the first stays first');
+  const dropped = LK.dropLink({}, 'ref-narcotics', 'ref-incident');
+  assert.deepStrictEqual(LK.linksOf({ order: dropped }).filter((l) => l.tab === 'reference').map((l) => l.name), ['Narcotic Calculator', 'Location Codes', 'Common UCR', 'Charges']);
+  assert.strictEqual(LK.linksOf({ order: dropped }).length, LK.linksOf({}).length, 'nothing lost');
   assert.strictEqual(LK.cleanUrl('javascript:alert(1)'), null);
   assert.strictEqual(LK.cleanUrl('file:///C:/x'), null);
   assert.strictEqual(LK.cleanUrl(''), '');

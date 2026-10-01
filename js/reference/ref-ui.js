@@ -54,12 +54,30 @@
     else if (l.url) tile = h('a', { class: 'quick-link', href: l.url, target: '_blank', rel: 'noopener noreferrer', referrerpolicy: 'no-referrer', title: tip }, ...inner, h('span', { class: 'ql-ext' }, ui.icon('box-arrow-up-right')));
     else tile = h('button', { type: 'button', class: 'quick-link needs-url', title: `${l.note || ''} No web address yet: click to add it.`, onclick: () => ui.showVaultPanel('links') }, ...inner, h('span', { class: 'ql-ext' }, ui.icon('pencil')));
     if (!editing) return tile;
-    return h('div', { class: `ql-edit-wrap ${l.hidden ? 'is-hidden' : ''}` }, tile,
+    // Arrange (v1.29): ‹ › move a button within its tab, or drag it onto another.
+    const move = async (step) => { try { await saveLinks({ order: LK().moveLink(savedLinks(), l.id, step) }); redraw(); } catch { /* reported */ } };
+    const wrap = h('div', { class: `ql-edit-wrap ${l.hidden ? 'is-hidden' : ''}`, draggable: 'true', 'data-id': l.id, title: 'Drag to move it, or use the arrows' },
+      h('button', { type: 'button', class: 'ql-move', title: 'Move left', onclick: () => move(-1) }, ui.icon('chevron-left'), h('span', { class: 'sr-only' }, `Move ${l.name} left`)),
+      tile,
+      h('button', { type: 'button', class: 'ql-move', title: 'Move right', onclick: () => move(1) }, ui.icon('chevron-right'), h('span', { class: 'sr-only' }, `Move ${l.name} right`)),
       h('button', { type: 'button', class: 'ql-toggle', title: l.hidden ? 'Show this link' : 'Hide this link', onclick: async () => {
         const hidden = new Set(savedLinks().hidden || []);
         if (hidden.has(l.id)) hidden.delete(l.id); else hidden.add(l.id);
         try { await saveLinks({ hidden: [...hidden] }); redraw(); } catch { /* reported */ }
       } }, ui.icon(l.hidden ? 'eye' : 'eye-slash'), h('span', { class: 'sr-only' }, l.hidden ? `Show ${l.name}` : `Hide ${l.name}`)));
+    wrap.addEventListener('dragstart', (e) => { e.dataTransfer.setData('application/x-casevault-link', l.id); e.dataTransfer.effectAllowed = 'move'; wrap.classList.add('dragging'); });
+    wrap.addEventListener('dragend', () => wrap.classList.remove('dragging'));
+    wrap.addEventListener('dragover', (e) => { if (e.dataTransfer.types.includes('application/x-casevault-link')) { e.preventDefault(); wrap.classList.add('drop-target'); } });
+    wrap.addEventListener('dragleave', () => wrap.classList.remove('drop-target'));
+    wrap.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      wrap.classList.remove('drop-target');
+      const id = e.dataTransfer.getData('application/x-casevault-link');
+      if (!id || id === l.id) return;
+      const r = wrap.getBoundingClientRect();
+      try { await saveLinks({ order: LK().dropLink(savedLinks(), id, l.id, e.clientX > r.left + r.width / 2) }); redraw(); } catch { /* reported */ }
+    });
+    return wrap;
   }
 
   function quickLinks() {
@@ -81,10 +99,10 @@
           }, t.label))),
           h('div', { class: 'spacer' }),
           !editing && hiddenCount ? h('span', { class: 'small muted' }, `${hiddenCount} hidden`) : null,
-          h('button', { type: 'button', class: `btn small ${editing ? 'primary' : 'ghost'}`, icon: editing ? 'check2' : 'eye-slash', title: editing ? 'Finish' : 'Choose which buttons to show. Addresses and your own links: Vault → Quick links.', onclick: () => { mem.editLinks = !mem.editLinks; draw(); } }, editing ? 'Done' : 'Show/Hide')),
-        tab !== 'reference' ? h('p', { class: 'muted small ql-note' }, ui.icon('info-circle'), ' These open outside CaseVault, in a new browser tab. Never paste case details into outside websites unless your policy allows it.') : null,
+          h('button', { type: 'button', class: `btn small ${editing ? 'primary' : 'ghost'}`, icon: editing ? 'check2' : 'arrow-left-right', title: editing ? 'Finish' : 'Move the buttons (arrows or drag) and choose which to show. Addresses and your own links: Vault → Quick links.', onclick: () => { mem.editLinks = !mem.editLinks; draw(); } }, editing ? 'Done' : 'Arrange')),
+        tab !== 'reference' ? h('p', { class: 'muted small ql-note' }, 'These open outside CaseVault, in a new browser tab. Never paste case details into outside websites unless your policy allows it.') : null,
         shown.length ? h('div', { class: 'quick-links' }, shown.map((l) => linkTile(l, { editing, redraw: draw })))
-          : h('p', { class: 'muted small' }, inTab.length ? 'All the links here are hidden. Click Show/Hide to bring them back.' : 'No links here yet. Add one in Vault → Quick links.')].filter(Boolean));
+          : h('p', { class: 'muted small' }, inTab.length ? 'All the links here are hidden. Click Arrange to bring them back.' : 'No links here yet. Add one in Vault → Quick links.')].filter(Boolean));
     };
     draw();
     return wrap;
