@@ -109,7 +109,7 @@
       `Status: ${c.status || '(none)'}`, `Opened: ${d.opened || '(none)'}`, c.tags && c.tags.length ? `Tags: ${c.tags.join(', ')}` : null,
       c.agencyNumber ? `Agency case number: ${c.agencyNumber}` : null,
       Array.isArray(c.partners) && c.partners.length && root.CVDraft ? `LEO partners: ${root.CVDraft.partnersText(c.partners)}` : null,
-      ...(Array.isArray(c.suspects) ? c.suspects : []).filter((x) => x && x.name).map((x) => `Suspect (${x.role || 'Main'}): ${[x.name, x.dob ? `DOB ${x.dob}` : '', x.residence].filter(Boolean).join(', ')}`),
+      ...(Array.isArray(c.suspects) ? c.suspects : []).filter((x) => x && x.name).map((x) => `Suspect (${!x.role || x.role === 'Main' ? 'Primary' : x.role}): ${[x.name, x.dob ? `DOB ${x.dob}` : '', x.residence].filter(Boolean).join(', ')}`),
       ...contactLines(c.contacts),
     ].filter(Boolean).join('\n');
     const events = (timeline.events || []).map((e) => `- ${e.date}${e.time ? ` ${e.time}` : ''} [${e.kind === 'deadline' ? 'deadline' : 'event'}${e.done ? ', done' : ''}] ${e.title}${e.note ? ` (${e.note.replace(/\s+/g, ' ')})` : ''}`).join('\n');

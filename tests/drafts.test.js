@@ -248,8 +248,8 @@ test('suspects fill {{suspect.*}} with the main suspect, {{suspects}} lists them
   assert.strictEqual(D.ageOn('', now), null);
   const c = { agencyNumber: 'AG-26-0077', suspects: [{ name: 'Sam Example', dob: '1995-01-15', residence: '100 Test Lane, Anytown', role: 'Secondary' }, { name: 'Pat Placeholder', dob: '1988-12-01', residence: '', role: 'Main' }, { name: '', role: 'Other' }] };
   const ctx = D.templateContext(c, now);
-  assert.strictEqual(D.fillTemplate('{{suspect.name}} ({{suspect.role}}), DOB {{suspect.dob}}, age {{suspect.age}}. Agency no. {{case.agencyNumber}}', ctx), 'Pat Placeholder (Main), DOB December 1, 1988, age 37. Agency no. AG-26-0077');
-  assert.strictEqual(ctx.suspects, 'Sam Example, DOB January 15, 1995, age 31, 100 Test Lane, Anytown (Secondary)\nPat Placeholder, DOB December 1, 1988, age 37 (Main)');
+  assert.strictEqual(D.fillTemplate('{{suspect.name}} ({{suspect.role}}), DOB {{suspect.dob}}, age {{suspect.age}}. Agency no. {{case.agencyNumber}}', ctx), 'Pat Placeholder (Primary), DOB December 1, 1988, age 37. Agency no. AG-26-0077');
+  assert.strictEqual(ctx.suspects, 'Sam Example, DOB January 15, 1995, age 31, 100 Test Lane, Anytown (Secondary)\nPat Placeholder, DOB December 1, 1988, age 37 (Primary)');
   assert.ok(D.placeholderGroups().some((g) => g.title === 'Suspects'));
 });
 

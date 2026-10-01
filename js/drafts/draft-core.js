@@ -123,7 +123,9 @@
   const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
   const AFFIANT_FIELDS = ['name', 'title', 'agency', 'address', 'phone', 'email'];
-  const SUSPECT_ROLES = ['Main', 'Secondary', 'Other'];
+  // v1.36: Primary (was "Main"; a saved Main reads as Primary).
+  const SUSPECT_ROLES = ['Primary', 'Secondary', 'Other'];
+  const isPrimary = (r) => r === 'Primary' || r === 'Main';
 
   /** Age in whole years on `now` from a "YYYY-MM-DD" date of birth; null if there is none. */
   function ageOn(dob, now = new Date()) {
@@ -162,12 +164,12 @@
     ctx['case.prosecutor.title'] = String((k.prosecutor && k.prosecutor.title) || '').trim();
     // Suspects from the Details tab: {{suspect.*}} is the main suspect (or the first one).
     const sus = (Array.isArray(c.suspects) ? c.suspects : []).filter((x) => x && String(x.name || '').trim());
-    const main = sus.find((x) => x.role === 'Main') || sus[0] || {};
+    const main = sus.find((x) => isPrimary(x.role)) || sus[0] || {};
     const age = ageOn(main.dob, now);
     Object.assign(ctx, {
       'suspect.name': String(main.name || '').trim(), 'suspect.dob': usDate(main.dob), 'suspect.age': age == null ? '' : String(age),
-      'suspect.residence': String(main.residence || '').trim(), 'suspect.role': String(main.role || '').trim(),
-      suspects: sus.map((x) => { const a = ageOn(x.dob, now); return [x.name.trim(), x.dob ? `DOB ${usDate(x.dob)}${a == null ? '' : `, age ${a}`}` : '', x.residence ? String(x.residence).trim() : '', x.role ? `(${x.role})` : ''].filter(Boolean).join(', ').replace(/, \(/, ' ('); }).join('\n'),
+      'suspect.residence': String(main.residence || '').trim(), 'suspect.role': String(main.role === 'Main' ? 'Primary' : main.role || '').trim(),
+      suspects: sus.map((x) => { const a = ageOn(x.dob, now); return [x.name.trim(), x.dob ? `DOB ${usDate(x.dob)}${a == null ? '' : `, age ${a}`}` : '', x.residence ? String(x.residence).trim() : '', x.role ? `(${x.role === 'Main' ? 'Primary' : x.role})` : ''].filter(Boolean).join(', ').replace(/, \(/, ' ('); }).join('\n'),
     });
     for (const k of AFFIANT_FIELDS) {
       ctx[`affiant.${k}`] = k === 'address' ? String(a[k] || '').replace(/\r\n?/g, '\n').trim() : String(a[k] || '').trim();

@@ -298,7 +298,7 @@
       src.value = ''; outBox.value = ''; extra.value = ''; name.value = ''; report.textContent = '';
       src.focus();
     };
-    const name = h('input', { type: 'text', class: 'dev-name', maxlength: 80, placeholder: 'Name, e.g. DEA 6 sample', 'aria-label': 'Name to save it under' });
+    const name = h('input', { type: 'text', class: 'dev-name', maxlength: 80, placeholder: 'Name: DEA 6 sample', 'aria-label': 'Name to save it under' });
     const text = () => { const t = outBox.value.trim(); if (!t) toast('Anonymize it first.', 'error'); return t; };
     const fileName = (ext) => `${(name.value.trim() || 'Anonymized document').replace(/\.(md|txt)$/i, '')}.${ext}`;
     const libFolder = (root.CVLibrary && root.CVLibrary.CATEGORIES[0] && root.CVLibrary.CATEGORIES[0].folder) || 'Report examples';
@@ -379,7 +379,7 @@
     const settings = (Vault.data && Vault.data.settings) || {};
     const about = [`CaseVault ${Vault.APP_VERSION || ''}`, navigator.userAgent.replace(/\s+/g, ' ').slice(0, 160), `Screen ${root.innerWidth}×${root.innerHeight}`, `Zoom ${getZoom()}%`].join('\n');
     const kind = h('select', { 'aria-label': 'Kind of message' }, ['Bug', 'Feature request', 'Question'].map((k) => h('option', { value: k }, k)));
-    const subject = h('input', { type: 'text', maxlength: 120, placeholder: 'Short title, e.g. Files tab: preview is blank', 'aria-label': 'Title' });
+    const subject = h('input', { type: 'text', maxlength: 120, placeholder: 'Short title: Files tab preview is blank', 'aria-label': 'Title' });
     const what = h('textarea', { rows: 6, placeholder: 'What did you do, what happened, and what did you expect? No case details, names or numbers.', 'aria-label': 'Description' });
     const includeAbout = h('input', { type: 'checkbox', checked: true });
     const email = h('input', { type: 'email', value: settings.devEmail || '', placeholder: 'developer@example.com', 'aria-label': 'Developer email' });

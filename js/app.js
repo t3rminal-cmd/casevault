@@ -1243,9 +1243,9 @@
         const dob = input('dob', { type: 'date', 'aria-label': `${who} date of birth` });
         dob.addEventListener('input', showAge);
         showAge();
-        const role = h('select', { 'aria-label': `${who} role` }, CVDraft.SUSPECT_ROLES.map((r) => h('option', { value: r, selected: r === (s.role || 'Main') }, r)));
+        const role = h('select', { 'aria-label': `${who} role` }, CVDraft.SUSPECT_ROLES.map((r) => h('option', { value: r, selected: r === (s.role || 'Primary') }, r)));
         role.addEventListener('change', () => { s.role = role.value; save(); });
-        if (!s.role) s.role = 'Main';
+        if (!s.role || s.role === 'Main') s.role = 'Primary'; // "Main" before v1.36
         // Demographics (v1.34), kept in s.info: Add From Suspects on the Draft tab copies them into Offenders.
         if (!s.info || typeof s.info !== 'object') s.info = {};
         const PERSON = (k) => CVReportFields.SUSPECT_INFO.find(([key]) => key === k);
@@ -1253,7 +1253,7 @@
           const [, label, kind, opts] = PERSON(k) || [k, k, 'text'];
           let el;
           if (kind === 'select') el = h('select', { 'aria-label': `${who} ${label}` }, opts.map((o) => h('option', { value: o, selected: o === (s.info[k] || '') }, o || '—')));
-          else el = h('input', { value: s.info[k] || '', autocomplete: 'off', maxlength: 200, 'aria-label': `${who} ${label}`, list: kind === 'hair' ? 'suspect-hair' : kind === 'eyes' ? 'suspect-eyes' : null, placeholder: kind === 'height' ? 'e.g. 5 ft 10 in' : kind === 'weight' ? 'e.g. 180 lbs' : '', ...attrs });
+          else el = h('input', { value: s.info[k] || '', autocomplete: 'off', maxlength: 200, 'aria-label': `${who} ${label}`, list: kind === 'hair' ? 'suspect-hair' : kind === 'eyes' ? 'suspect-eyes' : null, placeholder: kind === 'height' ? '5 ft 10 in' : kind === 'weight' ? '160 Pounds' : '', ...attrs });
           el.addEventListener(kind === 'select' ? 'change' : 'input', () => { s.info[k] = el.value.trim(); save(); });
           return field(label, el, kind === 'wide' ? 'suspect-wide' : '');
         };
@@ -1276,7 +1276,7 @@
       h('datalist', { id: 'suspect-eyes' }, CVReportFields.PICKS.eyes.map((x) => h('option', { value: x }))),
       rows,
       h('div', { class: 'contact-add' }, h('button', { class: 'btn small', type: 'button', icon: 'person-plus', onclick: () => {
-        c.suspects.push({ name: '', dob: '', residence: '', info: {}, role: c.suspects.some((x) => x.role === 'Main') ? 'Secondary' : 'Main' });
+        c.suspects.push({ name: '', dob: '', residence: '', info: {}, role: c.suspects.some((x) => x.role === 'Primary' || x.role === 'Main') ? 'Secondary' : 'Primary' });
         draw();
         const last = rows.lastElementChild && rows.lastElementChild.querySelector('input');
         if (last) last.focus();
@@ -1304,7 +1304,7 @@
   const DEPT_QUESTION = { 'State PD': 'Which state police?', 'Local PD': 'Which police department?', 'Sheriff Dept': 'Which sheriff\'s department?', Other: 'Which agency?' };
   function askDepartment(agency, current = '') {
     return openDialog((close) => {
-      const inp = h('input', { type: 'text', value: current, autofocus: true, maxlength: 300, placeholder: agency === 'State PD' ? 'e.g. Illinois State Police' : agency === 'Local PD' ? 'e.g. Evanston Police Department' : agency === 'Other' ? 'e.g. Postal Service OIG; Amtrak Police' : 'e.g. Cook County Sheriff\'s Office', 'aria-label': DEPT_QUESTION[agency] });
+      const inp = h('input', { type: 'text', value: current, autofocus: true, maxlength: 300, placeholder: agency === 'State PD' ? 'Illinois State Police' : agency === 'Local PD' ? 'Evanston Police Department' : agency === 'Other' ? 'Postal Service OIG; Amtrak Police' : 'Cook County Sheriff\'s Office', 'aria-label': DEPT_QUESTION[agency] });
       return h('form', { class: 'partner-form', onsubmit: (e) => { e.preventDefault(); close(inp.value.trim()); } },
         h('h2', { icon: 'building' }, DEPT_QUESTION[agency]),
         h('p', { class: 'muted small' }, 'More than one? Separate them with a semicolon (;).'),
@@ -1401,7 +1401,7 @@
     const others = h('div', { class: 'contact-others' });
     const drawOthers = () => {
       others.replaceChildren(...k.others.map((o, i) => h('div', { class: 'contact-row' },
-        field('Role', input(o, 'role', { maxlength: 80, list: 'contact-roles', placeholder: 'e.g. Finance', 'aria-label': `Contact ${i + 1} role` })),
+        field('Role', input(o, 'role', { maxlength: 80, list: 'contact-roles', placeholder: 'Finance', 'aria-label': `Contact ${i + 1} role` })),
         ...person(o, `Contact ${i + 1}`),
         h('button', { class: 'icon-btn danger-icon contact-remove', type: 'button', title: 'Remove this contact', onclick: () => { k.others.splice(i, 1); drawOthers(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Remove contact ${i + 1}`)))));
     };
