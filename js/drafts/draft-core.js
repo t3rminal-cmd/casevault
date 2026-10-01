@@ -102,7 +102,8 @@
   /* ---------------- LEO partners (v1.26) ---------------- */
 
   // v1.33: Secret Service (USSS) and ICE added; USPIS stays just before Local PD and Sheriff.
-  const PARTNER_AGENCIES = ['DEA', 'FBI', 'IRS', 'CBP', 'HSI', 'ICE', 'USSS', 'USPIS', 'Local PD', 'Sheriff Dept', 'Other'];
+  // Federal agencies first, then state and local ones, then Other (v1.34: ATF, U.S. Marshals and State PD added).
+  const PARTNER_AGENCIES = ['DEA', 'FBI', 'ATF', 'USMS', 'IRS', 'CBP', 'HSI', 'ICE', 'USSS', 'USPIS', 'State PD', 'Local PD', 'Sheriff Dept', 'Other'];
   /** "DEA, USPIS, Local PD (Evanston Police Department)" from [{ agency, name }]. */
   function partnersText(list) {
     const out = [];

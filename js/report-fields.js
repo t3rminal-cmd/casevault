@@ -130,8 +130,17 @@
   ];
   // The officers' roles at the scene (Police Personnel).
   const ROLES = ['', 'Case', 'Affiant', 'Entry', 'Perimeter', 'UCO', 'Surveillance', 'Enforcement', 'Sergeant', 'Lieutenant', 'Agent', 'Other'];
-  // Officer's Report lines that can be ticked off when they don't apply (v1.22).
-  const OPTIONAL_LINES = ['within1000', 'searchWarrant', 'subpoenaGJ', 'asa', 'ausa', 'judge', 'proofResidence', 'irNumber', 'cbNumber'];
+  // Officer's Report lines that can be ticked off when they don't apply (v1.22; every line since
+  // v1.34), and its lists (narcotics, charges, gangs…), which can be ticked off the same way.
+  const OPTIONAL_LINES = SECTIONS.find((s) => s.id === 'report').fields.filter(([, , kind]) => kind !== 'list').map(([k]) => k);
+  const OPTIONAL_LISTS = ['narcotics', ...SECTIONS.find((s) => s.id === 'report').lists];
+  /** The Court Branch line: [label, value] with the court date, each part left out when ticked off; null when both are. */
+  const courtLine = (d, show) => {
+    const hide = (k) => (d.hidden || []).includes(k);
+    if (hide('courtBranch') && hide('courtDate')) return null;
+    const parts = [hide('courtBranch') ? '' : show('courtBranch', d.courtBranch), hide('courtDate') ? '' : show('courtDate', d.courtDate)].filter(Boolean);
+    return [hide('courtBranch') ? 'Court Date' : 'Court Branch and Court Officer', parts.join(', ')];
+  };
   // Units the narcotic calculator prices by (js/reference).
   const NARCOTIC_UNITS = ['', 'gram', 'ounce', 'pound', 'kilogram', 'pill', 'mL'];
   const LISTS = {
@@ -172,7 +181,9 @@
   function normalize(data) {
     const src = data || {};
     const d = { ...empty(), ...src };
-    d.evidence = (Array.isArray(d.evidence) ? d.evidence : []).map((e) => ({ number: e.number, inventory: e.inventory || '', type: OLD_TYPES[e.type] || e.type || '', drug: e.drug || '', weight: e.weight || '', description: e.description || '', photos: Array.isArray(e.photos) ? e.photos.filter((x) => typeof x === 'string') : [] }));
+    d.evidence = (Array.isArray(d.evidence) ? d.evidence : []).map((e) => ({ number: e.number, inventory: e.inventory || '', type: OLD_TYPES[e.type] || e.type || '', drug: e.drug || '', weight: e.weight || '', description: e.description || '', photos: Array.isArray(e.photos) ? e.photos.filter((x) => typeof x === 'string') : [], photoLabels: [] }));
+    // Each photo's label (v1.34), kept in step with the photos.
+    d.evidence.forEach((e, i) => { const src0 = (Array.isArray(src.evidence) && src.evidence[i]) || {}; const ls = Array.isArray(src0.photoLabels) ? src0.photoLabels : []; e.photoLabels = e.photos.map((_, j) => String(ls[j] || '')); });
     // A v1.21 single Notifications line becomes the first notification.
     if (typeof src.notifications === 'string') d.notifications = String(src.notifications).trim() ? [{ notes: String(src.notifications).trim() }] : [];
     for (const k of Object.keys(LISTS)) d[k] = (Array.isArray(d[k]) ? d[k] : []).map((it) => ({ ...blankItem(k), ...(it && typeof it === 'object' ? it : {}) }));
@@ -338,12 +349,12 @@
     for (const s of SECTIONS) {
       if (isHidden(d, s.id)) continue;
       for (const [k, label, kind] of s.fields) {
-        if (kind === 'list') { for (const it of d[k].filter(filled)) lines.push(`${LISTS[k].item}: ${itemLine(k, it)}`); continue; }
+        if (kind === 'list') { if (!isHidden(d, k)) for (const it of d[k].filter(filled)) lines.push(`${LISTS[k].item}: ${itemLine(k, it)}`); continue; }
         if (isHidden(d, k)) continue;
         const v = shown(k, d[k]);
         if (v) lines.push(`${label}: ${v.replace(/\s*\n\s*/g, '; ')}`);
       }
-      for (const k of s.lists || []) for (const it of d[k].filter(filled)) lines.push(`${LISTS[k].item}: ${itemLine(k, it)}`);
+      for (const k of s.lists || []) if (!isHidden(d, k)) for (const it of d[k].filter(filled)) lines.push(`${LISTS[k].item}: ${itemLine(k, it)}`);
     }
     if (!isHidden(d, 'evidence')) for (const e of d.evidence) lines.push(`Evidence ${exhibitLine(e)}`);
     if (!isHidden(d, 'summary') && String(d.narrative || '').trim()) lines.push(`Summary of investigation (the investigator's own words): ${String(d.narrative).trim()}`);
@@ -373,7 +384,7 @@
     const list = (key) => {
       const L = LISTS[key];
       const items = d[key].filter(filled);
-      if (!items.length) return;
+      if (!items.length || isHidden(d, key)) return;
       out.push(`**${L.title}**`, '');
       table(['#', ...L.fields.filter(([k]) => !(key === 'narcotics' && k === 'unit')).map(([, l]) => l)],
         items.map((it, i) => [String(i + 1), ...L.fields.filter(([k]) => !(key === 'narcotics' && k === 'unit')).map(([k, , kind]) => valueText(key, it, k, kind))]));
@@ -405,8 +416,10 @@
       const report = SECTIONS.find((s) => s.id === 'report');
       const lines = [];
       for (const [k, l, kind] of report.fields) {
-        if (kind === 'list' || k === 'courtDate' || isHidden(d, k)) continue;
-        lines.push([l, k === 'courtBranch' ? [shown('courtBranch', d.courtBranch), shown('courtDate', d.courtDate)].filter(Boolean).join(', ') : shown(k, d[k])]);
+        if (kind === 'list' || k === 'courtDate') continue;
+        if (k === 'courtBranch') { const c = courtLine(d, shown); if (c) lines.push(c); continue; }
+        if (isHidden(d, k)) continue;
+        lines.push([l, shown(k, d[k])]);
       }
       table(["Officer's Report", 'Entry'], lines);
       list('narcotics');
@@ -432,7 +445,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, exhibitLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, exhibitLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

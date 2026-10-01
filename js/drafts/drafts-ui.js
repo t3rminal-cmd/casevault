@@ -94,15 +94,19 @@
 
     // Reports: every report of the case (v1.32: the Field Notes aren't listed here; they're in the
     // Notes button at the bottom right). No dates.
-    const list = h('table', { class: 'files drafts-table' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Report'), h('th', {}, 'Type'), h('th', {}, ''))),
+    const I = (n) => ui.icon(n);
+    // v1.34: the AI tag has its own column; each report has an icon, its type as a tag, and a bin.
+    const list = h('table', { class: 'files drafts-table reports-table' },
+      h('colgroup', {}, h('col', {}), h('col', { class: 'col-rtype' }), h('col', { class: 'col-ai' }), h('col', { class: 'col-ract' })),
+      h('thead', {}, h('tr', {}, h('th', {}, 'Report'), h('th', {}, 'Type'), h('th', { class: 'ai-col', title: 'Written with Draft with AI' }, 'AI'), h('th', {}, h('span', { class: 'sr-only' }, 'Delete')))),
       h('tbody', {}, drafts.length ? drafts.map((d) => h('tr', {},
-        h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/${encodeURIComponent(d.slug)}` }, d.title), d.ai ? h('span', { class: 'layer-badge ai-badge' }, 'AI') : null),
-        h('td', { class: 'muted' }, (CVDraft.DOC_TYPES[d.type] || CVDraft.DOC_TYPES.other).label),
-        h('td', { class: 'actions' }, h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
+        h('td', { class: 'report-name' }, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/${encodeURIComponent(d.slug)}` }, h('span', { class: 'report-icon', 'aria-hidden': 'true' }, I(d.fromFields ? 'clipboard2-check' : 'file-earmark-text')), h('span', { class: 'report-title' }, d.title))),
+        h('td', {}, h('span', { class: 'type-tag' }, (CVDraft.DOC_TYPES[d.type] || CVDraft.DOC_TYPES.other).label)),
+        h('td', { class: 'ai-col' }, d.ai ? h('span', { class: 'layer-badge ai-badge', title: 'Written with Draft with AI' }, I('robot'), 'AI') : h('span', { class: 'muted', 'aria-label': 'No' }, '—')),
+        h('td', { class: 'actions' }, h('button', { class: 'icon-btn danger-icon', type: 'button', title: `Delete ${d.title}`, onclick: async () => {
           if (!(await confirmDialog({ title: `Delete "${d.title}"?`, message: 'The report is permanently deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
           try { await Save.track(`draft-del:${c.id}:${d.slug}`, () => Vault.deleteDraft(c.id, d.slug)); ui.refresh(); } catch { /* reported */ }
-        } }, 'Delete')))) : [h('tr', {}, h('td', { colspan: 3, class: 'muted' }, 'No reports yet. Fill in the Draft tab and click Send Draft to Reports, or use New Report.'))]));
+        } }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${d.title}`))))) : [h('tr', {}, h('td', { colspan: 4, class: 'muted' }, 'No reports yet. Fill in the Draft tab and click Send Draft to Reports, or use New Report.'))]));
 
     const archived = Vault.isArchived(c.id);
     const newReport = () => ui.openDialog((close) => {
@@ -113,25 +117,28 @@
         h('div', { class: 'field span-2' }, h('span', {}, 'Start from'), startBox),
         h('div', { class: 'dialog-actions span-2' }, h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Cancel'), create));
     }).then(() => { closeNew = null; });
-    const newBtn = h('button', { class: 'btn small primary new-report-btn', type: 'button', onclick: () => newReport() }, 'New Report');
+    const newBtn = h('button', { class: 'btn small primary new-report-btn', type: 'button', icon: 'plus-lg', onclick: () => newReport() }, 'New Report');
     // Field Notes (v1.33): their own section at the top, always there; what you save in the notes
     // (here or in the Notes box) shows here.
     const notesPlain = String(notesText || '').replace(/\*\*|\+\+|__|[#>*_`]/g, '').replace(/\n{3,}/g, '\n\n').trim();
     const words = (notesPlain.match(/\S+/g) || []).length;
     const notesUrl = `#/case/${encodeURIComponent(c.id)}/reports/.notes`;
-    const notesSection = h('section', { class: 'notes-section' },
-      h('div', { class: 'reports-head' }, h('h2', { class: 'section-title' }, 'Field Notes'), h('div', { class: 'spacer' }),
-        h('span', { class: 'muted small' }, words ? `${words} word${words === 1 ? '' : 's'}` : 'Empty'),
-        h('a', { class: 'btn small', href: notesUrl }, archived ? 'Open' : 'Open and Edit')),
+    // v1.34: Field Notes and Reports are two cards, each with an icon in its heading.
+    const notesSection = h('section', { class: 'rpt-card notes-section' },
+      h('div', { class: 'reports-head' }, h('span', { class: 'rpt-icon', 'aria-hidden': 'true' }, I('journal-text')), h('h2', { class: 'section-title' }, 'Field Notes'), h('div', { class: 'spacer' }),
+        h('span', { class: 'count-pill' }, words ? `${words} word${words === 1 ? '' : 's'}` : 'Empty'),
+        h('a', { class: 'btn small', href: notesUrl }, I('pencil-square'), archived ? ' Open' : ' Open and Edit')),
       h('a', { class: 'notes-card', href: notesUrl, title: 'Open the Field Notes' },
         notesPlain ? h('div', { class: 'notes-card-text' }, notesPlain.length > 900 ? `${notesPlain.slice(0, 900).replace(/\s+\S*$/, '')}…` : notesPlain)
-          : h('div', { class: 'muted' }, 'No field notes yet. Click to write them; they save as you type.')));
+          : h('div', { class: 'notes-empty' }, I('pencil'), h('span', {}, 'No field notes yet. Click here to write them; they save as you type.'))));
     panel.replaceChildren(
       notesSection,
-      h('div', { class: 'reports-head' }, h('h2', { class: 'section-title' }, 'Reports'), h('div', { class: 'spacer' }),
-        // An archived case is read-only: its reports can be read and exported, not added to.
-        archived ? null : newBtn),
-      list,
+      h('section', { class: 'rpt-card reports-section' },
+        h('div', { class: 'reports-head' }, h('span', { class: 'rpt-icon', 'aria-hidden': 'true' }, I('files')), h('h2', { class: 'section-title' }, 'Reports'),
+          h('span', { class: 'count-pill' }, String(drafts.length)), h('div', { class: 'spacer' }),
+          // An archived case is read-only: its reports can be read and exported, not added to.
+          archived ? null : newBtn),
+        list),
       h('p', { class: 'muted small explain' }, `Every report, draft or AI draft for this case. Saved on the SSD in ${CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}`)}, in the drafts folder, as Markdown files. Templates live in CaseVault-Data | templates (Vault → Templates).`));
   }
 
@@ -336,30 +343,31 @@
     drawPlaceholders();
 
     // ---- toolbar
-    const genBtn = h('button', { class: 'btn small', type: 'button', onclick: () => openGenerate() }, 'Draft with AI');
+    // v1.34: in this order, each with its icon: Word View, PDF View, Draft with AI, Re-phrase, Review, Export, Save, Delete.
+    const wordViewBtn = h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button', icon: 'file-earmark-word', title: 'Shows this report as the Word document Export makes. Save it to the case files or to this computer from there.', onclick: () => wordView() }, 'Word View');
+    const genBtn = h('button', { class: 'btn small', type: 'button', icon: 'robot', onclick: () => openGenerate() }, 'Draft with AI');
     // PDF View (v1.31): the report as a PDF, in the Supplementary Report's style; save it from there.
-    const pdfViewBtn = h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button', title: 'Shows this report as a PDF. Print it, download it, or save it to the case files.', onclick: () => pdfView() }, 'PDF View');
+    const pdfViewBtn = h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button', icon: 'file-earmark-pdf', title: 'Shows this report as a PDF. Print it, download it, or save it to the case files.', onclick: () => pdfView() }, 'PDF View');
     const rephraseBtn = h('button', { class: 'btn small', type: 'button', icon: 'magic', title: 'Select a sentence or paragraph, then click: the AI on this computer rewrites it the way DEA reports are written. You see both before anything changes.', onclick: () => rephrase() }, 'Re-phrase');
     const reviewBtn = h('button', { class: 'btn small', type: 'button', icon: 'clipboard2-check', title: 'Checks that the totals add up (money and weights), then has the AI on this computer look for names, dates, amounts and facts that don\'t agree.', onclick: () => review() }, 'Review');
     const checkBtn = h('button', { class: 'btn small', type: 'button', hidden: meta.type !== 'affidavit', onclick: async () => {
       await Save.flushAll();
       CVChecks.checkDraft(c, { slug, title: meta.title, exclude: meta.exports || [] });
     } }, 'Run consistency check');
-    const exportMenu = h('details', { class: 'menu' },
-      h('summary', { class: 'btn small' }, 'Export ▾'),
+    // Export (v1.34): just the three choices. The report is saved as a Word document (.docx).
+    const exportMenu = h('details', { class: 'menu export-menu' },
+      h('summary', { class: 'btn small', title: 'Save this report as a Word document, or as a template' }, ui.icon('download'), ' Export ▾'),
       h('div', { class: 'menu-items' },
-        h('button', { type: 'button', onclick: () => exportDocx('case') }, 'Save .docx to case files'),
-        h('button', { 'data-ro-ok': 'true', type: 'button', onclick: () => exportDocx('download') }, 'Save .docx to this computer…'),
-        h('button', { 'data-ro-ok': 'true', type: 'button', onclick: copyForWord }, 'Copy for Word (formatted)'),
-        h('button', { 'data-ro-ok': 'true', type: 'button', onclick: copyPlain }, 'Copy as plain text'),
-        h('button', { type: 'button', onclick: saveAsTemplate }, 'Save as a template…')));
+        h('button', { type: 'button', title: 'Saves it as a Word document in this case\'s Files', onclick: () => exportDocx('case') }, ui.icon('folder-plus'), ' Save to Case Files'),
+        h('button', { 'data-ro-ok': 'true', type: 'button', title: 'Saves it as a Word document where you choose on this computer', onclick: () => exportDocx('download') }, ui.icon('pc-display'), ' Save to PC'),
+        h('button', { type: 'button', title: 'Keeps this report\'s text as a template in Vault → Templates', onclick: saveAsTemplate }, ui.icon('bookmark-plus'), ' Save Template')));
     // Drafts save by themselves; Save (or Ctrl+S) writes now and says so.
-    const saveBtn = h('button', { class: 'btn small primary', type: 'button', title: 'Save now (Ctrl+S). Drafts also save by themselves.', onclick: async () => {
+    const saveBtn = h('button', { class: 'btn small primary', type: 'button', icon: 'floppy', title: 'Save now (Ctrl+S). Drafts also save by themselves.', onclick: async () => {
       save(0);
       await Save.flushAll();
       if (!Save.failed.has(saveKey)) toast(`Saved to the SSD (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}).`, 'success', 2500);
     } }, 'Save');
-    const delBtn = h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
+    const delBtn = h('button', { class: 'btn small danger-ghost', type: 'button', icon: 'trash3', title: 'Delete this report from the SSD', onclick: async () => {
       if (!(await confirmDialog({ title: `Delete "${meta.title}"?`, message: 'The draft is permanently deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
       const t = Save.timers.get(saveKey);
       if (t) { clearTimeout(t.timer); Save.timers.delete(saveKey); }
@@ -375,11 +383,10 @@
       back,
       banner,
       h('div', { class: 'draft-head' }, titleInput, typeSelect),
+      h('div', { class: 'draft-actions-bar' }, wordViewBtn, pdfViewBtn, genBtn, rephraseBtn, reviewBtn, checkBtn, exportMenu, h('div', { class: 'spacer' }), saveBtn, delBtn),
       h('div', { class: 'toolbar draft-toolbar' },
         fmtBar,
-        suggestLabel,
-        h('div', { class: 'spacer' }),
-        genBtn, pdfViewBtn, rephraseBtn, reviewBtn, checkBtn, exportMenu, saveBtn, delBtn),
+        suggestLabel),
       genStatus,
       h('div', { class: 'draft-grid' },
         h('div', { class: 'draft-main' }, wrap),
@@ -435,31 +442,6 @@
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 10000);
-    }
-
-    // Formatted copy: pastes into Word (or Outlook) with bold, underline, headings, lists and tables.
-    async function copyForWord() {
-      exportMenu.open = false;
-      try {
-        const md = ta.value;
-        await navigator.clipboard.write([new ClipboardItem({
-          'text/html': new Blob([CVRichEditor.clipboardHTML(md, Markdown.render)], { type: 'text/html' }),
-          'text/plain': new Blob([CVDraft.stripMarkdown(md)], { type: 'text/plain' }),
-        })]);
-        toast('Copied. Paste it into Word with Ctrl+V.', 'success');
-      } catch {
-        toast('The browser did not allow copying. In the Formatted view, select the text and press Ctrl+C.', 'error');
-      }
-    }
-
-    async function copyPlain() {
-      exportMenu.open = false;
-      try {
-        await navigator.clipboard.writeText(CVDraft.stripMarkdown(ta.value));
-        toast('Copied as plain text.', 'success');
-      } catch {
-        toast('The browser did not allow copying. Select the text and press Ctrl+C.', 'error');
-      }
     }
 
     /* ---- Draft with AI ---- */
@@ -592,6 +574,26 @@
         viewer,
         h('div', { class: 'dialog-actions' }, saveCase, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
       viewer.destroy();
+    }
+
+    // Word View (v1.34): the Word document Export makes, shown read-only, with the same saves.
+    async function wordView() {
+      save(0);
+      await ui.Save.flushAll();
+      const bytes = CVDocx.buildDocx(ta.value, { title: meta.title });
+      const page = h('div', { class: 'docx-page' }, h('p', { class: 'muted' }, 'Making the Word document…'));
+      try {
+        const xml = await CVExtract.unzipEntry(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), 'word/document.xml');
+        const numbering = await CVExtract.unzipEntry(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), 'word/numbering.xml').catch(() => null);
+        const blocks = CVDocxView.parse(xml || '', numbering || '');
+        page.replaceChildren(...(blocks.length ? [CVDocxView.render(blocks)] : [h('p', { class: 'muted' }, 'This report has no text yet.')]));
+      } catch (err) { page.replaceChildren(h('p', { class: 'error-text' }, `Could not show the Word document: ${err.message}`)); }
+      const toCase = Vault.isArchived(c.id) ? null : h('button', { class: 'btn', type: 'button', icon: 'folder-plus', onclick: async () => { await exportDocx('case'); toCase.disabled = true; } }, 'Save to Case Files');
+      await ui.openDialog((close) => h('div', { class: 'word-view' },
+        h('h2', { icon: 'file-earmark-word' }, meta.title || 'Report'),
+        h('p', { class: 'muted small' }, 'The Word document, read-only. Fonts and spacing are simplified here; it opens in Word as usual.'),
+        h('div', { class: 'docx-preview word-view-page' }, page),
+        h('div', { class: 'dialog-actions' }, toCase, h('button', { 'data-ro-ok': 'true', class: 'btn', type: 'button', icon: 'pc-display', onclick: () => exportDocx('download') }, 'Save to PC'), h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
     }
 
     async function openGenerate() {

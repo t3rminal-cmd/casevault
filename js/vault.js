@@ -24,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.33.0';
+  const APP_VERSION = '1.34.0';
   const SCHEMA = 1;
   const DATA_DIR = 'CaseVault-Data';
   const STATUSES = ['Open', 'Pending', 'Closed', 'Archived'];
@@ -981,7 +981,7 @@ const Vault = (() => {
       const slug = e.name.replace(/\.md$/i, '');
       const f = await e.handle.getFile();
       const { meta } = CVDraft.parseDraft(await f.text());
-      out.push({ slug, title: meta.title || slug, type: meta.type || 'other', ai: !!meta.ai, created: meta.created || '', updated: meta.updated || new Date(f.lastModified).toISOString(), size: f.size });
+      out.push({ slug, title: meta.title || slug, type: meta.type || 'other', ai: !!meta.ai, fromFields: !!meta.fromFields, created: meta.created || '', updated: meta.updated || new Date(f.lastModified).toISOString(), size: f.size });
     }
     return out.sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
   }

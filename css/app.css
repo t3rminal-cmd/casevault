@@ -194,8 +194,8 @@ textarea { resize: vertical; }
   min-height: 0;
 }
 .sidebar-head { display: flex; flex-direction: column; align-items: flex-end; padding: .35rem .45rem 0; }
-/* v1.24: the padlock sits left of the hide button; locked, the hide buttons and the drag edge are off. */
-body:not(.sidebar-collapsed) .sidebar-head { flex-direction: row; justify-content: flex-end; gap: .3rem; }
+/* v1.34: the hide button sits far left and the padlock far right; locked, the hide buttons and the drag edge are off. */
+body:not(.sidebar-collapsed) .sidebar-head { flex-direction: row; justify-content: space-between; align-items: center; gap: .3rem; }
 #btn-sidebar-lock[aria-pressed="true"] { color: var(--accent); }
 body.sidebar-locked .sidebar-resizer { display: none; }
 body.sidebar-locked #btn-sidebar-collapse, body.sidebar-locked #btn-sidebar-expand { opacity: .35; cursor: not-allowed; }
@@ -2350,3 +2350,100 @@ body *:not(svg):not(svg *):not(.textLayer *):not(.xfaLayer *):not(.textLayer):no
 .htl-today { flex: 0 0 auto; position: relative; width: 2px; margin: 0 .3rem; background: var(--danger); border-radius: 2px; align-self: stretch; }
 .htl-today span { position: absolute; top: -.2rem; left: 50%; transform: translateX(-50%); font-size: .68rem; font-weight: 700; color: var(--danger); background: var(--bg, var(--surface)); padding: 0 .25rem; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .htl-card, .htl-dot { transition: none; } }
+
+/* v1.34 */
+/* Sidebar on a narrow window keeps the same order (hide button left, padlock right). */
+@media (max-width: 820px) { body:not(.sidebar-collapsed) .sidebar-head { justify-content: space-between; } }
+/* Files: the Added date wraps onto two lines when it has to, instead of being cut off, and the
+   Name column keeps room for the file name. */
+.files-layout { grid-template-columns: minmax(12rem, 14rem) minmax(0, 1fr); }
+.files-table-wrap col.col-type { width: 10rem; }
+.files-table-wrap col.col-size { width: 5.4rem; }
+.files-table-wrap col.col-added { width: 8.8rem; }
+.files-table-wrap col.col-actions { width: 7.4rem; }
+.files-table-wrap td.fadded { white-space: normal; overflow: visible; overflow-wrap: normal; line-height: 1.3; font-variant-numeric: tabular-nums; }
+@media (max-width: 1100px) { .files-table-wrap col.col-type { width: 8.5rem; } }
+/* Quick links: the tabs size to their words and icon with room on both sides, so the icon is never cut. */
+.ql-tabs { flex-wrap: wrap; overflow: visible; }
+.ql-tabs .btn, .dash-quick .ql-tabs .btn { width: auto; min-width: 8rem; padding: .3rem 1.1rem; gap: .5em; overflow: visible; line-height: 1.3; }
+.ql-tabs .btn svg { flex: 0 0 auto; width: 1.05em; height: 1.05em; overflow: visible; }
+/* Officer's Report (v1.34): every line has its tick box, and every label looks the same: the
+   words as written (not all capitals), one size and weight. */
+.rf-lines > .field > span, .rf-lines > .rf-optional > span { text-transform: none; font-size: .86rem; font-weight: 600; letter-spacing: 0; color: var(--text); }
+.rf-line-off > span { color: var(--muted); }
+.rf-list-head { display: flex; align-items: center; gap: .6rem; margin: 0 0 .35rem; cursor: pointer; }
+.rf-list-head > input[type=checkbox] { width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--accent); flex: 0 0 auto; }
+.rf-list-head h4 { margin: 0; }
+.rf-list.rf-line-off > .rf-items, .rf-list.rf-line-off > .contact-add, .rf-list.rf-line-off h4 { opacity: .45; }
+/* Evidence photos (v1.34): each photo with a label under it, and a big camera tile to add more. */
+.rf-photo-row { align-items: flex-start; gap: .75rem; }
+.rf-photos { gap: .75rem; }
+.rf-photo-card { margin: 0; width: 140px; display: grid; gap: .3rem; }
+.rf-photo-card .rf-photo { width: 140px; height: 112px; }
+.rf-photo-label { width: 100%; font-size: .78rem; padding: .25rem .4rem; }
+.rf-photo-add { width: 140px; height: 112px; display: inline-flex; flex-direction: column-reverse; align-items: center; justify-content: center; gap: .35rem; border: 2px dashed color-mix(in srgb, var(--accent) 55%, var(--border)); border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: .85rem; cursor: pointer; transition: background-color .15s, border-color .15s, transform .15s; }
+.rf-photo-add:hover, .rf-photo-add:focus-visible { border-color: var(--accent); border-style: solid; transform: translateY(-1px); }
+.rf-section .rf-photo-add svg, .rf-photo-add svg { display: inline-block; width: 2rem; height: 2rem; }
+
+/* Reports tab (v1.34): Field Notes and Reports as two cards. */
+.rpt-card { margin: 0 0 1.2rem; padding: 1rem 1.2rem 1.1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.rpt-card .reports-head { margin: 0 0 .8rem; }
+.rpt-icon { display: inline-grid; place-items: center; width: 2.1rem; height: 2.1rem; border-radius: .6rem; background: var(--accent-soft); color: var(--accent); flex: 0 0 auto; }
+.rpt-icon svg { width: 1.1rem; height: 1.1rem; }
+.notes-card { display: block; padding: .85rem 1rem; border: 1px dashed var(--border); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text); text-decoration: none; transition: border-color .15s, background-color .15s; }
+.notes-card:hover, .notes-card:focus-visible { border-color: var(--accent); border-style: solid; background: var(--accent-soft); }
+.notes-card-text { white-space: pre-wrap; line-height: 1.55; max-height: 12rem; overflow: hidden; -webkit-mask-image: linear-gradient(#000 75%, transparent); mask-image: linear-gradient(#000 75%, transparent); }
+.notes-empty { display: flex; align-items: center; gap: .6rem; color: var(--muted); }
+.reports-table { table-layout: fixed; width: 100%; }
+.reports-table col.col-rtype { width: 14rem; }
+.reports-table col.col-ai { width: 5.5rem; }
+.reports-table col.col-ract { width: 4rem; }
+.reports-table th.ai-col, .reports-table td.ai-col { text-align: center; }
+.reports-table td.ai-col .ai-badge { margin: 0; display: inline-flex; align-items: center; gap: .3em; }
+.reports-table td.ai-col .ai-badge svg { width: .9em; height: .9em; }
+.reports-table .report-name a { display: inline-flex; align-items: center; gap: .6rem; min-width: 0; max-width: 100%; color: var(--text); font-weight: 600; text-decoration: none; }
+.reports-table .report-name a:hover .report-title { color: var(--accent); text-decoration: underline; }
+.reports-table .report-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.report-icon { display: inline-grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: .5rem; background: var(--surface-2); color: var(--accent); flex: 0 0 auto; }
+.report-icon svg { width: 1rem; height: 1rem; }
+.type-tag { display: inline-block; max-width: 100%; padding: .12rem .55rem; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); font-size: .8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.reports-table td.actions { text-align: center; }
+@media (max-width: 700px) { .reports-table col.col-rtype { width: 8rem; } }
+
+/* Report editor: the actions in one bar, in order, each with its icon; the formatting bar under it. */
+.draft-actions-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; margin: .2rem 0 .6rem; padding: .55rem .65rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.draft-actions-bar .btn svg { width: 1em; height: 1em; }
+.draft-actions-bar .menu { position: relative; }
+.draft-actions-bar .menu .menu-items { left: 0; right: auto; z-index: 30; min-width: 13rem; }
+.export-menu .menu-items button { display: flex; align-items: center; gap: .55rem; }
+.export-menu summary { display: inline-flex; align-items: center; gap: .4em; }
+.word-view { display: flex; flex-direction: column; gap: .5rem; height: 100%; min-height: 0; }
+.word-view h2, .word-view p { margin: 0; }
+.word-view-page { flex: 1; min-height: 0; overflow: auto; background: var(--surface-2); padding: 1rem; border-radius: var(--radius-sm); }
+.word-view-page .docx-page { max-width: 46rem; margin: 0 auto; }
+
+/* Suspects (v1.34): each suspect is a card with their demographics under the first row. */
+.suspect-card { padding: .7rem .8rem .8rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.suspect-rows { display: grid; gap: .7rem; }
+.suspect-card .suspect-row { border-top: 0; padding: 0; }
+.suspect-demo { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: .5rem .6rem; margin-top: .6rem; padding-top: .6rem; border-top: 1px dashed var(--border); }
+.suspect-demo .field { margin: 0; min-width: 0; }
+.suspect-demo input, .suspect-demo select { width: 100%; }
+.suspect-demo .suspect-wide { grid-column: 1 / -1; }
+
+/* Deconfliction System: the drop-down and, for Other, the system's name under it. */
+.decon-system { display: grid; gap: .35rem; }
+.decon-system select, .decon-system input { width: 100%; }
+
+/* Anonymizer: a taller drop box. */
+.dev-drop { min-height: 6.5rem; padding: 1.4rem 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .35rem; }
+
+/* Draft tab (v1.34): each part's heading on a light band, the buttons in a bar that stays in view. */
+.rf-section > h3, .rf-section .rf-part-head { padding-bottom: .55rem; margin-bottom: .8rem; border-bottom: 1px solid var(--border); }
+.rf-actions { position: sticky; top: 0; z-index: 5; padding: .55rem .65rem; border: 1px solid var(--border); border-radius: var(--radius); background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(6px); box-shadow: var(--shadow); }
+.rf-section { border-left: 4px solid color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.rf-section.rf-off { border-left-color: var(--border); }
+.suspect-row { grid-template-columns: minmax(11rem, 1.5fr) 10.5rem 2.4rem minmax(13rem, 2.2fr) 7.6rem 1.8rem; align-items: end; }
+@media (max-width: 1100px) { .suspect-row { grid-template-columns: 1fr 10.5rem 2.4rem; } }
+.rf-photo-card, .rf-photo-card .rf-photo, .rf-photo-add { width: 160px; }
+.rf-photo-label { resize: none; line-height: 1.3; min-height: 0; overflow-wrap: anywhere; }

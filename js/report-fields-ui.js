@@ -43,7 +43,7 @@
           g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
           g.drawImage(bmp, 0, 0, cv.width, cv.height);
           const blob = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.88));
-          out.push({ jpeg: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height, caption: F().exhibitLine(e).replace(/^Exhibit \S+?(?=[,:])/, `Exhibit ${F().photoLabel(e.number, j)}`) });
+          out.push({ jpeg: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height, caption: `${F().exhibitLine(e).replace(/^Exhibit \S+?(?=[,:])/, `Exhibit ${F().photoLabel(e.number, j)}`)}${String((e.photoLabels || [])[j] || '').trim() ? ` - Photo: ${String(e.photoLabels[j]).trim()}` : ''}` });
         } catch { /* a photo that can't be read is left out */ }
       }
     }
@@ -163,8 +163,8 @@
         // From Location Codes; Type of Location fills in from the code picked.
         box = CVCombo.attach(el, { items: () => LOC_ITEMS, onPick: (it) => { setField('locationType', it.desc); save(); } });
       }
-      // Officer's Report lines that may not apply get their own tick box (v1.22).
-      if (kind === 'line' && F().OPTIONAL_LINES.includes(key)) {
+      // Officer's Report lines get their own tick box, for when one doesn't apply (v1.22; every line since v1.34).
+      if (F().OPTIONAL_LINES.includes(key)) {
         const on = !F().isHidden(data, key);
         const cb = h('input', { type: 'checkbox', checked: on, 'aria-label': `Include ${label}`, title: 'Untick if this line doesn\'t apply' });
         const row = ui.field(label, box, `span-all rf-line rf-optional${on ? '' : ' rf-line-off'}`);
@@ -317,7 +317,23 @@
         draw(); save();
         toast(`${list.length} suspect${list.length === 1 ? '' : 's'} filled into Offenders.`, 'success');
       } }, 'Add From Suspects') : null;
-      return h('div', { class: `rf-list rf-list-${key}` }, h('h4', {}, L.title), box, archived ? null : h('div', { class: 'contact-add' }, add, fromSuspects));
+      const wrap = h('div', { class: `rf-list rf-list-${key}` });
+      let head = h('h4', {}, L.title);
+      // The Officer's Report lists can be ticked off like its lines (v1.34): left out of the PDF and the report.
+      if (F().OPTIONAL_LISTS.includes(key)) {
+        const on = !F().isHidden(data, key);
+        const cb = h('input', { type: 'checkbox', checked: on, 'aria-label': `Include ${L.title}`, title: 'Untick if this doesn\'t apply' });
+        wrap.classList.toggle('rf-line-off', !on);
+        cb.addEventListener('change', () => {
+          data.hidden = data.hidden.filter((x) => x !== key);
+          if (!cb.checked) data.hidden.push(key);
+          wrap.classList.toggle('rf-line-off', !cb.checked);
+          save();
+        });
+        head = h('label', { class: 'rf-list-head' }, cb, h('h4', {}, L.title));
+      }
+      wrap.append(head, box, archived ? '' : h('div', { class: 'contact-add' }, add, fromSuspects || ''));
+      return wrap;
     }
 
     // ---- every part has an Include box on the left: untick it when the part doesn't apply; it's
@@ -381,16 +397,23 @@
         desc.value = e.description || '';
         desc.addEventListener('input', () => { e.description = desc.value; save(); });
         // Photos: saved in the case's exhibit folder; click one to view it.
+        if (!Array.isArray(e.photoLabels)) e.photoLabels = (e.photos || []).map(() => '');
         const strip = h('div', { class: 'rf-photos' });
         const drawPhotos = () => {
           strip.replaceChildren(...e.photos.map((path, j) => {
             const tag = F().photoLabel(n, j);
             const img = h('img', { alt: `Exhibit ${tag}` });
             Vault.readFile(c.id, path).then((f) => { img.src = URL.createObjectURL(f); img.addEventListener('load', () => URL.revokeObjectURL(img.src), { once: true }); }).catch(() => { img.alt = 'Photo not found'; });
-            return h('div', { class: 'rf-photo' },
-              h('span', { class: 'rf-photo-tag' }, tag),
-              h('button', { 'data-ro-ok': 'true', class: 'rf-photo-open', type: 'button', title: 'View', onclick: () => ui.previewFile(c, path) }, img),
-              archived ? null : h('button', { class: 'rf-photo-x', type: 'button', title: 'Take off this exhibit (the photo stays in the case files)', onclick: () => { e.photos.splice(j, 1); drawPhotos(); save(); } }, ui.icon('x-lg'), h('span', { class: 'sr-only' }, 'Remove photo')));
+            // A label for each photo (v1.34): shown under it here and in its caption in the PDF.
+            const label = h('textarea', { class: 'rf-photo-label', rows: 2, maxlength: 120, placeholder: 'Label this photo', 'aria-label': `Label for photo ${tag}`, readonly: archived || null });
+            label.value = e.photoLabels[j] || '';
+            label.addEventListener('input', () => { e.photoLabels[j] = label.value; save(); });
+            return h('figure', { class: 'rf-photo-card' },
+              h('div', { class: 'rf-photo' },
+                h('span', { class: 'rf-photo-tag' }, tag),
+                h('button', { 'data-ro-ok': 'true', class: 'rf-photo-open', type: 'button', title: 'View', onclick: () => ui.previewFile(c, path) }, img),
+                archived ? null : h('button', { class: 'rf-photo-x', type: 'button', title: 'Take off this exhibit (the photo stays in the case files)', onclick: () => { e.photos.splice(j, 1); e.photoLabels.splice(j, 1); drawPhotos(); save(); } }, ui.icon('x-lg'), h('span', { class: 'sr-only' }, 'Remove photo'))),
+              label);
           }));
         };
         drawPhotos();
@@ -402,12 +425,14 @@
             try {
               const path = await Save.track(`photo:${c.id}`, () => Vault.addFile(c.id, f, { folder: e.type === 'Narcotics' ? 'Drug Exhibits' : 'Other Exhibits', description: `Exhibit ${n} photo` }));
               e.photos.push(path);
+              e.photoLabels.push('');
             } catch { /* reported by Save */ }
           }
           drawPhotos();
           save(0);
         });
-        const addPhoto = archived ? null : h('button', { class: 'icon-btn rf-photo-add', type: 'button', title: 'Add photos', onclick: () => picker.click() }, ui.icon('camera'), h('span', { class: 'sr-only' }, 'Add photos'));
+        // A big camera tile, the size of a photo (v1.34), so it's easy to find.
+        const addPhoto = archived ? null : h('button', { class: 'rf-photo-add', type: 'button', title: 'Add photos of this exhibit', onclick: () => picker.click() }, ui.icon('camera-fill'), h('span', {}, 'Add Photos'));
         return h('div', { class: 'rf-exhibit-card' },
           h('div', { class: 'rf-exhibit-no', title: 'Given automatically; never reused' }, h('span', { class: 'small muted' }, 'Exhibit No.'), h('strong', { class: 'rf-exhibit' }, String(n))),
           h('div', { class: 'rf-exhibit-body' },
@@ -421,7 +446,7 @@
     const addExhibit = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', title: c.agencyNumber ? `Numbered on from the last exhibit of any case with federal jacket number ${c.agencyNumber}.` : 'Numbered on from the last exhibit of this case. Cases with the same federal jacket number share one sequence.', onclick: async () => {
       try {
         const n = F().nextExhibit(await numbersInUse(c, data));
-        data.evidence.push({ number: n, inventory: '', type: '', drug: '', weight: '', description: '', photos: [] });
+        data.evidence.push({ number: n, inventory: '', type: '', drug: '', weight: '', description: '', photos: [], photoLabels: [] });
         data.lastExhibit = Math.max(Number(data.lastExhibit) || 0, n);
         drawEvidence();
         save(0);
