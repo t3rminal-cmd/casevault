@@ -57,11 +57,21 @@
 
   /* ---------------- Arrest details tab ---------------- */
 
+  /* The Arrest details tab (v1.30): laid out like an arrest report, one per arrestee, in the
+   * report's order. Print / PDF, Save PDF to Case and Email for E-Sign make the Arrest Report
+   * PDF (js/arrest-pdf.js), in the same style as the Supplementary Report. */
+  const IMAGE_RE = /\.(jpe?g|png|gif|webp|bmp)$/i;
+
   async function renderArrest(panel, c, token) {
     const { h, Save, toast } = ui;
-    const arrest = await readArrest(c);
+    const arrest = K().normalizeArrest(await readArrest(c));
     if (token !== ui.state.renderToken) return;
     if (!arrest.arrestees.length) arrest.arrestees.push(K().emptyArrestee());
+    // The RD number is the case number unless you type another.
+    for (const a of arrest.arrestees) if (!a.rdNumber && c.number) a.rdNumber = c.number;
+    const archived = Vault.isArchived(c.id);
+    const images = archived ? [] : (await Vault.listFiles(c.id).catch(() => [])).filter((f) => IMAGE_RE.test(f.name));
+    if (token !== ui.state.renderToken) return;
 
     const status = h('span', { class: 'note-save-status small muted', role: 'status', 'aria-live': 'polite' }, '✓ Saved on the SSD');
     const key = `arrest:${c.id}`;
@@ -85,17 +95,66 @@
       Save.schedule(key, writeNow, 700);
     };
 
-    const input = (obj, f) => {
+    const input = (obj, f, onChange) => {
       let el;
-      if (f.type === 'select') el = h('select', {}, f.options.map((o) => h('option', { value: o, selected: (obj[f.key] || '') === o }, o || '—')));
-      else if (f.type === 'textarea') el = h('textarea', { rows: 2 });
+      if (f.type === 'select' || f.type === 'yn') el = h('select', {}, (f.type === 'yn' ? ['', 'Yes', 'No'] : f.options).map((o) => h('option', { value: o, selected: (obj[f.key] || '') === o }, o || '—')));
+      else if (f.type === 'textarea') el = h('textarea', { rows: f.key === 'narrative' ? 14 : 2 });
       else if (f.type === 'time') el = CVTimeField.create({ label: f.label });
       else el = h('input', { type: f.type || 'text', autocomplete: 'off', 'data-format': f.format || null, maxlength: f.format === 'ssn' ? 11 : null });
-      if (f.type !== 'select') el.value = obj[f.key] || '';
-      el.addEventListener(f.type === 'select' ? 'change' : 'input', () => { obj[f.key] = el.value; changed(); });
+      if (f.type !== 'select' && f.type !== 'yn') el.value = obj[f.key] || '';
+      el.addEventListener(f.type === 'select' || f.type === 'yn' ? 'change' : 'input', () => { obj[f.key] = el.value; changed(); if (onChange) onChange(); });
       return el;
     };
-    const fieldset = (obj, fields) => h('div', { class: 'form-grid arrest-grid' }, fields.map((f) => ui.field(f.label, input(obj, f), f.type === 'textarea' ? 'span-2' : '')));
+    const fieldset = (obj, fields, onChange) => h('div', { class: 'form-grid arrest-grid' }, fields.map((f) => ui.field(f.label, input(obj, f, onChange), f.type === 'textarea' ? 'span-2' : '')));
+    const section = (title, ...kids) => h('section', { class: 'arrest-section' }, h('h3', {}, title), ...kids);
+
+    // A list of entries (narcotics, warrants, victims and complainants): a box per entry.
+    const listEditor = (a, listKey, noneText, addLabel) => {
+      const L = K().LISTS[listKey];
+      const box = h('div', { class: 'arrest-list' });
+      const draw = () => {
+        box.replaceChildren(...(a[listKey].length ? a[listKey].map((it, i) => h('div', { class: 'arrest-item' },
+          h('div', { class: 'arrest-item-head' }, h('strong', {}, `${L.item} ${i + 1}`), h('div', { class: 'spacer' }),
+            archived ? null : h('button', { class: 'btn small ghost danger-text', type: 'button', onclick: () => { a[listKey].splice(i, 1); changed(); draw(); } }, `Remove ${L.item}`)),
+          fieldset(it, L.fields))) : [h('p', { class: 'muted small' }, noneText)]),
+        archived ? null : h('button', { class: 'btn small', type: 'button', onclick: () => { a[listKey].push(K().emptyItem(listKey)); changed(); draw(); } }, addLabel));
+      };
+      draw();
+      return box;
+    };
+
+    // The arrestee's photo: a picture from the case files, shown on the report beside the Offender.
+    const photoPicker = (a) => {
+      const img = h('img', { class: 'arrest-photo-img', alt: 'Arrestee photo', hidden: true });
+      let url = '';
+      const show = async () => {
+        if (url) { URL.revokeObjectURL(url); url = ''; }
+        img.hidden = true;
+        if (!a.photo) return;
+        try { url = URL.createObjectURL(await Vault.readFile(c.id, a.photo)); img.src = url; img.hidden = false; } catch { /* moved or deleted */ }
+      };
+      const sel = h('select', { 'aria-label': 'Photo' }, h('option', { value: '' }, '— No photo —'),
+        ...images.map((f) => h('option', { value: f.name, selected: f.name === a.photo }, f.name.split('/').pop())));
+      if (a.photo && !images.some((f) => f.name === a.photo)) sel.append(h('option', { value: a.photo, selected: true }, a.photo.split('/').pop()));
+      sel.addEventListener('change', () => { a.photo = sel.value; changed(); show(); });
+      const file = h('input', { type: 'file', accept: 'image/*', hidden: true });
+      file.addEventListener('change', async () => {
+        const f = file.files[0];
+        file.value = '';
+        if (!f) return;
+        try {
+          const path = await Save.track(`file:${c.id}`, () => Vault.addFile(c.id, f, { folder: 'Subject Information', description: `${K().arresteeName(a) || 'Arrestee'} photo` }));
+          a.photo = path;
+          sel.append(h('option', { value: path, selected: true }, path.split('/').pop()));
+          sel.value = path;
+          changed(); show();
+        } catch { /* reported by Save */ }
+      });
+      show();
+      return h('div', { class: 'arrest-photo' }, img,
+        h('div', { class: 'arrest-photo-pick' }, ui.field('Photo', sel),
+          archived ? null : h('button', { class: 'btn small', type: 'button', title: 'Adds a picture to the case files (Subject Information) and uses it here', onclick: () => file.click() }, 'Add Photo'), file));
+    };
 
     const list = h('div', { class: 'arrestees' });
     const draw = () => {
@@ -103,7 +162,7 @@
         const charges = h('tbody', {}, a.charges.map((ch, j) => h('tr', {},
           K().CHARGE_FIELDS.map((f) => {
             const el = input(ch, f);
-            if ((f.key !== 'statute' && f.key !== 'description') || !root.CVCombo) return h('td', {}, el);
+            if ((f.key !== 'statute' && f.key !== 'description') || !root.CVCombo) return h('td', { class: `charge-${f.key}` }, el);
             const box = CVCombo.attach(el, { label: 'Show the charges', items: () => chargeItems().map((x) => ({ ...x, value: f.key === 'statute' ? x.statute : x.desc })), onPick: (x) => {
               ch.statute = x.statute; ch.description = x.desc;
               changed(); draw();
@@ -112,25 +171,98 @@
           }),
           h('td', {}, h('button', { class: 'btn small ghost', type: 'button', title: 'Remove this charge', onclick: () => { a.charges.splice(j, 1); if (!a.charges.length) a.charges.push(K().emptyCharge()); changed(); draw(); } }, '✕')))));
         const name = K().arresteeName(a) || `Arrestee ${i + 1}`;
+        const ageOut = h('output', { class: 'arrest-age' });
+        const showAge = () => { const n = K().ageOn(a.dob, a.date); ageOut.textContent = n ? `${n} years` : '—'; };
+        showAge();
+        const offender = fieldset(a, K().ARRESTEE_FIELDS, showAge);
+        offender.insertBefore(ui.field('Age', ageOut), offender.children[6] || null);
         return h('section', { class: 'card arrestee' },
           h('div', { class: 'row' }, h('h2', {}, name), h('div', { class: 'spacer' }),
-            h('button', { class: 'btn small ghost danger-text', type: 'button', onclick: async () => {
+            archived ? null : h('button', { class: 'btn small ghost danger-text', type: 'button', onclick: async () => {
               if (!(await ui.confirmDialog({ title: `Remove ${name}?`, message: 'This arrestee and their charges are removed from the arrest details.', confirmText: 'Remove', danger: true }))) return;
               arrest.arrestees.splice(i, 1);
               if (!arrest.arrestees.length) arrest.arrestees.push(K().emptyArrestee());
               changed(); draw();
             } }, 'Remove Arrestee')),
-          h('h3', {}, 'Arrestee'), fieldset(a, K().ARRESTEE_FIELDS),
-          h('h3', {}, 'Arrest'), fieldset(a, K().ARREST_FIELDS),
-          h('h3', {}, 'Charges'),
-          h('div', { class: 'table-scroll' }, h('table', { class: 'files charges-table' },
-            h('thead', {}, h('tr', {}, K().CHARGE_FIELDS.map((f) => h('th', {}, f.label)), h('th', {}, ''))), charges)),
-          h('button', { class: 'btn small', type: 'button', onclick: () => { a.charges.push(K().emptyCharge()); changed(); draw(); } }, '+ Add charge'),
-          h('h3', {}, 'Property seized'), fieldset(a, [{ key: 'property', label: 'Property / evidence seized from the arrestee', type: 'textarea' }]),
-          h('h3', {}, 'Notes'), fieldset(a, [{ key: 'notes', label: 'Anything else for the arrest report', type: 'textarea' }]));
+          section('Report Numbers', (() => { const g = fieldset(a, K().NUMBER_FIELDS); g.classList.add('arrest-numbers'); return g; })()),
+          section('Offender', h('div', { class: 'arrest-offender' }, offender, photoPicker(a))),
+          section('Incident', fieldset(a, K().INCIDENT_FIELDS, showAge)),
+          section('Charges',
+            h('div', { class: 'table-scroll' }, h('table', { class: 'files charges-table' },
+              h('thead', {}, h('tr', {}, K().CHARGE_FIELDS.map((f) => h('th', {}, f.label)), h('th', {}, ''))), charges)),
+            archived ? null : h('button', { class: 'btn small', type: 'button', onclick: () => { a.charges.push(K().emptyCharge()); changed(); draw(); } }, '+ Add Charge')),
+          section('Recovered Narcotics', listEditor(a, 'narcotics', 'No narcotics recovered.', '+ Add Narcotic')),
+          section('Warrant', listEditor(a, 'warrants', 'No warrant identified.', '+ Add Warrant')),
+          section('Victim and Complainant', listEditor(a, 'nonOffenders', 'None added.', '+ Add Victim or Complainant')),
+          section('Arrestee Vehicle', fieldset(a, K().VEHICLE_FIELDS)),
+          section('Properties', fieldset(a, [{ key: 'property', label: 'Confiscated properties: inventory numbers and description', type: 'textarea' }])),
+          section('Incident Narrative', fieldset(a, [{ key: 'narrative', label: 'The facts for probable cause to arrest and to support the charges', type: 'textarea' }])),
+          section('Court and Bond', fieldset(a, [...K().COURT_FIELDS, ...K().BOND_FIELDS])),
+          section('Reporting Personnel', fieldset(a, K().PERSONNEL_FIELDS)));
       }));
     };
     draw();
+
+    // ---- the Arrest Report as a PDF: look at it and print, keep it, or send it to sign.
+    async function photoJpeg(path) {
+      const bmp = await createImageBitmap(await Vault.readFile(c.id, path));
+      const k = Math.min(1, 1200 / Math.max(bmp.width, bmp.height));
+      const cv = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
+      const g = cv.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+      g.drawImage(bmp, 0, 0, cv.width, cv.height);
+      const blob = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.88));
+      return { jpeg: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height };
+    }
+    const pdfBytes = async () => {
+      const p = Vault.data.settings.affiant || {};
+      const photos = {};
+      for (const [i, a] of arrest.arrestees.entries()) { if (a.photo) { try { photos[i] = await photoJpeg(a.photo); } catch { /* left out */ } } }
+      return CVArrestPdf.build(arrest, { agency: p.agency || '', caseNumber: c.number || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' · '), printed: CVFormat.dateText(Vault.localDay()), photos });
+    };
+    const pdfName = () => `Arrest Report ${[CVArrestPdf.reportName(arrest.arrestees[0] || {}), CVFormat.dateText(Vault.localDay())].filter(Boolean).join(' ')}.pdf`.replace(/[\\/:*?"<>|]/g, '');
+    async function showPdf(bytes) {
+      const viewer = CVPdfViewer.create(bytes, { h, icon: ui.icon, title: 'Arrest Report', fileName: pdfName() });
+      await ui.openDialog((close) => h('div', { class: 'pdf-view' },
+        h('h2', {}, 'Arrest Report'),
+        viewer,
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
+      viewer.destroy();
+    }
+    let lastPdf = null;
+    async function savePdf() {
+      await Save.flushAll();
+      const sig = JSON.stringify(arrest);
+      if (lastPdf && lastPdf.sig === sig) return lastPdf.path;
+      const bytes = await pdfBytes();
+      const file = new File([bytes], pdfName(), { type: 'application/pdf' });
+      const path = await Save.track(`arrest-pdf:${c.id}`, () => Vault.addFile(c.id, file, { folder: 'Arrest Report', description: pdfName().replace(/\.pdf$/, '') }));
+      lastPdf = { sig, path, bytes };
+      return path;
+    }
+    const printBtn = h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button', title: 'Opens the Arrest Report. Print it, or save it as a PDF.', onclick: async () => {
+      await Save.flushAll();
+      await showPdf(await pdfBytes());
+    } }, 'Print / PDF');
+    const pdfCaseBtn = h('button', { class: 'btn small', type: 'button', title: 'Saves the PDF in this case\'s Arrest Report folder.', onclick: async () => {
+      let path;
+      try { path = await savePdf(); } catch { return; }
+      toast(`Saved to the case files: ${path.split('/').pop()}`, 'success', 5000);
+      await showPdf(lastPdf.bytes);
+    } }, 'Save PDF to Case');
+    const signBtn = h('button', { class: 'btn small', type: 'button', title: 'Saves the PDF to the case and starts an email with it attached, for signing.', onclick: async () => {
+      let path;
+      try { path = await savePdf(); } catch { return; }
+      if (root.CVMailUI) {
+        CVMailUI.prepare(c, {
+          subject: `${c.number || c.title || ''} Arrest Report for signature`.trim(),
+          body: 'Please review and sign the attached Arrest Report. The signature boxes can be signed electronically (Adobe Acrobat or Reader: Fill & Sign) or printed and signed in blue ink.',
+          attach: [path],
+        });
+      }
+      ui.go(c.id, 'mail');
+      toast('The PDF is attached. Add the recipients, then check and create the Outlook draft.', 'success', 8000);
+    } }, 'Email for E-Sign');
 
     const saveBtn = h('button', { class: 'btn small primary', type: 'button', onclick: async () => {
       try { await Save.run(key, writeNow); } catch { /* shown by the header indicator */ }
@@ -138,13 +270,14 @@
     const reportBtn = h('button', { class: 'btn small', type: 'button', onclick: () => startArrestReport(c) }, 'Start an arrest report draft');
 
     panel.replaceChildren(
-      h('div', { class: 'toolbar' },
-        h('p', { class: 'muted small explain' }, 'These details fill {{arrest.…}} in templates, for the arrest report. Saved in this case\'s folder on the SSD (arrest.json).'),
-        h('div', { class: 'spacer' }), status, saveBtn,
-        Vault.isArchived(c.id) ? null : h('button', { class: 'btn small danger-ghost', type: 'button', title: 'Deletes all the arrest details of this case and takes the tab off', onclick: () => deleteArrest(c) }, 'Delete Arrest')),
+      h('div', { class: 'toolbar arrest-toolbar' },
+        h('p', { class: 'muted small explain' }, 'The Arrest Report for this case, one per arrestee. Print it, save it as a PDF or email it to sign. These details also fill {{arrest.…}} in templates. Saved in this case\'s folder on the SSD (arrest.json).'),
+        printBtn, archived ? null : pdfCaseBtn, archived ? null : signBtn,
+        h('div', { class: 'spacer' }), status, archived ? null : saveBtn,
+        archived ? null : h('button', { class: 'btn small danger-ghost', type: 'button', title: 'Deletes all the arrest details of this case and takes the tab off', onclick: () => deleteArrest(c) }, 'Delete Arrest')),
       list,
-      h('div', { class: 'row' },
-        h('button', { class: 'btn', type: 'button', onclick: () => { arrest.arrestees.push(K().emptyArrestee()); changed(); draw(); } }, '+ Add another arrestee'),
+      archived ? null : h('div', { class: 'row' },
+        h('button', { class: 'btn', type: 'button', onclick: () => { const a = K().emptyArrestee(); if (c.number) a.rdNumber = c.number; arrest.arrestees.push(a); changed(); draw(); } }, '+ Add another arrestee'),
         h('div', { class: 'spacer' }), reportBtn));
   }
 

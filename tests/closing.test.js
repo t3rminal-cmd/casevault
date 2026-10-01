@@ -61,3 +61,36 @@ test('Pending follow-up deadline, and arrestees for the privacy scan', () => {
   assert.deepStrictEqual([e.kind, e.date, e.title, e.done], ['deadline', '2026-10-06', 'Follow up: Lab results — item 1', false]);
   assert.deepStrictEqual(C.peopleOf(sampleArrest()), ['Jordan Placeholder']);
 });
+
+test('v1.30: arrest report fields, older arrest.json files, and the Arrest Report PDF', () => {
+  // A file from before v1.30: warrant number and notes become a Warrant entry and the narrative.
+  const old = { arrestees: [{ firstName: 'Jordan', lastName: 'Placeholder', warrantNumber: 'W-0001', notes: 'Old notes.', charges: [{ statute: 'TEST 1.01', description: 'Sample', level: 'Felony', degree: '4', counts: '1' }] }] };
+  const n = C.normalizeArrest(old).arrestees[0];
+  assert.deepStrictEqual(n.warrants.map((w) => w.number), ['W-0001']);
+  assert.strictEqual(n.narrative, 'Old notes.');
+  assert.deepStrictEqual([n.narcotics, n.nonOffenders], [[], []]);
+  assert.strictEqual(C.ageOn('1990-04-02', '2026-03-14'), '35');
+  assert.strictEqual(C.ageOn('1990-04-02', '2026-04-02'), '36');
+  assert.strictEqual(C.ageOn('', '2026-04-02'), '');
+  const ctx = C.arrestContext(old);
+  assert.strictEqual(ctx['arrest.warrantNumber'], 'W-0001');
+  assert.strictEqual(ctx['arrest.narrative'], 'Old notes.');
+  assert.strictEqual(ctx['arrest.notes'], 'Old notes.');
+
+  const A = require('../js/arrest-pdf.js');
+  assert.strictEqual(A.reportName({ firstName: 'Jordan', middleName: 'Q', lastName: 'Placeholder' }), 'PLACEHOLDER, Jordan Q');
+  const a = C.emptyArrest();
+  Object.assign(a.arrestees[0], { firstName: 'Jordan', lastName: 'Placeholder', bookingNumber: '00000001', date: '2026-03-14', dob: '1990-04-02', narrative: 'Sample narrative. '.repeat(200) });
+  a.arrestees[0].nonOffenders = [{ ...C.emptyItem('nonOffenders'), role: 'Complainant', name: 'Example Complainant' }];
+  a.arrestees.push({ ...C.emptyArrestee(), firstName: 'Casey', lastName: 'Example' });
+  const pages = A.layout(a, { agency: 'Example Agency', caseNumber: 'TEST-0001' });
+  const all = pages.map((p) => p.ops.join('\n')).join('\n');
+  for (const s of ['ARREST REPORT', 'OFFENDER', 'INCIDENT', 'CHARGES', 'RECOVERED NARCOTICS', 'NO NARCOTICS RECOVERED', 'WARRANT', 'NO WARRANT IDENTIFIED', 'VICTIM AND COMPLAINANT', 'Example Complainant', 'ARRESTEE VEHICLE', 'NO VEHICLE', 'PROPERTIES', 'INCIDENT NARRATIVE', 'COURT AND BOND', 'REPORTING PERSONNEL', 'PLACEHOLDER, Jordan', 'EXAMPLE, Casey', '35 years', 'TEST-0001']) assert.ok(all.includes(s), s);
+  assert.ok(pages.length >= 3, 'the long narrative runs on; the second arrestee starts a new page');
+  assert.ok(pages.some((p) => p.sigs.some((x) => x.name === 'AttestingOfficerSignature_2')), 'signature fields per arrestee');
+  // A photo goes beside the Offender section as an image.
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+  const bytes = A.build(a, { photos: { 0: { jpeg, w: 40, h: 50 } } });
+  const text = Buffer.from(bytes).toString('latin1');
+  assert.ok(text.startsWith('%PDF-1.7') && text.includes('/Subtype /Image') && text.includes('/Im0 Do') && text.includes('/FT /Sig') && text.includes('(Arrest Report)'));
+});

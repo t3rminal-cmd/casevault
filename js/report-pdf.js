@@ -354,7 +354,12 @@
     // With Evidence left out, no photos go in the file at all.
     const evidenceOff = Array.isArray(data && data.hidden) && data.hidden.includes('evidence');
     const photos = evidenceOff ? [] : (opts.photos || []).map((p, index) => ({ ...p, index }));
-    const pages = layout(data, { ...opts, photos });
+    return assemble(layout(data, { ...opts, photos }), { photos, title: opts.title || 'Supplementary Report' });
+  }
+
+  /** Pages ([{ ops, sigs, imgs }]) and their photos -> the PDF file's bytes. Shared with the
+   * Arrest Report (js/arrest-pdf.js). */
+  function assemble(pages, { photos = [], title = 'Report' } = {}) {
     const objs = []; // index = object number - 1
     const add = (body) => { objs.push(body); return objs.length; };
     const catalog = add(null); const pagesObj = add(null);
@@ -377,7 +382,7 @@
     }
     objs[pagesObj - 1] = `<< /Type /Pages /Kids [${kids.map((k) => `${k} 0 R`).join(' ')}] /Count ${kids.length} >>`;
     objs[catalog - 1] = `<< /Type /Catalog /Pages ${pagesObj} 0 R${fields.length ? ` /AcroForm << /Fields [${fields.map((a) => `${a} 0 R`).join(' ')}] /SigFlags 1 >>` : ''} >>`;
-    const info = add(`<< /Title ${pdfString(opts.title || 'Supplementary Report')} /Creator (CaseVault) /Producer (CaseVault) >>`);
+    const info = add(`<< /Title ${pdfString(title)} /Creator (CaseVault) /Producer (CaseVault) >>`);
 
     let out = '%PDF-1.7\n%âãÏÓ\n';
     const offsets = [];
@@ -390,7 +395,7 @@
     return bytes;
   }
 
-  const api = { build, layout, wrap, width, pdfString, plain };
+  const api = { build, layout, assemble, wrap, width, pdfString, plain, PAGE_W, PAGE_H, M };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportPdf = api;
 })(this);

@@ -158,14 +158,21 @@ Choosing *Cleared by arrest* opens the **Arrest details** tab so you can fill it
 
 ### Arrest details
 
-The **Arrest details** tab (after Details) appears once you choose **Add arrest details** or close a case by arrest. It holds what goes on an arrest report, for one or more arrestees:
+The **Arrest details** tab (after Details) appears once you choose **Add arrest details** or close a case by arrest. Since v1.30 it is laid out like an arrest report, one per arrestee, in the report's order:
 
-- **Arrestee**: name, date of birth, sex, race, height, weight, hair, eyes, address, phone, DL/ID number.
-- **Arrest**: date, time, location, type (on-view, warrant, summons, turned self in), warrant number, arresting and assisting officers, Miranda and its time, booking number, facility, bond.
-- **Charges**: statute/code, charge, level (felony, misdemeanor…), degree/class, counts. Typing in **Statute / code** or **Charge** suggests the Illinois and federal statutes from Reference → Charges; picking one fills both. **+ Add charge** for more.
-- **Property** and **notes**.
+- **Report Numbers:** CB #, IR #, YD #, RD # (the case number, unless you type another) and Event #.
+- **Offender:** name, residence and beat, date of birth (the **age** is worked out at the arrest date), place of birth, driver's licence number, armed with, SSN, phone, sex, race, height, weight, eyes, hair, hair style and complexion. **Photo:** pick a picture from the case files, or **Add Photo** (it's saved in the case's Subject Information folder); it goes beside the Offender section on the report.
+- **Incident:** arrest date and time, location and beat, holding facility, type of arrest, resisted arrest, declared CMA incident, TRR completed, total number arrested, co-arrests, associated cases, DCFS ward, dependent children, Miranda and its time.
+- **Charges:** offense as cited (statute), charge, class, type (felony, misdemeanor…), counts and victim. Typing in the statute or charge suggests the Illinois and federal statutes from Reference → Charges; picking one fills both. **+ Add Charge** for more.
+- **Recovered Narcotics**, **Warrant** and **Victim and Complainant:** add an entry for each (narcotic, amount, inventory number; warrant number, type, issued by, date, offense; role, name, residence, employer, phone, sex, race, date of birth, injured, deceased, hospitalized, treated and released, comments). Left empty, the report says *No narcotics recovered* and *No warrant identified*.
+- **Arrestee Vehicle:** year, make, model, body style, color, VIN, licence plate and state, impounded, pound number, inventory number, disposition.
+- **Properties** (confiscated property and inventory numbers) and the **Incident Narrative** (the facts for probable cause and the charges).
+- **Court and Bond:** desired and initial court dates and branches, court sergeant handle, docket number; bond date and time, type, receipt number and amount.
+- **Reporting Personnel:** the attesting officer, the first and second arresting officers (star numbers and beats), assisting officers, and the approving supervisor, with dates and times.
 
-It saves on its own as you type (and with the **Save** button) to `arrest.json` in the case folder. **Start an arrest report draft** makes a new draft from your arrest report template with all of this filled in (see *Templates*). Arrestees' names are added to the names the privacy scan always hides from online AI and flags in mail.
+**Print / PDF** opens the **Arrest Report** as a PDF, in the same style as the Supplementary Report (grey section bands, boxed fields, page numbers, the agency from My Profile at the top, no agency's name or form number built in). Each arrestee gets their own report, starting on a new page. **Save PDF to Case** keeps it in the case's **Arrest Report** folder, and **Email for E-Sign** saves it and starts an email with it attached: the attesting officer's and supervisor's signature boxes are real signature fields (Adobe Acrobat or Reader: Fill & Sign).
+
+It saves on its own as you type (and with the **Save** button) to `arrest.json` in the case folder; arrest details entered before v1.30 open in the new layout (a warrant number becomes a Warrant entry, the notes become the Incident Narrative). **Start an arrest report draft** makes a new draft from your arrest report template with all of this filled in (see *Templates*); `{{arrest.narrative}}`, `{{arrest.age}}`, `{{arrest.vehicle}}`, `{{arrest.narcotics}}` and `{{arrest.warrants}}` are new. Arrestees' names are added to the names the privacy scan always hides from online AI and flags in mail.
 
 **Delete Arrest** (on the Arrest details tab, or under Case actions) deletes the arrest details after you confirm and takes the tab off, also for a case closed *Cleared by arrest*. Arrest report drafts already made are kept. **Remove Arrestee** removes one person and their charges.
 

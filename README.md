@@ -15,7 +15,12 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.29)
+## Features (v1.30)
+
+- **Arrest Report:** the Arrest details tab is laid out like an arrest report (Report Numbers, Offender with photo, Incident, Charges, Recovered Narcotics, Warrant, Victim and Complainant, Arrestee Vehicle, Properties, Incident Narrative, Court and Bond, Reporting Personnel), one per arrestee
+- **Print / PDF**, **Save PDF to Case** (Arrest Report folder) and **Email for E-Sign**, in the same style as the Supplementary Report PDF, with signature fields; arrest details from older versions open in the new layout
+
+## Earlier (v1.29)
 
 - **Delete Arrest** on the Arrest details tab and under Case actions (also for a case closed by arrest); the arrest charges suggest the Illinois and federal statutes
 - Operations on the Overview: Field Notes, Reports, Photos and Files as words under each case number; the Timeline next to the operation; a muted folder colour. Files has a **Photos** view
