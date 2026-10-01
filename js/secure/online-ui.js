@@ -138,8 +138,8 @@
           : 'Write your question or the text to work on below. CaseVault hides the personal details, shows you the result, then sends it.'));
 
       const ta = h('textarea', { rows: 7, class: 'online-input', placeholder: session.purpose === 'Research'
-        ? 'e.g. What does the case law in Virginia say about the staleness of information in a search warrant affidavit?'
-        : 'e.g. Tighten the wording of this paragraph for a probable cause affidavit: …' });
+        ? 'What does the case law in Virginia say about the staleness of information in a search warrant affidavit?'
+        : 'Tighten the wording of this paragraph for a probable cause affidavit: …' });
       ta.value = session.draft || '';
       ta.addEventListener('input', () => { session.draft = ta.value; });
       const insert = h('select', { 'aria-label': 'Insert a draft', disabled: !caseObj }, h('option', { value: '' }, caseObj ? 'Insert a draft from this case…' : 'Pick a case to insert its drafts'));

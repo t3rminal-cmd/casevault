@@ -53,7 +53,7 @@
     const domains = h('input', { type: 'text', value: cur.domains.join(', '), placeholder: 'agency.gov, *.county.gov', autocomplete: 'off' });
     const book = h('textarea', { rows: 4, placeholder: 'Jane Doe <jane.doe@agency.gov>\nnarcotics-unit@agency.gov', spellcheck: 'false' });
     book.value = (cur.addressBook || []).map((a) => (a.name ? `${a.name} <${a.email}>` : a.email)).join('\n');
-    const marking = h('input', { type: 'text', value: cur.marking, placeholder: 'e.g. [LES]', class: 'narrow-wide', maxlength: 40 });
+    const marking = h('input', { type: 'text', value: cur.marking, placeholder: '[LES]', class: 'narrow-wide', maxlength: 40 });
     const requireMarking = h('input', { type: 'checkbox', checked: !!cur.requireMarking });
     const maxMB = h('input', { type: 'number', min: 1, max: 150, value: cur.maxMB, class: 'narrow' });
     const footer = h('textarea', { rows: 3 });

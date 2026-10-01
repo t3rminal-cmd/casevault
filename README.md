@@ -15,7 +15,13 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.35)
+## Features (v1.36)
+
+- Square corners everywhere (boxes, buttons, cards, tabs, menus, dialogs, tags) and traditional drop-downs with one arrow on the right, the same for every list
+- No clipped words: long names, dates, Race choices and placeholders show in full (they wrap instead of ending in "…")
+- LEO Partners: once one is picked, the others dim; suspect role **Primary** (was Main); placeholders without "e.g." (5 ft 10 in, 160 Pounds)
+
+## Earlier (v1.35)
 
 - The updater updates itself: its own new files wait in `updater\_next` and are put in place the next time `Check-For-Updates.bat` starts (until now the `updater` folder had to be copied by hand)
 - The updater shows the CaseVault logo (the folder with the padlock) instead of the "CV" square; the 8-bit dinosaur is gone and the plain progress bar is back

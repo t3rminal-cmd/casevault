@@ -124,7 +124,7 @@
     };
     const row = (l) => {
       const name = h('input', { value: l.name, maxlength: 60, 'aria-label': 'Name' });
-      const url = h('input', { value: l.url || '', placeholder: 'Web address, e.g. portal.example.org', 'aria-label': `${l.name} web address`, spellcheck: 'false' });
+      const url = h('input', { value: l.url || '', placeholder: 'Web address: portal.example.org', 'aria-label': `${l.name} web address`, spellcheck: 'false' });
       const save = async ({ redraw = true } = {}) => {
         const clean = LK().cleanUrl(url.value);
         if (clean === null) { toast('That is not a web address (it must start with https://).', 'error'); return false; }
@@ -155,7 +155,7 @@
     };
     const addRow = (tab) => {
       const name = h('input', { placeholder: 'Name', maxlength: 60, 'aria-label': 'New link name' });
-      const url = h('input', { placeholder: 'Web address, e.g. portal.example.org', 'aria-label': 'New link address', spellcheck: 'false' });
+      const url = h('input', { placeholder: 'Web address: portal.example.org', 'aria-label': 'New link address', spellcheck: 'false' });
       return h('form', { class: 'links-add', onsubmit: async (e) => {
         e.preventDefault();
         const clean = LK().cleanUrl(url.value);

@@ -440,7 +440,7 @@
     const cur = c.pending || {};
     const result = await openDialog((close) => {
       const reason = h('select', {}, K().PENDING_REASONS.map((r) => h('option', { value: r, selected: r === cur.reason }, r)));
-      const detail = h('input', { type: 'text', maxlength: 120, value: cur.detail || '', placeholder: 'e.g. lab request 26-114, DA Smith' });
+      const detail = h('input', { type: 'text', maxlength: 120, value: cur.detail || '', placeholder: 'Lab request 26-114, DA Smith' });
       const follow = h('input', { type: 'date', value: cur.followUp || plusDays(14) });
       const addDeadline = h('input', { type: 'checkbox', checked: true });
       return h('form', { onsubmit: (e) => { e.preventDefault(); close({ reason: reason.value, detail: detail.value.trim(), followUp: follow.value, addDeadline: addDeadline.checked }); } },

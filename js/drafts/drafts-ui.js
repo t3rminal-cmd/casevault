@@ -26,7 +26,7 @@
     if (token !== state.renderToken) return;
     Engine().refresh().then(() => { if (token === state.renderToken) drawStart(); });
 
-    const title = h('input', { maxlength: 150, placeholder: 'e.g. Affidavit for search warrant', 'aria-label': 'Report title' });
+    const title = h('input', { maxlength: 150, placeholder: 'Affidavit for search warrant', 'aria-label': 'Report title' });
     const type = h('select', { 'aria-label': 'Document type' }, Object.entries(CVDraft.DOC_TYPES).map(([k, t]) => h('option', { value: k }, t.label)));
     const tplSelect = h('select', { 'aria-label': 'Template' }, templates.map((t) => h('option', { value: t.file }, t.title)));
     // Picking a template suggests the matching document type (affidavit, subpoena, ...).
@@ -610,7 +610,7 @@
         const useTimeline = h('input', { type: 'checkbox', checked: true });
         const useNotes = h('input', { type: 'checkbox', checked: true });
         const docBoxes = docs.map((f) => h('input', { type: 'checkbox', value: f.name, checked: true }));
-        const instr = h('textarea', { rows: 3, placeholder: 'Optional, e.g. "Focus on the events of March 14" or "Formal tone, third person".' });
+        const instr = h('textarea', { rows: 3, placeholder: 'Optional: "Focus on the events of March 14" or "Formal tone, third person".' });
         const behavior = h('select', {}, behaviors.map((b) => h('option', { value: b.id, selected: b.id === (meta.behavior || CVLibrary.defaultBehaviorId(settings)) }, b.name)));
         // Library: examples of the chosen document type are ticked, and the "always use" directives.
         const libBox = h('div', { class: 'check-reports lib-pick' });

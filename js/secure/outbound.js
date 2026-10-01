@@ -147,7 +147,7 @@
       const typed = h('input', { type: 'text', autocomplete: 'off', spellcheck: 'false', class: 'narrow', 'aria-label': 'Type SEND to confirm' });
       const typedRow = h('label', { class: 'field', hidden: true }, h('span', {}, 'Sensitive details found (SSN, date of birth, ID, card or bank number). Type ', h('strong', {}, 'SEND'), ' to confirm they must go:'), typed);
       const sendBtn = h('button', { class: `btn ${mode === 'warn' ? 'danger' : 'primary'}`, type: 'submit', disabled: true }, opts.confirmText || 'Send');
-      const addTerm = h('input', { type: 'text', placeholder: 'Anything else to hide, e.g. a nickname or street', class: 'grow', autocomplete: 'off' });
+      const addTerm = h('input', { type: 'text', placeholder: 'Anything else to hide: a nickname or street', class: 'grow', autocomplete: 'off' });
 
       let redactedParts = [];
       const allFindings = () => [...scanned.parts.flatMap((p) => p.findings), ...scanned.attachments.flatMap((a) => a.findings || [])];
