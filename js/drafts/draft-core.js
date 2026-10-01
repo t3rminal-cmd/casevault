@@ -342,8 +342,17 @@ Prepared {{today}}
       .trim();
   }
 
+  /** Reports in the order arranged under Reports (v1.40): the slugs in `order` first, in that
+   * order; reports not in it (new ones) before them, as listed. */
+  function orderReports(list, order) {
+    const at = new Map((Array.isArray(order) ? order : []).map((s, i) => [String(s), i]));
+    const fresh = list.filter((d) => !at.has(d.slug));
+    const placed = list.filter((d) => at.has(d.slug)).sort((a, b) => at.get(a.slug) - at.get(b.slug));
+    return [...fresh, ...placed];
+  }
+
   const api = {
-    DOC_TYPES, STARTER_TEMPLATES, RETIRED_TEMPLATES, ARREST_OUTLINE, PARTNER_AGENCIES, partnersText, parseDraft, serializeDraft, slugify, extractPlaceholders,
+    orderReports, DOC_TYPES, STARTER_TEMPLATES, RETIRED_TEMPLATES, ARREST_OUTLINE, PARTNER_AGENCIES, partnersText, parseDraft, serializeDraft, slugify, extractPlaceholders,
     AFFIANT_FIELDS, SUSPECT_ROLES, ageOn, placeholderGroups, templateContext, fillTemplate, templateTitle, stripMarkdown,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

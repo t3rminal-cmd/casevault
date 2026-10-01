@@ -199,6 +199,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.40
+
+- **Timeline:** **Clear** (next to Add to Timeline) empties the form: today's date, Event, no time, title or note. The date of each event now stays on one line next to its marker.
+- **Reports are view only** (the Field Notes stay editable). Click a report, or its eye button, to see it as a PDF in the same window the Files tab uses. A report sent from the Draft tab has **Send Back to Draft** (in the list and in that window) to correct it; a report made with **New Report** has **Edit**.
+- **Your own order:** drag a report by its grip (or focus the grip and press Alt+Up / Alt+Down). The order is kept on the SSD in the case's `reports-order.json`; new reports appear at the top.
+- **Same PDF as the Draft tab:** every report sent from the Draft tab, not just the latest, prints from the form it was sent with, so it looks exactly like the Draft tab's Print / PDF.
+
 ### What's new in v1.39
 
 - **Sidebar:** click an operation's name to open its Details; the arrow on the right folds it.

@@ -95,20 +95,77 @@
     // Reports: every report of the case (v1.32: the Field Notes aren't listed here; they're in the
     // Notes button at the bottom right). No dates.
     const I = (n) => ui.icon(n);
+    const archived = Vault.isArchived(c.id);
+    // v1.40: view only. Clicking a report shows its PDF the way the Files tab shows one; the rows
+    // can be dragged into your own order (kept in reports-order.json); a report sent from the Draft
+    // tab can be sent back there to correct it.
+    let order = null;
+    try { order = await Vault.readCaseJSON(c.id, ORDER_FILE); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+    if (token !== state.renderToken) return;
+    const rows = CVDraft.orderReports(drafts, order && order.order);
+    const saveOrder = async (slugs) => {
+      try { await Save.track(`reports-order:${c.id}`, () => Vault.writeCaseJSON(c.id, ORDER_FILE, { order: slugs })); ui.refresh(); } catch { /* reported by Save */ }
+    };
+    const move = (d, to) => {
+      const slugs = rows.map((x) => x.slug).filter((x) => x !== d.slug);
+      slugs.splice(Math.max(0, Math.min(slugs.length, to)), 0, d.slug);
+      return saveOrder(slugs);
+    };
+    const sendBackBtn = (d) => h('button', { class: 'icon-btn', type: 'button', title: 'Send Back to Draft to correct it', onclick: async () => {
+      try { if (await root.CVReportFieldsUI.sendBack(c, d.slug)) go(c.id, 'draft'); } catch { /* reported */ }
+    } }, I('arrow-counterclockwise'), h('span', { class: 'sr-only' }, `Send ${d.title} back to the Draft tab`));
+    const fromDraft = (d) => d.fromFields && !!root.CVReportFieldsUI;
     // v1.34: the AI tag has its own column; each report has an icon, its type as a tag, and a bin.
     const list = h('table', { class: 'files drafts-table reports-table' },
-      h('colgroup', {}, h('col', {}), h('col', { class: 'col-rtype' }), h('col', { class: 'col-ai' }), h('col', { class: 'col-ract' })),
-      h('thead', {}, h('tr', {}, h('th', {}, 'Report'), h('th', {}, 'Type'), h('th', { class: 'ai-col', title: 'Written with Draft with AI' }, 'AI'), h('th', {}, h('span', { class: 'sr-only' }, 'Delete')))),
-      h('tbody', {}, drafts.length ? drafts.map((d) => h('tr', {},
-        h('td', { class: 'report-name' }, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/${encodeURIComponent(d.slug)}` }, h('span', { class: 'report-icon', 'aria-hidden': 'true' }, I(d.fromFields ? 'clipboard2-check' : 'file-earmark-text')), h('span', { class: 'report-title' }, d.title))),
-        h('td', {}, h('span', { class: 'type-tag' }, (CVDraft.DOC_TYPES[d.type] || CVDraft.DOC_TYPES.other).label)),
-        h('td', { class: 'ai-col' }, d.ai ? h('span', { class: 'layer-badge ai-badge', title: 'Written with Draft with AI' }, I('robot'), 'AI') : h('span', { class: 'muted', 'aria-label': 'No' }, '—')),
-        h('td', { class: 'actions' }, h('button', { class: 'icon-btn danger-icon', type: 'button', title: `Delete ${d.title}`, onclick: async () => {
-          if (!(await confirmDialog({ title: `Delete "${d.title}"?`, message: 'The report is permanently deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
-          try { await Save.track(`draft-del:${c.id}:${d.slug}`, () => Vault.deleteDraft(c.id, d.slug)); ui.refresh(); } catch { /* reported */ }
-        } }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${d.title}`))))) : [h('tr', {}, h('td', { colspan: 4, class: 'muted' }, 'No reports yet. Fill in the Draft tab and click Send Draft to Reports, or use New Report.'))]));
+      h('colgroup', {}, archived ? null : h('col', { class: 'col-grip' }), h('col', {}), h('col', { class: 'col-rtype' }), h('col', { class: 'col-ai' }), h('col', { class: 'col-ract' })),
+      h('thead', {}, h('tr', {}, archived ? null : h('th', { class: 'grip-cell', title: 'Your own order: drag the rows' }, h('span', { class: 'sr-only' }, 'Order')),
+        h('th', {}, 'Report'), h('th', {}, 'Type'), h('th', { class: 'ai-col', title: 'Written with Draft with AI' }, 'AI'), h('th', {}, h('span', { class: 'sr-only' }, 'Actions')))),
+      h('tbody', {}, rows.length ? rows.map((d, i) => {
+        const grip = archived ? null : h('button', { class: 'grip-btn', type: 'button', title: 'Drag to reorder (or Alt+Up / Alt+Down)', 'aria-label': `Move ${d.title}` }, I('grip-vertical'));
+        const tr = h('tr', { 'data-slug': d.slug, draggable: archived ? null : 'true' },
+          archived ? null : h('td', { class: 'grip-cell' }, grip),
+          h('td', { class: 'report-name' }, h('button', { 'data-ro-ok': 'true', class: 'linkish report-open', type: 'button', title: `View ${d.title}`, onclick: () => viewReport(c, d) },
+            h('span', { class: 'report-icon', 'aria-hidden': 'true' }, I(d.fromFields ? 'clipboard2-check' : 'file-earmark-text')), h('span', { class: 'report-title' }, d.title))),
+          h('td', {}, h('span', { class: 'type-tag' }, (CVDraft.DOC_TYPES[d.type] || CVDraft.DOC_TYPES.other).label)),
+          h('td', { class: 'ai-col' }, d.ai ? h('span', { class: 'layer-badge ai-badge', title: 'Written with Draft with AI' }, I('robot'), 'AI') : h('span', { class: 'muted', 'aria-label': 'No' }, '—')),
+          h('td', { class: 'actions' },
+            h('button', { 'data-ro-ok': 'true', class: 'icon-btn', type: 'button', title: 'View', onclick: () => viewReport(c, d) }, I('eye'), h('span', { class: 'sr-only' }, `View ${d.title}`)),
+            archived ? null : fromDraft(d) ? sendBackBtn(d)
+              : h('a', { class: 'icon-btn', href: `#/case/${encodeURIComponent(c.id)}/reports/${encodeURIComponent(d.slug)}`, title: 'Edit (a report made with New Report)' }, I('pencil-square'), h('span', { class: 'sr-only' }, `Edit ${d.title}`)),
+            archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: `Delete ${d.title}`, onclick: async () => {
+              if (!(await confirmDialog({ title: `Delete "${d.title}"?`, message: 'The report is permanently deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
+              try { await Save.track(`draft-del:${c.id}:${d.slug}`, () => Vault.deleteDraft(c.id, d.slug)); ui.refresh(); } catch { /* reported */ }
+            } }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${d.title}`))));
+        if (!archived) {
+          grip.addEventListener('keydown', (e) => {
+            if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+            e.preventDefault();
+            move(d, i + (e.key === 'ArrowUp' ? -1 : 1));
+          });
+          tr.addEventListener('dragstart', (e) => { e.dataTransfer.setData('application/x-casevault-report', d.slug); e.dataTransfer.effectAllowed = 'move'; tr.classList.add('dragging'); });
+          tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
+          tr.addEventListener('dragover', (e) => {
+            if (!e.dataTransfer.types.includes('application/x-casevault-report')) return;
+            e.preventDefault();
+            const r = tr.getBoundingClientRect();
+            tr.classList.toggle('drop-before', e.clientY < r.top + r.height / 2);
+            tr.classList.toggle('drop-after', e.clientY >= r.top + r.height / 2);
+          });
+          tr.addEventListener('dragleave', () => tr.classList.remove('drop-before', 'drop-after'));
+          tr.addEventListener('drop', (e) => {
+            const slug = e.dataTransfer.getData('application/x-casevault-report');
+            const after = tr.classList.contains('drop-after');
+            tr.classList.remove('drop-before', 'drop-after');
+            const moving = rows.find((x) => x.slug === slug);
+            if (!moving || moving === d) return;
+            e.preventDefault();
+            const rest = rows.filter((x) => x !== moving);
+            move(moving, rest.indexOf(d) + (after ? 1 : 0));
+          });
+        }
+        return tr;
+      }) : [h('tr', {}, h('td', { colspan: archived ? 4 : 5, class: 'muted' }, 'No reports yet. Fill in the Draft tab and click Send Draft to Reports, or use New Report.'))]));
 
-    const archived = Vault.isArchived(c.id);
     const newReport = () => ui.openDialog((close) => {
       closeNew = close;
       return h('form', { class: 'form-grid new-report-form', onsubmit: (e) => e.preventDefault() },
@@ -140,6 +197,48 @@
           archived ? null : newBtn),
         list),
       h('p', { class: 'muted small explain' }, `Every report, draft or AI draft for this case. Saved on the SSD in ${CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}`)}, in the drafts folder, as Markdown files. Templates live in CaseVault-Data | templates (Vault → Templates).`));
+  }
+
+  const ORDER_FILE = 'reports-order.json';
+  const pdfOpts = (c, title) => {
+    const p = Vault.data.settings.affiant || {};
+    return { agency: p.agency || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' \u00b7 '), printed: '', title: title || '' };
+  };
+
+  /** A report as its PDF, shown the way the Files tab shows a PDF (v1.40). Read only: a report sent
+   * from the Draft tab can be sent back there; one made with New Report can be opened to edit. */
+  async function viewReport(c, d) {
+    const { h, toast, go } = ui;
+    const RFU = root.CVReportFieldsUI;
+    let bytes = null;
+    try {
+      if (d.fromFields && RFU) bytes = await RFU.sentPdf(c, d.slug);
+      if (!bytes) {
+        const r = await Vault.readDraft(c.id, d.slug);
+        if (!r) throw Object.assign(new Error('the report is not on the SSD'), { name: 'NotFoundError' });
+        bytes = CVDraftPdf.build(r.body, pdfOpts(c, d.title));
+      }
+    } catch (err) {
+      if (FS.isDisconnectError(err) && err.name !== 'NotFoundError') return ui.onDriveLost();
+      return toast(`Could not open ${d.title}: ${err.message}`, 'error');
+    }
+    const name = `${FS.safeName(d.title || 'Report')}.pdf`;
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+    const archived = Vault.isArchived(c.id);
+    const I = (n) => ui.icon(n);
+    await ui.openDialog((close) => h('div', { class: 'preview report-preview' },
+      h('div', { class: 'preview-head' },
+        h('h2', {}, d.title),
+        h('span', { class: 'muted small', title: 'Reports are view only' }, I('lock-fill'), ' View only'),
+        h('div', { class: 'spacer' }),
+        archived ? null : d.fromFields && RFU
+          ? h('button', { class: 'btn primary', type: 'button', icon: 'arrow-counterclockwise', title: 'Put this report back on the Draft tab to correct it. Send Draft to Reports then updates it.', onclick: async () => {
+            try { if (await RFU.sendBack(c, d.slug)) { close(); go(c.id, 'draft'); } } catch { /* reported */ }
+          } }, 'Send Back to Draft')
+          : h('button', { class: 'btn', type: 'button', icon: 'pencil-square', title: 'Open this report in the editor', onclick: () => { close(); go(c.id, 'reports', d.slug); } }, 'Edit'),
+        h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Close')),
+      h('iframe', { class: 'preview-frame', src: url, title: name })));
+    URL.revokeObjectURL(url);
   }
 
   /* =====================================================================
@@ -565,8 +664,10 @@
       // The report made from the Draft tab, unchanged here: the same PDF as the Draft tab's (v1.32).
       const RFU = root.CVReportFieldsUI;
       // (Only the report the form now goes to: one sent before a Clear All prints from its text.)
-      const linked = RFU && meta.fromFields && slug === await RFU.sentSlugOf(c).catch(() => '') && await RFU.linkedReport(c, slug).then((r) => r && !r.edited).catch(() => false);
-      const bytes = linked ? await RFU.pdfFor(c) : CVDraftPdf.build(ta.value, opts);
+      // v1.40: every report sent from the Draft tab (not just the latest) prints from its form.
+      const sent = RFU && meta.fromFields ? await RFU.sentPdf(c, slug).catch(() => null) : null;
+      const linked = !!sent;
+      const bytes = sent || CVDraftPdf.build(ta.value, opts);
       const viewer = CVPdfViewer.create(bytes, { h, icon: ui.icon, title: meta.title || 'Report', fileName: name });
       const folder = /supplement/i.test(`${meta.type} ${meta.title}`) ? 'Supplementary Report' : /arrest/i.test(`${meta.type} ${meta.title}`) ? 'Arrest Report' : 'Case Report';
       const saveCase = Vault.isArchived(c.id) ? null : h('button', { class: 'btn', type: 'button', title: `Saves the PDF in this case's ${folder} folder.`, onclick: async () => {

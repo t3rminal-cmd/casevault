@@ -1771,6 +1771,13 @@
       cancel.hidden = true;
     };
     cancel.addEventListener('click', resetForm);
+    // v1.40: Clear empties the form (back to today, an Event) without leaving an edit in progress.
+    const clear = h('button', { class: 'btn', type: 'button', title: 'Clear the form' }, 'Clear');
+    clear.addEventListener('click', () => {
+      f.date.value = today(); f.kind.value = 'event';
+      f.title.value = ''; f.note.value = ''; f.time.value = '';
+      f.title.focus();
+    });
 
     const form = h('form', { class: 'timeline-form', onsubmit: async (e) => {
       e.preventDefault();
@@ -1800,7 +1807,7 @@
     many ? field('Case Number', f.caseSel, '', 'Which case number of the operation this belongs to') : null,
     field('Title', f.title, 'grow'),
     field('Note', f.note, 'full'),
-    h('div', { class: 'full form-actions' }, cancel, submit));
+    h('div', { class: 'full form-actions' }, cancel, clear, submit));
 
     function draw() {
       const all = CVOperation.mergeEvents([...tls.entries()].map(([caseId, t]) => ({ caseId, number: numberOf(caseId), events: t.events })));
