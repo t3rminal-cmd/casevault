@@ -199,6 +199,19 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.39
+
+- **Sidebar:** click an operation's name to open its Details; the arrow on the right folds it.
+- **Suspects** (Details): IR Number, FBI Number, IDOC Number and Phone Number, with the description in even columns.
+- **Offenders** (Draft): **Phone Numbers** (Add Another Phone) and **Monikers / Social Media** (a name and the app it's used on). Add From Suspects brings a suspect's phone along.
+- **IUCR Code:** picking one (or typing a code in the list) fills **Offense Classification** with its description, for example *Delv: Synthetic Drugs*.
+- **Officer Report Type:** the Draft tab's heading, the PDF and the report follow it: *Supplementary Report - Purchase*.
+- **Purchase Price** (Officer's Report, above Pre-Recorded Fund Sheet): the wording (*$100.00 prerecorded 1505 funds in the form of:*), then **Add Bill** for each bill: quantity, denomination, serial number, and Recovered or Not Recovered. They print in the PDF and the report; both can be ticked off like every other line.
+- **Draft buttons:** Show All and Hide All are at the top right; **Save Changes** is with Send Draft to Reports, Print / PDF and Clear All (the other two Save buttons are gone).
+- **View-only reports:** a report sent from the Draft tab can't be edited under Reports. **Send Back to Draft** puts its form back on the Draft tab (asking first if another report is there); Send Draft to Reports then updates the same report and PDF. Reports sent before v1.39 didn't keep their form, so send them again from the Draft tab once.
+- **Close Case:** asks who closed it (from My Profile), lists the operation's other open case numbers to tick, and, unless you untick **Update the Draft tab**, fills each one's Status and How Cleared (from the disposition, changeable) and ticks the Update Information boxes you choose.
+- **Files:** a new exhibit photo is named *Exhibit 1* (no "photo"); the Added date stays on one line.
+
 ## Reports (field notes and drafts)
 
 How a report comes together (v1.31), in tab order:

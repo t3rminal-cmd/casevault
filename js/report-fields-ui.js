@@ -102,6 +102,33 @@
     return { slug, kept: false };
   }
 
+  const formFile = (slug) => `report-fields-${slug}.json`;
+  const hasEntries = (d) => {
+    const x = F().normalize(d);
+    return F().FIELDS.some(([k, , kind]) => k !== 'caseNumber' && (kind === 'check' ? !!x[k] : String(x[k] || '').trim()))
+      || Object.keys(F().LISTS).some((k) => x[k].some(F().filled)) || x.evidence.length > 0 || !!String(x.narrative || '').trim();
+  };
+  /** Send Back to Draft (v1.39): the report's form goes back on the Draft tab. Asks first when the
+   * Draft tab holds a different report. -> true when done. */
+  async function sendBack(c, slug) {
+    const cur = await load(c);
+    let snap = null;
+    try { snap = await Vault.readCaseJSON(c.id, formFile(slug)); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+    if (!snap && cur.sentSlug !== slug) {
+      ui.toast(`${titleOf(slug)} was sent before this version kept its form, so it can't go back to the Draft tab. Edit the form there and send it again.`, 'error', 9000);
+      return false;
+    }
+    if (snap && cur.sentSlug !== slug && hasEntries(cur)) {
+      const other = cur.sentSlug ? `${titleOf(cur.sentSlug)} (as last sent, plus any changes since)` : 'a draft that hasn\'t been sent';
+      if (!(await ui.confirmDialog({ title: `Send ${titleOf(slug)} back to the Draft tab?`, message: `The Draft tab now holds ${other}. It's replaced by ${titleOf(slug)}'s form. What was sent stays under Reports and Files.`, confirmText: 'Send Back' }))) return false;
+    }
+    const next = snap ? F().normalize(snap) : cur;
+    next.sentSlug = slug;
+    await ui.Save.track(`report-fields:${c.id}`, () => Vault.writeCaseJSON(c.id, FILE, next));
+    ui.toast(`${titleOf(slug)} is back on the Draft tab. Send Draft to Reports updates the report when you're done.`, 'success', 6000);
+    return true;
+  }
+
   async function render(panel, c, token) {
     const { h, state, Save, toast, go } = ui;
     const data = await load(c);
@@ -118,7 +145,7 @@
     // Searchable lists (v1.22): UCR codes and location codes from the Reference pages, and the
     // charges; the pick-lists (victim, gang, hair, eyes). All can still be typed over.
     const RD = root.CVRefData || { UCR_CODES: [], LOCATION_CODES: [], CHARGES: [], NARCOTIC_DATA: {} };
-    const UCR_ITEMS = RD.UCR_CODES.flatMap((g) => g.codes.map(([code, desc]) => ({ value: `${code} ${desc}`, label: `${code} ${desc}`, hint: g.title, group: g.title })));
+    const UCR_ITEMS = RD.UCR_CODES.flatMap((g) => g.codes.map(([code, desc]) => ({ value: `${code} ${desc}`, label: `${code} ${desc}`, hint: g.title, group: g.title, code, desc })));
     const LOC_ITEMS = RD.LOCATION_CODES.flatMap((g) => g.codes.map(([code, desc]) => ({ value: code, label: `${code} ${desc}`, hint: g.title, desc })));
     const CHARGE_ITEMS = (RD.CHARGES || []).flatMap((g) => g.codes.map(([statute, desc]) => ({ value: statute, label: `${statute} ${desc}`, hint: g.title, statute, desc })));
     const pickItems = (list) => list.map((v) => ({ value: v, label: v }));
@@ -149,7 +176,8 @@
         el = CVTimeField.create({ label, value: data[key] || '' });
         el.addEventListener('input', () => { data[key] = el.value; save(); });
       } else {
-        el = h('input', { type: kind === 'date' ? 'date' : kind === 'number' ? 'number' : 'text', min: kind === 'number' ? 0 : null, autocomplete: 'off', value: data[key] || '' });
+        el = h('input', { type: kind === 'date' ? 'date' : kind === 'number' ? 'number' : 'text', min: kind === 'number' ? 0 : null, autocomplete: 'off', value: data[key] || '',
+          placeholder: key === 'buyFunds' ? '$100.00 prerecorded 1505 funds in the form of:' : null });
         el.addEventListener('input', () => { data[key] = el.value; save(); });
       }
       els[key] = el;
@@ -158,7 +186,14 @@
       let box = el;
       if (kind === 'ucr') {
         // From Common UCR; an empty Offense Classification takes the UCR group (Narcotics…).
-        box = CVCombo.attach(el, { items: () => UCR_ITEMS, onPick: (it) => { if (key === 'ucr' && !String(data.offense || '').trim()) setField('offense', it.group); save(); } });
+        // v1.39: picking an IUCR code puts its description in Offense Classification (for 2170:
+        // "Delv: Synthetic Drugs"); so does typing a code that's in the list.
+        const fillOffense = (it) => { if (key === 'ucr' && it) { setField('offense', it.desc); save(); } };
+        box = CVCombo.attach(el, { items: () => UCR_ITEMS, onPick: (it) => { fillOffense(it); save(); } });
+        el.addEventListener('change', () => {
+          const v = el.value.trim().toLowerCase();
+          fillOffense(UCR_ITEMS.find((it) => it.value.toLowerCase() === v || it.code.toLowerCase() === v));
+        });
       } else if (kind === 'location') {
         // From Location Codes; Type of Location fills in from the code picked.
         box = CVCombo.attach(el, { items: () => LOC_ITEMS, onPick: (it) => { setField('locationType', it.desc); save(); } });
@@ -194,6 +229,36 @@
           const stateVictim = F().isStateVictim(key, it);
           const fields = F().fieldsFor(key, it).map(([k, label, kind, opts]) => {
             let el;
+            // v1.39: an offender's phone numbers (Add Another Phone) and monikers with their app.
+            if (kind === 'phones' || kind === 'socials') {
+              if (!Array.isArray(it[k])) it[k] = [];
+              if (kind === 'phones' && !it[k].length) it[k].push('');
+              const holder = h('div', { class: 'rf-multi' });
+              const drawMulti = (focusLast) => {
+                holder.replaceChildren(...it[k].map((v, j) => {
+                  let parts;
+                  if (kind === 'phones') {
+                    const inp = h('input', { type: 'tel', autocomplete: 'off', value: v || '', 'aria-label': `${lab} phone number ${j + 1}` });
+                    inp.addEventListener('input', () => { it[k][j] = inp.value; save(); });
+                    parts = [inp];
+                  } else {
+                    const nm = h('input', { type: 'text', autocomplete: 'off', value: (v && v.name) || '', placeholder: 'Moniker / Username', 'aria-label': `${lab} moniker ${j + 1}` });
+                    nm.addEventListener('input', () => { it[k][j] = { ...it[k][j], name: nm.value }; save(); });
+                    const app = h('select', { 'aria-label': `${lab} moniker ${j + 1} app` }, F().SOCIAL_APPS.map((o) => h('option', { value: o, selected: o === ((v && v.app) || '') }, o || 'App or Street Name')));
+                    app.addEventListener('change', () => { it[k][j] = { ...it[k][j], app: app.value }; save(); });
+                    parts = [nm, app];
+                  }
+                  return h('div', { class: `rf-multi-row rf-multi-${kind}` }, ...parts,
+                    archived ? '' : h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Remove', onclick: () => { it[k].splice(j, 1); drawMulti(); save(); } }, ui.icon('x-lg'), h('span', { class: 'sr-only' }, 'Remove')));
+                }), archived ? '' : h('button', { class: 'btn small rf-multi-add', type: 'button', onclick: () => {
+                  it[k].push(kind === 'phones' ? '' : { name: '', app: '' }); drawMulti(true); save();
+                } }, kind === 'phones' ? (it[k].length ? 'Add Another Phone' : 'Add Phone Number') : 'Add Moniker / Social Media'));
+                if (focusLast) { const ins = holder.querySelectorAll('.rf-multi-row input'); if (ins.length) ins[ins.length - 1].focus(); }
+              };
+              drawMulti();
+              inputs[k] = holder;
+              return ui.field(label, holder, 'rf-wide');
+            }
             // Height in feet and inches, weight in pounds; for an unknown offender, from–to (v1.25).
             if (kind === 'height' || kind === 'weight' || (kind === 'age' && unknown)) {
               const range = unknown;
@@ -423,7 +488,7 @@
           picker.value = '';
           for (const f of files) {
             try {
-              const path = await Save.track(`photo:${c.id}`, () => Vault.addFile(c.id, f, { folder: e.type === 'Narcotics' ? 'Drug Exhibits' : 'Other Exhibits', description: `Exhibit ${n} photo` }));
+              const path = await Save.track(`photo:${c.id}`, () => Vault.addFile(c.id, f, { folder: e.type === 'Narcotics' ? 'Drug Exhibits' : 'Other Exhibits', description: `Exhibit ${n}` }));
               e.photos.push(path);
               e.photoLabels.push('');
             } catch { /* reported by Save */ }
@@ -499,6 +564,8 @@
           if (!force) return;
         }
         await syncLinked(c, data, { force, slug });
+        // The form as sent is kept with the report, so Send Back to Draft can bring it back (v1.39).
+        await Save.track(`report-form:${c.id}:${slug}`, () => Vault.writeCaseJSON(c.id, formFile(slug), { ...structuredClone(data), sentSlug: slug }));
         if (data.sentSlug !== slug) { data.sentSlug = slug; save(0); await Save.flushAll(); }
         const r = await savePdfToCase(c, data, null, titleOf(slug));
         toast(`Sent: Reports → ${titleOf(slug)}, and Files → ${r.path.split('/').pop()}`, 'success', 7000);
@@ -519,24 +586,25 @@
       ui.refresh();
     } }, 'Clear All');
 
+    // v1.39: the heading names the Officer Report Type picked (Supplementary Report – Purchase…);
+    // Show All / Hide All sit up here, and Save Changes sits with the other buttons.
+    const heading = h('h2', {}, headingOf(data));
+    if (els.activity) els.activity.addEventListener('change', () => { heading.textContent = headingOf(data); });
     panel.replaceChildren(
       h('div', { class: 'notes-head rf-head-bar' },
-        h('h2', {}, 'Supplementary Report'), h('div', { class: 'spacer' }), archived ? null : saveBtn),
-      h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case: fill it in, then Send Draft to Reports puts it under Reports and its PDF under Files. Clear All starts another one. Saved as report-fields.json.'),
-      h('div', { class: 'rf-actions' }, archived ? null : sendBtn, printBtn, archived ? null : clearBtn, h('div', { class: 'spacer' }),
+        heading, h('div', { class: 'spacer' }),
         h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-down', title: 'Open every part on screen', onclick: () => foldAll(false) }, 'Show All'),
         h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-right', title: 'Fold every part away on screen (they stay in the PDF). Open one with its arrow.', onclick: () => foldAll(true) }, 'Hide All')),
+      h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case: fill it in, then Send Draft to Reports puts it under Reports and its PDF under Files. Clear All starts another one. Saved as report-fields.json.'),
+      h('div', { class: 'rf-actions' }, archived ? null : sendBtn, printBtn, archived ? null : clearBtn, h('div', { class: 'spacer' }), archived ? null : saveBtn),
       ...sections.slice(0, -1),
       part('evidence', 'Evidence Inventoried', 'box-seam', evRows, archived ? null : h('div', { class: 'contact-add' }, addExhibit)),
       part('summary', 'Summary of Investigation', 'journal-text', fmt, rich.el, narrative),
-      sections[sections.length - 1], // Submission and Approval comes last, as on the printed report
-      archived ? null : h('div', { class: 'details-save rf-bottom' }, saveBtn.cloneNode(true)));
-    // The copy at the bottom does the same as the one at the top.
-    const bottom = panel.querySelector('.details-save .btn');
-    if (bottom) bottom.addEventListener('click', () => saveBtn.click());
+      sections[sections.length - 1]); // Submission and Approval comes last, as on the printed report
   }
+  const headingOf = (d) => F().titleFor(d);
 
   function init(kit) { ui = kit; }
 
-  root.CVReportFieldsUI = { init, load, render, numbersInUse, pdfFor, savePdfToCase, linkedReport, syncLinked, sentSlugOf, titleOf, LINKED, PDF_NAME };
+  root.CVReportFieldsUI = { init, load, render, sendBack, numbersInUse, pdfFor, savePdfToCase, linkedReport, syncLinked, sentSlugOf, titleOf, LINKED, PDF_NAME };
 })(this);

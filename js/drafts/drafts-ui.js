@@ -379,12 +379,21 @@
     // AI suggestions follow the cursor in the Markdown text, so they run in that view.
     const drawSuggestMode = (m) => { suggestLabel.hidden = m === 'rich'; if (m === 'rich') ghost.stop(); };
 
+    // v1.39: a report sent from the Draft tab is view-only here; Send Back to Draft puts its form
+    // back on the Draft tab for revisions (and the next Send Draft to Reports updates this report).
+    const RFU0 = root.CVReportFieldsUI;
+    const fromDraft = !!meta.fromFields && !!RFU0;
+    if (fromDraft) { ta.readOnly = true; titleInput.readOnly = true; typeSelect.disabled = true; }
+    const sendBackBtn = fromDraft && !Vault.isArchived(c.id) ? h('button', { class: 'btn small primary', type: 'button', icon: 'arrow-counterclockwise', title: 'Put this report back on the Draft tab to revise it. Send Draft to Reports then updates this report and its PDF.', onclick: async () => {
+      try { if (await RFU0.sendBack(c, slug)) go(c.id, 'draft'); } catch { /* reported */ }
+    } }, 'Send Back to Draft') : null;
     panel.replaceChildren(
       back,
       banner,
+      fromDraft ? h('p', { class: 'view-only-note' }, ui.icon('lock-fill'), ' View only: this report was sent from the Draft tab. To revise it, click Send Back to Draft.') : '',
       h('div', { class: 'draft-head' }, titleInput, typeSelect),
-      h('div', { class: 'draft-actions-bar' }, wordViewBtn, pdfViewBtn, genBtn, rephraseBtn, reviewBtn, checkBtn, exportMenu, h('div', { class: 'spacer' }), saveBtn, delBtn),
-      h('div', { class: 'toolbar draft-toolbar' },
+      h('div', { class: 'draft-actions-bar' }, wordViewBtn, pdfViewBtn, ...(fromDraft ? [] : [genBtn, rephraseBtn, reviewBtn]), checkBtn, exportMenu, h('div', { class: 'spacer' }), fromDraft ? sendBackBtn || '' : saveBtn, delBtn),
+      h('div', { class: 'toolbar draft-toolbar', hidden: fromDraft },
         fmtBar,
         suggestLabel),
       genStatus,

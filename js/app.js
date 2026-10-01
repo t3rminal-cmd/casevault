@@ -597,8 +597,16 @@
           // v1.32: the operation's file number, original case number and client, once.
           (() => { const o = opInfo(group); const t = [o.fileNumber, o.number, o.client].filter(Boolean).join(' | '); return t ? h('span', { class: 'op-meta muted' }, t) : null; })()),
         group.length > 1 ? h('span', { class: 'op-count' }, String(group.length)) : null,
-        h('span', { class: 'op-chev', 'aria-hidden': 'true' }, I('chevron-down'))),
+        h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
       h('ul', { class: 'op-cases' }, group.map((c) => caseItem(c, true))));
+    // v1.39: a click on the operation's name opens its Details (the first case number); only the
+    // arrow on the right folds or unfolds it.
+    det.querySelector('summary').addEventListener('click', (e) => {
+      if (e.target.closest('.op-chev')) return;
+      e.preventDefault();
+      const to = group.find((x) => x.id === state.caseId) || group[0];
+      location.hash = `#/case/${encodeURIComponent(to.id)}/details`;
+    });
     det.addEventListener('toggle', () => {
       // A <details> drawn open fires "toggle" too: save only a real change (v1.29: saving on
       // every draw redrew the list, which saved again, and the drive icon kept blinking).
@@ -1290,15 +1298,17 @@
         if (!s.info || typeof s.info !== 'object') s.info = {};
         const PERSON = (k) => CVReportFields.SUSPECT_INFO.find(([key]) => key === k);
         const infoInput = (k, attrs = {}) => {
-          const [, label, kind, opts] = PERSON(k) || [k, k, 'text'];
+          // v1.39: the record numbers and a phone, besides the description.
+          const EXTRA = { irNumber: 'IR Number', fbiNumber: 'FBI Number', idocNumber: 'IDOC Number', phone: 'Phone Number' };
+          const [, label, kind, opts] = PERSON(k) || [k, EXTRA[k] || k, k === 'phone' ? 'phone' : 'text'];
           let el;
           if (kind === 'select') el = h('select', { 'aria-label': `${who} ${label}` }, opts.map((o) => h('option', { value: o, selected: o === (s.info[k] || '') }, o || '—')));
-          else el = h('input', { value: s.info[k] || '', autocomplete: 'off', maxlength: 200, 'aria-label': `${who} ${label}`, list: kind === 'hair' ? 'suspect-hair' : kind === 'eyes' ? 'suspect-eyes' : null, placeholder: kind === 'height' ? '5 ft 10 in' : kind === 'weight' ? '160 Pounds' : '', ...attrs });
+          else el = h('input', { value: s.info[k] || '', autocomplete: 'off', maxlength: 200, 'aria-label': `${who} ${label}`, type: kind === 'phone' ? 'tel' : 'text', list: kind === 'hair' ? 'suspect-hair' : kind === 'eyes' ? 'suspect-eyes' : null, placeholder: kind === 'height' ? '5 ft 10 in' : kind === 'weight' ? '160 Pounds' : '', ...attrs });
           el.addEventListener(kind === 'select' ? 'change' : 'input', () => { s.info[k] = el.value.trim(); save(); });
           return field(label, el, kind === 'wide' ? 'suspect-wide' : '');
         };
         const demo = h('div', { class: 'suspect-demo' },
-          ['gender', 'race', 'complexion', 'height', 'weight', 'hair', 'eyes', 'marks'].map((k) => infoInput(k)));
+          ['gender', 'race', 'complexion', 'height', 'weight', 'hair', 'eyes', 'irNumber', 'fbiNumber', 'idocNumber', 'phone', 'marks'].map((k) => infoInput(k)));
         return h('div', { class: 'suspect-card' }, h('div', { class: 'suspect-row' },
           field('Name', input('name', { maxlength: 120, 'aria-label': `${who} name` })),
           field('DOB', dob),
@@ -1834,7 +1844,7 @@
     }
 
     draw();
-    panel.replaceChildren(many ? h('p', { class: 'muted small tl-op-note' }, `The timeline of the whole operation: all ${tls.size} case numbers.`) : null, form, list);
+    panel.replaceChildren(many ? h('p', { class: 'muted small tl-op-note' }, `The timeline of the whole operation: all ${tls.size} case numbers.`) : '', form, list);
   }
 
   /* ---------- Files ---------- */

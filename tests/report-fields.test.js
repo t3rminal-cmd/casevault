@@ -293,8 +293,8 @@ test('v1.27: State of Illinois victim, compact Local AI box', () => {
 
 test('v1.31: Officer\'s Report lines, UCO, no reclassification, and a report drawn as a PDF like the form', () => {
   const report = F.SECTIONS.find((s) => s.id === 'report').fields.map(([, l]) => l);
-  assert.deepStrictEqual(report.slice(0, 14), ['Operation / Mission Number', 'Within 1000 FT Of', 'Court Branch and Court Officer', 'Court Date', 'Search Warrant Number', 'Subpoena GJ Number',
-    'ASA Approving Search Warrant', 'AUSA Approving Search Warrant', 'Judge Approving Search Warrant', 'Pre-Recorded Fund Sheet', 'Evidence Officer', 'Proof of Residence', 'IR Number', 'CB Number']);
+  assert.deepStrictEqual(report.slice(0, 16), ['Operation / Mission Number', 'Within 1000 FT Of', 'Court Branch and Court Officer', 'Court Date', 'Search Warrant Number', 'Subpoena GJ Number',
+    'ASA Approving Search Warrant', 'AUSA Approving Search Warrant', 'Judge Approving Search Warrant', 'Purchase Price', 'Pre-Recorded Funds', 'Pre-Recorded Fund Sheet', 'Evidence Officer', 'Proof of Residence', 'IR Number', 'CB Number']);
   assert.ok(!F.FIELDS.some(([k]) => k === 'reclass' || k === 'revisedUcr'));
   assert.ok(F.ROLES.includes('UCO') && !F.ROLES.includes('UC'));
   assert.strictEqual(F.normalize({ personnel: [{ name: 'Officer Alex Sample', role: 'UC' }] }).personnel[0].role, 'UCO');
@@ -313,7 +313,7 @@ test('v1.31: Officer\'s Report lines, UCO, no reclassification, and a report dra
 test('v1.34: every Officer\'s Report line and list can be ticked off', () => {
   const F = require('../js/report-fields.js');
   for (const k of ['operation', 'courtBranch', 'courtDate', 'fundSheet', 'evidenceOfficer', 'cbNumber']) assert.ok(F.OPTIONAL_LINES.includes(k), k);
-  assert.deepStrictEqual(F.OPTIONAL_LISTS, ['narcotics', 'charges', 'gangs', 'notArrested', 'personnel', 'vehicles', 'notifications']);
+  assert.deepStrictEqual(F.OPTIONAL_LISTS, ['funds', 'narcotics', 'charges', 'gangs', 'notArrested', 'personnel', 'vehicles', 'notifications']);
   const d = F.normalize({ evidenceOfficer: 'Officer Sample', courtBranch: 'Branch 1', courtDate: '2026-10-20', charges: [{ statute: '720 ILCS 570/402(c)', description: 'Possession' }], hidden: ['evidenceOfficer', 'charges', 'courtDate'] });
   const md = F.toMarkdown(d);
   assert.ok(!/Officer Sample/.test(md));

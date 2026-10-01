@@ -83,7 +83,7 @@
   const M = 36; // margin
   const INNER = PAGE_W - 2 * M;
 
-  function layout(data, { agency = '', title = 'Supplementary Report', caseLabel = '', printed = '', photos: photosIn = [] } = {}) {
+  function layout(data, { agency = '', title = F().titleFor(data), caseLabel = '', printed = '', photos: photosIn = [] } = {}) {
     const RF = F();
     const d = RF.normalize(data);
     const val = (k) => RF.shown(k, d[k]);
@@ -179,7 +179,7 @@
       items.forEach((it, i) => {
         // A narcotic's unit goes with its amount, so its four boxes fill one row (v1.25).
         const cellsOf = RF.fieldsFor(key, it).filter(([k]) => !(key === 'narcotics' && k === 'unit')).map(([k, label, kind]) => (
-          { label: `${L.item} ${i + 1} - ${RF.labelFor(it, k, label)}`, value: RF.valueText(key, it, k, kind), wide: kind === 'wide' }));
+          { label: `${L.item} ${i + 1} - ${RF.labelFor(it, k, label)}`, value: RF.valueText(key, it, k, kind), wide: kind === 'wide' || RF.MULTI.includes(kind) }));
         const row = [];
         // Short rows are filled out with empty boxes so the four columns always line up.
         const flush = () => { if (row.length) { while (row.length < 4) row.push({ label: '', value: '' }); boxes(row.splice(0).map((c) => ({ ...c, w: 1 }))); } };
@@ -246,7 +246,7 @@
       const report = RF.SECTIONS.find((s) => s.id === 'report').fields;
       for (const [k, label, kind] of report) {
         if (kind === 'list') {
-          if (on('evidence')) labelled('Evidence Inventoried', d.evidence.length ? d.evidence.map((e) => `Exhibit ${e.number}${e.inventory ? ` - Inv. ${e.inventory}` : ''}`).join(', ') : '');
+          if (k === 'narcotics' && on('evidence')) labelled('Evidence Inventoried', d.evidence.length ? d.evidence.map((e) => `Exhibit ${e.number}${e.inventory ? ` - Inv. ${e.inventory}` : ''}`).join(', ') : '');
           if (d[k].some(RF.filled)) { y -= 4; listBlock(k); }
           continue;
         }
@@ -355,7 +355,7 @@
     // With Evidence left out, no photos go in the file at all.
     const evidenceOff = Array.isArray(data && data.hidden) && data.hidden.includes('evidence');
     const photos = evidenceOff ? [] : (opts.photos || []).map((p, index) => ({ ...p, index }));
-    return assemble(layout(data, { ...opts, photos }), { photos, title: opts.title || 'Supplementary Report' });
+    return assemble(layout(data, { ...opts, photos }), { photos, title: opts.title || F().titleFor(data) });
   }
 
   /** Pages ([{ ops, sigs, imgs }]) and their photos -> the PDF file's bytes. Shared with the

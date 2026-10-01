@@ -86,6 +86,9 @@
       ['asa', 'ASA Approving Search Warrant', 'line'],
       ['ausa', 'AUSA Approving Search Warrant', 'line'],
       ['judge', 'Judge Approving Search Warrant', 'line'],
+      // v1.39: the purchase price, then each pre-recorded bill (quantity, denomination, serial number, recovered or not).
+      ['buyFunds', 'Purchase Price', 'line'],
+      ['funds', 'Pre-Recorded Funds', 'list'],
       ['fundSheet', 'Pre-Recorded Fund Sheet', 'line'],
       ['evidenceOfficer', 'Evidence Officer', 'line'],
       ['proofResidence', 'Proof of Residence', 'line'],
@@ -133,7 +136,7 @@
   // Officer's Report lines that can be ticked off when they don't apply (v1.22; every line since
   // v1.34), and its lists (narcotics, charges, gangs…), which can be ticked off the same way.
   const OPTIONAL_LINES = SECTIONS.find((s) => s.id === 'report').fields.filter(([, , kind]) => kind !== 'list').map(([k]) => k);
-  const OPTIONAL_LISTS = ['narcotics', ...SECTIONS.find((s) => s.id === 'report').lists];
+  const OPTIONAL_LISTS = ['funds', 'narcotics', ...SECTIONS.find((s) => s.id === 'report').lists];
   /** The Court Branch line: [label, value] with the court date, each part left out when ticked off; null when both are. */
   const courtLine = (d, show) => {
     const hide = (k) => (d.hidden || []).includes(k);
@@ -146,7 +149,9 @@
   const LISTS = {
     narcotics: { title: 'Narcotics Recovered', item: 'Narcotic', fields: [['drug', 'Narcotics Type Recovered', 'narcotic'], ['amount', 'Total Weight', 'text'], ['unit', 'Unit', 'select', NARCOTIC_UNITS], ['price', 'Purchase Price', 'money'], ['value', 'Street Value', 'money']] },
     victimsList: { title: 'Victims', item: 'Victim', fields: [['name', 'Name', 'victim'], ['officer', 'Officer Name', 'text'], ...PERSON.slice(1)] },
-    offendersList: { title: 'Offenders', item: 'Offender', fields: PERSON },
+    // v1.39: an offender's phone numbers and monikers (with the social media app each is used on).
+    offendersList: { title: 'Offenders', item: 'Offender', fields: [...PERSON, ['phones', 'Phone Numbers', 'phones'], ['socials', 'Monikers / Social Media', 'socials']] },
+    funds: { title: 'Pre-Recorded Funds', item: 'Bill', fields: [['quantity', 'Quantity', 'text'], ['denomination', 'Denomination', 'select', ['', '$1', '$2', '$5', '$10', '$20', '$50', '$100']], ['serial', 'Serial Number', 'text'], ['recovered', 'Recovered', 'select', ['', 'Recovered', 'Not Recovered']]] },
     charges: { title: 'Charges', item: 'Charge', fields: [['statute', 'Statute', 'charge'], ['description', 'Statute Description', 'chargeWide']] },
     gangs: { title: 'Gang Affiliations', item: 'Gang', fields: [['name', 'Gang', 'gang'], ['faction', 'Faction / Set', 'text']] },
     notArrested: { title: 'Persons Present Not Arrested', item: 'Person', fields: [['name', 'Name', 'text'], ['phone', 'Contact Number', 'phone'], ['address', 'Address', 'wide']] },
@@ -173,8 +178,11 @@
 
   const empty = () => ({ schema: 4, ...Object.fromEntries(FIELDS.map(([k, , kind]) => [k, kind === 'check' ? false : ''])), ...Object.fromEntries(Object.keys(LISTS).map((k) => [k, []])), evidence: [], narrative: '', hidden: [] });
 
-  const blankItem = (list) => Object.fromEntries(LISTS[list].fields.map(([k]) => [k, '']));
-  const filled = (item) => Object.values(item || {}).some((v) => String(v || '').trim());
+  const MULTI = ['phones', 'socials']; // fields that hold several entries
+  const SOCIAL_APPS = ['', 'Facebook', 'Instagram', 'Snapchat', 'TikTok', 'X (Twitter)', 'WhatsApp', 'Telegram', 'Signal', 'YouTube', 'Discord', 'Cash App', 'Other'];
+  const blankItem = (list) => Object.fromEntries(LISTS[list].fields.map(([k, , kind]) => [k, MULTI.includes(kind) ? [] : '']));
+  const hasText = (v) => (Array.isArray(v) ? v.some(hasText) : v && typeof v === 'object' ? Object.values(v).some(hasText) : !!String(v || '').trim());
+  const filled = (item) => Object.values(item || {}).some(hasText);
 
   /** Saved data brought up to date: older type names, missing fields, and the single entries of
    * v1.20 (victim's name, charges, vehicle…) moved into the lists. */
@@ -251,6 +259,8 @@
 
   /** A value as it reads in the report: weights get "lbs", a narcotic amount its unit. */
   function valueText(list, it, k, kind) {
+    if (kind === 'phones') return (Array.isArray(it[k]) ? it[k] : []).map((x) => String(x || '').trim()).filter(Boolean).join(', ');
+    if (kind === 'socials') return (Array.isArray(it[k]) ? it[k] : []).filter(hasText).map((x) => `${String(x.name || '').trim()}${x.app ? ` (${x.app})` : ''}`).join('; ');
     let v = String(it[k] == null ? '' : it[k]).trim();
     if (!v) return '';
     if (kind === 'date') v = longDate(v);
@@ -303,6 +313,9 @@
     if (s.dob) { o.dob = s.dob; o.age = ageOn(s.dob, day); }
     const info = (s && s.info) || {};
     for (const [k] of SUSPECT_INFO) if (String(info[k] || '').trim()) o[k] = String(info[k]).trim();
+    // v1.39: the suspect's phone joins the offender's phone numbers.
+    const ph = String(info.phone || '').trim();
+    if (ph) { o.phones = Array.isArray(o.phones) ? o.phones : []; if (!o.phones.includes(ph)) o.phones.push(ph); }
     return { index, added };
   }
 
@@ -367,7 +380,9 @@
    * of boxes on the PDF is a small table, labels on top and the entries under them, in the same
    * order and sections, so the editable report reads like the form.
    */
-  function toMarkdown(data, title = 'Supplementary Report') {
+  /** The report's title (v1.39): the Officer Report Type picked goes after it ("Supplementary Report - Purchase"). */
+  const titleFor = (d) => (d && d.activity ? `Supplementary Report - ${d.activity}` : 'Supplementary Report');
+  function toMarkdown(data, title = titleFor(data)) {
     const d = normalize(data);
     const esc = (s) => String(s == null ? '' : s).replace(/\|/g, '\\|').replace(/\s*\n\s*/g, '; ').trim();
     const label = (k) => (FIELDS.find(([key]) => key === k) || [k, k])[1];
@@ -422,6 +437,7 @@
         lines.push([l, shown(k, d[k])]);
       }
       table(["Officer's Report", 'Entry'], lines);
+      list('funds');
       list('narcotics');
       for (const key of report.lists) list(key);
     }
@@ -445,7 +461,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, exhibitLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { MULTI, SOCIAL_APPS, STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, exhibitLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);
