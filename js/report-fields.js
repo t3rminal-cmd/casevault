@@ -37,8 +37,6 @@
       ['address', 'Address of Occurrence', 'text'],
       ['locationType', 'Type of Location', 'text'],
       ['locationCode', 'Location Code', 'location'],
-      ['reclass', 'Offense Reclassification / DNA', 'text'],
-      ['revisedUcr', 'Revised IUCR', 'ucr'],
       ['date', 'Date of Occurrence', 'date'],
       ['time', 'Time of Occurrence', 'time'],
       ['beatOccurrence', 'Beat of Occurrence', 'text'],
@@ -74,20 +72,23 @@
       ['cleared', 'How Cleared', 'select', ['', '1 - Arrest', '2 - Juv-Ct', '3 - Ref Pros', '4 - Comm Adj', '5 - Other']],
     ] },
     { id: 'report', title: "Officer's Report", icon: 'card-checklist', fields: [
+      // v1.31: in this order; AUSA, IR and CB numbers added.
       ['operation', 'Operation / Mission Number', 'line'],
-      ['within1000', 'Within 1000 Feet Of', 'line'],
+      ['within1000', 'Within 1000 FT Of', 'line'],
       ['courtBranch', 'Court Branch and Court Officer', 'line'],
       ['courtDate', 'Court Date', 'date'],
       ['searchWarrant', 'Search Warrant Number', 'line'],
       ['subpoenaGJ', 'Subpoena GJ Number', 'line'],
       ['asa', 'ASA Approving Search Warrant', 'line'],
+      ['ausa', 'AUSA Approving Search Warrant', 'line'],
       ['judge', 'Judge Approving Search Warrant', 'line'],
-      // v1.25: one line per narcotic (type, total weight, purchase price, street value) in place of
-      // the single Total Weight / Street Value / Purchase Price lines.
-      ['narcotics', 'Narcotics Recovered', 'list'],
-      ['fundSheet', 'Pre-Recorded Fund Sheet Inventory Number', 'line'],
+      ['fundSheet', 'Pre-Recorded Fund Sheet', 'line'],
       ['evidenceOfficer', 'Evidence Officer', 'line'],
       ['proofResidence', 'Proof of Residence', 'line'],
+      ['irNumber', 'IR Number', 'line'],
+      ['cbNumber', 'CB Number', 'line'],
+      // One line per narcotic (type, total weight, purchase price, street value), v1.25.
+      ['narcotics', 'Narcotics Recovered', 'list'],
     ], lists: ['charges', 'gangs', 'notArrested', 'personnel', 'vehicles', 'notifications'] },
     // One row per officer: name, star, date, time (v1.23; the Lieutenant lines were removed).
     { id: 'approval', title: 'Submission and Approval', icon: 'pencil-square', fields: [
@@ -124,9 +125,9 @@
     ['marks', 'Tattoos / Scars', 'wide'], ['clothing', 'Clothing Description', 'wide'],
   ];
   // The officers' roles at the scene (Police Personnel).
-  const ROLES = ['', 'Case', 'Affiant', 'Entry', 'Perimeter', 'UC', 'Surveillance', 'Enforcement', 'Sergeant', 'Lieutenant', 'Agent', 'Other'];
+  const ROLES = ['', 'Case', 'Affiant', 'Entry', 'Perimeter', 'UCO', 'Surveillance', 'Enforcement', 'Sergeant', 'Lieutenant', 'Agent', 'Other'];
   // Officer's Report lines that can be ticked off when they don't apply (v1.22).
-  const OPTIONAL_LINES = ['within1000', 'searchWarrant', 'subpoenaGJ', 'asa', 'judge', 'proofResidence'];
+  const OPTIONAL_LINES = ['within1000', 'searchWarrant', 'subpoenaGJ', 'asa', 'ausa', 'judge', 'proofResidence', 'irNumber', 'cbNumber'];
   // Units the narcotic calculator prices by (js/reference).
   const NARCOTIC_UNITS = ['', 'gram', 'ounce', 'pound', 'kilogram', 'pill', 'mL'];
   const LISTS = {
@@ -172,6 +173,7 @@
     if (typeof src.notifications === 'string') d.notifications = String(src.notifications).trim() ? [{ notes: String(src.notifications).trim() }] : [];
     for (const k of Object.keys(LISTS)) d[k] = (Array.isArray(d[k]) ? d[k] : []).map((it) => ({ ...blankItem(k), ...(it && typeof it === 'object' ? it : {}) }));
     // v1.21's "Unit / Role" text goes to Unit when it isn't one of the roles.
+    for (const p of d.personnel) if (p.role === 'UC') p.role = 'UCO'; // renamed in v1.31
     for (const p of d.personnel) if (p.role && !ROLES.includes(p.role)) { p.unit = p.unit || p.role; p.role = ''; }
     const old = (k) => String(src[k] || '').trim();
     if ((src.schema || 1) < 3) {
@@ -345,27 +347,82 @@
   }
 
   /** A report (Markdown) made from the fields: a table per section, the evidence, the summary. */
+  /**
+   * The report as Markdown for the editor (Create Report), laid out like the PDF (v1.31): each row
+   * of boxes on the PDF is a small table, labels on top and the entries under them, in the same
+   * order and sections, so the editable report reads like the form.
+   */
   function toMarkdown(data, title = 'Supplementary Report') {
     const d = normalize(data);
-    const esc = (s) => String(s).replace(/\|/g, '\\|').replace(/\s*\n\s*/g, '; ');
+    const esc = (s) => String(s == null ? '' : s).replace(/\|/g, '\\|').replace(/\s*\n\s*/g, '; ').trim();
+    const label = (k) => (FIELDS.find(([key]) => key === k) || [k, k])[1];
     const out = [`# ${title}`, ''];
-    for (const s of SECTIONS) {
-      if (isHidden(d, s.id)) continue;
-      const rows = [];
-      for (const [k, label, kind] of s.fields) {
-        if (kind === 'list') { d[k].filter(filled).forEach((it, i) => rows.push([`${LISTS[k].item} ${i + 1}`, itemLine(k, it)])); continue; }
-        const v = isHidden(d, k) ? '' : shown(k, d[k]);
-        if (v) rows.push([label, v]);
+    // A row of boxes: | Label | Label |, then the entries.
+    const row = (cells) => {
+      const cs = cells.map((c) => (typeof c === 'string' ? [label(c), shown(c, d[c])] : c));
+      out.push(`| ${cs.map(([l]) => esc(l)).join(' | ')} |`, `|${cs.map(() => '---').join('|')}|`, `| ${cs.map(([, v]) => esc(v) || ' ').join(' | ')} |`, '');
+    };
+    const table = (heads, rows) => { if (!rows.length) return; out.push(`| ${heads.map(esc).join(' | ')} |`, `|${heads.map(() => '---').join('|')}|`, ...rows.map((r) => `| ${r.map((v) => esc(v) || ' ').join(' | ')} |`), ''); };
+    const band = (t) => out.push(`## ${t}`, '');
+    const on = (id) => !isHidden(d, id);
+    // A list: one table, a column per field.
+    const list = (key) => {
+      const L = LISTS[key];
+      const items = d[key].filter(filled);
+      if (!items.length) return;
+      out.push(`**${L.title}**`, '');
+      table(['#', ...L.fields.filter(([k]) => !(key === 'narcotics' && k === 'unit')).map(([, l]) => l)],
+        items.map((it, i) => [String(i + 1), ...L.fields.filter(([k]) => !(key === 'narcotics' && k === 'unit')).map(([k, , kind]) => valueText(key, it, k, kind))]));
+    };
+
+    if (on('numbers')) { row(['caseNumber', 'eventNumber', 'incidentNumber', 'raidNumber', 'rdNumber']); row(['activity']); }
+    if (on('offense')) {
+      band('Offense');
+      row(['offense', 'ucr']); row(['address', 'locationType', 'locationCode']); row(['date', 'time', 'beatOccurrence', 'beatAssigned']);
+    }
+    if (on('people')) {
+      band('Victims and Offenders');
+      row(['victims', 'offenders', 'arrested', 'methodCode']);
+      list('victimsList'); list('offendersList');
+    }
+    if (on('assignment')) {
+      band('Assignment');
+      row(['method', 'unit', 'safeMethod', 'residence']); row(['arrestUnit', 'adults', 'juveniles', 'fire', 'gang']);
+    }
+    if (on('update')) {
+      band('Update Information');
+      const tick = (k) => [label(k), d[k] ? '[X]' : '[ ]'];
+      row(['victimVerified', 'offenderVerified', 'propertyVerified', 'circumstancesVerified'].map(tick));
+      row(['victimUpdated', 'offenderUpdated', 'propertyUpdated', 'circumstancesUpdated'].map(tick));
+      row(['status', 'cleared']);
+    }
+    if (on('report')) {
+      band(`Officer's Report${d.activity ? ` - ${d.activity}` : ''}`);
+      const report = SECTIONS.find((s) => s.id === 'report');
+      const lines = [];
+      for (const [k, l, kind] of report.fields) {
+        if (kind === 'list' || k === 'courtDate' || isHidden(d, k)) continue;
+        lines.push([l, k === 'courtBranch' ? [shown('courtBranch', d.courtBranch), shown('courtDate', d.courtDate)].filter(Boolean).join(', ') : shown(k, d[k])]);
       }
-      for (const k of s.lists || []) d[k].filter(filled).forEach((it, i) => rows.push([`${LISTS[k].item} ${i + 1}`, itemLine(k, it)]));
-      if (!rows.length) continue;
-      out.push(`## ${s.title}`, '', '| Field | Entry |', '|---|---|', ...rows.map(([l, v]) => `| ${l} | ${esc(v)} |`), '');
+      table(["Officer's Report", 'Entry'], lines);
+      list('narcotics');
+      for (const key of report.lists) list(key);
     }
-    if (d.evidence.length && !isHidden(d, 'evidence')) {
-      out.push('## Evidence Inventoried', '', '| Exhibit | Inventory Number | Type | Narcotic Type | Weight | Description |', '|---|---|---|---|---|---|',
-        ...d.evidence.map((e) => `| ${e.number} | ${esc(e.inventory)} | ${esc(e.type)} | ${esc(e.type === 'Narcotics' ? e.drug : '')} | ${esc(e.type === 'Narcotics' ? e.weight : '')} | ${esc(e.description)} |`), '');
+    if (on('evidence') && d.evidence.length) {
+      band('Evidence Inventoried');
+      table(['Exhibit', 'Inventory No.', 'Type', 'Narcotic Type', 'Weight', 'Description'],
+        d.evidence.map((e) => [String(e.number), e.inventory, e.type, e.type === 'Narcotics' ? e.drug : '', e.type === 'Narcotics' ? e.weight : '', e.description]));
     }
-    if (!isHidden(d, 'summary')) out.push('## Summary of Investigation', '', String(d.narrative || '').trim() || '[CONFIRM: summary of investigation]', '');
+    if (on('summary')) { band('Summary of Investigation'); out.push(String(d.narrative || '').trim() || '[CONFIRM: summary of investigation]', ''); }
+    if (on('approval')) {
+      band('Submission and Approval');
+      table(['Officer', 'Name', 'Star', 'Date', 'Time', 'Signature'], [
+        ['Reporting Officer', d.reportingOfficer, d.reportingStar, shown('dateSubmitted', d.dateSubmitted), d.timeSubmitted, ''],
+        ['Secondary Reporting Officer', d.secondOfficer, d.secondStar, shown('secondDate', d.secondDate), d.secondTime, ''],
+        ['Supervisor Approval', d.supervisor, d.supervisorStar, shown('dateApproved', d.dateApproved), d.timeApproved, ''],
+      ]);
+      if (d.extraCopies) row(['extraCopies']);
+    }
     return out.join('\n');
   }
 

@@ -68,8 +68,12 @@
       } catch { /* reported by Save */ }
     }
 
-    const create = h('button', { class: 'btn primary', type: 'button' }, 'Create report');
-    create.addEventListener('click', async () => {
+    // New ▾ (v1.31): Notes opens the Field Notes; Report asks for a title, type and how to start.
+    let closeNew = null;
+    const create = h('button', { class: 'btn primary', type: 'submit' }, 'Create Report');
+    create.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (closeNew) closeNew();
       const name = title.value.trim() || `${CVDraft.DOC_TYPES[type.value].label} ${CVFormat.dateText(Vault.localDay())}`;
       const start = startSel.value;
       let body = `# ${name}\n\n`;
@@ -98,18 +102,10 @@
         if (!(await confirmDialog({ title: 'Delete the Field Notes?', message: `All ${words} words of this case's notes are permanently deleted from the SSD.`, confirmText: 'Delete', danger: true }))) return;
         try { await Save.track(`notes:${c.id}`, () => Vault.saveNotes(c.id, '')); ui.refresh(); } catch { /* reported */ }
       } }, 'Delete') : null));
-    // Report Fields: the incident facts for this case's reports (js/report-fields-ui.js).
-    let reportType = '';
-    try { reportType = root.CVReportFieldsUI ? (await CVReportFieldsUI.load(c)).activity || '' : ''; } catch (err) { if (FS.isDisconnectError(err)) throw err; }
-    if (token !== state.renderToken) return;
-    const fieldsRow = h('tr', { class: 'notes-row' },
-      h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/.fields` }, 'Report Fields')),
-      h('td', { class: 'muted' }, 'Fields'),
-      h('td', { class: 'muted' }, `Report Type: ${reportType || 'Investigation, Purchase, Surveillance, Correction'}`),
-      h('td', {}));
+    // (Report Fields moved to the Draft tab in v1.31.)
     const list = h('table', { class: 'files drafts-table' },
       h('thead', {}, h('tr', {}, h('th', {}, 'Report'), h('th', {}, 'Type'), h('th', {}, 'Updated'), h('th', {}, ''))),
-      h('tbody', {}, notesRow, fieldsRow, drafts.map((d) => h('tr', {},
+      h('tbody', {}, notesRow, drafts.map((d) => h('tr', {},
         h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports/${encodeURIComponent(d.slug)}` }, d.title), d.ai ? h('span', { class: 'layer-badge ai-badge' }, 'AI') : null),
         h('td', { class: 'muted' }, (CVDraft.DOC_TYPES[d.type] || CVDraft.DOC_TYPES.other).label),
         h('td', { class: 'muted' }, d.updated ? fmtDateTime(Date.parse(d.updated)) : ''),
@@ -119,14 +115,26 @@
         } }, 'Delete'))))));
 
     const archived = Vault.isArchived(c.id);
+    const newReport = () => ui.openDialog((close) => {
+      closeNew = close;
+      return h('form', { class: 'form-grid new-report-form', onsubmit: (e) => e.preventDefault() },
+        h('h2', { class: 'span-2' }, 'New Report'),
+        ui.field('Title', title), ui.field('Type', type),
+        h('div', { class: 'field span-2' }, h('span', {}, 'Start from'), startBox),
+        h('div', { class: 'dialog-actions span-2' }, h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Cancel'), create));
+    }).then(() => { closeNew = null; });
+    const newSel = h('select', { class: 'new-select', 'aria-label': 'New' },
+      h('option', { value: '' }, 'New…'), h('option', { value: 'notes' }, 'Notes'), h('option', { value: 'report' }, 'Report'));
+    newSel.addEventListener('change', () => {
+      const v = newSel.value;
+      newSel.value = '';
+      if (v === 'notes') go(c.id, 'reports', '.notes');
+      if (v === 'report') newReport();
+    });
     panel.replaceChildren(
-      // An archived case is read-only: its drafts can be read and exported, not added to.
-      ...(archived ? [] : [h('div', { class: 'card' },
-        h('h2', {}, 'New report'),
-        h('div', { class: 'form-grid' }, ui.field('Title', title), ui.field('Type', type)),
-        h('div', { class: 'field' }, h('span', {}, 'Start from'), startBox),
-        h('div', { class: 'form-actions' }, create))]),
-      h('h2', { class: 'section-title' }, 'Reports'),
+      h('div', { class: 'reports-head' }, h('h2', { class: 'section-title' }, 'Reports'), h('div', { class: 'spacer' }),
+        // An archived case is read-only: its reports can be read and exported, not added to.
+        archived ? null : newSel),
       list,
       h('p', { class: 'muted small explain' }, `Your field notes and every report, draft or AI draft for this case. Saved on the SSD in ${CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}`)}: notes.md and the drafts folder, as Markdown files. Templates live in CaseVault-Data | templates (Vault → Templates).`));
   }
@@ -332,7 +340,9 @@
     drawPlaceholders();
 
     // ---- toolbar
-    const genBtn = h('button', { class: 'btn small', type: 'button', onclick: () => openGenerate() }, 'Draft with AI…');
+    const genBtn = h('button', { class: 'btn small', type: 'button', onclick: () => openGenerate() }, 'Draft with AI');
+    // PDF View (v1.31): the report as a PDF, in the Supplementary Report's style; save it from there.
+    const pdfViewBtn = h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button', title: 'Shows this report as a PDF. Print it, download it, or save it to the case files.', onclick: () => pdfView() }, 'PDF View');
     const rephraseBtn = h('button', { class: 'btn small', type: 'button', icon: 'magic', title: 'Select a sentence or paragraph, then click: the AI on this computer rewrites it the way DEA reports are written. You see both before anything changes.', onclick: () => rephrase() }, 'Re-phrase');
     const reviewBtn = h('button', { class: 'btn small', type: 'button', icon: 'clipboard2-check', title: 'Checks that the totals add up (money and weights), then has the AI on this computer look for names, dates, amounts and facts that don\'t agree.', onclick: () => review() }, 'Review');
     const checkBtn = h('button', { class: 'btn small', type: 'button', hidden: meta.type !== 'affidavit', onclick: async () => {
@@ -373,7 +383,7 @@
         fmtBar,
         suggestLabel,
         h('div', { class: 'spacer' }),
-        genBtn, rephraseBtn, reviewBtn, checkBtn, exportMenu, saveBtn, delBtn),
+        genBtn, pdfViewBtn, rephraseBtn, reviewBtn, checkBtn, exportMenu, saveBtn, delBtn),
       genStatus,
       h('div', { class: 'draft-grid' },
         h('div', { class: 'draft-main' }, wrap),
@@ -546,7 +556,7 @@
         if (!aiReady()) { aiBox.replaceChildren('The local AI engine is not connected, so only the totals were checked.'); return; }
         const choice = Engine().choice(); const det = Engine().detected;
         const caseObj = await Vault.getCase(c.id);
-        const facts = [`Title: ${caseObj.title || ''}`, `Case number: ${caseObj.number || ''}`, caseObj.agencyNumber ? `Agency case number: ${caseObj.agencyNumber}` : '', ...CVCopilot.contactLines(caseObj.contacts)].filter(Boolean).join('\n');
+        const facts = [`Title: ${caseObj.title || ''}`, `Case number: ${caseObj.number || ''}`, caseObj.agencyNumber ? `Federal jacket number: ${caseObj.agencyNumber}` : '', ...CVCopilot.contactLines(caseObj.contacts)].filter(Boolean).join('\n');
         let result = '';
         aiBox.replaceChildren(h('span', { class: 'spinner', 'aria-hidden': 'true' }), ' Reading the report…');
         await CVActivity.exclusive('draft', () => CVCopilot.streamChat({
@@ -557,6 +567,29 @@
       })().catch((err) => { if (!ctrl.signal.aborted) aiBox.textContent = `Could not finish the review: ${err.message}`; });
       await dlg;
       ctrl.abort();
+    }
+
+    async function pdfView() {
+      save(0);
+      await ui.Save.flushAll();
+      const p = Vault.data.settings.affiant || {};
+      const name = `${(meta.title || 'Report').replace(/[\\/:*?"<>|]/g, '')}.pdf`;
+      const opts = { agency: p.agency || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' \u00b7 '), printed: CVFormat.dateText(Vault.localDay()), title: meta.title || '' };
+      const bytes = CVDraftPdf.build(ta.value, opts);
+      const viewer = CVPdfViewer.create(bytes, { h, icon: ui.icon, title: meta.title || 'Report', fileName: name });
+      const folder = /supplement/i.test(`${meta.type} ${meta.title}`) ? 'Supplementary Report' : /arrest/i.test(`${meta.type} ${meta.title}`) ? 'Arrest Report' : 'Case Report';
+      const saveCase = Vault.isArchived(c.id) ? null : h('button', { class: 'btn', type: 'button', title: `Saves the PDF in this case's ${folder} folder.`, onclick: async () => {
+        try {
+          const path = await ui.Save.track(`draft-pdf:${c.id}`, () => Vault.addFile(c.id, new File([bytes], name, { type: 'application/pdf' }), { folder, description: name.replace(/\.pdf$/, '') }));
+          toast(`Saved to the case files: ${path.split('/').pop()}`, 'success', 5000);
+          saveCase.disabled = true;
+        } catch { /* reported by Save */ }
+      } }, 'Save PDF to Case');
+      await ui.openDialog((close) => h('div', { class: 'pdf-view' },
+        h('h2', {}, meta.title || 'Report'),
+        viewer,
+        h('div', { class: 'dialog-actions' }, saveCase, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
+      viewer.destroy();
     }
 
     async function openGenerate() {

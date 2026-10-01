@@ -205,7 +205,6 @@
       band('Offense');
       boxes([cell('offense', 3.3), cell('ucr', 1.4)]);
       boxes([cell('address', 2.4), cell('locationType', 1.5), cell('locationCode', 1.1)]);
-      boxes([cell('reclass', 3.3), cell('revisedUcr', 1.4)]);
       boxes([cell('date'), cell('time'), cell('beatOccurrence'), cell('beatAssigned')]);
       y -= 6;
     }

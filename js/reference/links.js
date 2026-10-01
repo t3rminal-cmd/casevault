@@ -22,6 +22,7 @@
     { id: 'ref-ucr', tab: 'reference', name: 'Common UCR', hash: '#/reference/ucr', icon: 'journal-text', note: 'UCR codes by category. Search by code or offense.' },
     { id: 'ref-charges', tab: 'reference', name: 'Charges', hash: '#/reference/charges', icon: 'bank2', note: 'Federal or State (Illinois) statutes.', choices: [['Federal Statute', '#/reference/charges-federal'], ['State Statute', '#/reference/charges-state']] },
     { id: 'ref-narcotics', tab: 'reference', name: 'Narcotic Calculator', hash: '#/reference/narcotics', icon: 'calculator-fill', note: 'Street value calculator and value chart, HIDTA 2022.' },
+    { id: 'ref-find-beat', tab: 'reference', name: 'Find my Beat', url: 'https://operations.chicagopolice.org/FindMyDistrict', icon: 'geo', note: 'Chicago Police: the district and beat for an address.' },
     { id: 'osint-maxmind', tab: 'osint', name: 'MaxMind IP', url: 'https://www.maxmind.com/en/geoip-demo', icon: 'globe2', note: 'Where an IP address is: city, ISP and organisation.' },
     { id: 'osint-fingerprint', tab: 'osint', name: 'Fingerprint', url: 'https://fingerprint.com/demo/', icon: 'fingerprint', note: 'Browser and device fingerprint demo.' },
     { id: 'osint-numlookup', tab: 'osint', name: 'NumLookup', url: 'https://www.numlookup.com/', icon: 'telephone', note: 'Free reverse phone lookup: who a number belongs to.' },

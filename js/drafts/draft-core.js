@@ -270,7 +270,7 @@ ${GENERIC_NOTE}
 
 **Case:** {{case.title}}
 **Original Case Number:** {{case.number}}
-**Agency Case Number:** {{case.agencyNumber}}
+**Federal Jacket Number:** {{case.agencyNumber}}
 **Date of Occurrence:** {{report.date}} {{report.time}}
 **Location:** {{report.address}}
 **Offense:** {{report.offense}} ({{report.ucr}})

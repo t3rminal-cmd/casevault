@@ -15,7 +15,13 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.30)
+## Features (v1.31)
+
+- **Draft** tab (between Timeline and Reports): the Supplementary Report form, with Print / PDF, Save PDF to Case and **Create Report**, which makes an editable report laid out like the PDF; **PDF View** in the report editor shows any report as a PDF in the same style and saves it to the case
+- **Reports**: Field Notes and the reports, with **New…** (Notes or Report) in place of the New report box
+- Officer's Report lines in the new order with AUSA, IR and CB numbers; UCO; no reclassification row; Federal Jacket Number; Find my Beat quick link; one font (the editor's) everywhere; the updater shows the CaseVault logo
+
+## Earlier (v1.30)
 
 - **Arrest Report:** the Arrest details tab is laid out like an arrest report (Report Numbers, Offender with photo, Incident, Charges, Recovered Narcotics, Warrant, Victim and Complainant, Arrestee Vehicle, Properties, Incident Narrative, Court and Bond, Reporting Personnel), one per arrestee
 - **Print / PDF**, **Save PDF to Case** (Arrest Report folder) and **Email for E-Sign**, in the same style as the Supplementary Report PDF, with signature fields; arrest details from older versions open in the new layout

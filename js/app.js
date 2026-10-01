@@ -781,7 +781,7 @@
               h('a', { class: 'op-word', href: to('files') }, 'Files')));
         }))) : null;
       box.replaceChildren(...[h('h2', { class: 'section-title' }, 'Operations'),
-        list.length ? tiles : h('p', { class: 'muted' }, 'Create a case with New Case: its operation appears here as a folder.'), inside].filter(Boolean));
+        list.length ? tiles : h('p', { class: 'muted' }, 'Create a case with New Case: Its operation appears here as a folder.'), inside].filter(Boolean));
     };
     draw();
     return box;
@@ -882,7 +882,7 @@
       field('File number', fileIn),
       field('Original Case Number', numberIn, '', 'The first report number of the case. An operation with several case numbers keeps its first one here.'),
       fileList,
-      field('Agency Case Number', agencyIn),
+      field('Federal Jacket Number', agencyIn),
       field('Client', clientIn),
       field('Status', h('select', { name: 'status' }, Vault.STATUSES.map((s) => h('option', {}, s)))),
       field('Opened', openedIn),
@@ -913,7 +913,7 @@
    * ===================================================================== */
 
   // Reports (v1.17) holds the case notes and every draft in one list.
-  const TABS = [['details', 'Details'], ['timeline', 'Timeline'], ['reports', 'Reports'], ['files', 'Files'], ['mail', 'Mail'], ['checks', 'Checks']];
+  const TABS = [['details', 'Details'], ['timeline', 'Timeline'], ['draft', 'Draft'], ['reports', 'Reports'], ['files', 'Files'], ['mail', 'Mail'], ['checks', 'Checks']];
   // The Arrest details tab appears once a case has arrest details, or is closed "by arrest".
   const FOLDER_ICONS = {
     '': 'collection', unsorted: 'folder', photos: 'image', 'Case Overview': 'journal-richtext', 'Case Initiation': 'flag', 'Affidavit Drafts': 'pencil-square', 'Affidavit Final': 'file-earmark-ruled', Affidavits: 'file-earmark-ruled',
@@ -967,6 +967,8 @@
     const c = state.caseObj;
     // Old addresses: #/case/<id>/notes and #/case/<id>/drafts[/<draft>] now live under Reports.
     if (tab === 'notes') { tab = 'reports'; sub = NOTES_SUB; } else if (tab === 'drafts') tab = 'reports';
+    // v1.31: Report Fields is the Draft tab.
+    if (tab === 'reports' && sub === '.fields') { tab = 'draft'; sub = null; }
     const tabs = tabsFor(c);
     if (!tabs.some(([t]) => t === tab)) tab = 'details';
     state.caseId = id;
@@ -993,7 +995,7 @@
     // the tab redraws. (vault.js refuses the writes too.)
     if (archived) new MutationObserver(() => applyReadOnly(panel)).observe(panel, { childList: true, subtree: true });
 
-    const renderers = { details: renderDetails, arrest: (...a) => CVClosingUI.renderArrest(...a), reports: (panel, cc, tk, s) => (s === NOTES_SUB ? renderNotes(panel, cc, tk) : s === '.fields' ? CVReportFieldsUI.render(panel, cc, tk) : CVDraftsUI.render(panel, cc, tk, s)), timeline: renderTimeline, files: renderFiles, mail: (...a) => CVMailUI.render(...a), checks: (...a) => CVChecks.render(...a) };
+    const renderers = { details: renderDetails, arrest: (...a) => CVClosingUI.renderArrest(...a), draft: (panel, cc, tk) => CVReportFieldsUI.render(panel, cc, tk), reports: (panel, cc, tk, s) => (s === NOTES_SUB ? renderNotes(panel, cc, tk) : CVDraftsUI.render(panel, cc, tk, s)), timeline: renderTimeline, files: renderFiles, mail: (...a) => CVMailUI.render(...a), checks: (...a) => CVChecks.render(...a) };
     try {
       await renderers[tab](panel, c, token, sub);
     } catch (err) {
@@ -1107,7 +1109,7 @@
       h('form', { class: 'form-grid details-grid', onsubmit: (e) => e.preventDefault() },
         field('File number', bind(h('input', { value: c.fileNumber || '', maxlength: 100, title: 'The investigation file. Several cases can share one file number.' }), (v) => { c.fileNumber = v; })),
         field('Original Case Number', bind(h('input', { value: c.number, maxlength: 100 }), (v) => { c.number = v; })),
-        field('Agency Case Number', bind(h('input', { value: c.agencyNumber || '', maxlength: 100, title: 'Your agency\'s own internal number for this case.' }), (v) => { c.agencyNumber = v; })),
+        field('Federal Jacket Number', bind(h('input', { value: c.agencyNumber || '', maxlength: 100, title: 'The federal jacket number for this case.' }), (v) => { c.agencyNumber = v; })),
         field('Client', (() => { const sel = clientSelect(c.client); sel.addEventListener('change', () => { c.client = sel.value; save(); }); return sel; })()),
         field('Tags', bind(h('input', { value: c.tags.join(', '), maxlength: 300 }), (v) => { c.tags = parseTags(v); }), 'span-2', 'Separate tags with commas.'),
         h('p', { class: 'muted span-2 small' },
@@ -1225,7 +1227,7 @@
         return h(tag, { class: `case-tile${cur ? ' current' : ''} status-${String(x.status).toLowerCase()}`, role: 'listitem', href: cur ? null : `#/case/${encodeURIComponent(x.id)}`, title: `${x.number || 'No case number'} · ${x.status}${cur ? ' (this one)' : ''}` },
           I(cur ? 'folder2-open' : 'folder-fill'), h('span', { class: 'case-tile-num' }, x.number || 'No number'), h('span', { class: 'case-tile-status' }, x.status));
       }),
-      archived ? null : h('button', { class: 'case-tile add', type: 'button', title: 'Add a case number to this operation: a new case with the same operation name, file number, agency case number and client', onclick: () => { Save.flushAll(); newCase({ title: c.title }); } },
+      archived ? null : h('button', { class: 'case-tile add', type: 'button', title: 'Add a case number to this operation: a new case with the same operation name, file number, federal jacket number and client', onclick: () => { Save.flushAll(); newCase({ title: c.title }); } },
         I('plus-lg'), h('span', { class: 'case-tile-num' }, 'Add Case Number')));
   }
 

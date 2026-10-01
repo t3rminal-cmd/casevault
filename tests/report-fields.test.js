@@ -38,9 +38,10 @@ test('Report Fields: placeholders, AI text and a report made from them', () => {
   assert.match(t, /Offense Classification \/ Last Report: Delivery/);
   assert.doesNotMatch(t, /Beat Assigned/, 'empty fields are left out');
   const md = F.toMarkdown(d, 'Supplementary Report');
-  assert.match(md, /\| IUCR Code \| 2012 Delv: Cocaine \|/);
+  // v1.31: laid out like the PDF: a row of labels, the entries under them.
+  assert.match(md, /\| Offense Classification \/ Last Report \| IUCR Code \|\n\|---\|---\|\n\| Delivery of a controlled substance \| 2012 Delv: Cocaine \|/);
   assert.match(md, /\| 5 \| 14000001 \| Narcotics \| Cocaine \| 12\.4 g \| 3 bags of white powder \|/);
-  assert.match(md, /\| 6 \|  \| Currency \|  \|  \| \$300 \|/, 'narcotic type and weight only for narcotics');
+  assert.match(md, /\| 6 \|\s+\| Currency \|\s+\|\s+\| \$300 \|/, 'narcotic type and weight only for narcotics');
   assert.match(md, /## Summary of Investigation\n\nOn 03\.14\.2026/);
   assert.ok(F.PLACEHOLDERS.includes('report.narrative'));
 });
@@ -209,7 +210,7 @@ test('v1.25: narcotics recovered, one line each; older single lines move into th
   assert.strictEqual(ctx['report.totalWeight'], 'Cocaine (Powder) 28 grams; Adderall 1 pill');
   assert.match(F.asText(d), /Subpoena GJ Number: GJ-1\n[\s\S]*Narcotic: Cocaine \(Powder\), Total Weight: 28 grams/);
   const md = F.toMarkdown(d);
-  assert.match(md, /\| Narcotic 1 \| Cocaine \(Powder\), Total Weight: 28 grams/);
+  assert.match(md, /\| 1 \| Cocaine \(Powder\) \| 28 grams \|/);
   const s = Buffer.from(P.build(d, {})).toString('latin1');
   assert.match(s, /NARCOTICS RECOVERED/);
   assert.match(s, /NARCOTIC 1 - STREET VALUE/);
@@ -288,4 +289,23 @@ test('v1.27: State of Illinois victim, compact Local AI box', () => {
   assert.deepStrictEqual(M.compact({ deviceMemory: 8 }), ['Local AI', '8 GB or more RAM']);
   const AI = require('../js/checker/ai.js');
   assert.deepStrictEqual(['qwen3:8b', 'gemma3:12b', 'llama3.1:8b:latest', 'Qwen2.5', ''].map(AI.modelName), ['Qwen3:8b', 'Gemma3:12b', 'Llama3.1:8b', 'Qwen2.5', '']);
+});
+
+test('v1.31: Officer\'s Report lines, UCO, no reclassification, and a report drawn as a PDF like the form', () => {
+  const report = F.SECTIONS.find((s) => s.id === 'report').fields.map(([, l]) => l);
+  assert.deepStrictEqual(report.slice(0, 14), ['Operation / Mission Number', 'Within 1000 FT Of', 'Court Branch and Court Officer', 'Court Date', 'Search Warrant Number', 'Subpoena GJ Number',
+    'ASA Approving Search Warrant', 'AUSA Approving Search Warrant', 'Judge Approving Search Warrant', 'Pre-Recorded Fund Sheet', 'Evidence Officer', 'Proof of Residence', 'IR Number', 'CB Number']);
+  assert.ok(!F.FIELDS.some(([k]) => k === 'reclass' || k === 'revisedUcr'));
+  assert.ok(F.ROLES.includes('UCO') && !F.ROLES.includes('UC'));
+  assert.strictEqual(F.normalize({ personnel: [{ name: 'Officer Alex Sample', role: 'UC' }] }).personnel[0].role, 'UCO');
+  const DP = require('../js/draft-pdf.js');
+  const md = F.toMarkdown({ ...F.empty(), caseNumber: 'TEST-1', offense: 'Sample offense', narrative: 'Sample summary.' });
+  const b = DP.blocks(md);
+  assert.strictEqual(b[0].kind, 'title');
+  assert.ok(b.some((x) => x.kind === 'band' && x.text === 'Offense'));
+  assert.deepStrictEqual(b.find((x) => x.kind === 'table').rows[0].slice(0, 2), ['Agency Report Number', 'Event Number']);
+  const all = DP.layout(md, { agency: 'Example Agency' }).map((p) => p.ops.join('\n')).join('\n');
+  for (const s of ['SUPPLEMENTARY REPORT', 'OFFENSE', 'AGENCY REPORT NUMBER', 'TEST-1', 'Sample summary.', "OFFICER'S REPORT"]) assert.ok(all.includes(s), s);
+  const pdf = Buffer.from(DP.build('# A Report\n\nSome **text**.\n\n- one\n- two\n\n| A | B | C |\n|---|---|---|\n| 1 | 2 | 3 |\n| 4 | 5 | 6 |\n')).toString('latin1');
+  assert.ok(pdf.startsWith('%PDF-1.7') && pdf.includes('(A REPORT)') && pdf.includes('(Some text.)'));
 });
