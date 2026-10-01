@@ -15,7 +15,12 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.36)
+## Features (v1.37)
+
+- Details: each case-number folder opens that case's **Reports** tab; a slim **timeline** under them (a line with small dots for the operation's events and a Today mark; point at a dot for its date, title and note, click it for the Timeline tab); each suspect is a darker box, so the count shows at a glance
+- Sidebar: **Titles only** (next to the search box) folds every operation so only its title shows; each operation still folds on its own (click its title), even with one of its cases open
+
+## Earlier (v1.36)
 
 - Square corners everywhere (boxes, buttons, cards, tabs, menus, dialogs, tags) and traditional drop-downs with one arrow on the right, the same for every list
 - No clipped words: long names, dates, Race choices and placeholders show in full (they wrap instead of ending in "…")

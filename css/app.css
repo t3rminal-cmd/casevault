@@ -2491,7 +2491,7 @@ input[list]::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
 @media (max-width: 600px) { .rf-item-grid .field:has(select[aria-label$=" Race"]) { grid-column: auto; } }
 /* Square corners everywhere (v1.36): boxes, buttons, cards, tabs, menus, dialogs, tags and badges,
    for clean symmetric edges. Only true dots and rings (a spinner, status dots, timeline dots) stay round. */
-*:not(.spinner):not(.key-dot):not(.phase-num):not(.flow-dot):not(.case-dot):not(.hero-ring):not(.htl-dot),
+*:not(.spinner):not(.key-dot):not(.phase-num):not(.flow-dot):not(.case-dot):not(.hero-ring):not(.htl-dot):not(.mini-tl-dot),
 *::before, *::after { border-radius: 0 !important; }
 :root { --radius: 0; --radius-sm: 0; }
 /* No clipped words (v1.36): long operation names wrap in the sidebar, the Timeline's date box fits a
@@ -2511,3 +2511,29 @@ input[list]::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
 }
 .htl-title { display: block; }
 .partner-name { max-width: none; }
+
+/* v1.37 */
+/* Details: each suspect is a darker box, so how many there are shows at a glance. */
+.suspect-card { background: color-mix(in srgb, var(--text) 9%, var(--surface)); border-color: color-mix(in srgb, var(--text) 22%, var(--border)); }
+.suspect-card input, .suspect-card select, .suspect-card .date-field { background-color: var(--surface); }
+/* Details: the slim timeline under the case-number folders: a line, small dots, a Today mark. */
+.mini-tl { margin: .9rem 0 1.1rem; padding: .7rem 1rem 1.1rem; border: 1px solid var(--border); background: var(--surface); }
+.mini-tl-head { display: flex; align-items: baseline; gap: .7rem; margin-bottom: .9rem; }
+.mini-tl-title { font-weight: 700; }
+.mini-tl-line { position: relative; height: 1.2rem; margin: 0 .2rem; }
+.mini-tl-line::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; transform: translateY(-50%); background: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.mini-tl-dot { position: absolute; top: 50%; width: .7rem; height: .7rem; transform: translate(-50%, -50%); border-radius: 50% !important; background: var(--surface); border: 2px solid var(--accent); z-index: 1; transition: transform .12s; }
+.mini-tl-dot:hover, .mini-tl-dot:focus-visible { transform: translate(-50%, -50%) scale(1.5); z-index: 2; }
+.mini-tl-dot.deadline { border-color: var(--warn); border-radius: 0 !important; transform: translate(-50%, -50%) rotate(45deg); }
+.mini-tl-dot.deadline:hover, .mini-tl-dot.deadline:focus-visible { transform: translate(-50%, -50%) rotate(45deg) scale(1.5); }
+.mini-tl-dot.deadline.overdue { border-color: var(--danger); background: var(--danger); }
+.mini-tl-dot.done { opacity: .45; }
+.mini-tl-today { position: absolute; top: -.15rem; bottom: -.15rem; width: 2px; transform: translateX(-50%); background: var(--danger); }
+/* Sidebar (v1.37): a chevron on each operation shows it folds; Titles only folds them all. */
+.op-chev { display: inline-grid; place-items: center; flex: 0 0 auto; color: var(--muted); transition: transform .15s; }
+.op-chev svg { width: .8rem; height: .8rem; color: var(--muted) !important; }
+.op-group:not([open]) .op-chev { transform: rotate(-90deg); }
+.sidebar-tools { display: flex; align-items: center; gap: .4rem; }
+.sidebar-tools .search-wrap { flex: 1; min-width: 0; }
+#btn-titles-only[aria-pressed="true"] { color: var(--accent); }
+.op-group:not([open]) .op-meta { display: none; }
