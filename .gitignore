@@ -54,6 +54,8 @@ notes.md
 *.7[zZ]
 *.[rR][aA][rR]
 !icons/*.png
+# v1.51: the colour icons (scripts/check-no-case-data.sh allows exactly these)
+!icons/color/*.png
 # Third-party library license files bundled in v1.5
 !vendor/**/*.[tT][xX][tT]
 

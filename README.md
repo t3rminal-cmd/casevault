@@ -15,6 +15,12 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.51)
+
+- New colour icon set throughout the app (cut from CaseVault's own artwork, bundled in `icons/color`): folders (Operations blue, General Files yellow, Closed green, Archived dark), trash, calendar, phone, map, notebook, chat and more; a colour badge for each LEO partner agency (CaseVault's own drawings, not seals); one-colour versions stay on filled buttons and the Overview banner, which is unchanged
+- New app logo (the safe with the document) for the tab, the header and the installed app
+- Updater window: a blue fading banner like the Overview's, with a shield and padlock instead of the logo
+
 ## Features (v1.50)
 
 - Privacy screen: blue 1s and 0s on a muted near-black, and a thin **AUTHENTICATE** box in the lower right (asterisks for the digits)
