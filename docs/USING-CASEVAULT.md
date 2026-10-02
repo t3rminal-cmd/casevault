@@ -215,6 +215,10 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.52
+
+- **Link Chart** tab on every case (after Files): who is under whom, with photos, monikers and webpages, ready to print in portrait. See *Link Chart* under *Files*.
+
 ### What's new in v1.51
 
 - **New icons:** CaseVault has a new set of colour icons. Folders are coloured: Operations blue, General Files yellow, Closed green with a check, Archived dark. Trash, calendar, phone, map, notebook, chat, settings and more are in colour too. On blue (filled) buttons and on the Overview banner, the icons stay white. The banner itself is unchanged.
@@ -503,6 +507,24 @@ The files in the case are never changed. The fingerprints in the index are of th
 3. Copy everything inside the unzipped folder (vlc.exe, the plugins folder, COPYING.txt…) into `CaseVault-Data\discovery-kit\VLC` on the SSD. Create those folders if they aren't there.
 
 From then on the **Copy the VLC player along** box is ticked by itself, and every package gets a **VLC Player** folder with VLC's license in it.
+
+### Link Chart (v1.52)
+
+The **Link Chart** tab (after Files) draws who is under whom in the case, for a briefing or a prosecutor. Each case has its own chart, saved in the case folder on the SSD (`linkchart.json`). Its PDF goes into the case's **Files → Link Charts**, so you can attach it to mail or add it to Discovery like any other file.
+
+- **Add Subject** puts a person at the top. To put a card under someone, pick them in the list on the left. Then use **Add Person Under** (a supplier, courier, associate…) or **Add Moniker / Page** (an online name or a webpage they use). **Add Page** puts a webpage or dark-web name on its own at the top.
+- **Each card:**
+  - **Kind**: Person, Moniker or Webpage, Phone, Crypto Wallet, Location or Other.
+  - **Role** for a person: Subject, Supplier, Courier, Associate, Customer, Source or Other. Each role has its own colour on the card.
+  - **Platform** for an online name: Webpage, Dark Web, Google, Snapchat, Facebook / Instagram, Telegram or Other. Each has its own picture.
+  - **Name**, and an **Alias / Moniker**, **Handle or URL**, number or address.
+  - **Under**: move the card somewhere else in the chart.
+  - **Delete Card**: the cards under it move up one level.
+- **Photos:** a person's **Photo** is a picture from the case's files. **Add Photo** adds one to Subject Information and uses it. Every photo is shown as the same square (head shots are cropped to fit), and a person without one gets a plain outline.
+- **Other Connections** draws a dashed line, with a short label, between two cards that aren't one under the other: the same phone, money sent, met at…
+- **Layout:** the chart lays itself out top down. When someone has five or more people or pages under them, and none of those have anyone under them, they go in rows of four, so a big crew still fits a portrait page.
+- **PDF View** shows the chart on a letter-size portrait page with its title, the case number and subject, and the date printed; from there you can print or download it. **Save PDF to Case** saves it as `Link Charts\<case>-<title>.pdf`; saving again replaces it. No agency name, seal or badge goes on the page.
+- An archived case shows its chart read-only.
 
 ### Adding files
 

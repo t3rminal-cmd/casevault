@@ -12,7 +12,7 @@ const C = (number, opened = '2026-03-14') => ({ number, dates: { opened } });
 test('the document folders, in order, with Recordings/Video and /Audio; Affidavits, Warrants Signed and Subpoena Sent are legacy', () => {
   assert.deepStrictEqual(CF.FOLDERS, ['Case Overview', 'Case Initiation', 'Warrant Drafts', 'Warrant Final',
     'Arrest Report', 'Supplementary Report', 'Case Report', 'Deconfliction', 'Drug Exhibits', 'Other Exhibits', 'Email', 'Ops Plan',
-    'Subpoena Drafts', 'Subpoena Response', 'Subject Information', 'Recordings', 'Recordings/Video', 'Recordings/Audio',
+    'Subpoena Drafts', 'Subpoena Response', 'Subject Information', 'Link Charts', 'Recordings', 'Recordings/Video', 'Recordings/Audio',
     'Vehicle Information', 'Maps', 'Case Closing', 'Other']);
   for (const [old, into] of [['Affidavits', 'Warrant Final'], ['Affidavit Drafts', 'Warrant Drafts'], ['Affidavit Final', 'Warrant Final'], ['Warrants Signed', 'Warrant Final'], ['Subpoena Sent', 'Subpoena Response']]) {
     assert.ok(CF.isCategory(old) && !CF.FOLDERS.includes(old), `${old} is still read`);

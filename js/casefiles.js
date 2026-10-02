@@ -43,6 +43,7 @@
     { folder: 'Subpoena Sent', label: 'Subpoena', legacy: true, mergeInto: 'Subpoena Response' },
     { folder: 'Subpoena Response', label: 'Subpoena Response' },
     { folder: 'Subject Information', label: 'Subject Information' },
+    { folder: 'Link Charts', label: 'Link Chart' }, // v1.52
     { folder: 'Recordings', label: 'Recording' },
     { folder: 'Recordings/Video', label: 'Video Recording' },
     { folder: 'Recordings/Audio', label: 'Audio Recording' },

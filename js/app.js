@@ -1379,12 +1379,13 @@
    * ===================================================================== */
 
   // Reports (v1.17) holds the case notes and every draft in one list.
-  const TABS = [['details', 'Details'], ['timeline', 'Timeline'], ['draft', 'Draft'], ['reports', 'Reports'], ['files', 'Files'], ['mail', 'Mail'], ['checks', 'Checks']];
+  // v1.52: Link Chart, after Files.
+  const TABS = [['details', 'Details'], ['timeline', 'Timeline'], ['draft', 'Draft'], ['reports', 'Reports'], ['files', 'Files'], ['linkchart', 'Link Chart'], ['mail', 'Mail'], ['checks', 'Checks']];
   // The Arrest details tab appears once a case has arrest details, or is closed "by arrest".
   const FOLDER_ICONS = {
     '': 'collection', unsorted: 'folder', photos: 'image', 'Case Overview': 'journal-richtext', 'Case Initiation': 'flag', 'Affidavit Drafts': 'pencil-square', 'Affidavit Final': 'file-earmark-ruled', Affidavits: 'file-earmark-ruled',
     'Warrant Drafts': 'pencil-fill', 'Warrant Final': 'file-earmark-text', 'Warrants Signed': 'shield-fill-check', 'Arrest Report': 'person-badge', 'Supplementary Report': 'file-earmark-text',
-    'Case Report': 'journal-bookmark', Deconfliction: 'signpost-split', 'Drug Exhibits': 'capsule-pill', 'Other Exhibits': 'box-seam', Email: 'envelope',
+    'Case Report': 'journal-bookmark', 'Link Charts': 'diagram-3-fill', Deconfliction: 'signpost-split', 'Drug Exhibits': 'capsule-pill', 'Other Exhibits': 'box-seam', Email: 'envelope',
     'Ops Plan': 'map', 'Subpoena Drafts': 'pencil-square', 'Subpoena Sent': 'send', 'Subpoena Response': 'inbox', 'Subject Information': 'person-vcard',
     Recordings: 'mic', 'Recordings/Video': 'camera-video', 'Recordings/Audio': 'mic', 'Vehicle Information': 'car-front', Maps: 'geo-alt', 'Case Closing': 'check-circle-fill', Other: 'folder',
   };
@@ -1463,7 +1464,7 @@
     // the tab redraws. (vault.js refuses the writes too.)
     if (archived) new MutationObserver(() => applyReadOnly(panel)).observe(panel, { childList: true, subtree: true });
 
-    const renderers = { details: renderDetails, arrest: (...a) => CVClosingUI.renderArrest(...a), draft: (panel, cc, tk) => CVReportFieldsUI.render(panel, cc, tk), reports: (panel, cc, tk, s) => (s === NOTES_SUB ? renderNotes(panel, cc, tk) : CVDraftsUI.render(panel, cc, tk, s)), timeline: renderTimeline, files: renderFiles, mail: (...a) => CVMailUI.render(...a), checks: (...a) => CVChecks.render(...a) };
+    const renderers = { details: renderDetails, arrest: (...a) => CVClosingUI.renderArrest(...a), draft: (panel, cc, tk) => CVReportFieldsUI.render(panel, cc, tk), reports: (panel, cc, tk, s) => (s === NOTES_SUB ? renderNotes(panel, cc, tk) : CVDraftsUI.render(panel, cc, tk, s)), timeline: renderTimeline, files: renderFiles, linkchart: (panel, cc, tk) => CVLinkChartUI.render(panel, cc, tk), mail: (...a) => CVMailUI.render(...a), checks: (...a) => CVChecks.render(...a) };
     try {
       await renderers[tab](panel, c, token, sub);
     } catch (err) {
@@ -3202,6 +3203,7 @@
   CVOnlineUI.init(window.CaseVaultUI);
   CVMailUI.init(window.CaseVaultUI);
   CVDiscoveryUI.init(window.CaseVaultUI);
+  CVLinkChartUI.init(window.CaseVaultUI);
   CVSecureSettings.init(window.CaseVaultUI);
   CVMemory.mount($('#mem-status'), {
     isHelper: () => MODE === 'helper',
