@@ -1,9 +1,9 @@
 /* CaseVault — the vault on the SSD.
  *
  * CaseVault-Data/
- *   vault.json            app version, settings, case index
+ *   vault.json            app version, settings, case index, Operations (v1.46)
  *   cases/<case-id>/
- *     case.json           title, number, client, status, tags, dates
+ *     case.json           title, number, subject, client, status, dates, operationId (v1.46)
  *     notes.md            free-form notes
  *     timeline.json       dated events and deadlines
  *     files/<Category>/   attached documents, copied in, one folder per document type
@@ -24,8 +24,9 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.45.0';
+  const APP_VERSION = '1.46.0';
   const SCHEMA = 1;
+  const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
   const STATUSES = ['Open', 'Pending', 'Closed', 'Archived'];
   const DEFAULT_SETTINGS = { backupsToKeep: 30, aiProfile: 'auto', privacyPin: null, privacyIdleMinutes: 15, webllm: true, webllmModel: '', affiant: null, sidebarCollapsed: false, mail: null, online: null, piiWatchlist: [] };
@@ -81,6 +82,8 @@ const Vault = (() => {
       updated: nowISO(),
       settings: { ...DEFAULT_SETTINGS },
       cases: [],
+      operations: [],
+      operationsVersion: OPERATIONS_VERSION,
     });
     return dir;
   }
@@ -103,11 +106,14 @@ const Vault = (() => {
     // v1 stored 'rules-only' without asking; from v1.5 the user picks, and "Auto" is the default.
     if (!vault.settings.aiProfileChosen) vault.settings.aiProfile = 'auto';
     vault.cases = Array.isArray(vault.cases) ? vault.cases : [];
+    vault.operations = Array.isArray(vault.operations) ? vault.operations.filter((o) => o && o.id) : [];
     lastBackupDay = null;
     await FS.getDir(root, 'cases', true);
     await FS.getDir(root, 'backups', true);
     await dailyBackup();
     await rebuildIndex();
+    if ((vault.operationsVersion || 0) < OPERATIONS_VERSION) await migrateOperations();
+    else await reconcileOperations();
     return vault;
   }
 
@@ -191,6 +197,8 @@ const Vault = (() => {
       location,
       title: c.title || '',
       number: c.number || '',
+      subject: c.subject || '',
+      operationId: c.operationId || '',
       fileNumber: c.fileNumber || '',
       agencyNumber: c.agencyNumber || '',
       client: c.client || '',
@@ -312,6 +320,11 @@ const Vault = (() => {
   }
 
   async function createCase(fields) {
+    // v1.46: Case Numbers are unique across the vault (archived cases count).
+    const dup = CVOperation.caseWithNumber(vault.cases, fields.number);
+    if (dup) throw validationError(`Case Number ${String(fields.number).trim()} already exists${dup.location === 'archive' ? ' (archived)' : ''}. Case Numbers must be unique.`);
+    const op = fields.operationId ? getOperation(fields.operationId) : null;
+    if (fields.operationId && !op) throw validationError('That Operation no longer exists.');
     const draft = { number: fields.number || '', dates: { opened: fields.opened || localDay() } };
     const base = CVCaseFiles.caseFolderName(draft);
     const id = base ? await freeCaseId(base) : newId();
@@ -319,8 +332,11 @@ const Vault = (() => {
     const c = {
       schema: SCHEMA,
       id,
-      title: fields.title || 'Untitled case',
-      number: fields.number || '',
+      title: CVOperation.caseTitle({ subject: fields.subject, title: fields.title }, op),
+      number: String(fields.number || '').trim(),
+      subject: String(fields.subject || '').trim(),
+      operationId: op ? op.id : '',
+      operation: op ? { number: op.number, name: op.name } : null,
       fileNumber: fields.fileNumber || '',
       agencyNumber: fields.agencyNumber || '',
       client: fields.client || '',
@@ -347,6 +363,8 @@ const Vault = (() => {
     }
     c.id = id;
     c.tags = Array.isArray(c.tags) ? c.tags : [];
+    c.subject = c.subject || '';
+    c.operationId = c.operationId || '';
     c.dates = { opened: '', closed: '', created: '', updated: '', ...(c.dates || {}) };
     return c;
   }
@@ -569,6 +587,8 @@ const Vault = (() => {
       c.status = c.statusBeforeArchive && c.statusBeforeArchive !== 'Archived' ? c.statusBeforeArchive : (c.dates.closed ? 'Closed' : 'Open');
       delete c.statusBeforeArchive;
       delete c.dates.archived;
+      // v1.46: its Operation was deleted while it was archived: it comes back as an independent case.
+      if (c.operationId && !getOperation(c.operationId)) { c.operationId = ''; c.operation = null; c.title = CVOperation.caseTitle(c, null); }
       c.dates.updated = nowISO();
       await FS.writeJSON(dir, 'case.json', c);
       const tl = await FS.readJSON(dir, 'timeline.json').catch(() => null);
@@ -653,6 +673,187 @@ const Vault = (() => {
         console.warn('Could not finish an interrupted rename', e.name, err);
       }
     }
+  }
+
+  /* ---------- Operations (v1.46) ----------
+   * vault.json holds the Operations; each case.json says which one it belongs to (operationId) and
+   * keeps a copy of its number and name, so the link survives an older vault.json being restored.
+   * Linking, unlinking and deleting an Operation never move, copy or delete a case or a file. */
+
+  function validationError(message) {
+    const err = new Error(message);
+    err.name = 'ValidationError';
+    return err;
+  }
+  const listOperations = () => (vault ? vault.operations : []);
+  const getOperation = (id) => (id && vault ? vault.operations.find((o) => o.id === id) || null : null);
+  /** The Operation a case (id or index entry) belongs to, or null. */
+  const operationOf = (c) => getOperation((typeof c === 'string' ? vault.cases.find((x) => x.id === c) || {} : c || {}).operationId);
+  /** Index entries of an Operation's cases (archived ones too). */
+  const operationMembers = (opId) => (opId && vault ? vault.cases.filter((c) => c.operationId === opId) : []);
+  const caseNumberTaken = (number, exceptId = '') => !!CVOperation.caseWithNumber(vault.cases, number, exceptId);
+
+  function cleanOperation(fields, prev = {}) {
+    const t = (v) => String(v == null ? '' : v).trim();
+    return {
+      ...prev,
+      number: t(fields.number ?? prev.number),
+      name: t(fields.name ?? prev.name).replace(/\s+/g, ' '),
+      status: CVOperation.OP_STATUSES.includes(fields.status) ? fields.status : (prev.status || 'Open'),
+      start: t(fields.start ?? prev.start),
+      end: t(fields.end ?? prev.end),
+      notes: String(fields.notes ?? prev.notes ?? ''),
+    };
+  }
+
+  async function createOperation(fields) {
+    const op = cleanOperation(fields);
+    const errs = CVOperation.validateOperation(op, vault.operations);
+    if (errs.length) throw validationError(errs.join(' '));
+    const now = nowISO();
+    Object.assign(op, { id: newId('op-'), created: now, updated: now });
+    vault.operations.push(op);
+    await saveVault();
+    return op;
+  }
+
+  /** A case.json change that is about the Operation link only (also on archived cases: their link
+   * is kept up to date even though they are read-only otherwise). */
+  function writeLink(id, mutate) {
+    return serial(`case:${id}`, async () => {
+      const dir = await caseDir(id);
+      const c = await FS.readJSON(dir, 'case.json');
+      if (!c) return null;
+      c.id = id;
+      if (mutate(c) === false) return c;
+      c.dates = { ...(c.dates || {}), updated: nowISO() };
+      await FS.writeJSON(dir, 'case.json', c);
+      const prev = vault.cases.find((e) => e.id === id);
+      upsertIndex({ ...indexEntry(c, null, prev, locationOf(id)), nextDeadline: prev ? prev.nextDeadline : null });
+      return c;
+    });
+  }
+
+  async function updateOperation(id, fields) {
+    const prev = getOperation(id);
+    if (!prev) throw validationError('That Operation no longer exists.');
+    const op = cleanOperation(fields, prev);
+    const errs = CVOperation.validateOperation(op, vault.operations, id);
+    if (errs.length) throw validationError(errs.join(' '));
+    op.updated = nowISO();
+    const renamed = op.number !== prev.number || op.name !== prev.name;
+    Object.assign(prev, op);
+    if (renamed) {
+      // Rename once: every case of the Operation takes the new number and name.
+      for (const m of operationMembers(id)) {
+        await writeLink(m.id, (c) => { c.operation = { number: prev.number, name: prev.name }; c.title = CVOperation.caseTitle(c, prev); });
+      }
+    }
+    await saveVault();
+    return prev;
+  }
+
+  /** Link a case to an Operation. A case already in another Operation is refused: unlink it first. */
+  async function assignCase(caseId, opId) {
+    const op = getOperation(opId);
+    if (!op) throw validationError('That Operation no longer exists.');
+    const entry = vault.cases.find((c) => c.id === caseId);
+    if (!entry) throw validationError('That case no longer exists.');
+    if (entry.operationId === opId) throw validationError(`Case ${entry.number || entry.title} is already in this Operation.`);
+    const cur = getOperation(entry.operationId);
+    if (cur) throw validationError(`Case ${entry.number || entry.title} is already assigned to ${CVOperation.opLabel(cur)}. Unlink it there first.`);
+    assertWritable(caseId);
+    const c = await writeLink(caseId, (x) => { x.operationId = op.id; x.operation = { number: op.number, name: op.name }; x.title = CVOperation.caseTitle(x, op); });
+    await saveVault();
+    return c;
+  }
+
+  /** Take a case out of its Operation. The case and every file in it stay, in General Files. */
+  async function unlinkCase(caseId) {
+    assertWritable(caseId);
+    const c = await writeLink(caseId, (x) => {
+      if (!x.operationId) return false;
+      x.operationId = '';
+      x.operation = null;
+      x.title = CVOperation.caseTitle(x, null);
+      return true;
+    });
+    await saveVault();
+    return c;
+  }
+
+  /** Delete an Operation: its cases (archived ones too) become independent cases in General Files.
+   * Nothing else is removed. Returns how many cases were unlinked. */
+  async function deleteOperation(id) {
+    const op = getOperation(id);
+    if (!op) return 0;
+    const members = operationMembers(id);
+    for (const m of members) {
+      await writeLink(m.id, (x) => { x.operationId = ''; x.operation = null; x.title = CVOperation.caseTitle(x, null); });
+    }
+    vault.operations = vault.operations.filter((o) => o.id !== id);
+    const folded = (vault.settings.foldedOps || []).filter((k) => k !== id);
+    vault.settings.foldedOps = folded;
+    await saveVault();
+    return members.length;
+  }
+
+  /** Every case.json, active and archived: [{ id, location, c }]. */
+  async function readAllCases() {
+    const out = [];
+    for (const e of vault.cases) {
+      try { const c = await FS.readJSON(await caseDir(e.id), 'case.json'); if (c) { c.id = e.id; out.push({ id: e.id, location: e.location, c }); } } catch (err) {
+        if (FS.isDisconnectError(err)) throw err;
+      }
+    }
+    return out;
+  }
+
+  /** v1.46, once per vault: vault.json is backed up, then cases that share a Title become one
+   * Operation (named after it), and each case gets a Subject Name from its first suspect. */
+  async function migrateOperations() {
+    if (vault.cases.length) await backupNow();
+    const all = await readAllCases();
+    const plan = CVOperation.planMigration(all.map((x) => x.c), vault.operations);
+    const now = nowISO();
+    const opOfCase = new Map();
+    for (const p of plan.operations) {
+      const op = { id: newId('op-'), number: p.number, name: p.name, status: p.status, start: p.start, end: p.end, notes: '', created: now, updated: now };
+      vault.operations.push(op);
+      for (const id of p.caseIds) opOfCase.set(id, op);
+    }
+    for (const { id, c } of all) {
+      const op = opOfCase.get(id);
+      const subject = plan.subjects[id];
+      if (!op && !subject && 'subject' in c && 'operationId' in c) continue;
+      await writeLink(id, (x) => {
+        if (subject) x.subject = subject;
+        if (!('subject' in x)) x.subject = '';
+        if (op) { x.operationId = op.id; x.operation = { number: op.number, name: op.name }; x.title = op.name; }
+        if (!('operationId' in x)) { x.operationId = ''; x.operation = null; }
+      });
+    }
+    vault.operationsVersion = OPERATIONS_VERSION;
+    // Folded operations were kept by title; now they're kept by Operation.
+    const folded = new Set((vault.settings.foldedOps || []).map(String));
+    vault.settings.foldedOps = vault.operations.filter((o) => folded.has(CVOperation.opKey(o.name))).map((o) => o.id);
+    await saveVault();
+  }
+
+  /** Cases that name an Operation vault.json doesn't have (an older vault.json was restored): the
+   * Operation is made again from the number and name the cases keep. */
+  async function reconcileOperations() {
+    const missing = new Map();
+    for (const e of vault.cases) if (e.operationId && !getOperation(e.operationId)) missing.set(e.operationId, [...(missing.get(e.operationId) || []), e]);
+    if (!missing.size) return;
+    const now = nowISO();
+    for (const [id, members] of missing) {
+      let snap = null;
+      for (const m of members) { try { const c = await FS.readJSON(await caseDir(m.id), 'case.json'); if (c && c.operation) { snap = c.operation; break; } } catch (err) { if (FS.isDisconnectError(err)) throw err; } }
+      const number = snap && snap.number && !vault.operations.some((o) => CVOperation.normNumber(o.number) === CVOperation.normNumber(snap.number)) ? snap.number : CVOperation.nextOpNumber(vault.operations);
+      vault.operations.push({ id, number, name: (snap && snap.name) || members[0].title || 'Operation', status: CVOperation.statusFrom(members.map((m) => m.status)), start: members.map((m) => m.opened).filter(Boolean).sort()[0] || '', end: '', notes: '', created: now, updated: now });
+    }
+    await saveVault();
   }
 
   /* ---------- notes ---------- */
@@ -1177,6 +1378,7 @@ const Vault = (() => {
     resolve, create, load, close, ping,
     backupNow, listBackups, rebuildIndex, updateSettings,
     createCase, getCase, saveCase, deleteCase,
+    listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
     archiveCase, restoreCase, isArchived, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
     getNotes, saveNotes, listChats, readChat, saveChat, deleteChat,
     getTimeline, saveTimeline, sortEvents,

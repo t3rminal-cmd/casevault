@@ -330,8 +330,8 @@
     await Save.flushAll();
     // v1.39: every open case number of the operation is listed; tick the ones to close (this one,
     // or all of them from Close Operation).
-    const opName = String(c.title || '').trim().toLowerCase();
-    const members = (operation || (Vault.data.cases || []).filter((x) => opName && String(x.title || '').trim().toLowerCase() === opName))
+    // v1.46: the Operation's cases are the ones linked to it (operationId).
+    const members = (operation || (Vault.data.cases || []).filter((x) => c.operationId && x.operationId === c.operationId))
       .filter((x) => x.id === c.id || (x.status !== 'Closed' && !Vault.isArchived(x.id)));
     if (!members.some((x) => x.id === c.id)) members.unshift(c);
     // Loose ends, as a reminder.

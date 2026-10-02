@@ -154,6 +154,8 @@
       'case.title': c.title, 'case.number': c.number, 'case.fileNumber': c.fileNumber, 'case.agencyNumber': c.agencyNumber, 'case.client': c.client, 'case.status': c.status,
       'case.tags': (c.tags || []).join(', '), 'case.opened': d.opened, 'case.closed': d.closed,
       'case.partners': partnersText(c.partners),
+      // v1.46: the Subject Name, and the Operation the case is in (blank when it's in none).
+      'case.subject': c.subject, 'operation.number': (c.operation && c.operation.number) || '', 'operation.name': (c.operation && c.operation.name) || '',
       today: longDate(now), 'today.iso': isoDate(now),
     };
     // Contacts from the Details tab.
@@ -184,7 +186,8 @@
   function placeholderGroups(arrestKeys = [], reportKeys = []) {
     const g = (title, keys) => ({ title, keys });
     return [
-      g('Case', ['case.fileNumber', 'case.number', 'case.agencyNumber', 'case.title', 'case.client', 'case.status', 'case.opened', 'case.closed', 'case.tags', 'case.partners']),
+      g('Case', ['case.fileNumber', 'case.number', 'case.subject', 'case.agencyNumber', 'case.title', 'case.client', 'case.status', 'case.opened', 'case.closed', 'case.tags', 'case.partners']),
+      g('Operation', ['operation.number', 'operation.name']),
       g('Suspects', ['suspect.name', 'suspect.dob', 'suspect.age', 'suspect.residence', 'suspect.role', 'suspects']),
       g('Contacts', ['case.officer.name', 'case.officer.email', 'case.officer.phone', 'case.prosecutor.title', 'case.prosecutor.name', 'case.prosecutor.email', 'case.prosecutor.phone']),
       g('Date', ['today', 'today.iso']),

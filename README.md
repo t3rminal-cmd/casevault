@@ -15,6 +15,13 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.46)
+
+- **Operations and General Files:** an Operation is its own record (Operation Number, Name, Status, Start and End Date, Notes), shown as "Number - Name"; every case lives in General Files and is linked to none or one Operation. An Operation's Files are its linked cases (nothing is copied). Create, edit (renames every case once), delete (the cases and files stay, independent), add a new or an existing case, unlink with a confirmation
+- Cases show the **Case Number** with the **Subject Name** under it; Case Numbers are unique (archived ones count); the same subject on another case asks first, a similar name is pointed out, nothing is merged
+- A vault from before v1.46 is backed up, then cases sharing a Title become an Operation (number from the File Number, else OP-001…), subjects come from each case's first suspect; duplicate Case Numbers are flagged, not changed
+- Templates: `{{case.subject}}`, `{{operation.number}}`, `{{operation.name}}`; search covers the subject and the Operation
+
 ## Features (v1.45)
 
 - Symmetrical PDFs: the Supplementary Report's boxes all sit on one eight-column grid (every label on one line, Status and How Cleared half each, the four numbers as boxes); the Arrest Report shows every value in a grey box, with each list's labels the same width so the boxes line up, and the charges, narcotics and warrants in grey rows on fixed columns

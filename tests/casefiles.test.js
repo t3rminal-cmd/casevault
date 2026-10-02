@@ -71,7 +71,7 @@ let App;
 function app() {
   if (!App) {
     globalThis.location = new URL('http://127.0.0.1:8517/');
-    load('js/checker/nlp.js', 'js/drafts/draft-core.js', 'js/casefiles.js', 'js/fs.js', 'js/helper-fs.js', 'js/vault.js');
+    load('js/checker/nlp.js', 'js/drafts/draft-core.js', 'js/casefiles.js', 'js/fs.js', 'js/helper-fs.js', 'js/operation.js', 'js/vault.js');
     App = { Vault: get('Vault'), FS: get('FS') };
   }
   return App;
@@ -87,10 +87,14 @@ async function freshVault() {
 test('a new case is named 2026-<CaseNo>, with all fourteen document folders', async () => {
   const { Vault, dir } = await freshVault();
   const a = await Vault.createCase({ title: 'A', number: '00123', opened: '2026-03-14' });
-  const b = await Vault.createCase({ title: 'B', number: '00123', opened: '2026-05-01' });
+  // v1.46: Case Numbers are unique, so a second 00123 is refused.
+  await assert.rejects(Vault.createCase({ title: 'B', number: '00123', opened: '2026-05-01' }), { name: 'ValidationError' });
+  // A folder already on the SSD with that name (left by something else) still gets -2.
+  await (await dir.getDirectoryHandle('cases')).getDirectoryHandle('2026-00124', { create: true });
+  const b = await Vault.createCase({ title: 'B', number: '00124', opened: '2026-05-01' });
   const n = await Vault.createCase({ title: 'No number' });
   assert.strictEqual(a.id, '2026-00123');
-  assert.strictEqual(b.id, '2026-00123-2', 'a taken name gets -2');
+  assert.strictEqual(b.id, '2026-00124-2', 'a taken name gets -2');
   assert.match(n.id, /^\d{8}-[0-9a-z]{6}$/);
   const files = await (await (await dir.getDirectoryHandle('cases')).getDirectoryHandle('2026-00123')).getDirectoryHandle('files');
   const names = []; for await (const k of files.keys()) names.push(k);
