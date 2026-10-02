@@ -24,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.48.0';
+  const APP_VERSION = '1.49.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -1025,6 +1025,21 @@ const Vault = (() => {
     });
   }
 
+  /** v1.49: a case's discovery records (the index PDFs) in cases/<id>/discovery/. */
+  function saveDiscoveryFile(id, name, data) {
+    return serial(`discovery:${id}`, async () => {
+      assertWritable(id);
+      const dir = await FS.getDir(await caseDir(id), 'discovery', true);
+      const free = await FS.uniqueName(dir, FS.safeName(name));
+      await FS.writeData(dir, free, data);
+      return free;
+    });
+  }
+  async function readDiscoveryFile(id, name) {
+    const dir = await FS.getDir(await caseDir(id), 'discovery');
+    return dir ? FS.getFile(dir, name) : null;
+  }
+
   /* ---------- logs/ and secrets/ (vault level) ---------- */
 
   /** Append an entry to logs/<name>-YYYY-MM.json (a JSON array). */
@@ -1403,7 +1418,7 @@ const Vault = (() => {
     getNotes, saveNotes, listChats, readChat, saveChat, deleteChat,
     getTimeline, saveTimeline, sortEvents,
     listFiles, addFile, readFile, deleteFile, moveFile, ensureFolders, renameCaseFolder, conventionalId, RENAME_MARKER,
-    readCaseJSON, writeCaseJSON, appendLog, readLogs, readSecret, writeSecret,
+    readCaseJSON, writeCaseJSON, saveDiscoveryFile, readDiscoveryFile, appendLog, readLogs, readSecret, writeSecret,
     listChecks, newCheckName, readCheck, saveCheck, deleteCheck, readTextCache, writeTextCache,
     listDrafts, readDraft, newDraftSlug, saveDraft, deleteDraft,
     listTemplates, readTemplate, saveTemplate, deleteTemplate, addStarterTemplates, purgeAll,

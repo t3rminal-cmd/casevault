@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discovery Package</title>
+<!-- CaseVault discovery viewer (v1.49). Works offline, opened straight from the USB or DVD in Chrome or
+     Edge. Nothing is sent anywhere: the files are decrypted in this window only. -->
+<style>
+  :root { --bg: #f3f4f6; --surface: #fff; --surface-2: #e9ecef; --border: #d0d5dc; --text: #1f2328; --muted: #5c636a; --accent: #0b57d0; --danger: #b42318; }
+  * { box-sizing: border-box; border-radius: 0 !important; }
+  html, body { margin: 0; height: 100%; }
+  body { font: 15px/1.45 "Segoe UI", Calibri, system-ui, Arial, sans-serif; background: var(--bg); color: var(--text); -webkit-user-select: none; user-select: none; }
+  button, input { font: inherit; }
+  button { cursor: pointer; padding: .45rem .9rem; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  input[type=password] { padding: .55rem .7rem; border: 1px solid var(--border); width: 100%; -webkit-user-select: text; user-select: text; }
+  .muted { color: var(--muted); }
+  .small { font-size: .85rem; }
+  .err { color: var(--danger); font-weight: 600; min-height: 1.3em; }
+  .center { min-height: 100%; display: grid; place-items: center; padding: 1.5rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); padding: 1.6rem 1.8rem; width: min(30rem, 100%); box-shadow: 0 .5rem 1.5rem rgba(15,23,42,.08); }
+  .card h1 { margin: 0 0 .3rem; font-size: 1.35rem; }
+  .card form { display: grid; gap: .7rem; margin-top: 1rem; }
+  .lock { font-size: 2rem; color: var(--accent); }
+  #app { display: none; height: 100%; grid-template-columns: minmax(15rem, 22rem) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  header { grid-column: 1 / -1; display: flex; align-items: center; gap: .8rem; padding: .6rem 1rem; background: var(--surface); border-bottom: 1px solid var(--border); }
+  header h1 { margin: 0; font-size: 1.05rem; }
+  header .spacer { flex: 1; }
+  nav { overflow: auto; background: var(--surface); border-right: 1px solid var(--border); }
+  nav button { display: grid; grid-template-columns: minmax(0, 1fr); gap: .1rem; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--border); padding: .55rem .8rem; background: none; }
+  nav button.active { background: #e8f0fe; box-shadow: inset 3px 0 0 var(--accent); }
+  nav .b { font-family: Consolas, "Courier New", monospace; font-size: .8rem; color: var(--muted); }
+  nav .n { overflow-wrap: anywhere; }
+  main { overflow: auto; padding: 1rem 1.2rem 2rem; }
+  .bar { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: .8rem; }
+  .bar h2 { margin: 0; font-size: 1.05rem; overflow-wrap: anywhere; }
+  .bar .spacer { flex: 1; }
+  .page { position: relative; margin: 0 auto 1rem; background: #fff; border: 1px solid var(--border); max-width: 60rem; }
+  .page img { display: block; width: 100%; height: auto; pointer-events: none; }
+  .bates { position: absolute; right: .5rem; bottom: .35rem; font: 600 12px Consolas, "Courier New", monospace; background: rgba(255,255,255,.92); color: #000; padding: .1rem .35rem; border: 1px solid #000; }
+  .media-bates { font: 600 13px Consolas, monospace; margin: .4rem 0; }
+  video { width: 100%; max-height: 75vh; background: #000; }
+  audio { width: 100%; }
+  pre.text { white-space: pre-wrap; background: #fff; border: 1px solid var(--border); padding: 1rem; font: 13px/1.5 Consolas, monospace; }
+  iframe.doc { width: 100%; height: 75vh; border: 1px solid var(--border); background: #fff; }
+  .note { background: #fff8e1; border: 1px solid #e6c200; padding: .7rem .9rem; margin: .6rem 0; }
+  .progress { height: 6px; background: var(--surface-2); margin: .6rem 0; }
+  .progress > div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  #print-area { display: none; }
+  @media print {
+    @page { margin: 10mm; }
+    body { background: #fff; }
+    #app, #lock, #pick { display: none !important; }
+    #print-area { display: block; }
+    #print-area .page { border: 0; margin: 0; max-width: none; page-break-after: always; break-after: page; }
+    #print-area .page:last-child { page-break-after: auto; break-after: auto; }
+    #print-area pre.text { border: 0; }
+  }
+</style>
+</head>
+<body>
+<div id="lock" class="center">
+  <div class="card">
+    <div class="lock" aria-hidden="true">&#128274;</div>
+    <h1>Discovery Package</h1>
+    <p class="muted small">Enter the password you were given separately. The files open in this window only: nothing is sent anywhere, and nothing is saved on this computer.</p>
+    <form id="lock-form">
+      <input id="pw" type="password" autocomplete="off" autofocus aria-label="Password" placeholder="Password">
+      <div id="lock-err" class="err" role="alert"></div>
+      <button class="primary" type="submit" id="unlock">Open</button>
+    </form>
+    <p class="muted small" id="browser-note"></p>
+  </div>
+</div>
+<div id="pick" class="center" style="display:none">
+  <div class="card">
+    <h1>Open the files</h1>
+    <p class="muted small">Your browser needs your permission to read the package's files. Click the button below and choose the folder that holds this page (the one with the <b>data</b> folder in it), then allow it to view the files.</p>
+    <div class="err" id="pick-err" role="alert"></div>
+    <button class="primary" type="button" id="pick-btn">Choose the Package Folder</button>
+    <input type="file" id="pick-input" webkitdirectory multiple hidden>
+  </div>
+</div>
+<div id="app">
+  <header><h1 id="title">Discovery</h1><span class="muted small" id="summary"></span><div class="spacer"></div><button type="button" id="print-index">Print Index</button><button type="button" id="lock-btn">Lock</button></header>
+  <nav id="list" aria-label="Files"></nav>
+  <main id="view"></main>
+</div>
+<div id="print-area" aria-hidden="true"></div>
+<script>/*@@CORE@@*/</script>
+<script type="application/json" id="cv-package">@@HEADER@@</script>
+<script>
+'use strict';
+(function () {
+  const D = window.CVDiscovery;
+  const $ = (id) => document.getElementById(id);
+  const h = (tag, attrs, ...kids) => { const el = document.createElement(tag); for (const [k, v] of Object.entries(attrs || {})) { if (v == null || v === false) continue; if (k.startsWith('on')) el.addEventListener(k.slice(2), v); else if (k === 'class') el.className = v; else el.setAttribute(k, v === true ? '' : v); } for (const c of kids.flat()) if (c != null && c !== false) el.append(c instanceof Node ? c : String(c)); return el; };
+  let header = null;
+  try { header = JSON.parse($('cv-package').textContent); } catch { header = null; }
+  let key = null; let manifest = null; let readPart = null; const urls = [];
+
+  // Read-only: no right-click menu, no dragging pictures out, no Ctrl+S.
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+  document.addEventListener('dragstart', (e) => e.preventDefault());
+  document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && /^[sS]$/.test(e.key)) e.preventDefault(); });
+  if (!window.crypto || !window.crypto.subtle) $('browser-note').textContent = 'Open this page in Google Chrome or Microsoft Edge.';
+
+  $('lock-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('lock-err').textContent = '';
+    $('unlock').disabled = true; $('unlock').textContent = 'Opening…';
+    try {
+      const r = await D.unlock(header, $('pw').value);
+      key = r.key; manifest = r.manifest; $('pw').value = '';
+      $('lock').style.display = 'none'; $('pick').style.display = '';
+    } catch (err) {
+      $('lock-err').textContent = err.name === 'WrongPassword' ? 'That password is not right. Try again.' : err.message;
+    } finally { $('unlock').disabled = false; $('unlock').textContent = 'Open'; }
+  });
+
+  // The package folder: with the folder picker where the browser has it, else a folder upload box
+  // (the files still stay on this computer).
+  async function fromHandle(dir) {
+    let data = null;
+    try { data = await dir.getDirectoryHandle('data'); } catch { data = dir; }
+    return async (name) => { try { return await (await data.getFileHandle(name)).getFile(); } catch { return null; } };
+  }
+  async function ready(reader) {
+    const first = manifest.items[0] || manifest.index;
+    const rec = first && (first.file || (first.pageImages || [])[0] || first.html);
+    if (rec && !(await reader(rec.parts[0]))) { $('pick-err').textContent = 'That folder doesn\'t hold this package\'s files. Choose the folder this page is in.'; return; }
+    readPart = reader;
+    $('pick').style.display = 'none';
+    start();
+  }
+  $('pick-btn').addEventListener('click', async () => {
+    $('pick-err').textContent = '';
+    if (window.showDirectoryPicker) {
+      try { return await ready(await fromHandle(await window.showDirectoryPicker({ mode: 'read' }))); } catch (err) { if (err && err.name === 'AbortError') return; }
+    }
+    $('pick-input').click();
+  });
+  $('pick-input').addEventListener('change', () => {
+    const map = {};
+    for (const f of $('pick-input').files) map[f.name] = f;
+    ready(async (name) => map[name] || null);
+  });
+
+  function lock() { for (const u of urls.splice(0)) URL.revokeObjectURL(u); key = null; manifest = null; readPart = null; location.reload(); }
+  $('lock-btn').addEventListener('click', lock);
+
+  const blobOf = (rec, type) => D.decryptToBlob(key, rec, readPart, type);
+  const urlOf = async (rec, type) => { const u = URL.createObjectURL(await blobOf(rec, type)); urls.push(u); return u; };
+  const B = (n) => D.bates(manifest.prefix, n);
+
+  function start() {
+    $('title').textContent = manifest.title || 'Discovery';
+    $('summary').textContent = `${manifest.items.length} item${manifest.items.length === 1 ? '' : 's'} · ${D.batesRange(manifest.prefix, manifest.batesFirst, manifest.batesLast)}`;
+    $('app').style.display = 'grid';
+    const all = [...(manifest.index ? [{ ...manifest.index, isIndex: true }] : []), ...manifest.items];
+    const btns = all.map((it) => h('button', { type: 'button', onclick: () => show(it, btn(it)) },
+      h('span', { class: 'b' }, it.isIndex ? 'INDEX' : D.batesRange(manifest.prefix, it.batesFirst, it.batesLast)),
+      h('span', { class: 'n' }, it.isIndex ? 'Discovery Index' : it.name),
+      h('span', { class: 'muted small' }, it.isIndex ? 'Every item, its Bates numbers and fingerprint' : `${D.KIND_LABEL[it.kind] || 'File'}${it.pages > 1 ? ` · ${it.pages} pages` : ''} · ${D.fmtSize(it.size)}`)));
+    const btn = (it) => btns[all.indexOf(it)];
+    $('list').replaceChildren(...btns);
+    $('print-index').hidden = !manifest.index;
+    $('print-index').onclick = () => printItem(all[0]);
+    if (all.length) show(all[0], btns[0]);
+  }
+
+  let token = 0;
+  async function show(it, button) {
+    const my = ++token;
+    for (const b of $('list').children) b.classList.toggle('active', b === button);
+    const view = $('view');
+    const bar = h('div', { class: 'bar' }, h('h2', {}, it.isIndex ? 'Discovery Index' : it.name), h('span', { class: 'muted small' }, it.isIndex ? '' : D.batesRange(manifest.prefix, it.batesFirst, it.batesLast)), h('div', { class: 'spacer' }));
+    const canPrint = it.pageImages || it.kind === 'image' || it.html || it.kind === 'text';
+    if (canPrint) bar.append(h('button', { type: 'button', onclick: () => printItem(it) }, 'Print'));
+    const unplayable = it.kind === 'media' || it.kind === 'other';
+    if (manifest.allowSave && it.file && (unplayable || it.kind === 'video' || it.kind === 'audio')) bar.append(h('button', { type: 'button', onclick: () => saveCopy(it) }, 'Save a Copy'));
+    const body = h('div', {});
+    const prog = h('div', { class: 'progress' }, h('div', {}));
+    view.replaceChildren(bar, prog, body);
+    view.scrollTop = 0;
+    const setProg = (f) => { prog.firstChild.style.width = `${Math.round(f * 100)}%`; if (f >= 1) prog.remove(); };
+    try {
+      if (it.pageImages) {
+        for (let i = 0; i < it.pageImages.length; i++) {
+          if (my !== token) return;
+          const u = await urlOf(it.pageImages[i], 'image/jpeg');
+          if (my !== token) return;
+          body.append(pageEl(u, it.isIndex ? '' : B(it.batesFirst + i)));
+          setProg((i + 1) / it.pageImages.length);
+        }
+      } else if (it.kind === 'image') {
+        body.append(pageEl(await urlOf(it.file, D.mimeOf(it.name)), B(it.batesFirst))); setProg(1);
+      } else if (it.kind === 'video' || it.kind === 'audio') {
+        const u = await urlOf(it.file, D.mimeOf(it.name)); setProg(1);
+        if (my !== token) return;
+        const el = h(it.kind, { controls: true, controlslist: 'nodownload noplaybackrate', disablepictureinpicture: true, preload: 'metadata', src: u });
+        el.addEventListener('error', () => el.replaceWith(cantPlay(it)));
+        body.append(h('div', { class: 'media-bates' }, B(it.batesFirst)), el);
+      } else if (it.html) {
+        const html = await (await blobOf(it.html, 'text/html')).text(); setProg(1);
+        body.append(h('div', { class: 'media-bates' }, B(it.batesFirst)), docFrame(html, B(it.batesFirst)));
+      } else if (it.kind === 'text') {
+        const t = await (await blobOf(it.file, 'text/plain')).text(); setProg(1);
+        body.append(h('div', { class: 'media-bates' }, B(it.batesFirst)), h('pre', { class: 'text' }, t));
+      } else {
+        setProg(1);
+        body.append(h('div', { class: 'media-bates' }, B(it.batesFirst)), cantPlay(it));
+      }
+    } catch (err) {
+      prog.remove();
+      body.append(h('p', { class: 'err' }, `This item could not be opened: ${err.message || 'it may be damaged'}.`));
+    }
+  }
+  function pageEl(url, label) { return h('div', { class: 'page' }, h('img', { src: url, alt: '', draggable: 'false' }), label ? h('span', { class: 'bates' }, label) : null); }
+  function cantPlay(it) {
+    return h('div', { class: 'note' },
+      h('p', {}, it.kind === 'media' ? 'This recording\'s format can\'t be played in the browser.' : 'This kind of file can\'t be shown in the browser.'),
+      manifest.vlc ? h('p', {}, 'A copy of the free VLC media player is on this drive, in the "VLC Player" folder (vlc.exe).') : null,
+      manifest.allowSave && it.file ? h('p', {}, 'Use Save a Copy above, then open the copy in VLC or the program that goes with it.') : h('p', { class: 'muted small' }, 'Ask the sender for a copy you can open.'));
+  }
+  function docFrame(html, label) {
+    const doc = `<!doctype html><meta charset="utf-8"><style>body{font:14px/1.45 Calibri,"Segoe UI",Arial,sans-serif;margin:1.2rem;-webkit-user-select:none;user-select:none}table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:.2rem .4rem;font-size:12px}.cv-bates{position:fixed;right:.4rem;bottom:.3rem;font:600 12px Consolas,monospace;border:1px solid #000;background:#fff;padding:.1rem .35rem}</style><div class="cv-bates">${label}</div>${html}`;
+    return h('iframe', { class: 'doc', sandbox: 'allow-same-origin allow-modals', srcdoc: doc, title: 'Document' });
+  }
+
+  async function printItem(it) {
+    const area = $('print-area');
+    area.replaceChildren();
+    if (it.pageImages) {
+      for (let i = 0; i < it.pageImages.length; i++) area.append(pageEl(await urlOf(it.pageImages[i], 'image/jpeg'), it.isIndex ? '' : B(it.batesFirst + i)));
+      await Promise.all([...area.querySelectorAll('img')].map((im) => (im.complete ? 0 : new Promise((r) => { im.onload = r; im.onerror = r; }))));
+    } else if (it.kind === 'image') {
+      area.append(pageEl(await urlOf(it.file, D.mimeOf(it.name)), B(it.batesFirst)));
+      await new Promise((r) => { const im = area.querySelector('img'); if (im.complete) r(); else { im.onload = r; im.onerror = r; } });
+    } else if (it.kind === 'text') {
+      area.append(h('div', { class: 'media-bates' }, B(it.batesFirst)), h('pre', { class: 'text' }, await (await blobOf(it.file, 'text/plain')).text()));
+    } else if (it.html) {
+      const fr = $('view').querySelector('iframe.doc');
+      if (fr && fr.contentWindow) { fr.contentWindow.focus(); fr.contentWindow.print(); }
+      return;
+    }
+    window.print();
+  }
+
+  async function saveCopy(it) {
+    try {
+      if (window.showSaveFilePicker) {
+        const fh = await window.showSaveFilePicker({ suggestedName: it.name });
+        const w = await fh.createWritable();
+        for await (const c of D.decryptRecord(key, it.file, readPart)) await w.write(c);
+        await w.close();
+        return;
+      }
+      const a = h('a', { href: await urlOf(it.file, D.mimeOf(it.name)), download: it.name });
+      document.body.append(a); a.click(); a.remove();
+    } catch (err) { if (!err || err.name !== 'AbortError') alert(`Could not save the copy: ${err.message}`); }
+  }
+})();
+</script>
+</body>
+</html>

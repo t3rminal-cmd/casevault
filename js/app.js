@@ -114,7 +114,7 @@
 
   const DIALOG_SIZES = [
     ['panel', '.vault-panel'],
-    ['full', '.preview, .doc-view, .lib-preview, .pdf-view, .word-view'],
+    ['full', '.preview, .doc-view, .lib-preview, .pdf-view, .word-view, .disc'],
     ['wide', '.type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
   ];
 
@@ -2395,7 +2395,9 @@
         if (!order) return;
         await saveFolderOrder(order);
         showCase(c.id, 'files', current || null);
-      } }, 'Arrange folders'));
+      } }, 'Arrange folders'),
+      // v1.49: a password-protected, view-and-print-only package of chosen files, for discovery.
+      archived ? null : h('button', { class: 'btn small folder-reset disc-open', type: 'button', icon: 'shield-lock-fill', title: 'Make a password-protected discovery package of chosen files, with Bates numbers, for a USB drive or a DVD.', onclick: () => CVDiscoveryUI.open(c).catch((err) => { if (FS.isDisconnectError(err)) onDriveLost(); else toast(`Could not open Discovery: ${err.message}`, 'error'); }) }, 'Discovery'));
 
     // A folder from an older version (Warrants Signed…): offer to move its files into the folder
     // that replaced it.
@@ -3169,6 +3171,7 @@
   CVApiKey.init(window.CaseVaultUI);
   CVOnlineUI.init(window.CaseVaultUI);
   CVMailUI.init(window.CaseVaultUI);
+  CVDiscoveryUI.init(window.CaseVaultUI);
   CVSecureSettings.init(window.CaseVaultUI);
   CVMemory.mount($('#mem-status'), {
     isHelper: () => MODE === 'helper',
