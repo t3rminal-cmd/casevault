@@ -213,6 +213,10 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.49
+
+- **Discovery** on the Files tab: choose files on the left and they go to the list on the right. CaseVault then writes a password-protected package to a USB drive or folder, or onto the SSD for a DVD. The recipient opens it in Chrome or Edge with the password and can view and print, not download. Every page carries its Bates number. Video and audio play in the window, and an index lists every item with its fingerprint. A portable VLC can go along, and each production is logged in the case. See *Discovery* under *Files*.
+
 ### What's new in v1.48
 
 - **Supplementary Report PDF:** the box at the top right is the **R.D. Number**. Event, Incident and Raid Number share the row under it. A form saved before keeps the number from that box as its R.D. Number. On the Draft tab the R.D. Number starts as the case's Case Number.
@@ -438,6 +442,42 @@ The table has one row per file with clear lines: **Name** shown as `2024-JH12345
 - A **new case folder** is named `<year>-<case no.>`, for example `2026-00123` for case 00123 opened in 2026 (the year comes from the **Opened** date). If that name is taken, CaseVault adds `-2`. A case created without a number gets a dated name; add the number on **Details**, then use **Rename folder to 2026-…** there. Every file is copied and checked before the old folder is removed.
 - **Every file** you save is named `<year>-<case no.>-<file name>`, for example `2026-00123-scan0001.pdf` or `2026-00123-bank records.pdf`. The file name is the original's unless you type another in **File name**; the folder it's in shows as its **Document** type in the table. A second file with the same name gets ` (2)`. Files named the older way (`2026-00123 Arrest Report.pdf`) still count as following the convention.
 - A case number that already starts with the year (`2026-00123`) isn't doubled.
+
+### Discovery (v1.49)
+
+**Discovery** (under the folder list on the Files tab) makes a password-protected package of the files you choose, for a USB drive or a DVD.
+
+1. **Pick the files.** The case's files are on the left (search box at the top). Click one to add it to **To Produce** on the right. There, the arrows set the order and the X takes one off. The total size shows at the top: one DVD holds about 4.3 GB.
+2. **Fill in:**
+   - **Produced To**, for example the ASA, the AUSA or defense counsel.
+   - **Bates Prefix** (DISC unless you change it) and the **Bates Start Number**, which continues from this case's last production with that prefix.
+   - **Where To:** a USB drive or folder you pick, or the SSD for a DVD.
+   - A **password** of at least 8 characters, twice. CaseVault does not keep it. Give it to the recipient separately, by phone, never with the drive.
+3. **Create Discovery Package.** In the place you chose, CaseVault writes a folder named `Discovery <date> (DISC-000001 - DISC-000040)`. Neither the folder nor anything else in the package shows a case detail without the password. The folder holds:
+   - **Open Discovery.html**, the viewer;
+   - **data**, every file encrypted (AES-256);
+   - **README - Start Here.txt**;
+   - **VLC Player**, when it's on the SSD (below).
+
+**What the recipient sees:** they open *Open Discovery.html* in Chrome or Edge (nothing to install), type the password, and choose the package folder when the browser asks.
+- **Documents:** each PDF page is shown as a page picture with its Bates number in the corner, on screen and on paper. Word documents and spreadsheets show as read-only pages, and text files as text. There is no download button, no right-click menu and no Save.
+- **Video and audio** play in the window.
+- **Index:** **Print Index** prints the index, which lists every item, its Bates numbers, pages, size and the SHA-256 fingerprint of the original file.
+- **Recordings the browser can't play** (AVI, WMV, DVR formats such as .dav): **Save a Copy** lets the recipient open them in VLC. You can switch that off with the box "Allow saving a copy…".
+- **Bates numbers:** one per page for PDFs, one per file for everything else.
+
+The files in the case are never changed. The fingerprints in the index are of the originals on the SSD.
+
+**What the case keeps:** each production is listed under **Earlier productions** in the Discovery window, with its date, recipient, Bates range and files. **Index** opens its index PDF. These are stored in the case folder: `discovery-log.json` and `discovery\Discovery Index ….pdf`.
+
+**For a DVD:** choose **The SSD, for a DVD**. The package goes to `CaseVault-Data\exports`. Put a blank disc in, open that folder in File Explorer, select the package folder and choose **Burn to disc** (right-click → Send to → the DVD drive, or Share → Burn to disc).
+
+**Adding VLC (once):** VLC is a free media player (GNU GPL), and you may hand out copies.
+1. On a computer with internet access, download the **portable (zip)** version of VLC for Windows from videolan.org.
+2. Unzip it.
+3. Copy everything inside the unzipped folder (vlc.exe, the plugins folder, COPYING.txt…) into `CaseVault-Data\discovery-kit\VLC` on the SSD. Create those folders if they aren't there.
+
+From then on the **Copy the VLC player along** box is ticked by itself, and every package gets a **VLC Player** folder with VLC's license in it.
 
 ### Adding files
 

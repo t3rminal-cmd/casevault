@@ -15,6 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.49)
+
+- **Discovery** (Files tab): pick files, then CaseVault writes a password-protected package (AES-256-GCM, PBKDF2) for a USB drive or a DVD. The recipient opens *Open Discovery.html* in Chrome or Edge, with nothing to install, to view and print only: PDFs as page images, Word and Excel as read-only pages, video and audio playing in the window. Bates numbers on every page, an index with SHA-256 fingerprints, an optional portable VLC from the SSD, and a production log in the case
+
 ## Features (v1.48)
 
 - Supplementary Report PDF: the R.D. Number in the top box
