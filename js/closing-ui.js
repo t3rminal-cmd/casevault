@@ -181,7 +181,7 @@
         showAge();
         const offender = fieldset(a, K().ARRESTEE_FIELDS, showAge, 'arrest-g-offender');
         offender.insertBefore(ui.field('Age', ageOut), offender.children[6] || null);
-        return h('section', { class: 'card arrestee' },
+        return h('section', { class: 'card arrestee cv-boxed' },
           h('div', { class: 'row' }, h('h2', {}, name), h('div', { class: 'spacer' }),
             archived ? null : h('button', { class: 'btn small ghost danger-text', type: 'button', onclick: async () => {
               if (!(await ui.confirmDialog({ title: `Remove ${name}?`, message: 'This arrestee and their charges are removed from the arrest details.', confirmText: 'Remove', danger: true }))) return;

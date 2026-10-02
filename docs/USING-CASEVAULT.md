@@ -121,11 +121,11 @@ With no case open, CaseVault shows the **Overview**: a welcome banner with the d
 
 From v1.46 an **Operation** is its own record, and cases are linked to it.
 
-- **General Files** holds every case, whether it's in an Operation or not. It's the master list: open it from the Overview, from a case's header, or by clicking **General Files** in the case list. Each row shows the **Case Number**, **Subject Name**, **Operation**, status and opened date, with **Assign to…** (pick an Operation) or **Unlink**. Search by case number, subject or Operation, and show all cases, independent ones, ones in an Operation, or archived ones.
+- **General Files** holds every case, whether it's in an Operation or not. It's the master list: open it from the Overview, from a case's header, or by clicking **General Files** in the case list. Each row shows the **Case Number**, **Subject Name**, **Operation**, status and opened date, with **Move File** (v1.50). Search by case number, subject or Operation, and show all cases, independent ones, ones in an Operation, or archived ones.
 - **An Operation** has an **Operation Number** (required, no two the same), an **Operation Name** (required), a **Status** (Open, Pending or Closed), a **Start Date**, an **End Date** and **Notes**. It shows everywhere as **Operation Number - Operation Name**. **Operations** (from the Overview or General Files) lists them all; **New Operation** makes one (the next free number, OP-001, OP-002…, is filled in for you).
-- **An Operation's page** shows its fields (**Edit Operation** changes them; renaming it renames it on every case) and its **Files**: the cases linked to it, each with **Details**, **Reports** and **Files**, and **Unlink**. **New Case in this Operation** creates a case in General Files and links it; **Add Existing Case** links cases from General Files (a case already in another Operation is shown greyed out: unlink it there first).
-- **A case is in no Operation or in one.** Nothing is ever copied: the Operation's Files are only a view of the cases linked to it. On a case's **Details** tab, the bar at the top shows the Operation it's in (or *General Files: not in an Operation*), with **Assign to** / **Move to** and **Unlink**.
-- **Unlink** asks first. The case and all its files stay, in General Files, as an independent case.
+- **An Operation's page** shows its fields (**Edit Operation** changes them; renaming it renames it on every case) and its **Files**: the cases linked to it, each with **Details**, **Reports** and **Files**, and **Move File**. **New Case in this Operation** creates a case in General Files and links it; **Add Existing Case** links cases from General Files (a case already in another Operation is shown greyed out: move it with **Move File** instead).
+- **A case is in no Operation or in one.** Nothing is ever copied: the Operation's Files are only a view of the cases linked to it. On a case's **Details** tab, the bar at the top shows the Operation it's in (or *General Files: not in an Operation*), with **Move File**.
+- **Move File** (v1.50; it replaced *Assign to…* and *Unlink*) opens a box listing **General Files (independent case)** and every Operation. Pick one and press **Move**: a case in General Files goes into an Operation, a case in an Operation goes to another one or back to General Files as an independent case. The case and all its files stay where they are on the SSD; only where it's listed changes.
 - **Delete Operation** (on the Operation's page) asks: *Are you sure you want to delete this Operation? The Operation and its Files folder will be removed. All associated cases and files will be preserved and will remain available in General Files as independent cases.* Only the Operation goes; every case (archived ones too) and every file stays.
 - **Case Number** and **Subject Name**: every case has a Case Number (shown large) with the Subject Name under it. No two cases can have the same Case Number (archived cases count): New Case and the Details tab refuse a number that's taken. Several cases can have the same subject: New Case asks *This subject already has another case. Is this a new case number for the same subject?* (**Continue and create new case** or **Cancel**), and points out a **Possible match** when a subject's name is close to another one (one or two letters apart, or the same words in another order). Nothing is ever merged.
 - **Opening a vault made before v1.46** (once, by itself): vault.json is backed up first (Vault → Backups), then cases that share a Title become an Operation named after it (its number is the cases' File Number, or OP-001 and so on), and a case with a Title of its own stays independent in General Files. Each case's Subject Name is taken from its first suspect (blank shows *No subject yet*). Case Numbers already used twice are flagged in General Files (*Duplicate*) and on the Details tab, never changed.
@@ -207,11 +207,28 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 **Delete case…** permanently deletes the case from the SSD: notes, timeline, files, drafts and checks. Its line in the older copies of `vault.json` (`backups\`) and the Ask AI chats about it are removed too. There is no trash. To confirm, type the case number (or the title, if the case has no number). The same window offers **Archive instead**. Archived cases can be deleted too.
 
+**The top of the case list** (v1.50): the hide-the-list button, **Search** (click it for the search box), **Home** (the Overview) and **Hide** (the privacy screen), with the padlock on the right. The folders start folded: the one holding what's on screen is open, and one you open with its arrow stays open until you go to another page. **Closed** (closed Operations and closed cases, including a closed case of an Operation that is still open) and **Archived** are grey folders at the bottom.
+
 **Hide the case list** with the button at the top of the list (or `Ctrl + \`) to give the page more room. The list shrinks to a thin strip with **Show the case list** and **+** (new case); the same **Show** button also appears at the left of the header. On a phone-sized window the list hides completely. CaseVault remembers the choice in `vault.json`.
 
 **Resize** the case list by dragging its right edge (double-click the edge to go back to the normal width). **Lock** it with the padlock next to the hide button: the list then stays exactly as it is, shown or hidden and at its width, and can't be hidden, resized or toggled with `Ctrl + \` until you click the padlock again. The width and the lock are kept in `vault.json` on the SSD, so they stay the same in Edge and Firefox and on another PC.
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
+
+### What's new in v1.50
+
+- **Privacy screen:** the blue 1s and 0s now fall on a muted near-black. With a PIN, a thin box in the lower right says **AUTHENTICATE**, and each digit shows as an asterisk.
+- **Supplementary Report PDF:** each box's label is on a grey band, and what you filled in is on white under it. This covers the signature table too (Extra Copies, Date Submitted, Reporting Officer…), as well as Update Information, Status and How Cleared. The Officer's Report part is unchanged.
+- **Arrest details, Timeline, Contacts and Deconfliction** look like the Draft tab: each field is a grey box with its label small inside it, and the section headers are in capitals.
+- **Dates:** the calendar button opens CaseVault's own square calendar. **«** and **»** change the year, **‹** and **›** the month; it also has **Today** and **Clear**, and works with the arrow keys and Page Up / Page Down.
+- **Case list:**
+  - The folders start folded. The folder holding the case, Operation or General Files on screen is open. A folder you open with its arrow stays open until you go to another page.
+  - **Search** is an icon; click it to show the search box (Esc clears and hides it).
+  - **Home** and **Hide** (the privacy screen) are next to Search; the header keeps only the menu ⋮.
+  - A closed case of an Operation that is still open stays in that Operation's folder and also shows under **Closed**.
+  - **Closed** and **Archived** at the bottom are grey folders with a drop-down arrow.
+- **Move File** replaces Assign to… and Unlink. It moves a case into an Operation, from one Operation to another, or back to General Files. See *Operations and General Files*.
+- **Discovery:** the list on the left can show files from this case, its whole Operation, another Operation, all cases or one other case, and the search box also finds case numbers and subjects. **Create Discovery Package** first opens **Ready to Copy**, a list of every file with its case and size and the total. **Copy Now** starts; **Back** changes nothing.
 
 ### What's new in v1.49
 
@@ -447,13 +464,13 @@ The table has one row per file with clear lines: **Name** shown as `2024-JH12345
 
 **Discovery** (under the folder list on the Files tab) makes a password-protected package of the files you choose, for a USB drive or a DVD.
 
-1. **Pick the files.** The case's files are on the left (search box at the top). Click one to add it to **To Produce** on the right. There, the arrows set the order and the X takes one off. The total size shows at the top: one DVD holds about 4.3 GB.
+1. **Pick the files.** The case's files are on the left. The list at the top switches to this case's whole Operation, another Operation, all cases or one other case (v1.50), and the search box finds file names, case numbers and subjects. Click one to add it to **To Produce** on the right. There, the arrows set the order and the X takes one off. The total size shows at the top: one DVD holds about 4.3 GB.
 2. **Fill in:**
    - **Produced To**, for example the ASA, the AUSA or defense counsel.
    - **Bates Prefix** (DISC unless you change it) and the **Bates Start Number**, which continues from this case's last production with that prefix.
    - **Where To:** a USB drive or folder you pick, or the SSD for a DVD.
    - A **password** of at least 8 characters, twice. CaseVault does not keep it. Give it to the recipient separately, by phone, never with the drive.
-3. **Create Discovery Package.** In the place you chose, CaseVault writes a folder named `Discovery <date> (DISC-000001 - DISC-000040)`. Neither the folder nor anything else in the package shows a case detail without the password. The folder holds:
+3. **Create Discovery Package.** First **Ready to Copy** lists every file going in, in order, with its case and size, and the total (with VLC if it goes along). **Copy Now** goes ahead; **Back** changes nothing. Then, in the place you chose, CaseVault writes a folder named `Discovery <date> (DISC-000001 - DISC-000040)`. Neither the folder nor anything else in the package shows a case detail without the password. The folder holds:
    - **Open Discovery.html**, the viewer;
    - **data**, every file encrypted (AES-256);
    - **README - Start Here.txt**;
@@ -622,11 +639,11 @@ The AI engine setup (profiles, models, the launcher) is in [AI-SETUP.md](AI-SETU
 
 ## Privacy screen
 
-To hide CaseVault instantly, for example when someone walks up to your desk, click **Hide** (the crossed-out eye) at the top right. It also hides by itself after the idle time you set (below). Since v1.21 there are no keyboard shortcuts for it.
+To hide CaseVault instantly, for example when someone walks up to your desk, click **Hide** (the crossed-out eye) at the top of the case list. It also hides by itself after the idle time you set (below). Since v1.21 there are no keyboard shortcuts for it.
 
-A white screen with blue 1s and 0s raining down covers the whole app, with no case names or data on it. The browser tab's title changes to **New Tab** and its icon goes blank. Audio and video pause, any open file preview closes, and any unsaved edits are written to the SSD first. If Windows is set to reduce animations, the rain stands still.
+A muted near-black screen with blue 1s and 0s raining down covers the whole app, with no case names or data on it. The browser tab's title changes to **New Tab** and its icon goes blank. Audio and video pause, any open file preview closes, and any unsaved edits are written to the SSD first. If Windows is set to reduce animations, the rain stands still.
 
-**To come back:** click anywhere. If you set a PIN, a terminal-style prompt shows `PIN>` with a blinking blue cursor. Type the PIN (each digit shows as a dot) and press Enter; it also unlocks by itself once you've typed 6 digits. After 5 wrong PINs you have to wait 30 seconds. Esc does nothing on the privacy screen: with a PIN set, only the PIN opens it.
+**To come back:** click anywhere. If you set a PIN, a thin box in the lower right says **AUTHENTICATE**. Type the PIN (each digit shows as an asterisk) and press Enter; it also unlocks by itself once you've typed 6 digits. After 5 wrong PINs you have to wait 30 seconds. Esc does nothing on the privacy screen: with a PIN set, only the PIN opens it.
 
 **Settings** (in **Vault → Privacy screen**):
 

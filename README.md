@@ -15,6 +15,16 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.50)
+
+- Privacy screen: blue 1s and 0s on a muted near-black, and a thin **AUTHENTICATE** box in the lower right (asterisks for the digits)
+- Supplementary Report PDF: the labels sit on grey bands and the values on white (signature table too); the Officer's Report is unchanged
+- Arrest details, Timeline, Contacts and Deconfliction: each field a grey box with its label inside, like the Draft tab
+- CaseVault's own square calendar for every date box
+- Case list: folders start folded (the one holding what's on screen opens), Search as an icon, Home and Hide next to it (the header keeps only the menu), a closed case of an open Operation also shows under Closed, Closed and Archived as grey folders with an arrow
+- **Move File**: a case moves from General Files into an Operation, between Operations, or back (replaces Assign to / Unlink)
+- Discovery: files from this case, its Operation, another Operation or any case; a box lists every file and the total size before anything is copied
+
 ## Features (v1.49)
 
 - **Discovery** (Files tab): pick files, then CaseVault writes a password-protected package (AES-256-GCM, PBKDF2) for a USB drive or a DVD. The recipient opens *Open Discovery.html* in Chrome or Edge, with nothing to install, to view and print only: PDFs as page images, Word and Excel as read-only pages, video and audio playing in the window. Bates numbers on every page, an index with SHA-256 fingerprints, an optional portable VLC from the SSD, and a production log in the case

@@ -89,8 +89,16 @@
     const D = CVDiscovery;
     const today = Vault.localDay();
     const prefix = D.cleanPrefix(opts.prefix);
-    const files = await Vault.listFiles(c.id);
-    const picked = opts.paths.map((p) => files.find((f) => f.name === p)).filter(Boolean);
+    // v1.50: the files can come from any case (this one, its Operation's, or another): each pick is
+    // { caseId, path }; a plain path is a file of this case.
+    const lists = new Map();
+    const filesOf = async (id) => { if (!lists.has(id)) lists.set(id, await Vault.listFiles(id)); return lists.get(id); };
+    const picked = [];
+    for (const x of opts.paths) {
+      const pick = typeof x === 'string' ? { caseId: c.id, path: x } : x;
+      const f = (await filesOf(pick.caseId)).find((y) => y.name === pick.path);
+      if (f) picked.push({ ...f, caseId: pick.caseId });
+    }
     if (!picked.length) throw new Error('Pick at least one file.');
     const total = picked.reduce((n, f) => n + (f.size || 0), 0) || 1;
     let done = 0;
@@ -99,9 +107,10 @@
     // 1. What each file becomes, and its page count (for the Bates numbers).
     const prepared = [];
     for (const f of picked) {
-      const file = await Vault.readFile(c.id, f.name);
+      const file = await Vault.readFile(f.caseId, f.name);
       const kind = D.kindOf(f.base);
-      const it = { path: f.name, name: f.base, folder: f.folder || '', kind, size: file.size, file };
+      const from = f.caseId === c.id ? null : Vault.data.cases.find((x) => x.id === f.caseId);
+      const it = { path: f.name, caseId: f.caseId, caseNumber: from ? from.number || '' : '', name: f.base, folder: from ? [from.number, f.folder].filter(Boolean).join(' / ') : f.folder || '', kind, size: file.size, file };
       step(`Preparing ${f.base}…`);
       try {
         if (kind === 'pdf') { it.pageBlobs = await pdfPages(file, (n, of) => step(`Preparing ${f.base}: page ${n} of ${of}…`)); it.pages = it.pageBlobs.length; }
@@ -191,7 +200,7 @@
     const entry = {
       id: `${today}-${D.bates(prefix, items[0].batesFirst)}`, produced: today, producedAt: new Date().toISOString(), producedTo: manifest.producedTo,
       prefix, batesFirst: items[0].batesFirst, batesLast: last, folder, destination: opts.destLabel || '', vlc: manifest.vlc, allowSave: manifest.allowSave, index: indexName,
-      items: manifestItems.map((it, i) => ({ path: items[i].path, batesFirst: it.batesFirst, batesLast: it.batesLast, pages: it.pages, size: it.size, sha256: it.sha256 })),
+      items: manifestItems.map((it, i) => ({ path: items[i].path, ...(items[i].caseId !== c.id ? { caseId: items[i].caseId, caseNumber: items[i].caseNumber } : {}), batesFirst: it.batesFirst, batesLast: it.batesLast, pages: it.pages, size: it.size, sha256: it.sha256 })),
     };
     const log = await readLog(c);
     log.productions.push(entry);
@@ -243,13 +252,33 @@
     await Save.flushAll();
     const D = CVDiscovery;
     const [files, log, kit] = await Promise.all([Vault.listFiles(c.id), readLog(c), vlcKit().catch(() => null)]);
+    // v1.50: files from this case, its Operation, any Operation or any case. Listed files are
+    // cached by case; a pick is "caseId|path".
+    const active = (Vault.data.cases || []).filter((x) => !(Vault.isArchived && Vault.isArchived(x.id)) && x.status !== 'Archived');
+    const caseNum = (id) => { const x = (Vault.data.cases || []).find((y) => y.id === id); return x ? x.number || 'No number' : ''; };
+    const byCase = new Map([[c.id, files]]);
+    const loadCase = async (id) => { if (!byCase.has(id)) byCase.set(id, await Vault.listFiles(id).catch(() => [])); return byCase.get(id); };
+    const ops = Vault.listOperations ? Vault.listOperations() : [];
+    const opName = (op) => (root.CVOperation ? CVOperation.opLabel(op) : op.name);
+    const myOp = c.operationId && Vault.getOperation ? Vault.getOperation(c.operationId) : null;
+    const casesFor = (src) => (src === 'all' ? active.map((x) => x.id) : src.startsWith('op:') ? active.filter((x) => x.operationId === src.slice(3)).map((x) => x.id) : [src.slice(5)]);
+    const keyOf = (id, path) => `${id}|${path}`;
+    const fileOf = (key) => { const i = key.indexOf('|'); const id = key.slice(0, i); return { caseId: id, f: (byCase.get(id) || []).find((x) => x.name === key.slice(i + 1)) }; };
     const settings = Vault.data.settings || {};
     let prefix = D.cleanPrefix(settings.discoveryPrefix || 'DISC');
     const picked = [];
     const canPick = typeof window.showDirectoryPicker === 'function';
 
     await openDialog((close) => {
-      const search = h('input', { type: 'search', placeholder: 'Search the case files', 'aria-label': 'Search the case files' });
+      const search = h('input', { type: 'search', placeholder: 'Search by file, case number or subject', 'aria-label': 'Search the files' });
+      const byNum = (a, b) => String(a.number || '').localeCompare(String(b.number || ''), undefined, { numeric: true });
+      const source = h('select', { 'aria-label': 'Files from' },
+        h('option', { value: `case:${c.id}` }, `This case: ${c.number || 'No number'}`),
+        myOp ? h('option', { value: `op:${myOp.id}` }, `This Operation: ${opName(myOp)}`) : null,
+        h('option', { value: 'all' }, 'All cases'),
+        ops.filter((o) => !myOp || o.id !== myOp.id).length ? h('optgroup', { label: 'Operations' }, ops.filter((o) => !myOp || o.id !== myOp.id).map((o) => h('option', { value: `op:${o.id}` }, opName(o)))) : null,
+        active.length > 1 ? h('optgroup', { label: 'Cases' }, active.filter((x) => x.id !== c.id).sort(byNum).map((x) => h('option', { value: `case:${x.id}` }, [x.number || 'No number', x.subject].filter(Boolean).join(' · ')))) : null);
+      let shownCases = [c.id];
       const left = h('div', { class: 'disc-list', role: 'list' });
       const right = h('div', { class: 'disc-list disc-picked', role: 'list' });
       const totals = h('span', { class: 'muted small' });
@@ -269,32 +298,69 @@
       for (const el of [pw, pw2]) el.addEventListener('input', () => { err.textContent = ''; });
       prefixIn.addEventListener('change', () => { prefix = D.cleanPrefix(prefixIn.value); prefixIn.value = prefix; startIn.value = nextStart(log, prefix); });
 
-      const row = (f, on, extra) => h('div', { class: `disc-row${on ? ' on' : ''}`, role: 'listitem' },
+      const row = (f, caseId, on, extra) => h('div', { class: `disc-row${on ? ' on' : ''}`, role: 'listitem' },
         h('span', { class: 'disc-kind' }, D.KIND_LABEL[D.kindOf(f.base)] || 'File'),
-        h('span', { class: 'disc-name', title: f.name }, f.base, h('span', { class: 'muted small block' }, f.folder || 'Unsorted')),
+        h('span', { class: 'disc-name', title: f.name }, f.base, h('span', { class: 'muted small block' }, [caseId !== c.id ? `Case ${caseNum(caseId)}` : '', f.folder || 'Unsorted'].filter(Boolean).join(' · '))),
         h('span', { class: 'disc-size muted small' }, D.fmtSize(f.size)), extra);
+      const pickedBytes = () => picked.reduce((n, k) => n + ((fileOf(k).f || {}).size || 0), 0);
       const draw = () => {
         const q = search.value.trim().toLowerCase();
-        const shown = files.filter((f) => !q || f.name.toLowerCase().includes(q));
-        left.replaceChildren(...(shown.length ? shown.map((f) => {
-          const on = picked.includes(f.name);
-          const r = row(f, on, h('span', { class: 'disc-act' }, on ? 'Added' : 'Add ›'));
+        const all = [];
+        for (const id of shownCases) {
+          const x = (Vault.data.cases || []).find((y) => y.id === id) || {};
+          const caseText = `${x.number || ''} ${x.subject || ''} ${x.title || ''}`.toLowerCase();
+          for (const f of byCase.get(id) || []) if (!q || f.name.toLowerCase().includes(q) || caseText.includes(q)) all.push({ f, caseId: id });
+        }
+        left.replaceChildren(...(all.length ? all.map(({ f, caseId }) => {
+          const key = keyOf(caseId, f.name);
+          const on = picked.includes(key);
+          const r = row(f, caseId, on, h('span', { class: 'disc-act' }, on ? 'Added' : 'Add ›'));
           r.tabIndex = 0;
-          const add = () => { if (!picked.includes(f.name)) { picked.push(f.name); draw(); } };
+          const add = () => { if (!picked.includes(key)) { picked.push(key); draw(); } };
           r.addEventListener('click', add);
           r.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); add(); } });
           return r;
-        }) : [h('p', { class: 'muted small disc-empty' }, files.length ? 'No files match.' : 'This case has no files yet.')]));
-        right.replaceChildren(...(picked.length ? picked.map((p, i) => {
-          const f = files.find((x) => x.name === p);
-          return row(f, false, h('span', { class: 'disc-btns' },
+        }) : [h('p', { class: 'muted small disc-empty' }, shownCases.some((id) => (byCase.get(id) || []).length) ? 'No files match.' : 'No files here yet.')]));
+        right.replaceChildren(...(picked.length ? picked.map((k, i) => {
+          const { f, caseId } = fileOf(k);
+          return row(f, caseId, false, h('span', { class: 'disc-btns' },
             h('button', { class: 'icon-btn', type: 'button', title: 'Move up', disabled: i === 0, onclick: () => { picked.splice(i - 1, 0, picked.splice(i, 1)[0]); draw(); } }, icon('arrow-up'), h('span', { class: 'sr-only' }, 'Move up')),
             h('button', { class: 'icon-btn', type: 'button', title: 'Move down', disabled: i === picked.length - 1, onclick: () => { picked.splice(i + 1, 0, picked.splice(i, 1)[0]); draw(); } }, icon('arrow-down'), h('span', { class: 'sr-only' }, 'Move down')),
             h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Take off the list', onclick: () => { picked.splice(i, 1); draw(); } }, icon('x-lg'), h('span', { class: 'sr-only' }, 'Remove'))));
         }) : [h('p', { class: 'muted small disc-empty' }, 'Click files on the left to add them here, in the order they are produced.')]));
-        const bytes = picked.reduce((n, p) => n + ((files.find((x) => x.name === p) || {}).size || 0), 0);
+        const bytes = pickedBytes();
         totals.textContent = picked.length ? `${picked.length} file${picked.length === 1 ? '' : 's'} · ${D.fmtSize(bytes)}${bytes > 4.38 * 1024 ** 3 ? ' · more than one DVD holds' : ''}` : '';
       };
+      source.addEventListener('change', async () => {
+        const want = casesFor(source.value);
+        left.replaceChildren(h('p', { class: 'muted small disc-empty' }, 'Reading the files…'));
+        for (const id of want) await loadCase(id);
+        shownCases = want;
+        draw();
+      });
+      // v1.50: before anything is written, a box lists every file going in and the total size.
+      const confirmList = (destText) => new Promise((resolve) => {
+        const bytes = pickedBytes();
+        const extra = vlc.checked && kit ? kit.bytes : 0;
+        const box = h('dialog', { class: 'dialog disc-confirm', 'aria-label': 'Files to copy' });
+        const done = (v) => { box.close(); box.remove(); resolve(v); };
+        box.addEventListener('cancel', (e) => { e.preventDefault(); done(false); });
+        box.append(h('h2', {}, 'Ready to Copy'),
+          h('p', { class: 'small' }, `${picked.length} file${picked.length === 1 ? '' : 's'} go to ${destText}, encrypted, in the order below.`),
+          h('div', { class: 'disc-confirm-list' }, h('table', { class: 'data-table' },
+            h('thead', {}, h('tr', {}, ['#', 'File', 'Case', 'Size'].map((t) => h('th', {}, t)))),
+            h('tbody', {}, picked.map((k, i) => { const { f, caseId } = fileOf(k); return h('tr', {}, h('td', {}, String(i + 1)), h('td', { class: 'disc-name' }, f.base), h('td', { class: 'nowrap' }, caseNum(caseId)), h('td', { class: 'nowrap disc-size' }, D.fmtSize(f.size))); })),
+            h('tfoot', {},
+              extra ? h('tr', {}, h('td', {}), h('td', {}, 'VLC Player'), h('td', {}), h('td', { class: 'nowrap disc-size' }, D.fmtSize(extra))) : null,
+              h('tr', { class: 'disc-total' }, h('td', {}), h('td', {}, 'Total'), h('td', {}), h('td', { class: 'nowrap disc-size' }, D.fmtSize(bytes + extra)))))),
+          h('p', { class: 'muted small' }, `About ${D.fmtSize(bytes + extra)} on the drive; PDFs become page images, so the package can be somewhat larger or smaller.${bytes + extra > 4.38 * 1024 ** 3 ? ' That is more than one DVD (about 4.3 GB) holds: use a USB drive, or split the files over two productions.' : ''}`),
+          h('div', { class: 'dialog-actions' },
+            h('button', { class: 'btn', type: 'button', onclick: () => done(false) }, 'Back'),
+            h('button', { class: 'btn primary', type: 'button', onclick: () => done(true) }, 'Copy Now')));
+        form.append(box);
+        box.showModal();
+        box.querySelector('.btn.primary').focus();
+      });
       search.addEventListener('input', draw);
       draw();
 
@@ -318,6 +384,7 @@
         if (!picked.length) { err.textContent = 'Add at least one file to the list on the right.'; return; }
         if (pw.value.length < 8) { err.textContent = 'Use a password of at least 8 characters.'; pw.focus(); return; }
         if (pw.value !== pw2.value) { err.textContent = 'The two passwords are not the same.'; pw2.focus(); return; }
+        if (!(await confirmList(dest.value === 'pick' ? 'the USB drive or folder you pick next' : 'CaseVault-Data\\exports on the SSD'))) return;
         let dir = null; let destLabel = '';
         try {
           if (dest.value === 'pick') { dir = await window.showDirectoryPicker({ id: 'cv-discovery', mode: 'readwrite' }); destLabel = `Folder "${dir.name}"`; }
@@ -326,7 +393,7 @@
         go.disabled = true; bar.hidden = false;
         const setBar = (text, f) => { bar.firstChild.style.width = `${Math.round(f * 100)}%`; bar.lastChild.textContent = text; };
         try {
-          const entry = await exportPackage(c, { password: pw.value, prefix, start: Number(startIn.value) || 1, producedTo: toIn.value, allowSave: allow.checked, vlc: vlc.checked, dest: dir, destLabel, paths: [...picked] }, setBar);
+          const entry = await exportPackage(c, { password: pw.value, prefix, start: Number(startIn.value) || 1, producedTo: toIn.value, allowSave: allow.checked, vlc: vlc.checked, dest: dir, destLabel, paths: picked.map((k) => { const { caseId, f } = fileOf(k); return { caseId, path: f.name }; }) }, setBar);
           pw.value = ''; pw2.value = '';
           await Vault.updateSettings({ discoveryPrefix: prefix }).catch(() => {});
           close(true);
@@ -346,7 +413,7 @@
       h('h2', {}, 'Discovery'),
       h('p', { class: 'muted small' }, 'Pick the files to produce. CaseVault writes a password-protected package: it opens in Chrome or Edge with the password, shows and prints every page with its Bates number, plays video and audio, and has nothing to download. The files in the case are not changed.'),
       h('div', { class: 'disc-panes' },
-        h('section', { class: 'disc-pane' }, h('div', { class: 'disc-pane-head' }, h('strong', {}, 'Case Files'), search), left),
+        h('section', { class: 'disc-pane' }, h('div', { class: 'disc-pane-head' }, h('strong', {}, 'Files'), source, search), left),
         h('section', { class: 'disc-pane' }, h('div', { class: 'disc-pane-head' }, h('strong', {}, 'To Produce'), totals, h('div', { class: 'spacer' }),
           h('button', { class: 'btn small ghost', type: 'button', onclick: () => { picked.splice(0); draw(); } }, 'Clear')), right)),
       h('div', { class: 'form-grid disc-opts' },
