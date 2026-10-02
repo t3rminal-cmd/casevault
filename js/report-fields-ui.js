@@ -182,7 +182,9 @@
     // Searchable lists (v1.22): UCR codes and location codes from the Reference pages, and the
     // charges; the pick-lists (victim, gang, hair, eyes). All can still be typed over.
     const RD = root.CVRefData || { UCR_CODES: [], LOCATION_CODES: [], CHARGES: [], NARCOTIC_DATA: {} };
-    const UCR_ITEMS = RD.UCR_CODES.flatMap((g) => g.codes.map(([code, desc]) => ({ value: `${code} ${desc}`, label: `${code} ${desc}`, hint: g.title, group: g.title, code, desc })));
+    // v1.42: the IUCR Code box holds just the code; its description goes in Offense Classification.
+    const UCR_ITEMS = RD.UCR_CODES.flatMap((g) => g.codes.map(([code, desc]) => ({ value: code, label: code, hint: desc, group: g.title, code, desc })));
+    { const m = /^(\S+)\s+\S/.exec(String(data.ucr || '')); if (m && UCR_ITEMS.some((it) => it.code === m[1])) data.ucr = m[1]; }
     const LOC_ITEMS = RD.LOCATION_CODES.flatMap((g) => g.codes.map(([code, desc]) => ({ value: code, label: `${code} ${desc}`, hint: g.title, desc })));
     const CHARGE_ITEMS = (RD.CHARGES || []).flatMap((g) => g.codes.map(([statute, desc]) => ({ value: statute, label: `${statute} ${desc}`, hint: g.title, statute, desc })));
     const pickItems = (list) => list.map((v) => ({ value: v, label: v }));
@@ -229,7 +231,7 @@
         box = CVCombo.attach(el, { items: () => UCR_ITEMS, onPick: (it) => { fillOffense(it); save(); } });
         el.addEventListener('change', () => {
           const v = el.value.trim().toLowerCase();
-          fillOffense(UCR_ITEMS.find((it) => it.value.toLowerCase() === v || it.code.toLowerCase() === v));
+          fillOffense(UCR_ITEMS.find((it) => it.code.toLowerCase() === v || `${it.code} ${it.desc}`.toLowerCase() === v));
         });
       } else if (kind === 'location') {
         // From Location Codes; Type of Location fills in from the code picked.
@@ -549,15 +551,28 @@
     drawEvidence();
     const addExhibit = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', title: c.agencyNumber ? `Numbered on from the last exhibit of any case with federal jacket number ${c.agencyNumber}.` : 'Numbered on from the last exhibit of this case. Cases with the same federal jacket number share one sequence.', onclick: async () => {
       try {
-        const n = F().nextExhibit(await numbersInUse(c, data));
+        const n = await nextNumber();
         data.evidence.push({ number: n, inventory: '', type: '', drug: '', weight: '', description: '', photos: [], photoLabels: [] });
         data.lastExhibit = Math.max(Number(data.lastExhibit) || 0, n);
         drawEvidence();
         save(0);
+        drawNext();
         const last = evRows.lastElementChild && evRows.lastElementChild.querySelector('input');
         if (last) last.focus();
       } catch (err) { if (FS.isDisconnectError(err)) ui.onDriveLost(); }
     } }, 'Add Exhibit');
+    // v1.42: the numbering can start again (Reset to 1) or from any number. Empty: numbered on
+    // automatically, as before.
+    const nextNumber = async () => (Number(data.exhibitStart) > 0
+      ? F().nextFrom(data.exhibitStart, data.evidence.map((e) => e.number))
+      : F().nextExhibit(await numbersInUse(c, data)));
+    const startAt = h('input', { type: 'number', min: 1, step: 1, inputmode: 'numeric', class: 'rf-num rf-start-at', 'aria-label': 'Next exhibit number', value: Number(data.exhibitStart) > 0 ? data.exhibitStart : '' });
+    const drawNext = () => { nextNumber().then((n) => { startAt.placeholder = String(n); if (Number(data.exhibitStart) > 0) startAt.value = String(n); }).catch(() => {}); };
+    startAt.addEventListener('change', () => { const v = parseInt(startAt.value, 10); data.exhibitStart = v > 0 ? v : 0; save(0); drawNext(); });
+    const resetBtn = h('button', { class: 'btn small ghost', type: 'button', onclick: () => { data.exhibitStart = 1; save(0); drawNext(); } }, 'Reset to 1');
+    const autoBtn = h('button', { class: 'btn small ghost', type: 'button', onclick: () => { data.exhibitStart = 0; startAt.value = ''; save(0); drawNext(); } }, 'Automatic');
+    const numbering = archived ? null : h('div', { class: 'rf-numbering' }, h('label', { class: 'rf-numbering-label' }, h('span', {}, 'Next Exhibit No.'), startAt), resetBtn, autoBtn);
+    drawNext();
 
     const narrative = h('textarea', { class: 'rf-narrative', rows: 24, placeholder: 'What happened, in order. Tab indents.', 'aria-label': 'Summary of Investigation' });
     narrative.value = data.narrative || '';
@@ -668,7 +683,7 @@
       h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case: fill it in, then Send Draft to Reports puts it under Reports and its PDF under Files. Clear All starts another one. Saved as report-fields.json.'),
       h('div', { class: 'rf-actions' }, archived ? null : sendBtn, printBtn, archived ? null : clearBtn, h('div', { class: 'spacer' }), archived ? null : saveBtn),
       ...sections.slice(0, -1),
-      part('evidence', 'Evidence Inventoried', 'box-seam', evRows, archived ? null : h('div', { class: 'contact-add' }, addExhibit)),
+      part('evidence', 'Evidence Inventoried', 'box-seam', evRows, archived ? null : h('div', { class: 'contact-add rf-evidence-add' }, addExhibit, numbering)),
       part('summary', 'Summary of Investigation', 'journal-text', fmt, rich.el, narrative),
       sections[sections.length - 1]); // Submission and Approval comes last, as on the printed report
   }

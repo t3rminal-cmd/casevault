@@ -86,7 +86,7 @@
       ['asa', 'ASA Approving Search Warrant', 'line'],
       ['ausa', 'AUSA Approving Search Warrant', 'line'],
       ['judge', 'Judge Approving Search Warrant', 'line'],
-      // v1.39: the purchase price, then each pre-recorded bill (quantity, denomination, serial number, recovered or not).
+      // v1.39: the purchase price, then each pre-recorded bill (denomination, serial number, recovered or not; v1.42: no quantity).
       ['buyFunds', 'Purchase Price', 'line'],
       ['funds', 'Pre-Recorded Funds', 'list'],
       ['fundSheet', 'Pre-Recorded Fund Sheet', 'line'],
@@ -151,12 +151,12 @@
     victimsList: { title: 'Victims', item: 'Victim', fields: [['name', 'Name', 'victim'], ['officer', 'Officer Name', 'text'], ...PERSON.slice(1)] },
     // v1.39: an offender's phone numbers and monikers (with the social media app each is used on).
     offendersList: { title: 'Offenders', item: 'Offender', fields: [...PERSON, ['phones', 'Phone Numbers', 'phones'], ['socials', 'Monikers / Social Media', 'socials']] },
-    funds: { title: 'Pre-Recorded Funds', item: 'Bill', fields: [['quantity', 'Quantity', 'text'], ['denomination', 'Denomination', 'select', ['', '$1', '$2', '$5', '$10', '$20', '$50', '$100']], ['serial', 'Serial Number', 'text'], ['recovered', 'Recovered', 'select', ['', 'Recovered', 'Not Recovered']]] },
+    funds: { title: 'Pre-Recorded Funds', item: 'Bill', fields: [['denomination', 'Denomination', 'select', ['', '$1', '$2', '$5', '$10', '$20', '$50', '$100']], ['serial', 'Serial Number', 'text'], ['recovered', 'Recovered', 'select', ['', 'Recovered', 'Not Recovered']]] },
     charges: { title: 'Charges', item: 'Charge', fields: [['statute', 'Statute', 'charge'], ['description', 'Statute Description', 'chargeWide']] },
     gangs: { title: 'Gang Affiliations', item: 'Gang', fields: [['name', 'Gang', 'gang'], ['faction', 'Faction / Set', 'text']] },
     notArrested: { title: 'Persons Present Not Arrested', item: 'Person', fields: [['name', 'Name', 'text'], ['phone', 'Contact Number', 'phone'], ['address', 'Address', 'wide']] },
     personnel: { title: 'Police Personnel on Scene', item: 'Officer', fields: [['name', 'Name', 'text'], ['star', 'Star Number', 'text'], ['unit', 'Unit', 'text'], ['role', 'Role', 'select', ROLES]] },
-    notifications: { title: 'Notifications', item: 'Notification', fields: [['date', 'Date', 'date'], ['name', 'Person Notified', 'text'], ['by', 'Notified By', 'text'], ['notes', 'Notes', 'wide']] },
+    notifications: { title: 'Notifications', item: 'Notification', fields: [['date', 'Date', 'date'], ['name', 'Person Notified', 'text'], ['by', 'Notified By', 'text']] }, // v1.42: no Notes
     vehicles: { title: 'Vehicles', item: 'Vehicle', fields: [['year', 'Year', 'text'], ['make', 'Make', 'text'], ['model', 'Model', 'text'], ['color', 'Color', 'text'], ['plate', 'License Plate', 'text'], ['state', 'Plate State', 'text'], ['vin', 'VIN', 'text'], ['disposition', 'Impound / Tow', 'select', ['', 'Impound', 'Tow', 'Other']], ['notes', 'Owner and Notes', 'wide']] },
   };
   const PICKS = {
@@ -193,8 +193,10 @@
     // Each photo's label (v1.34), kept in step with the photos.
     d.evidence.forEach((e, i) => { const src0 = (Array.isArray(src.evidence) && src.evidence[i]) || {}; const ls = Array.isArray(src0.photoLabels) ? src0.photoLabels : []; e.photoLabels = e.photos.map((_, j) => String(ls[j] || '')); });
     // A v1.21 single Notifications line becomes the first notification.
-    if (typeof src.notifications === 'string') d.notifications = String(src.notifications).trim() ? [{ notes: String(src.notifications).trim() }] : [];
+    if (typeof src.notifications === 'string') d.notifications = String(src.notifications).trim() ? [{ name: String(src.notifications).trim() }] : [];
     for (const k of Object.keys(LISTS)) d[k] = (Array.isArray(d[k]) ? d[k] : []).map((it) => ({ ...blankItem(k), ...(it && typeof it === 'object' ? it : {}) }));
+    // v1.42: Notifications have no Notes box; notes without a name become the name.
+    for (const n of d.notifications) if (n.notes && !String(n.name || '').trim()) n.name = n.notes;
     // v1.21's "Unit / Role" text goes to Unit when it isn't one of the roles.
     for (const p of d.personnel) if (p.role === 'UC') p.role = 'UCO'; // renamed in v1.31
     for (const p of d.personnel) if (p.role && !ROLES.includes(p.role)) { p.unit = p.unit || p.role; p.role = ''; }
@@ -320,6 +322,14 @@
   }
 
   /** The next exhibit number: one more than the highest used in this case or any case sharing its agency case number. */
+  /** v1.42: numbering started again from `start`: the first number from there that this case's
+   * exhibits don't use. */
+  function nextFrom(start, used) {
+    const taken = new Set((used || []).map((n) => parseInt(String(n).replace(/\D+/g, ''), 10)).filter(Number.isFinite));
+    let n = Math.max(1, parseInt(start, 10) || 1);
+    while (taken.has(n)) n++;
+    return n;
+  }
   function nextExhibit(numbersInUse) {
     const max = (numbersInUse || []).map((n) => parseInt(String(n).replace(/\D+/g, ''), 10)).filter(Number.isFinite).reduce((a, b) => Math.max(a, b), 0);
     return max + 1;
@@ -469,7 +479,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { MULTI, SOCIAL_APPS, STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, exhibitLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { MULTI, SOCIAL_APPS, STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

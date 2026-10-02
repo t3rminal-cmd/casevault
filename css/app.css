@@ -309,7 +309,7 @@ body.sidebar-collapsed .rail-only { display: inline-flex; }
 .segmented { display: inline-flex; gap: .25rem; }
 .notes-editor {
   min-height: calc(60vh / var(--z, 1));
-  font: 15px/1.6 var(--font);
+  font: 15px/1.2 var(--font);
   padding: 1rem;
 }
 .notes-preview {
@@ -1732,7 +1732,10 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 .rich-editor .md-table td, .rich-editor .md-table th { min-width: 4rem; }
 .rich-editor mark.confirm-mark { background: #fff3a3; color: #3a3000; border-radius: 2px; padding: 0 .1em; }
 .rf-narrative-rich { min-height: 14rem; padding: .8rem 1rem; font: 15px/1.6 var(--font); }
-.notes-editor-rich { min-height: calc(60vh / var(--z, 1)); padding: 1rem; font: 15px/1.6 var(--font); }
+.notes-editor-rich { min-height: calc(60vh / var(--z, 1)); padding: 1rem; font: 15px/1.2 var(--font); }
+/* v1.42: Field Notes single spaced: no space between paragraphs, lines 1.2 high. */
+.notes-editor-rich p, .notes-editor-rich ul, .notes-editor-rich ol { margin: 0; }
+.notes-editor-rich h2, .notes-editor-rich h3, .notes-editor-rich h4 { margin: .5em 0 0; line-height: 1.2; }
 .draft-editor-rich { min-height: calc(65vh / var(--z, 1)); padding: 1rem; font: 15px/1.6 var(--font); }
 .edit-mode .btn { min-width: 5.5rem; }
 .fmt-bar .edit-mode { margin-right: .1rem; }
@@ -1931,7 +1934,7 @@ body.notes-open .toasts { right: auto; left: 1rem; }
 .notes-float-top select { width: 100%; }
 .notes-float-edit { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: .4rem; }
 .notes-float-edit[hidden] { display: none; }
-.notes-float-edit .rich-editor, .notes-float-editor { flex: 1; min-height: 6rem; overflow-y: auto; resize: none; width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .6rem .7rem; font: 14px/1.55 var(--font); background: var(--surface); }
+.notes-float-edit .rich-editor, .notes-float-editor { flex: 1; min-height: 6rem; overflow-y: auto; resize: none; width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .6rem .7rem; font: 14px/1.2 var(--font); background: var(--surface); }
 .notes-float-edit .format-bar { flex-wrap: wrap; }
 .notes-float-foot { display: flex; align-items: center; gap: .5rem; padding-top: .45rem; }
 .notes-float-empty { margin: auto; text-align: center; }
@@ -2392,12 +2395,12 @@ body *:not(svg):not(svg *):not(.textLayer *):not(.xfaLayer *):not(.textLayer):no
 .rpt-icon svg { width: 1.1rem; height: 1.1rem; }
 .notes-card { display: block; padding: .85rem 1rem; border: 1px dashed var(--border); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text); text-decoration: none; transition: border-color .15s, background-color .15s; }
 .notes-card:hover, .notes-card:focus-visible { border-color: var(--accent); border-style: solid; background: var(--accent-soft); }
-.notes-card-text { white-space: pre-wrap; line-height: 1.55; max-height: 12rem; overflow: hidden; -webkit-mask-image: linear-gradient(#000 75%, transparent); mask-image: linear-gradient(#000 75%, transparent); }
+.notes-card-text { white-space: pre-wrap; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 9; line-clamp: 9; } /* v1.42: no fade at the bottom; single spaced */
 .notes-empty { display: flex; align-items: center; gap: .6rem; color: var(--muted); }
 .reports-table { table-layout: fixed; width: 100%; }
 .reports-table col.col-rtype { width: 14rem; }
 .reports-table col.col-ai { width: 5.5rem; }
-.reports-table col.col-ract { width: 8rem; }
+.reports-table col.col-ract { width: 10.5rem; }
 .reports-table col.col-grip { width: 2.4rem; }
 .reports-table th.ai-col, .reports-table td.ai-col { text-align: center; }
 .reports-table td.ai-col .ai-badge { margin: 0; display: inline-flex; align-items: center; gap: .3em; }
@@ -2584,3 +2587,85 @@ input[list]::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
 .files-layout { grid-template-columns: minmax(12rem, 13.5rem) minmax(0, 1fr); }
 .files-table-wrap col.col-type { width: 9.8rem; }
 .files-table-wrap td.ftype { overflow-wrap: break-word !important; word-break: normal !important; }
+
+/* ---------- v1.42 ---------- */
+/* Files: the Document column breaks only between words ("Supplementary / Report"), never inside
+   one, and file names break between words before splitting one. */
+.files-table-wrap col.col-type { width: 10.5rem; }
+.files-table-wrap td.ftype { overflow-wrap: normal !important; word-break: normal; hyphens: none; }
+.files-table-wrap .fname-link, .files-table-wrap .fname-folder { overflow-wrap: break-word !important; word-break: normal; }
+@media (max-width: 1100px) { .files-table-wrap col.col-type { width: 10rem; } }
+@media (max-width: 900px) { .files-table-wrap col.col-type { width: 0; } }
+/* Draft tab: the exhibit numbering control sits beside Add Exhibit. */
+.rf-evidence-add { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.rf-numbering { display: inline-flex; align-items: center; gap: .4rem; margin-left: auto; }
+.rf-numbering-label { display: inline-flex; align-items: center; gap: .5rem; font-size: .85rem; color: var(--muted); white-space: nowrap; }
+.rf-numbering .rf-start-at { width: 5.5rem; }
+/* Pre-Recorded Funds: one compact row per bill (Bill N, denomination, serial number, recovered, delete). */
+.rf-list-funds .rf-items { gap: .3rem; }
+.rf-list-funds .rf-item { display: grid; grid-template-columns: 4rem minmax(0, 1fr) auto; align-items: end; gap: .2rem .7rem; padding: .35rem .6rem; }
+.rf-list-funds .rf-item-head { display: contents; }
+.rf-list-funds .rf-item-head > strong { order: 1; align-self: center; padding-top: 1.1rem; font-size: .85rem; white-space: nowrap; }
+.rf-list-funds .rf-item-grid { order: 2; grid-template-columns: minmax(0, 8rem) minmax(0, 1.6fr) minmax(0, 11rem); gap: .4rem .6rem; }
+.rf-list-funds .rf-item-head > button { order: 3; align-self: end; margin-bottom: .1rem; }
+.rf-list-funds .rf-item-grid .field > span { font-size: .75rem; }
+@media (max-width: 700px) { .rf-list-funds .rf-item { grid-template-columns: 1fr auto; } .rf-list-funds .rf-item-grid { grid-template-columns: 1fr; grid-column: 1 / -1; } }
+/* Dev Tools (v1.42): the Anonymizer as a card in numbered steps; the purge in a danger zone. */
+.dev-card { display: grid; gap: .8rem; padding: 1.1rem 1.2rem; border: 1px solid var(--border); background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.dev-card-head { display: flex; align-items: center; gap: .9rem; padding-bottom: .8rem; border-bottom: 1px solid var(--border); }
+.dev-card-head h3 { margin: 0; font-size: 1.05rem; }
+.dev-card-head p { margin: .15rem 0 0; }
+.dev-card-icon { display: inline-grid; place-items: center; width: 2.6rem; height: 2.6rem; flex: 0 0 auto; background: var(--accent-soft); color: var(--accent); }
+.dev-card-icon svg { width: 1.4rem; height: 1.4rem; }
+.dev-step-head { display: flex; align-items: center; gap: .7rem; }
+.dev-step-num { display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem; flex: 0 0 auto; background: var(--accent); color: #fff; font-weight: 700; font-size: .9rem; }
+.dev-step { gap: .55rem; }
+.dev-panel .dev-actions { grid-template-columns: minmax(10rem, 14rem) minmax(8rem, 10rem); }
+.purge-box { gap: 1.1rem; padding: 1rem 1.2rem; margin-top: .4rem; border: 1px solid var(--danger); border-left-width: 6px; background: var(--danger-soft); }
+.purge-box strong { color: var(--danger); font-size: 1rem; }
+.purge-box p { color: var(--text); }
+.purge-skull { display: inline-grid; place-items: center; width: 3.4rem; height: 3.4rem; flex: 0 0 auto; background: var(--danger); color: #fff; }
+.purge-skull svg { width: 2.2rem; height: 2.2rem; }
+.dev-panel .purge-btn { display: inline-flex; align-items: center; gap: .5rem; width: 13rem; }
+.dev-panel .purge-btn svg { display: inline-block; width: 1.1rem; height: 1.1rem; order: -1; }
+/* Sidebar (v1.42): each operation a card with an accent edge, the two-tone folder, case numbers
+   under a thin guide line; Closed and Archived sit together at the bottom. */
+.sidebar { background: var(--surface); }
+.case-list > li + li { margin-top: .45rem; }
+.op-group { border: 1px solid var(--border); border-left: 3px solid var(--accent); background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / .05); transition: border-color .15s, box-shadow .15s; }
+.op-group:hover { box-shadow: 0 3px 10px rgb(0 0 0 / .08); }
+.op-head { padding: .55rem .6rem .55rem .55rem; }
+.op-head > .op-folder { width: 2rem; height: 2rem; background: linear-gradient(160deg, var(--accent-soft), color-mix(in srgb, var(--accent) 22%, var(--surface))); }
+.op-head > .op-folder svg { width: 1.15rem; height: 1.15rem; }
+.op-name { font-weight: 700; font-size: .93rem; letter-spacing: .01em; }
+.op-meta { font-size: .72rem; }
+.op-cases::before { width: 1px; background: var(--border); }
+.op-cases .case-item { padding: .38rem .6rem; }
+.op-cases .case-item.active { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.case-item .pill, .case-item .status-pill { font-size: .66rem; padding: .08rem .4rem; letter-spacing: .03em; }
+.archived-cases { max-height: 30%; background: var(--surface-2); }
+.archived-cases summary { display: flex; align-items: center; gap: .5rem; padding: .6rem .9rem; font-size: .74rem; text-transform: uppercase; letter-spacing: .08em; }
+.archived-cases summary .count-pill { margin-left: auto; text-transform: none; letter-spacing: 0; }
+.archived-cases .op-group { border-left-color: var(--muted); }
+.closed-cases + .archived-cases { border-top: 1px solid var(--border); }
+.closed-cases .op-head > .op-folder { background: var(--surface-2); color: var(--muted); }
+/* Overview (v1.42): the open operation's case numbers, each with all of its tabs. */
+.op-timeline-section .section-head { justify-content: center; }
+.op-timeline-section .section-head .section-title { text-align: center; }
+.op-open-section .op-open { margin: 0; }
+.op-case-links { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .55rem; }
+.op-tab-link { display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .6rem; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: .82rem; text-decoration: none; white-space: nowrap; }
+.op-tab-link svg { width: .9rem; height: .9rem; color: var(--accent); flex: 0 0 auto; }
+.op-tab-link:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.op-folder-art svg { width: 3.6rem; height: 3.6rem; color: var(--accent); }
+.op-open-section .op-open-cases { grid-template-columns: repeat(auto-fill, minmax(min(100%, 25rem), 1fr)); }
+.op-case-links { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.op-tab-link { justify-content: center; }
+@media (max-width: 600px) { .op-case-links { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* The landing timeline: each event's title centered in its card, like the section title. */
+.htl-card { text-align: center; justify-items: center; }
+/* Funds: the column names show once, over the first bill. */
+.rf-list-funds .rf-item:not(:first-child) .rf-item-grid .field > span { display: none; }
+.rf-list-funds .rf-item:not(:first-child) .rf-item-head > strong { padding-top: 0; }
+.rf-list-funds .rf-item:not(:first-child) { align-items: center; }
+.rf-list-funds .rf-item:not(:first-child) .rf-item-head > button { align-self: center; margin-bottom: 0; }
