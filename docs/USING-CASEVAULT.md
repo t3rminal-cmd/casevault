@@ -215,6 +215,18 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.56
+
+- **Link Chart overhaul** (see *Link Chart* under *Files* for the details):
+  - **Subject** is now **Primary** (Add Primary).
+  - **Tree** or **Free** layout. In Free, drag cards anywhere. In Tree, **Move Left / Move Right** set the order and **Per Row** sets how many cards sit side by side.
+  - **Link Cards**: click a card, then another, to draw an arrow; click two linked cards to unlink them. Each connection's arrow can point either way, both ways or not at all.
+  - **Zoom** in and out, and **Fit**, for big organization charts. A line under the chart says how big the names will print, and when the chart is too crowded to read (up to 4 in a row print full size, up to 6 stay readable).
+  - **Clear Chart** button. The Chart Title has no sample text.
+  - No more cut-off words: names, aliases, web addresses and labels wrap. The form boxes and connection labels show the whole text.
+  - Phone cards use the same phone format as the rest of CaseVault.
+  - **Open in Link Chart** in Files → Link Charts sends a saved chart back to the tab. The PDF is named after the chart title, so you can keep more than one.
+
 ### What's new in v1.55
 
 - **Discovery receipt.** In **Files → Discovery**, the **Options** box has **Make a receipt to sign (PDF to Downloads)**, on by default. When the package is made, CaseVault also makes the **Discovery Receipt** PDF:
@@ -543,22 +555,31 @@ The files in the case are never changed. The fingerprints in the index are of th
 
 From then on the **Copy the VLC player along** box is ticked by itself, and every package gets a **VLC Player** folder with VLC's license in it.
 
-### Link Chart (v1.52)
+### Link Chart (v1.52, v1.56)
 
 The **Link Chart** tab (after Files) draws who is under whom in the case, for a briefing or a prosecutor. Each case has its own chart, saved in the case folder on the SSD (`linkchart.json`). Its PDF goes into the case's **Files → Link Charts**, so you can attach it to mail or add it to Discovery like any other file.
 
-- **Add Subject** puts a person at the top. To put a card under someone, pick them in the list on the left. Then use **Add Person Under** (a supplier, courier, associate…) or **Add Moniker / Page** (an online name or a webpage they use). **Add Page** puts a webpage or dark-web name on its own at the top.
+- **Add Primary** puts a person at the top. To put a card under someone, pick them in the list on the left. Then use **Add Person Under** (a supplier, courier, associate…), **Add Moniker** (an online name or a webpage they use) or **Add Phone**. **Add Page** puts a webpage or dark-web name on its own at the top.
 - **Each card:**
   - **Kind**: Person, Moniker or Webpage, Phone, Crypto Wallet, Location or Other.
-  - **Role** for a person: Subject, Supplier, Courier, Associate, Customer, Source or Other. Each role has its own colour on the card.
+  - **Role** for a person: Primary, Supplier, Courier, Associate, Customer, Source or Other. Each role has its own colour on the card. (Charts made before v1.56 with *Subject* show *Primary*.)
   - **Platform** for an online name: Webpage, Dark Web, Google, Snapchat, Facebook / Instagram, Telegram or Other. Each has its own picture.
-  - **Name**, and an **Alias / Moniker**, **Handle or URL**, number or address.
+  - **Name**, and an **Alias / Moniker**, **Handle or URL**, **Phone Number**, wallet or address. A phone number formats itself as you type (123.456.7890), like every phone box in CaseVault.
   - **Under**: move the card somewhere else in the chart.
+  - **Move Left / Move Right** (Tree layout): change the order of cards under the same person.
   - **Delete Card**: the cards under it move up one level.
+- **Nothing is cut off:** names take up to three lines and aliases or web addresses up to two (a long address is split across the lines). All cards on a chart are as tall as the fullest one needs. Labels on connections take two lines.
 - **Photos:** a person's **Photo** is a picture from the case's files. **Add Photo** adds one to Subject Information and uses it. Every photo is shown as the same square (head shots are cropped to fit), and a person without one gets a plain outline.
-- **Other Connections** draws a dashed line, with a short label, between two cards that aren't one under the other: the same phone, money sent, met at…
-- **Layout:** the chart lays itself out top down. When someone has five or more people or pages under them, and none of those have anyone under them, they go in rows of four, so a big crew still fits a portrait page.
-- **PDF View** shows the chart on a letter-size portrait page with its title, the case number and subject, and the date printed; from there you can print or download it. **Save PDF to Case** saves it as `Link Charts\<case>-<title>.pdf`; saving again replaces it. No agency name, seal or badge goes on the page.
+- **The bar over the chart:**
+  - **Tree** (the default): the chart lays itself out top down. **Per Row** sets how many people or pages sit side by side under one person before they go into rows (4 to start).
+  - **Free**: drag any card where you want it (it snaps to a small grid). Cards start where the tree put them; switching back to Tree lays them out again.
+  - **Link Cards**: click one card, then another, and a dashed arrow is drawn from the first to the second. Click two cards that are already linked and the line goes. Press **Esc** or click **Link Cards** again to stop.
+  - **Zoom**: **−** and **+** (or Ctrl + mouse wheel), and **Fit** to see the whole chart. Zoom is only for the screen; the PDF always fits the page.
+- **How many fit:** the line under the chart says how big the names will print. On the portrait page, up to **4 cards in a row** print full size and up to **6** stay readable; at 7 or 8 the names print under 6 pt and the line turns orange. For a big organization, use fewer per row or split it into one chart per crew (change the title and save each as its own PDF).
+- **Other Connections** lists every dashed line: **From**, **To**, **Arrow** (Arrow To →, ← Arrow From, ↔ Both Ways or No Arrow) and a short **Label** (the same phone, money sent, met at…). **Add Connection** adds one by hand.
+- **Clear Chart** takes every card off (after asking). Photos stay in the case files, and a saved PDF stays in Files.
+- **PDF View** shows the chart on a letter-size portrait page with its title, the case number and subject, and the date printed; from there you can print or download it. **Save PDF to Case** saves it as `Link Charts\<case>-<title>.pdf`; saving again with the same title replaces it, a new title makes a new PDF. No agency name, seal or badge goes on the page.
+- **Back from Files:** a Link Chart PDF saved with v1.56 or later carries the chart inside it. In **Files → Link Charts**, the **Open in Link Chart** button on its row puts that chart back on the Link Chart tab to change it (CaseVault asks first if the tab already has cards).
 - An archived case shows its chart read-only.
 
 ### Adding files

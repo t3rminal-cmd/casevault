@@ -59,11 +59,93 @@ test('SVG: names, roles, platform pictures, photos cropped square, the extra lin
   c.nodes[0].photo = 'Subject Information/doe.jpg';
   const { svg, width, height } = LC.toSvg(c, { photoUrl: (n) => (n.photo ? 'data:image/jpeg;base64,AAAA' : ''), iconUrl: (k) => `icons/color/${k}.png`, selected: 'b' });
   assert.ok(width > 0 && height > 0);
-  for (const s of ['John Doe', 'Subject', 'Rick Roe', 'Courier', 'Telegram', 'icons/color/telegram.png', 'icons/color/phone.png', 'xMidYMid slice', 'Same subscriber', 'stroke-dasharray']) assert.ok(svg.includes(s), s);
+  for (const s of ['John Doe', 'Primary', 'Rick Roe', 'Courier', 'Telegram', 'icons/color/telegram.png', 'icons/color/phone.png', 'xMidYMid slice', 'Same subscriber', 'stroke-dasharray']) assert.ok(svg.includes(s), s);
   assert.ok(!/<script/i.test(LC.toSvg(LC.normalize({ nodes: [{ id: 'q', name: '<script>x</script>' }] })).svg), 'names are escaped');
 });
 
 test('long names fit the card', () => {
   assert.deepStrictEqual(LC.twoLines('Jonathan Alexander Doe-Example Junior', 122, 10.5).length, 2);
   assert.ok(LC.fit('https://example.com/a/very/long/path/that/goes/on', 122, 8.5).endsWith('…'));
+});
+
+// v1.56
+test('Subject becomes Primary; old links have no arrow; mode and per-row kept clean', () => {
+  const c = chart();
+  assert.strictEqual(c.nodes[0].role, 'Primary');
+  assert.strictEqual(c.links[0].dir, 'none');
+  assert.strictEqual(c.mode, 'tree');
+  assert.strictEqual(c.perRow, 4);
+  const d = LC.normalize({ mode: 'free', perRow: 99, nodes: [{ id: 'a', x: 10.4, y: 'no' }] });
+  assert.strictEqual(d.mode, 'free'); assert.strictEqual(d.perRow, 4);
+  assert.strictEqual(d.nodes[0].x, 10); assert.strictEqual(d.nodes[0].y, null);
+  assert.strictEqual(LC.newNode('person').role, 'Primary');
+});
+
+test('per row decides when a crew goes into rows', () => {
+  const c = LC.normalize({ perRow: 3, nodes: [{ id: 'a' }] });
+  for (let i = 0; i < 6; i++) c.nodes.push({ ...LC.newNode('person', 'a') });
+  const L = LC.layout(c);
+  assert.strictEqual(new Set(c.nodes.slice(1).map((n) => L.boxes.get(n.id).y)).size, 2, '6 in rows of 3');
+  c.perRow = 6;
+  assert.strictEqual(new Set(c.nodes.slice(1).map((n) => LC.layout(c).boxes.get(n.id).y)).size, 1, '6 side by side');
+  const big = LC.printScale(c); c.perRow = 2; const small = LC.printScale(c);
+  assert.ok(small.nameSize >= big.nameSize);
+  assert.strictEqual(typeof big.readable, 'boolean');
+});
+
+test('move left / right swaps cards under the same card', () => {
+  const c = chart();
+  assert.strictEqual(LC.moveSibling(c, 'c', -1), true);
+  assert.deepStrictEqual(LC.ordered(c).map((x) => x.node.id), ['a', 'c', 'b', 'd']);
+  assert.strictEqual(LC.moveSibling(c, 'c', -1), false, 'already first');
+  assert.strictEqual(LC.moveSibling(c, 'a', 1), false, 'only top card');
+});
+
+test('click to link and unlink, arrows drawn', () => {
+  const c = chart();
+  assert.strictEqual(LC.toggleLink(c, 'b', 'c'), 'linked');
+  const l = c.links.find((x) => x.from === 'b');
+  assert.strictEqual(l.dir, 'to');
+  assert.ok(LC.toSvg(c).svg.includes('marker-end="url(#lc-arrow)"'));
+  l.dir = 'from';
+  assert.ok(LC.toSvg(c).svg.includes('marker-start="url(#lc-arrow)"'));
+  assert.strictEqual(LC.toggleLink(c, 'c', 'b'), 'unlinked', 'either way round');
+  assert.strictEqual(LC.toggleLink(c, 'b', 'b'), '');
+  LC.clear(c);
+  assert.deepStrictEqual([c.nodes.length, c.links.length, c.title], [0, 0, 'Example Sweep']);
+});
+
+test('free mode keeps each card where it was put', () => {
+  const c = chart();
+  const before = LC.layout(c).boxes.get('d');
+  LC.freeze(c);
+  assert.strictEqual(c.mode, 'free');
+  assert.deepStrictEqual([LC.layout(c).boxes.get('d').x, LC.layout(c).boxes.get('d').y], [Math.round(before.x), Math.round(before.y)]);
+  c.nodes.find((n) => n.id === 'd').x = -200;
+  const L = LC.layout(c);
+  assert.strictEqual(L.offset.x, -200);
+  assert.strictEqual(L.boxes.get('d').x, 0, 'shifted so nothing is off the page');
+  assert.ok(LC.toSvg(c).svg.includes('<polyline'), 'lines to parents');
+});
+
+test('names, handles and labels wrap instead of being cut', () => {
+  const long = 'https://example.com/a/very/long/path/that/goes/on';
+  const lines = LC.wrapLines(long, 140, 8.5, 2);
+  assert.strictEqual(lines.join(''), long);
+  assert.ok(lines.every((l) => l.length <= Math.floor(140 / (8.5 * 0.6))));
+  assert.strictEqual(LC.wrapLines('Jonathan Alexander Doe-Example Junior', 140, 10.5, 3).join(' '), 'Jonathan Alexander Doe-Example Junior');
+});
+
+test('the chart rides inside its PDF and comes back', () => {
+  const pdf = new TextEncoder().encode('%PDF-1.7\n1 0 obj\n<<>>\nendobj\nxref\n0 1\ntrailer\n<< >>\nstartxref\n9\n%%EOF\n');
+  const c = chart(); c.title = 'Doé Crew'; LC.freeze(c);
+  const out = LC.embed(pdf, c);
+  const s = new TextDecoder().decode(out);
+  assert.ok(s.indexOf('%CaseVault-LinkChart:') < s.lastIndexOf('startxref'));
+  assert.ok(s.endsWith('startxref\n9\n%%EOF\n'));
+  const back = LC.extract(out);
+  assert.strictEqual(back.title, 'Doé Crew');
+  assert.strictEqual(back.mode, 'free');
+  assert.deepStrictEqual(back.nodes.map((n) => n.id), c.nodes.map((n) => n.id));
+  assert.strictEqual(LC.extract(pdf), null);
 });
