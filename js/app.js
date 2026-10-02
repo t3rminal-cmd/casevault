@@ -2518,7 +2518,7 @@
     };
 
     const table = shown.length
-      ? h('div', { class: 'files-table-wrap' }, h('table', { class: 'files' },
+      ? h('div', { class: 'files-table-wrap' }, h('table', { class: `files${shown.some((f) => f.folder === 'Link Charts' && /\.pdf$/i.test(f.base)) ? ' has-lc' : ''}` },
         h('colgroup', {}, dragRows ? h('col', { class: 'col-grip' }) : null, h('col', { class: 'col-name' }), h('col', { class: 'col-type' }), h('col', { class: 'col-ext' }), h('col', { class: 'col-size' }), h('col', { class: 'col-added' }), h('col', { class: 'col-actions' })),
         h('thead', {}, h('tr', {},
           dragRows ? h('th', { class: 'grip-cell', title: 'Your own order: drag the rows' }, h('span', { class: 'sr-only' }, 'Order')) : null,
@@ -2541,6 +2541,8 @@
             h('td', { class: 'muted fadded', title: fmtDateTime(f.modified) }, addedText(f.modified)),
             h('td', { class: 'actions' },
               h('button', { 'data-ro-ok': 'true', class: 'icon-btn', type: 'button', title: 'Open', onclick: () => previewFile(c, f.name) }, I('eye'), h('span', { class: 'sr-only' }, `Open ${f.base}`)),
+              // v1.56: a Link Chart PDF goes back to the Link Chart tab.
+              f.folder === 'Link Charts' && /\.pdf$/i.test(f.base) ? h('button', { class: 'icon-btn', type: 'button', title: 'Open in Link Chart: send this chart back to the Link Chart tab to change it', onclick: async () => { if (await CVLinkChartUI.openFromFile(c, f.name)) showCase(c.id, 'linkchart'); } }, I('diagram-3-fill'), h('span', { class: 'sr-only' }, `Open ${f.base} in Link Chart`)) : null,
               h('button', { class: 'icon-btn', type: 'button', title: f.folder ? 'Move or rename' : 'File it in a folder', onclick: () => moveFileDialog(c, f, current) }, I('arrow-left-right'), h('span', { class: 'sr-only' }, `Move or rename ${f.base}`)),
               h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Delete from the SSD', onclick: async () => {
                 if (!(await confirmDialog({ title: 'Delete this file?', message: `"${f.base}" will be permanently deleted from the SSD.`, confirmText: 'Delete', danger: true }))) return;

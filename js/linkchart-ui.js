@@ -1,6 +1,9 @@
-/* CaseVault — the Link Chart tab (v1.52). The cards on the left (who is under whom), the card
- * you picked in a form under them, and the chart on the right as it will print. PDF View shows it
- * as a portrait page; Save PDF to Case puts it in Files → Link Charts, ready to attach.
+/* CaseVault — the Link Chart tab (v1.52, v1.56). The cards on the left (who is under whom), the
+ * card you picked in a form under them, and the chart on the right as it will print. PDF View
+ * shows it as a portrait page; Save PDF to Case puts it in Files → Link Charts, ready to attach,
+ * with the chart inside so Files can send it back here (Open in Link Chart).
+ * v1.56: Tree or Free layout (drag the cards), cards per row, Link Cards (click one card, then
+ * another: an arrow; click two linked cards: the line goes), zoom, Clear Chart.
  * Kept in the case folder as linkchart.json; photos are the case's own pictures (Subject Information).
  */
 'use strict';
@@ -10,6 +13,8 @@
   const FILE = 'linkchart.json';
   const IMAGE_RE = /\.(jpe?g|png|gif|webp|bmp)$/i;
   const LC = () => root.CVLinkChart;
+  const ZOOMS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.25, 1.5, 2];
+  const SNAP = 10;
 
   async function load(c) {
     try { return LC().normalize(await Vault.readCaseJSON(c.id, FILE)); } catch { return LC().emptyChart(); }
@@ -23,7 +28,7 @@
     if (!iconCache.has(name)) iconCache.set(name, fetch(`icons/color/${name}.png`).then((r) => (r.ok ? r.blob() : null)).then((b) => (b ? blobToDataUrl(b) : '')).catch(() => ''));
     return iconCache.get(name);
   }
-  /** A case photo, made small (the card is 76 units; 300 px is plenty at print size). */
+  /** A case photo, made small (the card is 70 units; 300 px is plenty at print size). */
   async function photoData(c, path) {
     try {
       const file = await Vault.readFile(c.id, path);
@@ -51,8 +56,8 @@
     const top = PH - M - 46; const areaW = PW - 2 * M; const areaH = top - (M + 14);
     const k = Math.min(areaW / width, areaH / height, 1.6);
     const w = width * k; const hgt = height * k;
-    // Drawn at about 200 dots per inch of the printed size.
-    const dpi = 200 / 72;
+    // Drawn at about 200 dots per inch of the printed size (more when the chart is shrunk a lot).
+    const dpi = Math.min(400, 200 / Math.max(0.5, Math.min(1, k * 2))) / 72;
     const cv = document.createElement('canvas');
     cv.width = Math.max(1, Math.round(w * dpi)); cv.height = Math.max(1, Math.round(hgt * dpi));
     const g = cv.getContext('2d');
@@ -74,19 +79,37 @@
     const printed = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
     text(M, M - 12, `Printed ${printed}`, 7.5, false);
     text(PW - M - R.width('Page 1 of 1', 8, false, 'helvetica'), M - 12, 'Page 1 of 1', 8, false);
-    return R.assemble([{ ops, sigs: [], imgs: [0], signed: true }], { photos: [{ jpeg, w: cv.width, h: cv.height, index: 0 }], title: 'Link Chart' });
+    const pdf = R.assemble([{ ops, sigs: [], imgs: [0], signed: true }], { photos: [{ jpeg, w: cv.width, h: cv.height, index: 0 }], title: 'Link Chart' });
+    // v1.56: the chart rides inside, so Files can send it back to the tab.
+    return LC().embed(pdf, chart);
+  }
+
+  /** v1.56: Files → Link Charts → Open in Link Chart. Puts the chart in that PDF back in the tab. -> opened? */
+  async function openFromFile(c, path) {
+    const { toast, confirmDialog } = ui;
+    let chart = null;
+    try { chart = LC().extract(new Uint8Array(await (await Vault.readFile(c.id, path)).arrayBuffer())); } catch (err) { if (FS.isDisconnectError(err)) { ui.onDriveLost(); return false; } }
+    if (!chart) { toast('This PDF has no Link Chart in it. Only Link Charts saved with CaseVault 1.56 or later can be opened again.', 'error', 6000); return false; }
+    const now = await load(c);
+    if (now.nodes.length && !(await confirmDialog({ title: 'Open This Link Chart?', message: `The Link Chart tab has ${now.nodes.length} card${now.nodes.length === 1 ? '' : 's'} now. They are replaced by the ${chart.nodes.length} in "${path.split('/').pop()}". The chart now on the tab is still in Files if you saved its PDF.`, confirmText: 'Open It' }))) return false;
+    chart.updated = new Date().toISOString();
+    await Vault.writeCaseJSON(c.id, FILE, chart);
+    toast('Link Chart opened from Files.', 'success');
+    return true;
   }
 
   /* ---------- the tab ---------- */
 
   async function render(panel, c, token) {
-    const { h, icon, field, toast, Save, openDialog } = ui;
+    const { h, icon, field, toast, Save, openDialog, confirmDialog } = ui;
     const chart = await load(c);
     const archived = Vault.isArchived(c.id);
     const files = archived ? [] : await Vault.listFiles(c.id).catch(() => []);
     if (token !== ui.state.renderToken) return;
     let images = files.filter((f) => IMAGE_RE.test(f.name));
     let selected = chart.nodes[0] ? chart.nodes[0].id : '';
+    let linking = false; let linkFrom = '';
+    let zoom = 1;
     const urls = new Map(); // case photo path -> object URL, for the screen
     const photoUrl = (n) => {
       if (!n.photo) return '';
@@ -114,19 +137,132 @@
     const form = h('div', { class: 'lc-form cv-boxed' });
     const linksBox = h('div', { class: 'lc-links cv-boxed' });
     const view = h('div', { class: 'lc-view', 'aria-label': 'The chart' });
+    const note = h('p', { class: 'lc-note small' });
     const nodeLabel = (n) => n.name || n.handle || (n.kind === 'person' ? 'Unknown person' : LC().subLine(n)) || 'Unnamed';
 
-    function drawView() {
-      const { svg } = LC().toSvg(chart, { photoUrl, iconUrl: (k) => `icons/color/${k}.png`, selected });
-      view.innerHTML = chart.nodes.length ? svg : '';
-      if (!chart.nodes.length) view.append(h('p', { class: 'muted lc-empty' }, archived ? 'No link chart for this case.' : 'Add the first person: Add Subject at the top left.'));
+    /* --- the toolbar over the chart --- */
+    const modeBtn = (m, label, ic, tip) => h('button', { type: 'button', class: 'btn small lc-seg', 'data-mode': m, icon: ic, title: tip, 'aria-pressed': 'false', disabled: archived, onclick: () => setMode(m) }, label);
+    const treeBtn = modeBtn('tree', 'Tree', 'diagram-3-fill', 'CaseVault places the cards top down. Move Left / Move Right in the card\'s form change the order.');
+    const freeBtn = modeBtn('free', 'Free', 'arrows-move', 'Drag every card where you want it. It starts from where the tree put it.');
+    const perRow = h('select', { 'aria-label': 'Cards per row', title: 'How many cards side by side before a crew goes into rows', disabled: archived },
+      Array.from({ length: LC().PER_ROW.max - LC().PER_ROW.min + 1 }, (_, i) => i + LC().PER_ROW.min).map((n) => h('option', { value: String(n), selected: n === chart.perRow }, String(n))));
+    perRow.addEventListener('change', () => { chart.perRow = Number(perRow.value); save(); drawView(); });
+    const perRowWrap = h('label', { class: 'lc-perrow' }, h('span', { class: 'small' }, 'Per Row'), perRow);
+    const linkBtn = h('button', { type: 'button', class: 'btn small', icon: 'link-45deg', 'aria-pressed': 'false', disabled: archived, title: 'Click one card, then another: an arrow from the first to the second. Click two linked cards: the line goes. Esc or this button stops.', onclick: () => setLinking(!linking) }, 'Link Cards');
+    const zoomPct = h('span', { class: 'lc-zoom-pct small', 'aria-live': 'polite' }, '100%');
+    const zoomBy = (dir) => { const i = ZOOMS.findIndex((z) => z >= zoom - 0.001); const j = Math.max(0, Math.min(ZOOMS.length - 1, (i < 0 ? ZOOMS.length - 1 : i) + dir)); setZoom(ZOOMS[j]); };
+    const fitBtn = h('button', { type: 'button', class: 'btn small ghost', title: 'Show the whole chart', onclick: () => fitZoom() }, 'Fit');
+    const toolbar = h('div', { class: 'lc-toolbar' },
+      h('div', { class: 'lc-segs', role: 'group', 'aria-label': 'Layout' }, treeBtn, freeBtn),
+      perRowWrap, linkBtn,
+      h('div', { class: 'spacer' }),
+      h('div', { class: 'lc-zoom', role: 'group', 'aria-label': 'Zoom' },
+        h('button', { type: 'button', class: 'icon-btn', title: 'Zoom out', onclick: () => zoomBy(-1) }, icon('dash-lg'), h('span', { class: 'sr-only' }, 'Zoom out')),
+        zoomPct,
+        h('button', { type: 'button', class: 'icon-btn', title: 'Zoom in', onclick: () => zoomBy(1) }, icon('plus-lg'), h('span', { class: 'sr-only' }, 'Zoom in')),
+        fitBtn));
+
+    function setMode(m) {
+      if (m === chart.mode) return;
+      if (m === 'free') LC().freeze(chart);
+      else chart.mode = 'tree';
+      save(); drawAll();
     }
-    view.addEventListener('click', (e) => {
+    function setLinking(on) {
+      linking = on; linkFrom = '';
+      linkBtn.setAttribute('aria-pressed', String(on));
+      linkBtn.classList.toggle('on', on);
+      view.classList.toggle('linking', on);
+      drawView();
+    }
+    function setZoom(z) {
+      zoom = Math.max(0.1, Math.min(2, z));
+      zoomPct.textContent = `${Math.round(zoom * 100)}%`;
+      sizeSvg();
+    }
+    function fitZoom() {
+      const svg = view.querySelector('svg');
+      if (!svg) return;
+      const w = Number(svg.getAttribute('width')); const hh = Number(svg.getAttribute('height'));
+      setZoom(Math.min(1, (view.clientWidth - 24) / w, Math.max(320, view.clientHeight - 24) / hh));
+    }
+    function sizeSvg() {
+      const svg = view.querySelector('svg');
+      if (!svg) return;
+      svg.style.setProperty('width', `${Math.round(Number(svg.getAttribute('width')) * zoom)}px`);
+      svg.style.setProperty('height', `${Math.round(Number(svg.getAttribute('height')) * zoom)}px`);
+    }
+    function drawToolbar() {
+      for (const b of [treeBtn, freeBtn]) { const on = b.dataset.mode === chart.mode; b.setAttribute('aria-pressed', String(on)); b.classList.toggle('on', on); }
+      perRowWrap.hidden = chart.mode !== 'tree';
+    }
+    function drawNote() {
+      if (!chart.nodes.length) { note.replaceChildren(); return; }
+      const s = LC().printScale(chart);
+      const R = LC().PER_ROW;
+      note.className = `lc-note small${s.readable ? '' : ' warn-text'}`;
+      note.replaceChildren(icon(s.readable ? 'info-circle' : 'exclamation-triangle-fill'), ' ',
+        `On the portrait page: up to ${R.default} cards in a row print full size, up to ${R.readable} stay readable. `,
+        h('strong', {}, `Names print at ${s.nameSize} pt now`),
+        s.readable ? '.' : ': too small to read. Use fewer per row, split the chart (one PDF per crew), or take cards off.');
+    }
+
+    let lastSvg = null;
+    function drawView() {
+      const { svg } = LC().toSvg(chart, { photoUrl, iconUrl: (k) => `icons/color/${k}.png`, selected, linkFrom });
+      view.innerHTML = chart.nodes.length ? svg : '';
+      if (!chart.nodes.length) view.append(h('p', { class: 'muted lc-empty' }, archived ? 'No link chart for this case.' : 'Add the first person: Add Primary at the top left.'));
+      view.classList.toggle('free', chart.mode === 'free');
+      lastSvg = view.querySelector('svg');
+      sizeSvg();
+      drawNote();
+    }
+
+    /* --- clicking and dragging on the chart --- */
+    let drag = null;
+    const unitScale = () => (lastSvg ? lastSvg.getBoundingClientRect().width / Number(lastSvg.getAttribute('width')) : 1) || 1;
+    view.addEventListener('pointerdown', (e) => {
       const g = e.target.closest && e.target.closest('[data-node]');
-      if (!g) return;
-      selected = g.getAttribute('data-node');
-      drawAll();
+      if (!g || e.button !== 0) return;
+      const id = g.getAttribute('data-node');
+      e.preventDefault();
+      if (linking && !archived) {
+        if (!linkFrom) { linkFrom = id; drawView(); return; }
+        if (linkFrom === id) { linkFrom = ''; drawView(); return; }
+        const r = LC().toggleLink(chart, linkFrom, id);
+        const a = chart.nodes.find((n) => n.id === linkFrom); const b = chart.nodes.find((n) => n.id === id);
+        toast(r === 'linked' ? `Linked: ${nodeLabel(a)} → ${nodeLabel(b)}` : `Unlinked: ${nodeLabel(a)} and ${nodeLabel(b)}`, 'info', 2500);
+        linkFrom = '';
+        save(); drawLinks(); drawView();
+        return;
+      }
+      const n = chart.nodes.find((x) => x.id === id);
+      if (chart.mode === 'free' && !archived && n) {
+        const L = LC().layout(chart); const bx = L.boxes.get(id);
+        drag = { id, n, sx: e.clientX, sy: e.clientY, x0: bx.x + L.offset.x, y0: bx.y + L.offset.y, moved: false, k: unitScale() };
+        view.setPointerCapture(e.pointerId);
+      } else { selected = id; drawAll(); }
     });
+    view.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const dx = (e.clientX - drag.sx) / drag.k; const dy = (e.clientY - drag.sy) / drag.k;
+      if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+      drag.moved = true;
+      drag.n.x = Math.max(0, Math.round((drag.x0 + dx) / SNAP) * SNAP);
+      drag.n.y = Math.max(0, Math.round((drag.y0 + dy) / SNAP) * SNAP);
+      drawView();
+    });
+    const endDrag = () => {
+      if (!drag) return;
+      const { id, moved } = drag;
+      drag = null;
+      if (moved) save();
+      selected = id; drawAll();
+    };
+    view.addEventListener('pointerup', endDrag);
+    view.addEventListener('pointercancel', endDrag);
+    view.addEventListener('wheel', (e) => { if (!e.ctrlKey) return; e.preventDefault(); zoomBy(e.deltaY < 0 ? 1 : -1); }, { passive: false });
+    panel.addEventListener('keydown', (e) => { if (e.key === 'Escape' && linking) { e.stopPropagation(); setLinking(false); } });
 
     function drawTree() {
       const rows = LC().ordered(chart);
@@ -134,8 +270,8 @@
         const ic = LC().iconOf(n);
         const b = h('button', { type: 'button', class: `lc-item${n.id === selected ? ' on' : ''}`, onclick: () => { selected = n.id; drawAll(); } },
           h('span', { class: 'lc-dot' }), ic ? icon(ic) : icon('person-badge'),
-          h('span', { class: 'lc-item-name' }, nodeLabel(n)), h('span', { class: 'lc-item-sub muted small' }, LC().subLine(n)));
-        b.style.setProperty('--depth', String(depth));
+          h('span', { class: 'lc-item-name', title: nodeLabel(n) }, nodeLabel(n)), h('span', { class: 'lc-item-sub muted small' }, LC().subLine(n)));
+        b.style.setProperty('--depth', String(Math.min(depth, 6)));
         b.style.setProperty('--lc', LC().colorOf(n));
         return h('li', {}, b);
       }) : [h('li', { class: 'muted small lc-none' }, 'No cards yet.')]));
@@ -172,50 +308,68 @@
           changed(false); drawForm();
         } catch { /* reported by Save */ }
       });
-      const person = n.kind === 'person'; const online = n.kind === 'online';
-      const handleLabel = person ? 'Alias / Moniker' : online ? 'Handle or URL' : n.kind === 'phone' ? 'Number' : n.kind === 'crypto' ? 'Wallet Address' : n.kind === 'location' ? 'Address' : 'Details';
-      form.replaceChildren(
+      const person = n.kind === 'person'; const online = n.kind === 'online'; const phone = n.kind === 'phone';
+      const handleLabel = person ? 'Alias / Moniker' : online ? 'Handle or URL' : phone ? 'Phone Number' : n.kind === 'crypto' ? 'Wallet Address' : n.kind === 'location' ? 'Address' : 'Details';
+      // v1.56: a phone number formats itself like every phone box in CaseVault (123.456.7890).
+      const handle = input('handle', { maxlength: 300, ...(phone ? { type: 'tel' } : {}) });
+      const sibs = LC().childrenOf(chart, n.parent); const at = sibs.indexOf(n);
+      const move = (dir) => { if (LC().moveSibling(chart, n.id, dir)) { save(); drawAll(); } };
+      form.replaceChildren(...[
         h('div', { class: 'lc-form-grid' },
-          field('Kind', kind),
-          person ? field('Role', role) : online ? field('Platform', plat) : h('span'),
+          field('Kind', kind, person || online ? '' : 'span-2'),
+          person ? field('Role', role) : online ? field('Platform', plat) : null,
           field(person ? 'Name' : online ? 'Moniker or Page Name' : 'Name', input('name', { maxlength: 120 }), 'span-2'),
-          field(handleLabel, input('handle', { maxlength: 300 }), 'span-2'),
+          field(handleLabel, handle, 'span-2'),
           field('Under', parent, 'span-2'),
           person ? field('Photo', photoSel, 'span-2') : null),
+        chart.mode === 'tree' && sibs.length > 1 ? h('div', { class: 'lc-form-move' },
+          h('button', { class: 'btn small', type: 'button', icon: 'arrow-left', disabled: at <= 0, title: 'Swap with the card to its left', onclick: () => move(-1) }, 'Move Left'),
+          h('span', { class: 'muted small' }, `${at + 1} of ${sibs.length}`),
+          h('button', { class: 'btn small', type: 'button', icon: 'arrow-right', disabled: at >= sibs.length - 1, title: 'Swap with the card to its right', onclick: () => move(1) }, 'Move Right')) : null,
         h('div', { class: 'lc-form-actions' },
           person ? h('button', { class: 'btn small', type: 'button', icon: 'camera', title: 'Add a picture to the case files (Subject Information) and use it on this card', onclick: () => pick.click() }, 'Add Photo') : null, pick,
           h('button', { class: 'btn small', type: 'button', icon: 'person-plus', title: 'A person under this card (a courier, an associate…)', onclick: () => add('person', n.id) }, 'Add Person Under'),
-          h('button', { class: 'btn small', type: 'button', icon: 'globe2', title: 'A moniker, webpage or dark-web name used by this card', onclick: () => add('online', n.id) }, 'Add Moniker / Page'),
+          h('button', { class: 'btn small', type: 'button', icon: 'globe2', title: 'A moniker, webpage or dark-web name used by this card', onclick: () => add('online', n.id) }, 'Add Moniker'),
+          h('button', { class: 'btn small', type: 'button', icon: 'telephone', title: 'A phone used by this card', onclick: () => add('phone', n.id) }, 'Add Phone'),
           h('button', { class: 'btn small ghost danger-text', type: 'button', icon: 'trash3', title: 'Take this card off the chart. The cards under it move up.', onclick: () => {
             LC().removeNode(chart, n.id);
             selected = n.parent || (chart.nodes[0] ? chart.nodes[0].id : '');
             save(); drawAll();
-          } }, 'Delete Card')));
+          } }, 'Delete Card'))].filter(Boolean));
     }
 
     function drawLinks() {
       if (archived) { linksBox.replaceChildren(); return; }
       const opts = (val) => [h('option', { value: '' }, '—'), ...LC().ordered(chart).map(({ node }) => h('option', { value: node.id, selected: node.id === val }, nodeLabel(node)))];
-      linksBox.replaceChildren(
+      linksBox.replaceChildren(...[
         h('h3', { title: 'A dashed line between two cards that aren\'t one under the other: the same phone, money sent, met at…' }, 'Other Connections'),
+        chart.nodes.length > 1 ? h('p', { class: 'muted small lc-hint' }, 'Quickest: Link Cards above the chart, then click one card and another. Click two linked cards to unlink them.') : null,
         ...chart.links.map((l, i) => {
           const from = h('select', { 'aria-label': `Connection ${i + 1} from` }, opts(l.from));
           const to = h('select', { 'aria-label': `Connection ${i + 1} to` }, opts(l.to));
-          const label = h('input', { value: l.label, maxlength: 80, placeholder: 'Same phone, sends money…', 'aria-label': `Connection ${i + 1} label` });
-          const upd = () => { l.from = from.value; l.to = to.value; l.label = label.value; save(); drawView(); };
-          from.addEventListener('change', upd); to.addEventListener('change', upd); label.addEventListener('input', upd);
-          return h('div', { class: 'lc-link-row' }, field('From', from), field('To', to), field('Label', label),
-            h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Remove this connection', onclick: () => { chart.links.splice(i, 1); save(); drawAll(); } }, icon('trash3'), h('span', { class: 'sr-only' }, 'Remove')));
+          const dir = h('select', { 'aria-label': `Connection ${i + 1} arrow` }, LC().DIRS.map(([v, lab]) => h('option', { value: v, selected: v === l.dir }, lab)));
+          const label = h('textarea', { rows: 2, maxlength: 80, placeholder: 'Same phone, sends money…', 'aria-label': `Connection ${i + 1} label` }, l.label);
+          const upd = () => { l.from = from.value; l.to = to.value; l.dir = dir.value; l.label = label.value; save(); drawView(); };
+          for (const el of [from, to, dir]) el.addEventListener('change', upd);
+          label.addEventListener('input', upd);
+          return h('div', { class: 'lc-link-row' }, field('From', from), field('To', to), field('Arrow', dir), h('button', { class: 'btn small ghost danger-text lc-link-del', type: 'button', icon: 'trash3', title: 'Remove this connection', onclick: () => { chart.links.splice(i, 1); save(); drawAll(); } }, 'Remove'), field('Label', label, 'span-2'));
         }),
         chart.nodes.length > 1 ? h('button', { class: 'btn small', type: 'button', icon: 'link-45deg', onclick: () => {
-          chart.links.push({ id: `l${Date.now().toString(36)}`, from: selected || '', to: '', label: '' });
+          chart.links.push({ id: `l${Date.now().toString(36)}`, from: selected || '', to: '', label: '', dir: 'to' });
           drawLinks();
-        } }, 'Add Connection') : null);
+        } }, 'Add Connection') : null].flat().filter(Boolean));
     }
 
-    function drawAll() { drawTree(); drawForm(); drawLinks(); drawView(); }
+    function drawAll() { drawToolbar(); drawTree(); drawForm(); drawLinks(); drawView(); }
     function add(kind, parent) {
       const n = LC().newNode(kind, parent);
+      if (chart.mode === 'free') {
+        // Under its card in Free layout, or at the right of everything at the top.
+        const L = LC().layout(chart); const p = L.boxes.get(parent);
+        const W = LC().CARD.W; const H = L.cardH;
+        if (p) { const k = LC().childrenOf(chart, parent).length; n.x = Math.round(p.x + L.offset.x + k * (W + 24)); n.y = Math.round(p.y + L.offset.y + H + 50); }
+        else { n.x = Math.round(L.width + L.offset.x + (chart.nodes.length ? 48 : 0)); n.y = Math.max(0, Math.round(L.offset.y)); }
+      }
       chart.nodes.push(n);
       selected = n.id;
       save(); drawAll();
@@ -223,13 +377,14 @@
       if (first) first.focus();
     }
 
-    const title = h('input', { value: chart.title, maxlength: 200, placeholder: c.subject ? `${c.subject} organization` : 'Chart title', 'aria-label': 'Chart title', disabled: archived });
+    const title = h('input', { value: chart.title, maxlength: 200, 'aria-label': 'Chart title', disabled: archived });
     title.addEventListener('input', () => { chart.title = title.value; save(); });
+    const pdfName = () => `${(chart.title || 'Link Chart').replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Link Chart'}.pdf`;
     const pdfView = async () => {
       if (!chart.nodes.length) { toast('Add a card first.', 'info'); return; }
       await Save.flushAll();
       const bytes = await buildPdf(c, chart);
-      const viewer = CVPdfViewer.create(bytes, { h, icon, title: 'Link Chart', fileName: `${c.number || 'Case'} Link Chart.pdf` });
+      const viewer = CVPdfViewer.create(bytes, { h, icon, title: 'Link Chart', fileName: `${c.number || 'Case'} ${pdfName()}` });
       await openDialog((done) => h('div', { class: 'pdf-view' }, h('h2', {}, 'Link Chart'), viewer,
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => done() }, 'Done'))));
       viewer.destroy();
@@ -238,29 +393,36 @@
       if (!chart.nodes.length) { toast('Add a card first.', 'info'); return; }
       await Save.flushAll();
       const bytes = await buildPdf(c, chart);
-      const file = new File([bytes], 'Link Chart.pdf', { type: 'application/pdf' });
+      const file = new File([bytes], pdfName(), { type: 'application/pdf' });
       try {
         const path = await Save.track(`file:${c.id}`, () => Vault.addFile(c.id, file, { folder: 'Link Charts', description: chart.title || 'Link Chart', replace: true }));
-        toast(`Saved to Files: ${path.split('/').pop()}`, 'success', 4000);
+        toast(`Saved to Files → Link Charts: ${path.split('/').pop()}. Open it again here from Files any time.`, 'success', 5000);
       } catch { /* reported by Save */ }
+    };
+    const clearChart = async () => {
+      if (!chart.nodes.length) return;
+      if (!(await confirmDialog({ title: 'Clear the Link Chart?', message: `All ${chart.nodes.length} card${chart.nodes.length === 1 ? '' : 's'} and their connections come off the chart. Photos stay in the case files, and a PDF saved to Files stays there (open it again from Files → Link Charts).`, confirmText: 'Clear Chart', danger: true }))) return;
+      LC().clear(chart); chart.mode = 'tree'; selected = ''; setLinking(false);
+      save(); drawAll();
     };
 
     panel.replaceChildren(h('section', { class: 'lc' },
-      h('div', { class: 'lc-head' },
+      h('div', { class: 'lc-head cv-boxed' },
         h('label', { class: 'field lc-title' }, h('span', {}, 'Chart Title'), title),
-        h('div', { class: 'spacer' }), status,
+        h('div', { class: 'lc-head-actions' }, status,
+        archived ? null : h('button', { class: 'btn ghost danger-text', type: 'button', icon: 'trash3', title: 'Take every card off the chart and start again', onclick: clearChart }, 'Clear Chart'),
         h('button', { class: 'btn', type: 'button', icon: 'file-earmark-pdf', title: 'See it as a portrait page, to print', onclick: pdfView }, 'PDF View'),
-        archived ? null : h('button', { class: 'btn primary', type: 'button', icon: 'save', title: 'Save the chart as a PDF in Files → Link Charts (saving again replaces it)', onclick: savePdf }, 'Save PDF to Case')),
+        archived ? null : h('button', { class: 'btn primary', type: 'button', icon: 'save', title: 'Save the chart as a PDF in Files → Link Charts, named after the title (saving again replaces it)', onclick: savePdf }, 'Save PDF to Case'))),
       h('div', { class: 'lc-body' },
         h('aside', { class: 'lc-side' },
           archived ? null : h('div', { class: 'lc-add' },
-            h('button', { class: 'btn small primary', type: 'button', icon: 'person-plus', title: 'A person at the top of the chart', onclick: () => add('person', '') }, 'Add Subject'),
+            h('button', { class: 'btn small primary', type: 'button', icon: 'person-plus', title: 'A person at the top of the chart', onclick: () => add('person', '') }, 'Add Primary'),
             h('button', { class: 'btn small', type: 'button', icon: 'globe2', title: 'A webpage or dark-web name on its own at the top', onclick: () => add('online', '') }, 'Add Page')),
           tree, form, linksBox),
-        view)));
+        h('div', { class: 'lc-main' }, toolbar, view, note))));
     drawAll();
   }
 
   function init(kit) { ui = kit; }
-  root.CVLinkChartUI = { init, render, buildPdf, load };
+  root.CVLinkChartUI = { init, render, buildPdf, load, openFromFile };
 })(this);

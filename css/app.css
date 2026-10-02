@@ -2991,13 +2991,17 @@ svg.ci > image { transform: scale(1.12); transform-origin: 50% 50%; }
 
 /* v1.52: Link Chart tab: the cards and the form on the left, the chart (as it prints) on the right. */
 .lc { display: flex; flex-direction: column; gap: .8rem; }
-.lc-head { display: flex; align-items: flex-end; gap: .6rem; flex-wrap: wrap; }
-.lc-head .lc-title { flex: 0 1 26rem; min-width: 14rem; }
-.lc-body { display: grid; grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.lc { display: flex; flex-direction: column; gap: .8rem; }
+.lc-head { display: flex; align-items: flex-end; gap: .8rem; flex-wrap: wrap; padding: .6rem .8rem; }
+.lc-head .lc-title { flex: 1 1 16rem; min-width: 14rem; margin: 0; }
+.lc-head-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
+.lc-head-actions .btn { white-space: nowrap; }
+.lc-body { display: grid; grid-template-columns: minmax(19rem, 23rem) minmax(0, 1fr); gap: 1rem; align-items: start; }
 .lc-side { display: flex; flex-direction: column; gap: .7rem; min-width: 0; }
-.lc-add { display: flex; gap: .4rem; flex-wrap: wrap; }
+.lc-add { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
+.lc-add .btn { justify-content: center; }
 .lc-tree { list-style: none; margin: 0; padding: .3rem; border: 1px solid var(--border); background: var(--surface); max-height: 18rem; overflow-y: auto; }
-.lc-item { --depth: 0; --lc: var(--muted); display: grid; grid-template-columns: .5rem 1.1rem minmax(0, 1fr) auto; align-items: center; gap: .4rem; width: 100%; padding: .32rem .45rem .32rem calc(.45rem + var(--depth) * 1rem); border: 1px solid transparent; background: transparent; color: var(--text); font: inherit; font-size: .88rem; text-align: left; cursor: pointer; }
+.lc-item { --depth: 0; --lc: var(--muted); display: grid; grid-template-columns: .5rem 1.1rem minmax(0, 1fr) auto; align-items: center; gap: .4rem; width: 100%; padding: .32rem .45rem .32rem calc(.45rem + var(--depth) * 1rem); background: none; border: 1px solid transparent; text-align: left; cursor: pointer; font: inherit; color: inherit; }
 .lc-item:hover { background: var(--surface-2); }
 .lc-item.on { background: var(--accent-soft); border-color: var(--accent); }
 .lc-dot { width: .5rem; height: .5rem; background: var(--lc); }
@@ -3005,20 +3009,44 @@ svg.ci > image { transform: scale(1.12); transform-origin: 50% 50%; }
 .lc-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lc-item-sub { white-space: nowrap; }
 .lc-none { padding: .6rem; }
-.lc-form, .lc-links { border: 1px solid var(--border); background: var(--surface); padding: .7rem; display: grid; gap: .6rem; }
+.lc-form, .lc-links { border: 1px solid var(--border); padding: .7rem; display: grid; gap: .6rem; min-width: 0; }
 .lc-form:empty, .lc-links:empty { display: none; }
-.lc-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45rem; }
-.lc-form-grid .span-2 { grid-column: span 2; }
-.lc-form-actions { display: flex; flex-wrap: wrap; gap: .35rem; }
-.lc-links h3 { margin: 0; font-size: .82rem; }
-.lc-link-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .4rem; align-items: stretch; padding-top: .4rem; border-top: 1px solid var(--border); }
-.lc-link-row > .field:nth-child(3) { grid-column: 1; }
-.lc-link-row > .icon-btn { align-self: center; justify-self: end; }
-.lc-view { border: 1px solid var(--border); background: #ffffff; min-height: 22rem; overflow: auto; padding: .6rem; display: grid; place-items: start center; }
-.lc-view svg { max-width: 100%; height: auto; display: block; }
+.lc-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.lc-form-grid .span-2 { grid-column: 1 / -1; }
+.lc-form .field > span, .lc-links .field > span { white-space: normal; overflow: visible; }
+.lc-form .field input, .lc-form .field select, .lc-links .field input, .lc-links .field select { width: 100%; min-width: 0; }
+.lc-form-move { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: .4rem; }
+.lc-form-move .btn { justify-content: center; }
+.lc-form-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem; }
+.lc-form-actions .btn { justify-content: center; white-space: normal; text-align: center; }
+.lc-links h3 { margin: 0; font-size: .82rem; text-transform: uppercase; letter-spacing: .03em; }
+.lc-hint { margin: 0; }
+.lc-link-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .4rem; align-items: end; padding-top: .5rem; border-top: 1px solid var(--border); }
+.lc-link-row > .field.span-2 { grid-column: 1 / -1; }
+.lc-link-row textarea { width: 100%; resize: none; min-height: 2.9rem; }
+.lc-link-del { justify-self: end; align-self: center; }
+.lc-main { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--border); background: var(--surface); }
+.lc-toolbar { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; padding: .45rem .6rem; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+.lc-segs { display: inline-flex; }
+.lc-segs .btn + .btn { margin-left: -1px; }
+.lc-toolbar .btn.on, .lc-toolbar .btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.lc-perrow { display: inline-flex; align-items: center; gap: .35rem; margin: 0; }
+.lc-perrow select { width: auto; min-width: 3.6rem; }
+.lc-zoom { display: inline-flex; align-items: center; gap: .2rem; }
+.lc-zoom-pct { min-width: 3.4rem; text-align: center; font-weight: 700; }
+.lc-view { background: #ffffff; height: min(70vh, 46rem); min-height: 22rem; overflow: auto; padding: .75rem; display: grid; place-items: start center; }
+.lc-view svg { display: block; max-width: none; }
 .lc-view .lc-card { cursor: pointer; }
+.lc-view.free .lc-card { cursor: grab; }
+.lc-view.free .lc-card:active { cursor: grabbing; }
+.lc-view.linking .lc-card { cursor: crosshair; }
 .lc-view .lc-card:hover > rect:first-child { stroke: #0d6efd; }
+.lc-view.linking { outline: 2px dashed #c98a12; outline-offset: -2px; }
+.lc-view { touch-action: none; user-select: none; }
 .lc-empty { align-self: center; }
+.lc-note { margin: 0; padding: .45rem .7rem; border-top: 1px solid var(--border); background: var(--surface-2); }
+.lc-note .bi { vertical-align: -.15em; }
+.lc-note:empty { display: none; }
 @media (max-width: 1000px) { .lc-body { grid-template-columns: minmax(0, 1fr); } }
 .lc-item > * { order: 0 !important; }
 
@@ -3122,3 +3150,5 @@ section.foldable.folded > .fold-head { margin-bottom: 0; }
 .disc-steps { margin: 0; padding: .55rem .7rem .55rem 1.6rem; background: var(--surface-2); border: 1px solid var(--border); display: flex; flex-direction: column; gap: .35rem; font-size: .88rem; }
 .disc-confirm[open] { display: flex; flex-direction: column; gap: .6rem; }
 @media (max-width: 640px) { .disc-tiles { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .disc-pair { grid-template-columns: minmax(0, 1fr); } }
+
+.files-table-wrap table.files.has-lc col.col-actions { width: 9rem; }

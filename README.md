@@ -15,7 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.55)
+## Features (v1.56)
+
+- Link Chart: Primary (was Subject); Tree or Free layout (drag cards); Move Left / Right; cards per row with a readability line for the portrait page; Link Cards (click two cards to link with an arrow, again to unlink) with arrows to, from or both ways; zoom and Fit; Clear Chart; no cut-off words; phone format; saved PDFs carry the chart so Files → Link Charts can open it back in the tab
 
 - Discovery receipt: a printable PDF made with each production (option on by default). It lists who turned it over and to whom, every item with its Bates numbers and SHA-256, blank Date and Time of Receipt boxes, an acknowledgment that the items received are accurate and complete, and wet-signature lines for the recipient, the officer and a witness. It goes to this PC's Downloads folder, and a copy stays with the case
 - Discovery popups redesigned: header with icon, options in three boxes, summary tiles in Ready to Copy and Done, Receipt button on each earlier production
