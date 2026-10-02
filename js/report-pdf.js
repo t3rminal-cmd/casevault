@@ -1,17 +1,19 @@
 /* CaseVault — the Supplementary Report as a PDF (Reports → Report Fields → Print / PDF, Save PDF
  * to case files, Email for E-Sign).
  *
- * Laid out like a narcotics supplementary report: case numbers across the top, boxed fields for
- * the offense, victims and offenders and the assignment, tick boxes for update information,
- * status and how cleared, the officer's report lines, the evidence inventoried, the summary of
- * investigation, and the signature and approval block. The header shows the agency from
- * Vault → My Profile; no agency's name, seal or form number is built in.
+ * v1.43: laid out like a narcotics division supplementary report form, in Times: the title and
+ * the agency report number box, a ruled grid with small labels (offense, occurrence, victims,
+ * offenders, assignment), Update Information tick boxes, Status and How Cleared with a round mark
+ * under each choice, the event / incident / raid / R.D. numbers, the officer's report as
+ * "LABEL:" lines (lists one entry a line), the summary of investigation, and the signature table.
+ * Pages without the signature table end with "Preparer" and "Approval" initial boxes. The header
+ * shows the agency from Vault → My Profile; no agency's name, seal or form number is built in.
  *
  * The signature boxes are real PDF signature fields, so Adobe Acrobat / Reader (Fill & Sign,
  * Request e-signatures) and other e-sign services offer "click to sign" there.
  *
- * A small PDF writer of its own (Helvetica and Helvetica-Bold, which every PDF reader has built
- * in; lines, boxes and wrapped text), with no library and nothing fetched: it runs offline and
+ * A small PDF writer of its own (Helvetica or Times, which every PDF reader has built in; lines,
+ * boxes, circles and wrapped text), with no library and nothing fetched: it runs offline and
  * under Node for the tests.
  */
 'use strict';
@@ -26,18 +28,24 @@
   // Characters outside plain ASCII that WinAnsi has (quotes, dashes, bullet…), and their widths.
   const WIN = { '‘': [0x91, 222], '’': [0x92, 222], '“': [0x93, 333], '”': [0x94, 333], '•': [0x95, 350], '–': [0x96, 556], '—': [0x97, 1000], '…': [0x85, 1000], '·': [0xb7, 278], ' ': [0x20, 278], 'é': [0xe9, 556], 'ñ': [0xf1, 556], '°': [0xb0, 400], '½': [0xbd, 834] };
 
-  function width(text, size, bold = false) {
-    const t = bold ? W_BOLD : W_REG;
+  // Times-Roman and Times-Bold (v1.43, for the Supplementary Report).
+  const T_REG = [250, 333, 408, 500, 500, 833, 778, 180, 333, 333, 500, 564, 250, 333, 250, 278, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 278, 278, 564, 564, 564, 444, 921, 722, 667, 667, 722, 611, 556, 722, 722, 333, 389, 722, 611, 889, 722, 722, 556, 722, 667, 556, 611, 722, 722, 944, 722, 722, 611, 333, 278, 333, 469, 500, 333, 444, 500, 444, 500, 444, 333, 500, 500, 278, 278, 500, 278, 778, 500, 500, 500, 500, 333, 389, 278, 500, 500, 722, 500, 500, 444, 480, 200, 480, 541];
+  const T_BOLD = [250, 333, 555, 500, 500, 1000, 833, 278, 333, 333, 500, 570, 250, 333, 250, 278, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 333, 333, 570, 570, 570, 500, 930, 722, 667, 722, 722, 667, 611, 778, 778, 389, 500, 778, 667, 944, 722, 778, 611, 778, 722, 556, 667, 722, 722, 1000, 722, 722, 667, 333, 278, 333, 581, 500, 333, 500, 556, 444, 556, 444, 333, 500, 556, 278, 333, 556, 278, 833, 556, 500, 556, 556, 444, 389, 333, 556, 500, 722, 500, 500, 444, 394, 220, 394, 520];
+
+  function width(text, size, bold = false, face = 'helvetica') {
+    const t = face === 'times' ? (bold ? T_BOLD : T_REG) : (bold ? W_BOLD : W_REG);
     let w = 0;
     for (const ch of String(text)) {
       const c = ch.codePointAt(0);
-      w += c >= 32 && c <= 126 ? t[c - 32] : WIN[ch] ? WIN[ch][1] : 556;
+      w += c >= 32 && c <= 126 ? t[c - 32] : WIN[ch] ? WIN[ch][1] : 500;
     }
     return (w * size) / 1000;
   }
 
+  const widthOf = (s, z, b, f) => width(s, z, b, f);
   /** Lines no wider than `max` points; long words are broken. Keeps the text's own line breaks. */
-  function wrap(text, size, max, bold = false) {
+  function wrap(text, size, max, bold = false, face = 'helvetica') {
+    const width = (s, z, b) => widthOf(s, z, b, face);
     const out = [];
     for (const para of String(text == null ? '' : text).replace(/\r\n?/g, '\n').split('\n')) {
       const indent = /^\t+/.exec(para);
@@ -87,27 +95,67 @@
     const RF = F();
     const d = RF.normalize(data);
     const val = (k) => RF.shown(k, d[k]);
+    const on = (id) => !RF.isHidden(d, id); // parts ticked off as "doesn't apply" are left out
+    const tw = (s, size, bold = false) => width(s, size, bold, 'times');
+    const twrap = (s, size, max, bold = false) => wrap(s, size, max, bold, 'times');
+    const labelOf = (k) => (RF.FIELDS.find(([key]) => key === k) || [k, k])[1];
     const pages = [];
+    const BOTTOM = M + 44; // room for the initial boxes and the footer
     let ops = null; let y = 0; let sigs = null;
-    const newPage = () => {
-      ops = []; sigs = [];
-      pages.push({ ops, sigs, imgs: [] });
-      y = PAGE_H - M;
-      // Header on every page.
-      text(M, y - 10, agency || '', 9, true);
-      text(PAGE_W / 2 - width(title.toUpperCase(), 13, true) / 2, y - 12, title.toUpperCase(), 13, true);
-      if (d.rdNumber) text(PAGE_W - M - width(`R.D. ${d.rdNumber}`, 9, true), y - 10, `R.D. ${d.rdNumber}`, 9, true);
-      y -= 20;
-      line(M, y, PAGE_W - M, y, 1.2);
-      y -= 6;
-    };
-    const text = (x, yy, s, size = 9, bold = false) => { if (s !== '' && s != null) ops.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${x.toFixed(2)} ${yy.toFixed(2)} Td ${pdfString(s)} Tj ET`); };
+
+    const text = (x, yy, s, size = 10, bold = false) => { if (s !== '' && s != null) ops.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${x.toFixed(2)} ${yy.toFixed(2)} Td ${pdfString(s)} Tj ET`); };
+    const center = (x, w, yy, s, size, bold) => text(x + (w - tw(s, size, bold)) / 2, yy, s, size, bold);
     const line = (x1, y1, x2, y2, w = 0.6) => ops.push(`${w} w ${x1.toFixed(2)} ${y1.toFixed(2)} m ${x2.toFixed(2)} ${y2.toFixed(2)} l S`);
+    const dashed = (x1, y1, x2) => ops.push(`[1.5 1.5] 0 d 0.4 w ${x1.toFixed(2)} ${y1.toFixed(2)} m ${x2.toFixed(2)} ${y1.toFixed(2)} l S [] 0 d`);
     const rect = (x, yy, w, h, lw = 0.6) => ops.push(`${lw} w ${x.toFixed(2)} ${yy.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re S`);
     const fill = (x, yy, w, h, gray = 0.9) => ops.push(`${gray} g ${x.toFixed(2)} ${yy.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re f 0 g`);
-    const ensure = (h) => { if (y - h < M + 18) newPage(); };
+    const circle = (cx, cy, r, filled) => {
+      const k = 0.5523 * r;
+      ops.push(`0.6 w ${(cx + r).toFixed(2)} ${cy.toFixed(2)} m ${(cx + r).toFixed(2)} ${(cy + k).toFixed(2)} ${(cx + k).toFixed(2)} ${(cy + r).toFixed(2)} ${cx.toFixed(2)} ${(cy + r).toFixed(2)} c ${(cx - k).toFixed(2)} ${(cy + r).toFixed(2)} ${(cx - r).toFixed(2)} ${(cy + k).toFixed(2)} ${(cx - r).toFixed(2)} ${cy.toFixed(2)} c ${(cx - r).toFixed(2)} ${(cy - k).toFixed(2)} ${(cx - k).toFixed(2)} ${(cy - r).toFixed(2)} ${cx.toFixed(2)} ${(cy - r).toFixed(2)} c ${(cx + k).toFixed(2)} ${(cy - r).toFixed(2)} ${(cx + r).toFixed(2)} ${(cy - k).toFixed(2)} ${(cx + r).toFixed(2)} ${cy.toFixed(2)} c ${filled ? 'B' : 'S'}`);
+    };
+    const tick = (x, yy, on2) => { rect(x, yy, 7, 7, 0.5); if (on2) { line(x + 1.3, yy + 1.3, x + 5.7, yy + 5.7, 0.8); line(x + 1.3, yy + 5.7, x + 5.7, yy + 1.3, 0.8); } };
 
-    // A band with a section title.
+    // The numbers line, at the top of every page after the first (as on the form's second page).
+    const numbersLine = () => [['EVENT NUMBER', d.eventNumber], ['INCIDENT NUMBER', d.incidentNumber], ['RAID NUMBER', d.raidNumber], ['R.D. NUMBER', d.rdNumber]];
+    // The four numbers across the page: each label, then its value; the space left over is shared
+    // out, and a long value gets a smaller size rather than running into the next label.
+    const numbersRow = (yy, shaded) => {
+      const parts = numbersLine().map(([l, v]) => ({ l: `${l}:`, v: v || '', lw: tw(`${l}:`, 8.5, true) }));
+      const need = parts.map((p) => p.lw + 6 + Math.max(tw(p.v, 9.5), 30) + 10);
+      const spare = Math.max(0, INNER - need.reduce((a, b) => a + b, 0)) / parts.length;
+      let x = M;
+      parts.forEach((p, i) => {
+        const room = need[i] + spare - p.lw - 16;
+        const size = Math.max(6.5, Math.min(9.5, (9.5 * room) / Math.max(1, tw(p.v, 9.5))));
+        text(x + 1, yy, p.l, 8.5, true);
+        if (shaded) fill(x + p.lw + 5, yy - 3, room + 4, 13, 0.93);
+        text(x + p.lw + 7, yy + 0.5, p.v, size);
+        x += need[i] + spare;
+      });
+    };
+    const newPage = () => {
+      ops = []; sigs = [];
+      pages.push({ ops, sigs, imgs: [], signed: false });
+      y = PAGE_H - M;
+      if (pages.length === 1) {
+        // Title on the left, the agency under it; the agency report number in a box on the right.
+        text(M, y - 14, title, 14, true);
+        if (agency) text(M, y - 25, agency.toUpperCase(), 7.5, true);
+        const bw = 170;
+        rect(PAGE_W - M - bw, y - 30, bw, 30, 0.9);
+        text(PAGE_W - M - bw + 3, y - 8, 'Agency Report Number', 7);
+        if (on('numbers') && d.caseNumber) text(PAGE_W - M - bw + 6, y - 23, d.caseNumber, 11, true);
+        y -= 36;
+      } else {
+        numbersRow(y - 10, false);
+        y -= 16;
+        line(M, y, PAGE_W - M, y, 0.8);
+        y -= 8;
+      }
+    };
+    const ensure = (h) => { if (y - h < BOTTOM) newPage(); };
+
+    // A band with a section title (Exhibit Attachments).
     const band = (label) => {
       ensure(30);
       fill(M, y - 13, INNER, 13, 0.88);
@@ -116,204 +164,190 @@
       y -= 13;
     };
 
-    // A row of labelled boxes; widths are fractions of the row. The value wraps inside its box.
-    const boxes = (cells, minH = 24) => {
+    // A ruled row of the grid: each cell has its small label, a dashed rule, then the value.
+    const grid = (cells, minH = 27) => {
       const total = cells.reduce((n, c) => n + (c.w || 1), 0);
       const sizes = cells.map((c) => ((c.w || 1) / total) * INNER);
-      const lines = cells.map((c, i) => wrap(c.value || '', 9, sizes[i] - 8));
-      const h = Math.max(minH, 13 + Math.max(...lines.map((l) => l.length)) * 10.5);
+      const lines = cells.map((c, i) => twrap(c.value || '', 10, sizes[i] - 6));
+      const labs = cells.map((c, i) => twrap(c.label || '', 7.5, sizes[i] - 4));
+      const lh = Math.max(...labs.map((l) => l.length)) * 8 + 3;
+      const h = Math.max(minH, lh + 4 + Math.max(...lines.map((l) => l.length)) * 11.5);
       ensure(h);
       let x = M;
       cells.forEach((c, i) => {
-        rect(x, y - h, sizes[i], h);
-        text(x + 3, y - 7.5, String(c.label).toUpperCase(), 6, false);
-        lines[i].forEach((l, j) => text(x + 4, y - 17.5 - j * 10.5, l, 9, false));
-        if (c.sign) sigs.push({ name: c.sign, rect: [x + 2, y - h + 1, x + sizes[i] - 2, y - 9] });
+        rect(x, y - h, sizes[i], h, 0.6);
+        labs[i].forEach((l, j) => text(x + 2, y - 7.5 - j * 8, l, 7.5));
+        dashed(x + 1, y - lh, x + sizes[i] - 1);
+        lines[i].forEach((l, j) => text(x + 3, y - lh - 10 - j * 11.5, l, 10));
         x += sizes[i];
       });
       y -= h;
     };
-    const cell = (k, w = 1, label) => ({ label: label || RF.FIELDS.find(([key]) => key === k)[1], value: val(k), w });
+    const g = (k, w = 1, label) => ({ label: label || labelOf(k), value: val(k), w });
 
-    // Tick boxes in a row.
-    const ticks = (items, perRow) => {
-      const cw = INNER / perRow;
-      for (let i = 0; i < items.length; i += perRow) {
-        ensure(15);
-        rect(M, y - 15, INNER, 15);
-        items.slice(i, i + perRow).forEach((it, j) => {
-          const x = M + j * cw + 5;
-          rect(x, y - 11.5, 8, 8);
-          if (it.on) { line(x + 1.5, y - 10, x + 6.5, y - 5); line(x + 1.5, y - 5, x + 6.5, y - 10); }
-          text(x + 12, y - 10.3, it.label, 8);
+    // "LABEL:  value" lines of the officer's report; the value wraps on the right, over a light rule.
+    const LW = 215;
+    const labelled = (label, value) => {
+      const vals = Array.isArray(value) ? value : [value || ''];
+      const lines = vals.flatMap((v) => twrap(v, 10, INNER - LW - 6));
+      const labels = twrap(`${label.toUpperCase()}:`, 8.5, LW - 14);
+      const h = Math.max(16, 4 + Math.max(lines.length * 12, labels.length * 10));
+      ensure(h);
+      labels.forEach((l, j) => text(M + 2, y - 11 - j * 10, l, 8.5));
+      (lines.length ? lines : ['']).forEach((l, j) => text(M + LW + 3, y - 11 - j * 12, l, 10));
+      fill(M + LW, y - h + 2, INNER - LW, h - 3, 0.95);
+      // (the fill is drawn under the text: move it to the front of this row's operations)
+      ops.splice(ops.length - 1 - labels.length - (lines.length || 1), 0, ops.pop());
+      y -= h;
+    };
+    const items = (key) => d[key].filter(RF.filled).map((it) => (key === 'funds'
+      // A bill on one line: "$20 - Serial AA00000001A - Not Recovered".
+      ? [it.denomination, it.serial ? `Serial ${it.serial}` : '', it.recovered].filter(Boolean).join(' - ')
+      : RF.itemLine(key, it)));
+
+    newPage();
+
+    // ---- the grid: offense and occurrence
+    if (on('offense')) {
+      grid([g('offense', 3), g('ucr', 1), g('activity', 1.6)]);
+      grid([g('address', 2.6), g('locationType', 1.5), g('locationCode', 0.9), g('date', 1.3), g('time', 0.8), g('beatOccurrence', 0.8, 'Beat of Occ.'), g('beatAssigned', 0.9)]);
+    }
+    // ---- victims, offenders and the assignment
+    const people = on('people'); const assign = on('assignment');
+    if (people || assign) {
+      const vs = d.victimsList.filter(RF.filled); const os = d.offendersList.filter(RF.filled);
+      const one = (list) => (list.length === 1 ? list[0].name || '' : list.length ? 'See below' : '');
+      const P1 = (k, w, label) => (people ? g(k, w, label) : { label: label || labelOf(k), value: '', w });
+      const A1 = (k, w, label) => (assign ? g(k, w, label) : { label: label || labelOf(k), value: '', w });
+      grid([P1('victims', 0.6, 'Victims'), { label: "Victim's Name", value: people ? one(vs) : '', w: 2 }, { label: 'Relation', value: people && vs[0] ? vs[0].relation || '' : '', w: 0.6 }, P1('methodCode', 0.8), A1('method', 1), A1('unit', 0.6, 'Unit'), A1('safeMethod', 0.8), A1('residence', 1.4, 'If Residence / Where')]);
+      grid([P1('offenders', 0.6, 'Offenders'), { label: "Offender's Name", value: people ? one(os) : '', w: 2 }, { label: 'Relation', value: people && os[0] ? os[0].relation || '' : '', w: 0.6 }, P1('arrested', 0.8, 'Num Arrested'), A1('arrestUnit', 1), A1('adults', 0.6), A1('juveniles', 0.8), A1('fire', 0.6), A1('gang', 0.8, 'Gang Related')]);
+    }
+    // ---- update information, status, how cleared
+    if (on('update')) {
+      ensure(16 + 2 * 15 + 34);
+      rect(M, y - 14, INNER, 14, 0.6);
+      center(M, INNER, y - 10, 'Update Information    *See Narrative For Updated Information', 8.5, true);
+      y -= 14;
+      const upd = [['victimVerified', 'offenderVerified', 'propertyVerified', 'circumstancesVerified'], ['victimUpdated', 'offenderUpdated', 'propertyUpdated', 'circumstancesUpdated']];
+      for (const row of upd) {
+        row.forEach((k, i) => {
+          const x = M + (INNER / 4) * i;
+          rect(x, y - 15, INNER / 4, 15, 0.6);
+          text(x + 3, y - 10.5, labelOf(k), 9);
+          tick(x + INNER / 4 - 12, y - 11.5, !!d[k]);
         });
         y -= 15;
       }
-    };
-
-    // "LABEL:  value" lines, the value wrapping on the right.
-    const labelled = (label, value) => {
-      const lw = 190;
-      const lines = wrap(value || '', 9, INNER - lw - 8);
-      const labels = wrap(`${label.toUpperCase()}:`, 7.5, lw - 12, true);
-      const h = Math.max(15, 5 + Math.max(lines.length * 11, labels.length * 9.5));
-      ensure(h);
-      labels.forEach((l, j) => text(M + 3, y - 10.5 - j * 9.5, l, 7.5, true));
-      lines.forEach((l, j) => text(M + lw, y - 10.5 - j * 11, l, 9));
-      line(M + lw - 3, y - h + 1, PAGE_W - M, y - h + 1, 0.4);
-      y -= h;
-    };
-
-    newPage();
-    const on = (id) => !RF.isHidden(d, id); // parts ticked off as "doesn't apply" are left out
-
-    // A list (victims, charges, vehicles…): one numbered block of boxes per entry, two fields a row
-    // (a wide field takes the whole row), so every box lines up.
-    const listBlock = (key) => {
-      const L = RF.LISTS[key];
-      const items = d[key].filter(RF.filled);
-      if (!items.length || RF.isHidden(d, key)) return;
-      ensure(40);
-      text(M + 2, y - 10, L.title.toUpperCase(), 7.5, true);
-      y -= 13;
-      items.forEach((it, i) => {
-        // A narcotic's unit goes with its amount, so its four boxes fill one row (v1.25).
-        const cellsOf = RF.fieldsFor(key, it).filter(([k]) => !(key === 'narcotics' && k === 'unit')).map(([k, label, kind]) => (
-          { label: `${L.item} ${i + 1} - ${RF.labelFor(it, k, label)}`, value: RF.valueText(key, it, k, kind), wide: kind === 'wide' || RF.MULTI.includes(kind) }));
-        const row = [];
-        // Short rows are filled out with empty boxes so the four columns always line up.
-        const flush = () => { if (row.length) { while (row.length < 4) row.push({ label: '', value: '' }); boxes(row.splice(0).map((c) => ({ ...c, w: 1 }))); } };
-        for (const c of cellsOf) {
-          if (c.wide) { flush(); boxes([{ ...c, w: 1 }]); continue; }
-          row.push(c);
-          if (row.length === 4) flush();
-        }
-        flush();
-        y -= 3;
-      });
-    };
-
-    // ---- case numbers
+      const opts = (k) => RF.FIELDS.find(([key]) => key === k)[3].filter(Boolean);
+      const split = INNER * 0.56;
+      const halves = [[M, split, 'Status', 'status'], [M + split, INNER - split, 'How Cleared', 'cleared']];
+      rect(M, y - 34, split, 34, 0.6); rect(M + split, y - 34, INNER - split, 34, 0.6);
+      for (const [x, w, head, k] of halves) {
+        center(x, w, y - 9.5, head, 8.5, true);
+        const list = opts(k); const cw = w / list.length;
+        list.forEach((o, i) => {
+          const lab = o.replace(/ - /, '-');
+          center(x + i * cw, cw, y - 20, lab, 7.5);
+          circle(x + i * cw + cw / 2, y - 28, 3, d[k] === o);
+        });
+      }
+      y -= 34;
+    }
+    // ---- event, incident, raid and R.D. numbers
     if (on('numbers')) {
-      boxes([cell('caseNumber', 1.3), cell('eventNumber'), cell('incidentNumber'), cell('raidNumber'), cell('rdNumber')]);
-      boxes([{ label: 'Case', value: caseLabel, w: 2.6 }, cell('activity', 1.4)]);
-      y -= 6;
+      ensure(20);
+      line(M, y, PAGE_W - M, y, 1.2);
+      numbersRow(y - 13, true);
+      y -= 19;
     }
-
-    // ---- offense
-    if (on('offense')) {
-      band('Offense');
-      boxes([cell('offense', 3.3), cell('ucr', 1.4)]);
-      boxes([cell('address', 2.4), cell('locationType', 1.5), cell('locationCode', 1.1)]);
-      boxes([cell('date'), cell('time'), cell('beatOccurrence'), cell('beatAssigned')]);
-      y -= 6;
-    }
-
-    // ---- victims and offenders
-    if (on('people')) {
-      band('Victims and Offenders');
-      boxes([cell('victims'), cell('offenders'), cell('arrested'), cell('methodCode')]);
-      y -= 4;
-      listBlock('victimsList');
-      listBlock('offendersList');
-      y -= 4;
-    }
-
-    // ---- assignment
-    if (on('assignment')) {
-      band('Assignment');
-      boxes([cell('method', 1.2), cell('unit', 0.9), cell('safeMethod', 1), cell('residence', 1.8)]);
-      boxes([cell('arrestUnit', 1.2), cell('adults', 0.8), cell('juveniles', 0.8), cell('fire', 0.7), cell('gang', 0.9)]);
-      y -= 6;
-    }
-
-    // ---- update information, status, how cleared
-    if (on('update')) {
-      band('Update Information');
-      ticks(['victimVerified', 'offenderVerified', 'propertyVerified', 'circumstancesVerified', 'victimUpdated', 'offenderUpdated', 'propertyUpdated', 'circumstancesUpdated']
-        .map((k) => ({ label: RF.FIELDS.find(([key]) => key === k)[1], on: !!d[k] })), 4);
-      const opt = (k) => RF.FIELDS.find(([key]) => key === k)[3].filter(Boolean);
-      band('Status');
-      ticks(opt('status').map((o) => ({ label: o, on: d.status === o })), 8);
-      band('How Cleared');
-      ticks(opt('cleared').map((o) => ({ label: o, on: d.cleared === o })), 5);
-      y -= 6;
-    }
-
     // ---- officer's report
     if (on('report')) {
-      band(`Officer's Report${d.activity ? ` - ${d.activity}` : ''}`);
-      const report = RF.SECTIONS.find((s) => s.id === 'report').fields;
-      for (const [k, label, kind] of report) {
-        if (kind === 'list') {
-          if (k === 'narcotics' && on('evidence')) labelled('Evidence Inventoried', d.evidence.length ? d.evidence.map((e) => `Exhibit ${e.number}${e.inventory ? ` - Inv. ${e.inventory}` : ''}`).join(', ') : '');
-          if (d[k].some(RF.filled)) { y -= 4; listBlock(k); }
-          continue;
-        }
-        if (k === 'courtDate') continue;
-        if (k === 'courtBranch') { const c = RF.courtLine(d, (kk) => val(kk)); if (c) labelled(c[0], c[1]); continue; }
-        if (RF.isHidden(d, k)) continue;
-        labelled(label, val(k));
-      }
-      y -= 6;
-      for (const key of RF.SECTIONS.find((s) => s.id === 'report').lists) listBlock(key);
+      ensure(40);
       y -= 4;
-    }
-
-    // ---- evidence inventoried
-    if (on('evidence')) {
-      band('Evidence Inventoried');
-      const cols = [['Exhibit', 46], ['Inventory No.', 76], ['Type', 88], ['Narcotic Type', 88], ['Weight', 52]];
-      const descW = INNER - cols.reduce((n, [, w]) => n + w, 0);
-      const head = () => {
-        ensure(14);
-        let x = M;
-        for (const [l, w] of [...cols, ['Description', descW]]) { fill(x, y - 13, w, 13, 0.95); rect(x, y - 13, w, 13); text(x + 3, y - 9.3, l.toUpperCase(), 6.5, true); x += w; }
-        y -= 13;
-      };
-      head();
-      if (!d.evidence.length) { rect(M, y - 15, INNER, 15); text(M + 4, y - 10.5, 'None.', 9); y -= 15; }
-      for (const e of d.evidence) {
-        const vals = [String(e.number), e.inventory, e.type, e.type === 'Narcotics' ? e.drug : '', e.type === 'Narcotics' ? e.weight : ''];
-        const desc = wrap(`${e.description}${e.photos && e.photos.length ? `${e.description ? ' ' : ''}[Photo${e.photos.length === 1 ? '' : 's'} ${e.photos.map((_, j) => RF.photoLabel(e.number, j)).join(', ')} attached]` : ''}`, 9, descW - 8);
-        const small = vals.map((v, i) => wrap(v, 9, cols[i][1] - 6));
-        const h = Math.max(15, 5 + Math.max(desc.length, ...small.map((l) => l.length)) * 11);
-        if (y - h < M + 18) { newPage(); head(); }
-        let x = M;
-        small.forEach((ls, i) => { rect(x, y - h, cols[i][1], h); ls.forEach((l, j) => text(x + 3, y - 10.5 - j * 11, l, 9)); x += cols[i][1]; });
-        rect(x, y - h, descW, h);
-        desc.forEach((l, j) => text(x + 4, y - 10.5 - j * 11, l, 9));
-        y -= h;
+      rect(M, y - 16, INNER, 16, 0.6);
+      text(M + 4, y - 11.5, d.activity ? `Officer's Report - ${d.activity}` : "Officer's Report", 10, true);
+      y -= 20;
+      const by = `This is an Officer's Report by Beat Assigned: ${on('offense') ? val('beatAssigned') : ''}`;
+      text(M + 2, y - 9, by.trim(), 9.5);
+      y -= 16;
+      const done = new Set(['courtDate']);
+      const line1 = (k) => { done.add(k); if (RF.isHidden(d, k)) return; if (k === 'courtBranch') { const c = RF.courtLine(d, (kk) => val(kk)); if (c) labelled(c[0], c[1]); return; } labelled(labelOf(k), val(k)); };
+      const list1 = (key, label) => { done.add(key); if (RF.isHidden(d, key)) return; labelled(label || RF.LISTS[key].title, items(key)); };
+      // In the form's order: the operation, the people, the charges and the court, the warrant…
+      line1('operation');
+      if (people) list1('offendersList', 'Offender(s)');
+      list1('gangs', 'Gang Affiliation(s)');
+      list1('charges', 'Charge(s)');
+      ['within1000', 'courtBranch', 'searchWarrant', 'subpoenaGJ', 'asa', 'ausa', 'judge'].forEach(line1);
+      list1('notArrested', 'Person(s) Present Not Arrested');
+      list1('personnel', 'Police Personnel on Scene');
+      if (people) list1('victimsList', 'Victim(s)');
+      if (on('evidence')) labelled('Evidence Inventoried', d.evidence.map((e) => RF.exhibitLine(e)));
+      list1('narcotics', 'Narcotics Recovered (Total Weight & Street Value)');
+      line1('buyFunds');
+      list1('funds', 'Pre-Recorded Funds');
+      ['fundSheet', 'evidenceOfficer', 'proofResidence', 'irNumber', 'cbNumber'].forEach(line1);
+      list1('vehicles', 'Vehicle(s) Impounded / Towed');
+      list1('notifications', 'Notifications');
+      // Anything else of the report part, so nothing entered is left out.
+      for (const [k, label, kind] of RF.SECTIONS.find((s2) => s2.id === 'report').fields) {
+        if (done.has(k)) continue;
+        if (kind === 'list') list1(k, label); else line1(k);
       }
-      y -= 8;
+      for (const key of RF.SECTIONS.find((s2) => s2.id === 'report').lists) if (!done.has(key)) list1(key);
+      y -= 4;
     }
 
     // ---- summary of investigation
     if (on('summary')) {
-      band('Summary of Investigation');
-      const summary = wrap(plain(d.narrative) || '', 10, INNER - 12);
+      ensure(60);
+      text(M + 2, y - 11, 'SUMMARY OF INVESTIGATION:', 8.5);
+      y -= 15;
+      const summary = twrap(plain(d.narrative) || '', 10.5, INNER - 14);
       let top = y;
-      const closeBox = () => { if (top > y) rect(M, y - 4, INNER, top - y + 4); };
+      const closeBox = () => { if (top > y) rect(M, y - 5, INNER, top - y + 5, 0.6); };
       y -= 4;
       for (const l of (summary.length ? summary : [''])) {
-        if (y - 13 < M + 18) { closeBox(); newPage(); top = y; y -= 4; }
-        text(M + 6, y - 10, l, 10);
+        if (y - 13 < BOTTOM) { closeBox(); newPage(); top = y; y -= 4; }
+        text(M + 7, y - 10.5, l, 10.5);
         y -= 13;
       }
       closeBox();
-      y -= 12;
+      y -= 14;
     }
 
-    // ---- submission and approval (kept together on one page)
+    // ---- the signature table (kept together on one page), three columns, heavy outline
     if (on('approval')) {
-      ensure(4 * 38 + 30);
-      band('Submission and Approval');
-      // One row per officer, the same columns each time: name, star, date, time, signature.
-      const officer = (name, star, date, time, label, sign) => boxes([cell(name, 2, label), cell(star, 0.7, 'Star'), cell(date, 1, 'Date'), cell(time, 0.7, 'Time'), { label: 'Signature', value: '', w: 2.2, sign }], 36);
-      officer('reportingOfficer', 'reportingStar', 'dateSubmitted', 'timeSubmitted', 'Reporting Officer - Print', 'ReportingOfficerSignature');
-      officer('secondOfficer', 'secondStar', 'secondDate', 'secondTime', 'Secondary Reporting Officer', 'SecondOfficerSignature');
-      officer('supervisor', 'supervisorStar', 'dateApproved', 'timeApproved', 'Supervisor Approval', 'SupervisorSignature');
-      boxes([cell('extraCopies', 2.7, 'Extra Copies Required'), { label: 'Note', value: 'Sign in blue ink or with an electronic signature.', w: 3.9 }]);
+      const rowH = 30; const tH = rowH * 3;
+      ensure(tH + 24);
+      const top = y; const cw = INNER / 3;
+      const cellT = (x, yy, w, label, value, sign) => {
+        rect(x, yy - rowH, w, rowH, 0.6);
+        text(x + 3, yy - 8, label, 7);
+        if (value) text(x + 4, yy - 22, value, 10);
+        if (sign) sigs.push({ name: sign, rect: [x + 2, yy - rowH + 2, x + w - 2, yy - 10] });
+      };
+      const pair = (x, yy, a, b, split = 0.68) => { cellT(x, yy, cw * split, a[0], a[1], a[2]); cellT(x + cw * split, yy, cw * (1 - split), b[0], b[1], b[2]); };
+      pair(M + cw, y, ['DATE SUBMITTED', val('dateSubmitted')], ['TIME', val('timeSubmitted')]);
+      cellT(M, y, cw, "EXTRA COPIES REQ'D", val('extraCopies'));
+      pair(M + 2 * cw, y, ['SUPERVISOR APPROVAL', val('supervisor')], ['STAR', val('supervisorStar')]);
+      y -= rowH;
+      pair(M, y, ['PRINT (REPORTING OFFICER)', val('reportingOfficer')], ['STAR', val('reportingStar')]);
+      pair(M + cw, y, ['SECONDARY REPORTING OFFICER', val('secondOfficer')], ['STAR', val('secondStar')]);
+      cellT(M + 2 * cw, y, cw, 'SIGNATURE', '', 'SupervisorSignature');
+      y -= rowH;
+      cellT(M, y, cw, 'SIGNATURE', '', 'ReportingOfficerSignature');
+      cellT(M + cw, y, cw, 'SIGNATURE', '', 'SecondOfficerSignature');
+      // The secondary officer's date and time, small, in the corner of the signature box.
+      if (val('secondDate')) text(M + 2 * cw - 4 - tw(val('secondDate'), 7), y - 8, val('secondDate'), 7);
+      if (val('secondTime')) text(M + 2 * cw - 4 - tw(val('secondTime'), 7), y - 26, val('secondTime'), 7);
+      pair(M + 2 * cw, y, ['DATE APPROVED', val('dateApproved')], ['TIME', val('timeApproved')]);
+      y -= rowH;
+      rect(M, y, INNER, top - y, 1.6);
+      line(M + cw, y, M + cw, top, 1.6); line(M + 2 * cw, y, M + 2 * cw, top, 1.6);
+      text(M + 2 * cw + 4, y - 10, 'SIGNATURES IN BLUE INK OR ELECTRONIC SIGNATURE', 7);
+      y -= 16;
+      pages[pages.length - 1].signed = true;
     }
 
     // ---- Exhibit Attachments: the exhibit photos, two to a portrait page, each as large as fits,
@@ -321,12 +355,13 @@
     const photos = on('evidence') ? (photosIn || []) : [];
     for (let i = 0; i < photos.length; i += 2) {
       newPage();
+      pages[pages.length - 1].signed = true; // a photo page has no initial boxes
       band('Exhibit Attachments');
       y -= 6;
       const slotH = (y - (M + 18)) / 2;
       photos.slice(i, i + 2).forEach((ph, j) => {
         const top = y - j * slotH;
-        const cap = wrap(ph.caption || '', 9, INNER - 8).slice(0, 3);
+        const cap = twrap(ph.caption || '', 9.5, INNER - 8).slice(0, 3);
         const capH = cap.length * 11 + 8;
         const boxH = slotH - capH - 10;
         const k = Math.min((INNER - 12) / ph.w, (boxH - 12) / ph.h);
@@ -335,14 +370,24 @@
         const x = M + (INNER - w) / 2; const yy = top - boxH + (boxH - hgt) / 2;
         ops.push(`q ${w.toFixed(2)} 0 0 ${hgt.toFixed(2)} ${x.toFixed(2)} ${yy.toFixed(2)} cm /Im${ph.index} Do Q`);
         pages[pages.length - 1].imgs.push(ph.index);
-        cap.forEach((l, n) => text(M + 4, top - boxH - 12 - n * 11, l, 9, n === 0));
+        cap.forEach((l, n) => text(M + 4, top - boxH - 12 - n * 11, l, 9.5, n === 0));
       });
     }
 
-    // Footer with page numbers.
+    // Initial boxes at the foot of every page without the signature table, and the footer.
     pages.forEach((p, i) => {
-      const f = `${caseLabel ? `${caseLabel}  ·  ` : ''}${printed ? `Printed ${printed}  ·  ` : ''}Page ${i + 1} of ${pages.length}`;
-      p.ops.push(`BT /F1 7.5 Tf ${(PAGE_W - M - width(f, 7.5)).toFixed(2)} ${(M - 12).toFixed(2)} Td ${pdfString(f)} Tj ET`);
+      const add = (s2) => p.ops.push(s2);
+      if (!p.signed) {
+        const bx = M + 24; const bw = (INNER - 48) / 2; const by = M + 4;
+        for (const [n, l] of [[0, 'PREPARER - SIGN OR INITIAL'], [1, 'APPROVAL - SIGN OR INITIAL']]) {
+          add(`0.9 w ${(bx + n * bw).toFixed(2)} ${by.toFixed(2)} ${bw.toFixed(2)} 24 re S`);
+          add(`BT /F1 7 Tf ${(bx + n * bw + 3).toFixed(2)} ${(by + 16).toFixed(2)} Td ${pdfString(l)} Tj ET`);
+        }
+      }
+      const pg = `Page ${i + 1} of ${pages.length}`;
+      add(`BT /F1 8 Tf ${(PAGE_W / 2 - width(pg, 8, false, 'times') / 2).toFixed(2)} ${(M - 12).toFixed(2)} Td ${pdfString(pg)} Tj ET`);
+      if (caseLabel) add(`BT /F1 7.5 Tf ${M.toFixed(2)} ${(M - 12).toFixed(2)} Td ${pdfString(caseLabel)} Tj ET`);
+      if (printed) { const pr = `Printed ${printed}`; add(`BT /F1 7.5 Tf ${(PAGE_W - M - width(pr, 7.5, false, 'times')).toFixed(2)} ${(M - 12).toFixed(2)} Td ${pdfString(pr)} Tj ET`); }
     });
     return pages;
   }
@@ -355,17 +400,18 @@
     // With Evidence left out, no photos go in the file at all.
     const evidenceOff = Array.isArray(data && data.hidden) && data.hidden.includes('evidence');
     const photos = evidenceOff ? [] : (opts.photos || []).map((p, index) => ({ ...p, index }));
-    return assemble(layout(data, { ...opts, photos }), { photos, title: opts.title || F().titleFor(data) });
+    return assemble(layout(data, { ...opts, photos }), { photos, title: opts.title || F().titleFor(data), face: 'times' });
   }
 
   /** Pages ([{ ops, sigs, imgs }]) and their photos -> the PDF file's bytes. Shared with the
    * Arrest Report (js/arrest-pdf.js). */
-  function assemble(pages, { photos = [], title = 'Report' } = {}) {
+  function assemble(pages, { photos = [], title = 'Report', face = 'helvetica' } = {}) {
     const objs = []; // index = object number - 1
     const add = (body) => { objs.push(body); return objs.length; };
     const catalog = add(null); const pagesObj = add(null);
-    const f1 = add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
-    const f2 = add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+    const [reg, bold] = face === 'times' ? ['Times-Roman', 'Times-Bold'] : ['Helvetica', 'Helvetica-Bold'];
+    const f1 = add(`<< /Type /Font /Subtype /Type1 /BaseFont /${reg} /Encoding /WinAnsiEncoding >>`);
+    const f2 = add(`<< /Type /Font /Subtype /Type1 /BaseFont /${bold} /Encoding /WinAnsiEncoding >>`);
     const imgObj = photos.map((p) => {
       let bin = '';
       for (let i = 0; i < p.jpeg.length; i += 0x8000) bin += String.fromCharCode.apply(null, p.jpeg.subarray(i, i + 0x8000));

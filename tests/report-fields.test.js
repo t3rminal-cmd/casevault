@@ -54,7 +54,8 @@ test('Report PDF: a valid PDF with the fields, signature fields and page numbers
   const s = Buffer.from(bytes).toString('latin1');
   assert.ok(s.startsWith('%PDF-1.7'));
   assert.ok(s.trimEnd().endsWith('%%EOF'));
-  assert.match(s, /\(Example Police Department\)/);
+  assert.match(s, /\(EXAMPLE POLICE DEPARTMENT\)/); // v1.43: the agency in capitals under the title
+  assert.match(s, /\/BaseFont \/Times-Roman/, 'set in Times, like the form');
   assert.match(s, /\(Delivery \\\(cocaine\\\)\)/, 'parentheses are escaped');
   assert.match(s, /\\223Quoted\\224 \\226 dash/, 'curly quotes and dashes in WinAnsi');
   assert.doesNotMatch(s, /\*\*Bold/, 'Markdown marks are taken off');
@@ -192,8 +193,8 @@ test('v1.25: height in feet and inches, weight in pounds, unknown offender range
   assert.strictEqual(F.itemLine('offendersList', d.offendersList[0]), 'John Example, Height: 5\'10", Weight: 180 lbs');
   assert.strictEqual(F.itemLine('offendersList', d.offendersList[1]), 'Unknown Offender, Age Range: 25 - 30, Height Range: 5\'8" - 5\'11", Weight Range: 170 - 190 lbs');
   const s = Buffer.from(P.build(d, {})).toString('latin1');
-  assert.match(s, /OFFENDER 2 - AGE RANGE/);
-  assert.match(s, /\(170 - 190 lbs\)/);
+  assert.match(s, /Age Range: 25 - 30/); // v1.43: each offender on a line under OFFENDER(S)
+  assert.match(s, /170 - 190 lbs/);
 });
 
 test('v1.25: narcotics recovered, one line each; older single lines move into the list', () => {
@@ -213,7 +214,7 @@ test('v1.25: narcotics recovered, one line each; older single lines move into th
   assert.match(md, /\| 1 \| Cocaine \(Powder\) \| 28 grams \|/);
   const s = Buffer.from(P.build(d, {})).toString('latin1');
   assert.match(s, /NARCOTICS RECOVERED/);
-  assert.match(s, /NARCOTIC 1 - STREET VALUE/);
+  assert.match(s, /Total Weight: 28 grams/);
   assert.match(s, /SUBPOENA GJ NUMBER/);
   // The four narcotic boxes share one row.
   const R = require('../js/reference/reference.js');
@@ -280,8 +281,8 @@ test('v1.27: State of Illinois victim, compact Local AI box', () => {
   assert.strictEqual(F.itemLine('victimsList', d.victimsList[0]), 'State of Illinois, Officer Name: P.O. Example #1234');
   assert.strictEqual(F.itemLine('victimsList', d.victimsList[1]), 'Jane Example, Race: Black');
   const s = Buffer.from(P.build(d, {})).toString('latin1');
-  assert.match(s, /VICTIM 1 - OFFICER NAME/);
-  assert.doesNotMatch(s, /VICTIM 1 - RACE/);
+  assert.match(s, /Officer Name: P.O. Example/);
+  assert.doesNotMatch(s, /State of Illinois, Race/);
   const M = require('../js/ai/memory.js');
   // v1.28: Local AI, RAM in use of total, RAM free, the drive's free space.
   const G = 1024 ** 3;
