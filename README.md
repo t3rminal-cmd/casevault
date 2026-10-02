@@ -15,8 +15,15 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.41)
+## Features (v1.42)
 
+- Overview: Upcoming Deadlines is gone (the banner shows what's due); an open operation folder shows each case number with all its tabs (Details, Timeline, Draft, Reports, Files, Mail, Checks) in that spot, so the folders never move; the timeline's titles are centered; a new two-tone operation folder icon
+- Sidebar: restyled; operations whose case numbers are all Closed sit in a Closed section at the bottom, above Archived
+- Field Notes single spaced, with no fading at the bottom of the Reports card; no hover boxes over the Field Notes and report names
+- Reports list shows "Purchase" rather than "Supplementary Report - Purchase" (the type is in its own column), and every report can be sent to Files from the list or its viewer
+- Draft tab: the IUCR Code box holds just the code (Offense Classification gets the description); Pre-Recorded Funds is one compact row per bill, with no Quantity; Notifications have no Notes; exhibit numbering can be reset to 1 or started from any number
+- Files: the Document column breaks only between words
+- Dev Tools restyled in numbered steps; Emergency Purge has a skull and crossbones
 - Draft tab: each sent report is named after its heading (Supplementary Report - Purchase). Change the Officer Report Type and send again, and CaseVault asks whether to make a **New Report** (the UCO's and the surveillance officer's reports of one buy) or update the one sent; two reports never share a title or a PDF
 - Exhibit photos are named like their labels on the Draft tab (Exhibit 1a, 1b), and older "Exhibit 1 (2)" names are renamed to match
 - Timeline: a **Clear** button next to Add to Timeline; each date on one line next to its marker

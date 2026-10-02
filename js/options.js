@@ -303,18 +303,24 @@
     const fileName = (ext) => `${(name.value.trim() || 'Anonymized document').replace(/\.(md|txt)$/i, '')}.${ext}`;
     const libFolder = (root.CVLibrary && root.CVLibrary.CATEGORIES[0] && root.CVLibrary.CATEGORIES[0].folder) || 'Report examples';
 
+    // v1.42: laid out as cards: the Anonymizer in numbered steps, the Emergency Purge apart below it.
+    const step = (n, title, sub) => h('div', { class: 'dev-step-head' }, h('span', { class: 'dev-step-num', 'aria-hidden': 'true' }, String(n)), h('div', {}, h('strong', {}, title), h('span', { class: 'muted small block' }, sub)));
     return h('section', { class: 'opt-panel dev-panel' },
-      h('h3', { title: 'Turns a real document into a fictitious one you can keep as a template or give the AI to learn from. Runs on this computer only: nothing goes online.' }, 'Document Anonymizer'),
-      h('div', { class: 'dev-col' },
-        h('div', { class: 'dev-col-head' }, h('strong', {}, 'Original')),
+      h('div', { class: 'dev-card' },
+      h('div', { class: 'dev-card-head' },
+        h('span', { class: 'dev-card-icon', 'aria-hidden': 'true' }, ui.icon('incognito')),
+        h('div', {}, h('h3', {}, 'Document Anonymizer'), h('p', { class: 'muted small' }, 'Turns a real document into a fictitious one to keep as a template or give the AI to learn from. Runs on this PC only.'))),
+      h('div', { class: 'dev-col dev-step' },
+        step(1, 'Original', 'Drop a file or paste the text.'),
         drop, src, extra),
-      h('div', { class: 'dev-col' },
-        h('div', { class: 'dev-col-head' }, h('strong', {}, 'Fictitious')), outBox),
-      file,
       h('div', { class: 'dev-actions' },
         runBtn,
-        h('button', { class: 'btn dev-btn', type: 'button', title: 'Empty both boxes', onclick: clear }, 'Clear')),
+        h('button', { class: 'btn dev-btn', type: 'button', onclick: clear }, 'Clear')),
       report,
+      h('div', { class: 'dev-col dev-step' },
+        step(2, 'Fictitious', 'Read it through, edit if needed.'), outBox),
+      file,
+      h('div', { class: 'dev-col dev-step' }, step(3, 'Keep It', 'Name it, then copy it or save it.')),
       h('div', { class: 'dev-save' },
         name,
         h('button', { class: 'btn dev-btn', type: 'button', onclick: async () => { const t = text(); if (!t) return; try { await navigator.clipboard.writeText(t); toast('Copied.', 'success', 1500); } catch { toast('Could not copy.', 'error'); } } }, 'Copy'),
@@ -330,7 +336,7 @@
             toast(`Added to the Library: ${path.replace(/\.md$/i, '')}`, 'success');
           } catch { /* reported by Save */ }
         } }, 'Add to Library')),
-      h('p', { class: 'muted small explain' }, 'Detection is a safety net, not a guarantee. Read the result before you save it; anything you add to the Library is read by the AI.'),
+      h('p', { class: 'muted small explain' }, 'Detection is a safety net, not a guarantee. Read the result before you save it; anything you add to the Library is read by the AI.')),
       purgeSection());
   }
 
@@ -366,9 +372,11 @@
         location.replace(location.pathname + location.search);
       } catch (err) { toast(`The purge stopped: ${err.message || err}. Run it again, or delete CaseVault-Data in File Explorer.`, 'error', 12000); }
     };
+    // v1.42: a skull and crossbones on the left, so it can't be mistaken for anything else.
     return h('div', { class: 'purge-box' },
-      h('div', {}, h('strong', {}, 'Emergency Purge'), h('p', { class: 'muted small' }, 'Deletes all case data CaseVault keeps on the SSD, at once.')),
-      h('button', { class: 'btn danger dev-btn', type: 'button', onclick: go }, 'Emergency Purge'));
+      h('span', { class: 'purge-skull', 'aria-hidden': 'true' }, ui.icon('skull-crossbones')),
+      h('div', {}, h('strong', {}, 'Emergency Purge'), h('p', { class: 'small' }, 'Deletes all case data CaseVault keeps on the SSD, at once. There is no undo.')),
+      h('button', { class: 'btn danger dev-btn purge-btn', type: 'button', onclick: go }, ui.icon('skull-crossbones'), h('span', {}, 'Emergency Purge')));
   }
 
   /* ---------- Contact Dev ---------- */

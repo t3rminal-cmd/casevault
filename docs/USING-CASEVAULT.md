@@ -199,6 +199,20 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.42
+
+- **Overview:** the Upcoming Deadlines list is gone; the banner at the top already says what's due. Click an operation's folder and its case numbers show where that list was, each with buttons for every tab (**Details, Timeline, Draft, Reports, Files, Mail, Checks**), under the operation's timeline. The folders themselves stay where they are. The timeline's title and each event's title are centered.
+- **Sidebar:** a cleaner look, with a new folder icon for each operation. An operation whose case numbers are all **Closed** moves to the **Closed** section at the bottom of the list, just above **Archived**.
+- **Field Notes** are single spaced (no blank space between paragraphs), and the preview on the Reports tab no longer fades out at the bottom. Hovering over the Field Notes or a report no longer shows a hover box.
+- **Reports list:** a report sent from the Draft tab shows by its type of activity (**Purchase**, **Surveillance**…); "Supplementary Report" is already in the Type column. The folder button on each row (and **Send to Files** in the report window) saves its PDF to Files, in place of the copy saved before.
+- **Draft tab:**
+  - **IUCR Code** holds just the code. The list shows each code with its description, and picking one puts the description in **Offense Classification**.
+  - **Pre-Recorded Funds** is one compact row per bill: Denomination, Serial Number, Recovered. Quantity is gone.
+  - **Notifications** no longer have a Notes box; notes written before become the Person Notified when that was empty.
+  - **Exhibit numbering:** next to **Add Exhibit**, **Next Exhibit No.** shows the number the next exhibit gets. Type a number to start from there, click **Reset to 1** to start again (numbers this case already uses are skipped), or **Automatic** to number on as before (shared by cases with the same federal jacket number).
+- **Files:** the Document column breaks only between words, so "Supplementary Report" is never cut.
+- **Dev Tools:** the Document Anonymizer is laid out in numbered steps (Original, Fictitious, Keep It), and **Emergency Purge** sits apart in red with a skull and crossbones.
+
 ### What's new in v1.41
 
 - **One draft, several reports:** each report sent from the Draft tab is named after its heading, such as **Supplementary Report - Purchase**, and so is its PDF in Files. If you change the **Officer Report Type** after sending (Purchase to Surveillance, say) and click **Send Draft to Reports**, CaseVault asks: **New Report** keeps the Purchase report as it was sent and adds a Surveillance report next to it; **Update** replaces the Purchase report (and its PDF). Sending again with the same type just updates that report. Two reports of the same type get "2", "3" on the end, so a PDF is never overwritten by another report's.

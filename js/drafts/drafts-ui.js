@@ -118,18 +118,21 @@
     // v1.34: the AI tag has its own column; each report has an icon, its type as a tag, and a bin.
     const list = h('table', { class: 'files drafts-table reports-table' },
       h('colgroup', {}, archived ? null : h('col', { class: 'col-grip' }), h('col', {}), h('col', { class: 'col-rtype' }), h('col', { class: 'col-ai' }), h('col', { class: 'col-ract' })),
-      h('thead', {}, h('tr', {}, archived ? null : h('th', { class: 'grip-cell', title: 'Your own order: drag the rows' }, h('span', { class: 'sr-only' }, 'Order')),
-        h('th', {}, 'Report'), h('th', {}, 'Type'), h('th', { class: 'ai-col', title: 'Written with Draft with AI' }, 'AI'), h('th', {}, h('span', { class: 'sr-only' }, 'Actions')))),
+      h('thead', {}, h('tr', {}, archived ? null : h('th', { class: 'grip-cell' }, h('span', { class: 'sr-only' }, 'Order')),
+        h('th', {}, 'Report'), h('th', {}, 'Type'), h('th', { class: 'ai-col' }, 'AI'), h('th', {}, h('span', { class: 'sr-only' }, 'Actions')))),
       h('tbody', {}, rows.length ? rows.map((d, i) => {
-        const grip = archived ? null : h('button', { class: 'grip-btn', type: 'button', title: 'Drag to reorder (or Alt+Up / Alt+Down)', 'aria-label': `Move ${d.title}` }, I('grip-vertical'));
+        const grip = archived ? null : h('button', { class: 'grip-btn', type: 'button', 'aria-label': `Move ${d.title} (drag, or Alt+Up / Alt+Down)` }, I('grip-vertical'));
         const tr = h('tr', { 'data-slug': d.slug, draggable: archived ? null : 'true' },
           archived ? null : h('td', { class: 'grip-cell' }, grip),
-          h('td', { class: 'report-name' }, h('button', { 'data-ro-ok': 'true', class: 'linkish report-open', type: 'button', title: `View ${d.title}`, onclick: () => viewReport(c, d) },
-            h('span', { class: 'report-icon', 'aria-hidden': 'true' }, I(d.fromFields ? 'clipboard2-check' : 'file-earmark-text')), h('span', { class: 'report-title' }, d.title))),
+          h('td', { class: 'report-name' }, h('button', { 'data-ro-ok': 'true', class: 'linkish report-open', type: 'button', onclick: () => viewReport(c, d) },
+            h('span', { class: 'report-icon', 'aria-hidden': 'true' }, I(d.fromFields ? 'clipboard2-check' : 'file-earmark-text')), h('span', { class: 'report-title' }, shortTitle(d)))),
           h('td', {}, h('span', { class: 'type-tag' }, (CVDraft.DOC_TYPES[d.type] || CVDraft.DOC_TYPES.other).label)),
-          h('td', { class: 'ai-col' }, d.ai ? h('span', { class: 'layer-badge ai-badge', title: 'Written with Draft with AI' }, I('robot'), 'AI') : h('span', { class: 'muted', 'aria-label': 'No' }, '—')),
+          h('td', { class: 'ai-col' }, d.ai ? h('span', { class: 'layer-badge ai-badge' }, I('robot'), 'AI') : h('span', { class: 'muted', 'aria-label': 'No' }, '—')),
           h('td', { class: 'actions' },
             h('button', { 'data-ro-ok': 'true', class: 'icon-btn', type: 'button', title: 'View', onclick: () => viewReport(c, d) }, I('eye'), h('span', { class: 'sr-only' }, `View ${d.title}`)),
+            archived ? null : h('button', { class: 'icon-btn', type: 'button', title: 'Send to Files', onclick: async () => {
+              try { const path = await saveReportToFiles(c, d); toast(`Saved to Files: ${path.split('/').pop()}`, 'success', 5000); } catch (err) { if (!FS.isDisconnectError(err) && err.name === 'NotFoundError') toast(`Could not save ${d.title}: ${err.message}`, 'error'); }
+            } }, I('folder-plus'), h('span', { class: 'sr-only' }, `Send ${d.title} to Files`)),
             archived ? null : fromDraft(d) ? sendBackBtn(d)
               : h('a', { class: 'icon-btn', href: `#/case/${encodeURIComponent(c.id)}/reports/${encodeURIComponent(d.slug)}`, title: 'Edit (a report made with New Report)' }, I('pencil-square'), h('span', { class: 'sr-only' }, `Edit ${d.title}`)),
             archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: `Delete ${d.title}`, onclick: async () => {
@@ -185,7 +188,7 @@
       h('div', { class: 'reports-head' }, h('span', { class: 'rpt-icon', 'aria-hidden': 'true' }, I('journal-text')), h('h2', { class: 'section-title' }, 'Field Notes'), h('div', { class: 'spacer' }),
         h('span', { class: 'count-pill' }, words ? `${words} word${words === 1 ? '' : 's'}` : 'Empty'),
         h('a', { class: 'btn small', href: notesUrl }, I('pencil-square'), archived ? ' Open' : ' Open and Edit')),
-      h('a', { class: 'notes-card', href: notesUrl, title: 'Open the Field Notes' },
+      h('a', { class: 'notes-card', href: notesUrl },
         notesPlain ? h('div', { class: 'notes-card-text' }, notesPlain.length > 900 ? `${notesPlain.slice(0, 900).replace(/\s+\S*$/, '')}…` : notesPlain)
           : h('div', { class: 'notes-empty' }, I('pencil'), h('span', {}, 'No field notes yet. Click here to write them; they save as you type.'))));
     panel.replaceChildren(
@@ -207,17 +210,39 @@
 
   /** A report as its PDF, shown the way the Files tab shows a PDF (v1.40). Read only: a report sent
    * from the Draft tab can be sent back there; one made with New Report can be opened to edit. */
+  /** A report's PDF bytes: from its form when sent from the Draft tab, else from its text. */
+  async function reportPdfBytes(c, d) {
+    const RFU = root.CVReportFieldsUI;
+    let bytes = d.fromFields && RFU ? await RFU.sentPdf(c, d.slug) : null;
+    if (!bytes) {
+      const r = await Vault.readDraft(c.id, d.slug);
+      if (!r) throw Object.assign(new Error('the report is not on the SSD'), { name: 'NotFoundError' });
+      bytes = CVDraftPdf.build(r.body, pdfOpts(c, d.title));
+    }
+    return bytes;
+  }
+
+  /** Saves a report's PDF in Files (v1.42), in place of the copy saved before. -> path */
+  async function saveReportToFiles(c, d, bytes = null) {
+    const b = bytes || await reportPdfBytes(c, d);
+    const RFU = root.CVReportFieldsUI;
+    if (d.fromFields && RFU) return (await RFU.savePdfToCase(c, null, b, d.title)).path;
+    const what = `${d.type} ${d.title}`;
+    const folder = /supplement/i.test(what) ? 'Supplementary Report' : /arrest/i.test(what) ? 'Arrest Report' : 'Case Report';
+    const name = `${FS.safeName(d.title || 'Report')}.pdf`;
+    return ui.Save.track(`draft-pdf:${c.id}`, () => Vault.addFile(c.id, new File([b], name, { type: 'application/pdf' }), { folder, description: d.title, replace: true }));
+  }
+
+  /** The name shown in the Reports list: "Purchase" for "Supplementary Report - Purchase", the
+   * type being in its own column (v1.42). */
+  const shortTitle = (d) => { const m = /^Supplementary Report\s+-\s+(.+)$/i.exec(d.title || ''); return m ? m[1] : d.title; };
+
   async function viewReport(c, d) {
     const { h, toast, go } = ui;
     const RFU = root.CVReportFieldsUI;
     let bytes = null;
     try {
-      if (d.fromFields && RFU) bytes = await RFU.sentPdf(c, d.slug);
-      if (!bytes) {
-        const r = await Vault.readDraft(c.id, d.slug);
-        if (!r) throw Object.assign(new Error('the report is not on the SSD'), { name: 'NotFoundError' });
-        bytes = CVDraftPdf.build(r.body, pdfOpts(c, d.title));
-      }
+      bytes = await reportPdfBytes(c, d);
     } catch (err) {
       if (FS.isDisconnectError(err) && err.name !== 'NotFoundError') return ui.onDriveLost();
       return toast(`Could not open ${d.title}: ${err.message}`, 'error');
@@ -236,6 +261,10 @@
             try { if (await RFU.sendBack(c, d.slug)) { close(); go(c.id, 'draft'); } } catch { /* reported */ }
           } }, 'Send Back to Draft')
           : h('button', { class: 'btn', type: 'button', icon: 'pencil-square', title: 'Open this report in the editor', onclick: () => { close(); go(c.id, 'reports', d.slug); } }, 'Edit'),
+        archived ? null : h('button', { class: 'btn', type: 'button', icon: 'folder-plus', onclick: async (e) => {
+          const btn = e.currentTarget;
+          try { const path = await saveReportToFiles(c, d, bytes); toast(`Saved to Files: ${path.split('/').pop()}`, 'success', 5000); btn.disabled = true; } catch { /* reported by Save */ }
+        } }, 'Send to Files'),
         h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Close')),
       h('iframe', { class: 'preview-frame', src: url, title: name })));
     URL.revokeObjectURL(url);

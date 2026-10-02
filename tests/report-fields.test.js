@@ -112,7 +112,7 @@ test('v1.22: age from DOB, photo labels, roles, notifications and optional lines
   assert.deepStrictEqual([F.photoLabel(1, 0), F.photoLabel(1, 1), F.photoLabel(3, 25), F.photoLabel(3, 26)], ['1a', '1b', '3z', '3aa']);
   assert.deepStrictEqual(F.PICKS.victim, ['State of Illinois']);
   const d = F.normalize({ schema: 3, notifications: 'Called the watch commander', personnel: [{ name: 'A', role: 'Unit 189' }, { name: 'B', role: 'Entry' }], within1000: 'School', hidden: ['within1000'] });
-  assert.strictEqual(d.notifications[0].notes, 'Called the watch commander');
+  assert.strictEqual(d.notifications[0].name, 'Called the watch commander');
   assert.deepStrictEqual(d.personnel.map((p) => [p.unit, p.role]), [['Unit 189', ''], ['', 'Entry']]);
   assert.doesNotMatch(F.asText(d), /Within 1000/);
   const s = Buffer.from(P.build(d)).toString('latin1');
@@ -337,4 +337,14 @@ test('uniqueTitle: reports never share a title or PDF (v1.41)', () => {
   assert.strictEqual(F.uniqueTitle(t, new Set([t.toLowerCase(), `${t} 2`.toLowerCase()])), `${t} 3`);
   assert.strictEqual(F.photoLabel(1, 0), '1a');
   assert.strictEqual(F.photoLabel(1, 1), '1b');
+});
+
+test('v1.42: exhibit numbering from a start, funds without quantity, notifications without notes', () => {
+  assert.strictEqual(F.nextFrom(1, [1, 2, 5]), 3);
+  assert.strictEqual(F.nextFrom(20, [1, 20]), 21);
+  assert.strictEqual(F.nextFrom(0, []), 1);
+  assert.deepStrictEqual(F.LISTS.funds.fields.map((f) => f[0]), ['denomination', 'serial', 'recovered']);
+  assert.deepStrictEqual(F.LISTS.notifications.fields.map((f) => f[0]), ['date', 'name', 'by']);
+  const d = F.normalize({ notifications: [{ notes: 'Called the watch commander' }] });
+  assert.strictEqual(d.notifications[0].name, 'Called the watch commander');
 });

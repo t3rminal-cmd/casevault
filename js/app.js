@@ -590,7 +590,7 @@
     const bell = group.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date));
     const det = h('details', { class: 'op-group', open },
       h('summary', { class: 'op-head', title: `${group[0].title}: ${group.length} case numbers` },
-        h('span', { class: 'op-folder' }, I('folder-fill')),
+        h('span', { class: 'op-folder' }, I('op-folder')),
         h('span', { class: 'op-text' },
           h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, group[0].title),
             bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
@@ -629,13 +629,16 @@
     const first = [...group].sort((a, b) => (a.opened || a.dates?.opened || '').localeCompare(b.opened || b.dates?.opened || '') || String(a.number || '').localeCompare(String(b.number || ''), undefined, { numeric: true }))[0] || {};
     return { fileNumber: group.map((c) => c.fileNumber).filter(Boolean).sort(byFileNumber)[0] || '', number: first.number || '', client: first.client || group.map((c) => c.client).find(Boolean) || '' };
   }
-  function groupedItems(cases) {
+  function opGroups(cases) {
     const byOp = new Map();
     for (const c of cases) { const k = opKey(c.title) || `#${c.id}`; byOp.set(k, [...(byOp.get(k) || []), c]); }
     const groups = [...byOp.values()].map((g) => g.sort((a, b) => String(a.number || '').localeCompare(String(b.number || ''), undefined, { numeric: true })));
     groups.sort((a, b) => byFileNumber(opInfo(a).fileNumber, opInfo(b).fileNumber) || String(a[0].title || '').localeCompare(String(b[0].title || '')));
-    return groups.map((g) => operationGroup(g));
+    return groups;
   }
+  // v1.42: an operation whose case numbers are all Closed goes to the Closed section at the bottom.
+  const isClosedGroup = (g) => g.every((c) => c.status === 'Closed');
+  function groupedItems(cases) { return opGroups(cases).map((g) => operationGroup(g)); }
 
   function renderCaseList() {
     const list = $('#case-list');
@@ -644,8 +647,18 @@
     if (!Vault.data) { list.replaceChildren(); section.hidden = true; return; }
     const cases = filteredCases();
     const activeCount = Vault.data.cases.filter((c) => !isArchivedEntry(c)).length;
-    list.replaceChildren(...(cases.length ? groupedItems(cases) : [h('li', { class: 'empty muted' },
-      activeCount ? 'No cases match.' : Vault.data.cases.length ? 'No active cases.' : 'No cases yet. Click "New case".')]));
+    const groups = opGroups(cases);
+    const openGroups = groups.filter((g) => !isClosedGroup(g));
+    const closedGroups = groups.filter(isClosedGroup);
+    list.replaceChildren(...(openGroups.length ? openGroups.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted' },
+      closedGroups.length ? 'Every operation is closed.' : activeCount ? 'No cases match.' : Vault.data.cases.length ? 'No active cases.' : 'No cases yet. Click "New case".')]));
+    // Closed operations: above Archived, at the bottom of the list (v1.42).
+    const closedSec = $('#closed-cases');
+    const allClosed = opGroups(Vault.data.cases.filter((c) => !isArchivedEntry(c))).filter(isClosedGroup);
+    closedSec.hidden = !allClosed.length;
+    $('#closed-count').textContent = String(closedGroups.length);
+    $('#closed-list').replaceChildren(...(closedGroups.length ? closedGroups.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted' }, 'No closed operations match.')]));
+    if ((state.caseId && closedGroups.some((g) => g.some((c) => c.id === state.caseId))) || ($('#case-search').value.trim() && closedGroups.length)) closedSec.open = true;
 
     // Archived cases: a collapsible section, searched with the same box.
     const q = $('#case-search').value.trim().toLowerCase();
@@ -759,6 +772,7 @@
     const clearedAt = (Vault.data.settings && Vault.data.settings.recentClearedAt) || '';
     const recent = [...cases].filter((c) => (c.updated || '') > clearedAt).sort((a, b) => (b.updated || '').localeCompare(a.updated || '')).slice(0, 8);
     const tlBox = h('div', { class: 'dash-section op-timeline-section', hidden: true });
+    const opBox = h('div', { class: 'dash-section op-open-section', hidden: true });
 
     $('#main').replaceChildren(h('section', { class: 'dashboard' },
       welcomeHero(cases, deadlines),
@@ -766,18 +780,11 @@
         ...Vault.STATUSES.map((s) => h('div', { class: `stat stat-${s.toLowerCase()}` },
           h('span', { class: 'stat-icon' }, I(STATUS_ICONS[s])),
           h('div', {}, h('div', { class: 'stat-num' }, count(s)), h('div', { class: 'stat-label' }, s))))),
-      operationFolders(cases, tlBox),
+      operationFolders(cases, tlBox, opBox),
       tlBox,
-      h('div', { class: 'dash-section' }, h('h2', { class: 'section-title' }, 'Upcoming deadlines'),
-      deadlines.length
-        ? h('ul', { class: 'plain-list' }, deadlines.map((c) => {
-          const due = dueLabel(c.nextDeadline.date);
-          return h('li', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/timeline`, class: 'row-link' },
-            h('span', { class: `due ${due.cls}` }, `${fmtDate(c.nextDeadline.date)}${c.nextDeadline.time ? ' ' + c.nextDeadline.time : ''}`),
-            h('span', {}, c.nextDeadline.title || 'Deadline', ' — ', c.title),
-            h('span', { class: `due ${due.cls}` }, due.text)));
-        }))
-        : h('p', { class: 'muted' }, 'No open deadlines. Add them from a case\'s Timeline tab.')),
+      // v1.42: no Upcoming Deadlines (the banner shows what's due); the open operation's case
+      // numbers, each with its tabs, sit here instead, so the folders above never move.
+      opBox,
       h('div', { class: 'dash-section' }, h('div', { class: 'section-head' }, h('h2', { class: 'section-title' }, 'Recently updated'), h('div', { class: 'spacer' }),
         recent.length ? h('button', { class: 'btn small ghost', type: 'button', title: 'Empties this list. Cases you change after this show here again.', onclick: async () => {
           try { await Save.track('settings', () => Vault.updateSettings({ recentClearedAt: new Date().toISOString() })); showDashboard(); } catch { /* reported */ }
@@ -794,17 +801,19 @@
    * its name under it. Click one to open it: its case numbers, each with its Reports, Field Notes,
    * Files (photos, documents) and Timeline. Which one is open is remembered for this visit. */
   const opFolderState = { open: '', close: null };
+  // v1.42: every tab of a case number, from the open operation on the Overview.
+  const OP_TABS = [['details', 'Details', 'info-circle'], ['timeline', 'Timeline', 'calendar-event'], ['draft', 'Draft', 'pencil-square'], ['reports', 'Reports', 'files'], ['files', 'Files', 'folder2-open'], ['mail', 'Mail', 'envelope'], ['checks', 'Checks', 'clipboard2-check']];
   // Empty space: anything that isn't a control, a link, a folder, the open folder's cases or the
   // timeline, and nothing inside a dialog or the sidebar.
   document.addEventListener('click', (e) => {
     if (!opFolderState.open || !opFolderState.close) return;
     const t = e.target;
     if (!(t instanceof Element) || !t.closest('#main')) return;
-    if (t.closest('a, button, input, select, textarea, label, summary, details, [role="button"], [contenteditable], .op-folder-tile, .op-open, .op-timeline-section, .htl-wrap, .dialog')) return;
+    if (t.closest('a, button, input, select, textarea, label, summary, details, [role="button"], [contenteditable], .op-folder-tile, .op-open, .op-open-section, .op-timeline-section, .htl-wrap, .dialog')) return;
     if (window.getSelection && String(window.getSelection())) return; // selecting text isn't a click away
     opFolderState.close();
   });
-  function operationFolders(cases, tlBox = null) {
+  function operationFolders(cases, tlBox = null, opBox = null) {
     const active = cases.filter((c) => !isArchivedEntry(c));
     const ops = new Map();
     for (const c of active) {
@@ -822,7 +831,7 @@
         return h('button', { type: 'button', role: 'listitem', class: `op-folder-tile ${open === o ? 'open' : ''}`, 'aria-expanded': String(open === o),
           title: `${o.name}: ${o.group.length} case number${o.group.length === 1 ? '' : 's'}`,
           onclick: () => { opFolderState.open = open === o ? '' : o.k; draw(); } },
-        h('span', { class: 'op-folder-art' }, I(open === o ? 'folder2-open' : 'folder-fill'), o.group.length > 1 ? h('span', { class: 'op-folder-count' }, String(o.group.length)) : null),
+        h('span', { class: 'op-folder-art' }, I('op-folder'), o.group.length > 1 ? h('span', { class: 'op-folder-count' }, String(o.group.length)) : null),
         h('span', { class: 'op-folder-name' }, o.name, bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null));
       }));
       const inside = open ? h('div', { class: 'op-open' },
@@ -833,13 +842,12 @@
           const to = (tab, sub) => `#/case/${encodeURIComponent(c.id)}/${tab}${sub ? `/${sub}` : ''}`;
           return h('div', { class: 'op-case-card' },
             h('a', { class: 'op-case-top', href: to('details') }, h('span', { class: 'op-case-num' }, c.number || 'No case number yet'), statusPill(c.status)),
-            h('div', { class: 'op-case-links' },
-              h('a', { class: 'op-word', href: to('reports') }, 'Reports'),
-              h('a', { class: 'op-word', href: to('files', 'photos') }, 'Photos'),
-              h('a', { class: 'op-word', href: to('files') }, 'Files')));
+            h('nav', { class: 'op-case-links', 'aria-label': `${c.number || 'Case'} tabs` },
+              ...OP_TABS.map(([tab, label, icon]) => h('a', { class: 'op-tab-link', href: to(tab) }, I(icon), h('span', {}, label)))));
         }))) : null;
       box.replaceChildren(...[h('h2', { class: 'section-title' }, 'Operations'),
-        list.length ? tiles : h('p', { class: 'muted' }, 'Create a case with New Case: Its operation appears here as a folder.'), inside].filter(Boolean));
+        list.length ? tiles : h('p', { class: 'muted' }, 'Create a case with New Case: Its operation appears here as a folder.'), opBox ? null : inside].filter(Boolean));
+      if (opBox) { opBox.hidden = !inside; opBox.replaceChildren(...(inside ? [inside] : [])); }
       if (tlBox) drawTimeline(open);
     };
     // The open operation's Timeline (v1.32): every case number's events, in its own section above
