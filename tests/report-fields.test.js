@@ -329,3 +329,12 @@ test('v1.34: each evidence photo keeps its label', () => {
   assert.deepStrictEqual(d.evidence[0].photoLabels, ['Front', '']);
   assert.deepStrictEqual(d.evidence[1].photoLabels, ['']);
 });
+
+test('uniqueTitle: reports never share a title or PDF (v1.41)', () => {
+  const t = 'Supplementary Report - Purchase';
+  assert.strictEqual(F.uniqueTitle(t, new Set()), t);
+  assert.strictEqual(F.uniqueTitle(t, new Set([t.toLowerCase()])), `${t} 2`);
+  assert.strictEqual(F.uniqueTitle(t, new Set([t.toLowerCase(), `${t} 2`.toLowerCase()])), `${t} 3`);
+  assert.strictEqual(F.photoLabel(1, 0), '1a');
+  assert.strictEqual(F.photoLabel(1, 1), '1b');
+});

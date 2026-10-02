@@ -92,10 +92,10 @@
 
   /** Writes the form into the linked report (made the first time). An edited one is replaced only
    * when force is set. -> { slug, kept } */
-  async function syncLinked(c, data, { force = false, slug = LINKED } = {}) {
+  async function syncLinked(c, data, { force = false, slug = LINKED, title = '' } = {}) {
     const cur = await linkedReport(c, slug);
     if (cur && cur.edited && !force) return { slug, kept: true };
-    const title = titleOf(slug);
+    title = title || (cur && cur.meta.title) || titleOf(slug);
     const body = F().toMarkdown(data, title);
     const meta = { ...(cur ? cur.meta : { created: new Date().toISOString() }), title, type: 'supplemental', ai: false, fromFields: true, fieldsSig: sigOf(body) };
     await ui.Save.track(`draft:${c.id}:${slug}`, () => Vault.saveDraft(c.id, slug, meta, body));
@@ -103,6 +103,10 @@
   }
 
   const formFile = (slug) => `report-fields-${slug}.json`;
+  /** A sent report's title as it shows under Reports (v1.41: named after its heading). */
+  const reportTitle = async (c, slug) => { const d = await Vault.readDraft(c.id, slug).catch(() => null); return (d && d.meta.title) || titleOf(slug); };
+  /** Where savePdfToCase puts a report's PDF. */
+  const pdfPathOf = (c, title) => CVCaseFiles.joinPath('Supplementary Report', FS.safeName(CVCaseFiles.fileName(c, 'Supplementary Report', `${title}.pdf`, title)));
   const hasEntries = (d) => {
     const x = F().normalize(d);
     return F().FIELDS.some(([k, , kind]) => k !== 'caseNumber' && (kind === 'check' ? !!x[k] : String(x[k] || '').trim()))
@@ -112,20 +116,21 @@
    * Draft tab holds a different report. -> true when done. */
   async function sendBack(c, slug) {
     const cur = await load(c);
+    const name = await reportTitle(c, slug);
     let snap = null;
     try { snap = await Vault.readCaseJSON(c.id, formFile(slug)); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
     if (!snap && cur.sentSlug !== slug) {
-      ui.toast(`${titleOf(slug)} was sent before this version kept its form, so it can't go back to the Draft tab. Edit the form there and send it again.`, 'error', 9000);
+      ui.toast(`${name} was sent before this version kept its form, so it can't go back to the Draft tab. Edit the form there and send it again.`, 'error', 9000);
       return false;
     }
     if (snap && cur.sentSlug !== slug && hasEntries(cur)) {
-      const other = cur.sentSlug ? `${titleOf(cur.sentSlug)} (as last sent, plus any changes since)` : 'a draft that hasn\'t been sent';
-      if (!(await ui.confirmDialog({ title: `Send ${titleOf(slug)} back to the Draft tab?`, message: `The Draft tab now holds ${other}. It's replaced by ${titleOf(slug)}'s form. What was sent stays under Reports and Files.`, confirmText: 'Send Back' }))) return false;
+      const other = cur.sentSlug ? `${await reportTitle(c, cur.sentSlug)} (as last sent, plus any changes since)` : 'a draft that hasn\'t been sent';
+      if (!(await ui.confirmDialog({ title: `Send ${name} back to the Draft tab?`, message: `The Draft tab now holds ${other}. It's replaced by ${name}'s form. What was sent stays under Reports and Files.`, confirmText: 'Send Back' }))) return false;
     }
     const next = snap ? F().normalize(snap) : cur;
     next.sentSlug = slug;
     await ui.Save.track(`report-fields:${c.id}`, () => Vault.writeCaseJSON(c.id, FILE, next));
-    ui.toast(`${titleOf(slug)} is back on the Draft tab. Send Draft to Reports updates the report when you're done.`, 'success', 6000);
+    ui.toast(`${name} is back on the Draft tab. Send Draft to Reports updates the report when you're done.`, 'success', 6000);
     return true;
   }
 
@@ -140,6 +145,25 @@
     if (snap) return pdfFor(c, F().normalize(snap));
     const now = await load(c);
     return (await sentSlugOf(c, now)) === slug ? pdfFor(c, now) : null;
+  }
+
+  /** Photos saved before v1.41 as "Exhibit 1", "Exhibit 1 (2)" are renamed in Files to their label
+   * (Exhibit 1a, 1b). Only those names, and only when the new name is free. -> true when renamed. */
+  async function relabelPhotos(c, e, n) {
+    let changed = false;
+    for (let j = 0; j < e.photos.length; j++) {
+      const { folder, base } = CVCaseFiles.splitPath(e.photos[j]);
+      const ext = (/\.[^.]{1,10}$/.exec(base) || [''])[0];
+      const stem = base.slice(0, base.length - ext.length);
+      const m = /-Exhibit (\d+)(?: \((\d+)\))?$/.exec(stem);
+      if (!m || m[1] !== String(n)) continue;
+      const label = `Exhibit ${F().photoLabel(n, j)}`;
+      const target = CVCaseFiles.joinPath(folder, FS.safeName(CVCaseFiles.fileName(c, folder, base, label)));
+      if (await Vault.readFile(c.id, target).catch(() => null)) continue;
+      e.photos[j] = await Vault.moveFile(c.id, e.photos[j], folder, { description: label });
+      changed = true;
+    }
+    return changed;
   }
 
   async function render(panel, c, token) {
@@ -495,13 +519,15 @@
           }));
         };
         drawPhotos();
+        if (!archived) relabelPhotos(c, e, n).then((changed) => { if (changed) { drawPhotos(); save(0); } }).catch(() => {});
         const picker = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true });
         picker.addEventListener('change', async () => {
           const files = [...picker.files];
           picker.value = '';
           for (const f of files) {
             try {
-              const path = await Save.track(`photo:${c.id}`, () => Vault.addFile(c.id, f, { folder: e.type === 'Narcotics' ? 'Drug Exhibits' : 'Other Exhibits', description: `Exhibit ${n}` }));
+              // v1.41: named like its label here (Exhibit 1a, 1b), not "Exhibit 1 (2)".
+              const path = await Save.track(`photo:${c.id}`, () => Vault.addFile(c.id, f, { folder: e.type === 'Narcotics' ? 'Drug Exhibits' : 'Other Exhibits', description: `Exhibit ${F().photoLabel(n, e.photos.length)}` }));
               e.photos.push(path);
               e.photoLabels.push('');
             } catch { /* reported by Save */ }
@@ -549,7 +575,7 @@
     const pdfBytes = () => pdfFor(c, data);
     async function showPdf(bytes) {
       // Our own viewer (pdf.js): the whole report always scrolls into view; zoom in percent (v1.25).
-      const viewer = CVPdfViewer.create(bytes, { h, icon: ui.icon, title: 'Supplementary Report', fileName: data.sentSlug ? `${titleOf(data.sentSlug)}.pdf` : PDF_NAME });
+      const viewer = CVPdfViewer.create(bytes, { h, icon: ui.icon, title: 'Supplementary Report', fileName: `${F().titleFor(data)}.pdf` });
       await ui.openDialog((close) => h('div', { class: 'pdf-view' },
         h('h2', { icon: 'printer' }, 'Supplementary Report'),
         viewer,
@@ -569,19 +595,50 @@
       try {
         let slug = await sentSlugOf(c, data);
         if (slug && !(await Vault.readDraft(c.id, slug).catch(() => null))) slug = ''; // that report was deleted
-        if (!slug) slug = await Vault.newDraftSlug(c.id, BASE_TITLE);
+        // v1.41: each report is named after its heading (Supplementary Report - Purchase). When the
+        // Officer Report Type changed since it was sent, ask: a new report (the UCO's and the
+        // surveillance officer's reports of one buy), or update the one sent.
+        const want = F().titleFor(data);
+        let prevTitle = '';
+        if (slug) {
+          prevTitle = await reportTitle(c, slug);
+          let snap = null;
+          try { snap = await Vault.readCaseJSON(c.id, formFile(slug)); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+          const prevBase = snap ? F().titleFor(F().normalize(snap)) : prevTitle;
+          if (prevBase !== want) {
+            const choice = await ui.openDialog((close) => h('form', { class: 'send-choice', onsubmit: (e) => { e.preventDefault(); close('new'); } },
+              h('h2', {}, 'Make a new report?'),
+              h('p', {}, `This draft was sent as ${prevTitle}. It's now ${want}.`),
+              h('p', { class: 'muted small' }, `New Report keeps ${prevTitle} as it was sent and adds ${want} under Reports and Files. Update replaces ${prevTitle}.`),
+              h('div', { class: 'dialog-actions' },
+                h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
+                h('button', { class: 'btn', type: 'button', onclick: () => close('update') }, `Update ${prevTitle}`),
+                h('button', { class: 'btn primary', type: 'submit', autofocus: true }, 'New Report'))));
+            if (!choice) return;
+            if (choice === 'new') { slug = ''; prevTitle = ''; }
+          }
+        }
+        // Two reports never share a title (or a PDF): "… - Purchase", "… - Purchase 2".
+        const taken = new Set((await Vault.listDrafts(c.id)).filter((d) => d.slug !== slug).map((d) => d.title.toLowerCase()));
+        const title = F().uniqueTitle(want, taken);
+        if (!slug) slug = await Vault.newDraftSlug(c.id, title);
         const cur = await linkedReport(c, slug);
         let force = false;
         if (cur && cur.edited) {
-          force = await ui.confirmDialog({ title: 'Replace the edited report?', message: `${titleOf(slug)} was changed under Reports. Replace its text with this draft? (Its PDF in Files is replaced too.)`, confirmText: 'Replace' });
+          force = await ui.confirmDialog({ title: 'Replace the edited report?', message: `${prevTitle || title} was changed under Reports. Replace its text with this draft? (Its PDF in Files is replaced too.)`, confirmText: 'Replace' });
           if (!force) return;
         }
-        await syncLinked(c, data, { force, slug });
+        await syncLinked(c, data, { force, slug, title });
         // The form as sent is kept with the report, so Send Back to Draft can bring it back (v1.39).
         await Save.track(`report-form:${c.id}:${slug}`, () => Vault.writeCaseJSON(c.id, formFile(slug), { ...structuredClone(data), sentSlug: slug }));
         if (data.sentSlug !== slug) { data.sentSlug = slug; save(0); await Save.flushAll(); }
-        const r = await savePdfToCase(c, data, null, titleOf(slug));
-        toast(`Sent: Reports → ${titleOf(slug)}, and Files → ${r.path.split('/').pop()}`, 'success', 7000);
+        const r = await savePdfToCase(c, data, null, title);
+        // Updated under a new name: its old PDF goes, so Files doesn't keep a stale copy.
+        if (prevTitle && prevTitle !== title) {
+          const old = pdfPathOf(c, prevTitle);
+          if (old !== r.path) await Vault.deleteFile(c.id, old).catch(() => {});
+        }
+        toast(`Sent: Reports → ${title}, and Files → ${r.path.split('/').pop()}`, 'success', 7000);
       } catch { /* reported by Save */ }
     } }, 'Send Draft to Reports');
     // Clear All (v1.33): an empty form, to draft another report. What was sent stays in Reports and

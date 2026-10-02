@@ -673,7 +673,7 @@
       const saveCase = Vault.isArchived(c.id) ? null : h('button', { class: 'btn', type: 'button', title: `Saves the PDF in this case's ${folder} folder.`, onclick: async () => {
         try {
           const path = linked
-            ? (await RFU.savePdfToCase(c, null, bytes, RFU.titleOf(slug))).path
+            ? (await RFU.savePdfToCase(c, null, bytes, meta.title || RFU.titleOf(slug))).path
             : await ui.Save.track(`draft-pdf:${c.id}`, () => Vault.addFile(c.id, new File([bytes], name, { type: 'application/pdf' }), { folder, description: name.replace(/\.pdf$/, ''), replace: true }));
           toast(`Saved to the case files: ${path.split('/').pop()}`, 'success', 5000);
           saveCase.disabled = true;
