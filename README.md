@@ -15,8 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.44)
+## Features (v1.45)
 
+- Symmetrical PDFs: the Supplementary Report's boxes all sit on one eight-column grid (every label on one line, Status and How Cleared half each, the four numbers as boxes); the Arrest Report shows every value in a grey box, with each list's labels the same width so the boxes line up, and the charges, narcotics and warrants in grey rows on fixed columns
+- Compact, symmetrical entry forms: the Draft tab and the Arrest Details tab use tighter rows, and no box is left alone on a row (Arrest Details in four columns, the photo as the fourth column beside the offender)
 - PDFs: military time without the colon (1435); the Supplementary Report's values sit in light grey boxes (no dotted lines), each person's name in bold on its own line with the details under it, and the officer's report lines in blocks with space between them
 - Details tab: Title, Status, Opened and Closed in one row; File Number, Original Case Number, Federal Jacket Number and Client in one row; no Tags; a clearer U.S. Marshals emblem
 - Overview: an open operation's case numbers link to Details, Reports and Files only

@@ -66,6 +66,40 @@
       return Math.max(1, lines.length) * (size + 2);
     };
 
+    // v1.45: values in light grey boxes, every label of a list the same width so the boxes line up.
+    const BOX = 0.92;
+    const kvList = (x, yy, rows, w, size = 9) => {
+      const lw = Math.max(...rows.map(([l]) => width(`${l} `, size, true)));
+      const vw = Math.max(30, w - lw - 2);
+      for (const [l, v] of rows) {
+        const lines = wrap(clean(v), size, vw - 8);
+        const n = Math.max(1, lines.length);
+        const h = n * (size + 3.5);
+        fill(x + lw, yy - h + size + 0.5, vw, h - 1, BOX);
+        text(x, yy, l, size, true);
+        lines.forEach((t, j) => text(x + lw + 4, yy - j * (size + 3.5), t, size));
+        yy -= h + 2.5;
+      }
+      return yy;
+    };
+    // A table in grey rows: cols [[label, from, share]] of the content width.
+    const tableRows = (cols, rows, boldCol = -1) => {
+      cols.forEach(([l, f]) => text(CX + CW * f + 2, y - 9, l, 8.5, true));
+      y -= 13;
+      for (const r of rows) {
+        const cells = r.map((v, i) => wrap(v || '', 9, CW * cols[i][2] - 8));
+        const h = Math.max(1, ...cells.map((c) => c.length)) * 11.5 + 4;
+        ensure(h + 2);
+        cols.forEach(([, f, sh]) => fill(CX + CW * f + 1, y - h, CW * sh - 2, h, BOX));
+        cells.forEach((ls, i) => ls.forEach((t, j) => text(CX + CW * cols[i][1] + 4, y - 11 - j * 11.5, t, 9, i === boldCol)));
+        y -= h + 3;
+      }
+    };
+    // Text on a grey ground that runs on over pages.
+    const greyText = (lines, size, lead) => {
+      for (const t of lines) { ensure(lead + 1); fill(CX, y - lead, CW, lead, BOX); text(CX + 6, y - lead + 3.5, t, size); y -= lead; }
+      y -= 3;
+    };
     const band = (label) => { fill(L, y - 13, INNER, 13, 0.8); rect(L, y - 13, INNER, 13, 0.6); center(L, INNER, y - 9.8, label, 9, true); y -= 13; };
 
     const newPage = () => {
@@ -129,7 +163,7 @@
       newPage();
       if (open) { seg = { label: open.label, top: y }; y -= 4; }
     };
-    const subBand = (s, right = '') => { fill(L + TAB + 2, y - 12, INNER - TAB - 3, 12, 0.85); text(CX, y - 9, s, 9, true); if (right) text(PAGE_W - L - 70, y - 9, right, 9, true); y -= 14; };
+    const subBand = (s, right = '') => { fill(L + TAB + 2, y - 12, INNER - TAB - 3, 12, 0.85); text(CX, y - 9, s, 9, true); if (right) text(CX + 321, y - 9, right, 9, true); y -= 14; };
     const big = (s) => { text(CX + 14, y - 14, s, 9.5, true); y -= 22; };
 
     const yn = (s) => clean(s) || '';
@@ -143,22 +177,18 @@
       // ---- offender: who, then the description in a column, the photo on the right
       startSeg('OFFENDER', 130);
       const top = y;
-      const c1 = CX; const c1w = CW * 0.5; const c2 = CX + c1w + 6; const c2w = CW * 0.27; const c3 = c2 + c2w + 4; const c3w = CX + CW - c3;
+      const c1 = CX; const c1w = CW * 0.5; const c2 = CX + c1w + 8; const c2w = CW * 0.26; const c3 = c2 + c2w + 6; const c3w = CX + CW - c3;
       let ly = y - 9;
-      text(c1, ly, 'Name:', 9, true); text(c1 + width('Name: ', 9, true), ly, reportName(a), 11, true); ly -= 14;
-      if (clean(a.beatResidence)) kv(c1 + c1w - 62, ly, 'Beat:', a.beatResidence, { max: 62 });
-      ly -= kv(c1, ly, 'Res:', a.address, { max: c1w - 66 }) + 3;
-      for (const [l, v] of [['DOB:', US(a.dob)], ['AGE:', age ? `${age} years` : ''], ['POB:', a.pob], ['DLN:', a.idNumber], ['PHONE:', a.phone], ['ARMED WITH:', a.armedWith]]) {
-        if (!clean(v) && !['DOB:', 'AGE:', 'POB:', 'DLN:', 'ARMED WITH:'].includes(l)) continue;
-        ly -= kv(c1, ly, l, v, { max: c1w }) + 1;
-      }
-      // The description, one item a line, as on the form.
+      text(c1, ly, 'Name:', 9, true); text(c1 + width('Name: ', 9, true), ly, reportName(a), 11, true); ly -= 16;
+      ly = kvList(c1, ly, [['Res:', a.address], ['Beat:', a.beatResidence], ['DOB:', US(a.dob)], ['Age:', age ? `${age} years` : ''], ['POB:', a.pob], ['DLN:', a.idNumber], ['Phone:', a.phone], ['Armed With:', a.armedWith]], c1w);
+      // The description, one item a line, in one grey column.
       const desc = [a.sex, a.race, a.height, a.weight, a.eyes && `${clean(a.eyes)} Eyes`, a.hair && `${clean(a.hair)} Hair`, a.hairStyle && `${clean(a.hairStyle)} Hair Style`, a.complexion && `${clean(a.complexion)} Complexion`].map(clean).filter(Boolean);
-      let ry = y - 9;
-      for (const d of desc) { for (const l of wrap(d, 9, c2w - 4)) { text(c2, ry, l, 9); ry -= 11; } }
+      const dl = desc.flatMap((d) => wrap(d, 9, c2w - 8));
+      let ry = top - 9;
+      if (dl.length) { fill(c2, ry - (dl.length - 1) * 12.5 - 3.5, c2w, dl.length * 12.5 + 1, BOX); for (const l of dl) { text(c2 + 4, ry, l, 9); ry -= 12.5; } }
       const ph = photos[n];
       const blockH = Math.max(ph ? 140 : 118, top - Math.min(ly, ry) + 6);
-      line(c2 - 4, top + 4, c2 - 4, top - blockH, 0.6);
+      line(c2 - 5, top + 4, c2 - 5, top - blockH, 0.6);
       if (ph) {
         const bh = blockH - 6;
         const k = Math.min((c3w - 4) / ph.w, bh / ph.h);
@@ -169,88 +199,39 @@
       y = top - blockH;
       endSeg();
 
-      // ---- incident
+      // ---- incident: two columns of the same width
       startSeg('INCIDENT', 70);
-      const it = y; const half = CW * 0.56; const r0 = CX + half + 6;
-      let iy = y - 9;
-      kv(CX + half - 105, iy, 'TRR Completed?', yn(a.trr), { max: 105 });
-      kv(CX, iy, 'Arrest Date:', when(a.date, a.time), { max: half - 110 }); iy -= 12;
-      if (clean(a.beat)) kv(CX + half - 60, iy, 'Beat:', a.beat, { max: 60 });
-      iy -= kv(CX, iy, 'Location:', a.location, { max: half - 64 }) + 1;
-      for (const [l, v] of [['Holding Facility:', a.facility], ['Type of Arrest:', a.type], ['Resisted Arrest?', yn(a.resisted)], ['Declared CMA Incident?', yn(a.cma)], ['Miranda:', [clean(a.miranda), MIL(a.mirandaTime)].filter(Boolean).join(', ')]]) iy -= kv(CX, iy, l, v, { max: half }) + 1;
-      let jy = y - 9;
-      const rw = CX + CW - r0;
-      kv(r0, jy, 'Total No Arrested:', a.totalArrested, { max: rw * 0.4 });
-      text(r0 + rw * 0.42, jy, 'Co-Arrests', 9, true); text(r0 + rw * 0.72, jy, 'Assoc Cases', 9, true); jy -= 11;
-      const co = wrap(clean(a.coArrests), 8.5, rw * 0.29); const as = wrap(clean(a.assocCases), 8.5, rw * 0.27);
-      co.forEach((l, j) => text(r0 + rw * 0.42, jy - j * 10, l, 8.5)); as.forEach((l, j) => text(r0 + rw * 0.72, jy - j * 10, l, 8.5));
-      jy -= Math.max(co.length, as.length, 0) * 10 + 2;
-      jy -= kv(r0 + rw * 0.42, jy, 'DCFS Ward ?', yn(a.dcfsWard), { max: rw * 0.58 }) + 2;
-      jy -= kv(r0, jy, 'Dependent Children?', yn(a.dependentChildren), { max: rw }) + 1;
-      line(r0 - 4, it + 4, r0 - 4, Math.min(iy, jy) - 2, 0.6);
+      const it = y; const half = (CW - 12) / 2; const r0 = CX + half + 12;
+      const iy = kvList(CX, y - 9, [['Arrest Date:', when(a.date, a.time)], ['Location:', a.location], ['Beat:', a.beat], ['Holding Facility:', a.facility], ['Type of Arrest:', a.type], ['Miranda:', [clean(a.miranda), MIL(a.mirandaTime)].filter(Boolean).join(', ')]], half);
+      const jy = kvList(r0, y - 9, [['Total No Arrested:', a.totalArrested], ['Co-Arrests:', a.coArrests], ['Assoc Cases:', a.assocCases], ['Resisted Arrest?', yn(a.resisted)], ['Declared CMA Incident?', yn(a.cma)], ['TRR Completed?', yn(a.trr)], ['DCFS Ward?', yn(a.dcfsWard)], ['Dependent Children?', yn(a.dependentChildren)]], half);
+      line(r0 - 6, it + 4, r0 - 6, Math.min(iy, jy) - 2, 0.6);
       y = Math.min(iy, jy);
       endSeg(66);
 
-      // ---- charges
+      // ---- charges: one grey row per charge, the same columns each time
       startSeg('CHARGES', 70);
-      const vx = CX + CW * 0.74;
-      text(vx, y - 9, 'Victim', 9, true);
-      y -= 14;
+      const ccols = [['#', 0, 0.05], ['Offense As Cited', 0.05, 0.22], ['Charge', 0.27, 0.38], ['Class', 0.65, 0.08], ['Type', 0.73, 0.08], ['Victim', 0.81, 0.19]];
       const charges = a.charges.filter((c) => clean(c.statute) || clean(c.description));
       if (!charges.length) big('NO CHARGES ENTERED');
-      charges.forEach((c, i) => {
-        const desc = wrap(clean(c.description).toUpperCase(), 9, vx - CX - 125);
-        const vic = wrap(clean(c.victim), 9, CX + CW - vx);
-        ensure(14 + desc.length * 11 + 12);
-        text(CX, y - 9, String(i + 1), 9.5, true);
-        text(CX + 30, y - 9, 'Offense As Cited', 9);
-        text(CX + 115, y - 9, clean(c.statute), 9.5, true);
-        vic.forEach((l, j) => text(vx, y - 9 - j * 11, l, 9));
-        y -= 20;
-        desc.forEach((l) => { text(CX + 115, y + 9 - 9, l, 9); y -= 11; });
-        const cls = [clean(c.degree) && `Class ${clean(c.degree)}`, clean(c.level) && `Type ${typeCode(c.level)}`, Number(c.counts) > 1 ? `Counts ${Number(c.counts)}` : ''].filter(Boolean).join(' - ');
-        if (cls) { text(CX + 115, y, cls, 9); y -= 11; }
-        y -= 6;
-      });
+      else {
+        tableRows(ccols, charges.map((c, i) => [String(i + 1), clean(c.statute), clean(c.description).toUpperCase() + (Number(c.counts) > 1 ? ` (${Number(c.counts)} COUNTS)` : ''), clean(c.degree), typeCode(c.level), clean(c.victim)]), 1);
+      }
       endSeg(66);
 
       // ---- recovered narcotics
       startSeg('RECOVERED NARCOTICS', 56);
       const narcotics = a.narcotics.filter(C.itemFilled);
       if (!narcotics.length) { y -= 6; big('NO NARCOTICS RECOVERED'); }
-      else {
-        const cols = [['Narcotic', 0], ['Amount', 0.26], ['Inventory #', 0.42], ['Description', 0.58]];
-        cols.forEach(([l, f]) => text(CX + CW * f, y - 9, l, 9, true));
-        y -= 13;
-        for (const x of narcotics) {
-          const vals = [clean(x.drug), [clean(x.amount), clean(x.unit)].filter(Boolean).join(' '), clean(x.inventory), clean(x.description)];
-          const desc = wrap(vals[3], 9, CW * 0.42);
-          ensure(desc.length * 11 + 4);
-          vals.slice(0, 3).forEach((v2, i) => text(CX + CW * cols[i][1], y - 9, v2, 9));
-          desc.forEach((l, j) => text(CX + CW * 0.58, y - 9 - j * 11, l, 9));
-          y -= Math.max(1, desc.length) * 11 + 2;
-        }
-      }
+      else tableRows([['Narcotic', 0, 0.26], ['Amount', 0.26, 0.16], ['Inventory #', 0.42, 0.16], ['Description', 0.58, 0.42]],
+        narcotics.map((x) => [clean(x.drug), [clean(x.amount), clean(x.unit)].filter(Boolean).join(' '), clean(x.inventory), clean(x.description)]));
       endSeg(56);
 
       // ---- warrant
       startSeg('WARRANT', 44);
       const warrants = a.warrants.filter(C.itemFilled);
       if (!warrants.length) { y -= 4; big('NO WARRANT IDENTIFIED'); }
-      else {
-        const cols = [['Warrant #', 0], ['Type', 0.2], ['Issued By', 0.4], ['Date Issued', 0.62], ['Offense', 0.78]];
-        cols.forEach(([l, f]) => text(CX + CW * f, y - 9, l, 9, true));
-        y -= 13;
-        for (const x of warrants) {
-          const vals = [clean(x.number), clean(x.kind), clean(x.issuedBy), US(x.issued), clean(x.offense)];
-          const ws = [0.2, 0.2, 0.22, 0.16, 0.22];
-          const cells = vals.map((v2, i) => wrap(v2, 9, CW * ws[i] - 6));
-          const h = Math.max(...cells.map((c) => c.length)) * 11 + 2;
-          ensure(h);
-          cells.forEach((ls, i) => ls.forEach((l, j) => text(CX + CW * cols[i][1], y - 9 - j * 11, l, 9)));
-          y -= h;
-        }
-      }
+      else tableRows([['Warrant #', 0, 0.2], ['Type', 0.2, 0.2], ['Issued By', 0.4, 0.22], ['Date Issued', 0.62, 0.16], ['Offense', 0.78, 0.22]],
+        warrants.map((x) => [clean(x.number), clean(x.kind), clean(x.issuedBy), US(x.issued), clean(x.offense)]));
       endSeg(44);
       // The CB number on a tab at the right edge, as on the form.
       if (pages.length === who.firstPage + 1 && cb(a)) {
@@ -259,46 +240,37 @@
         vtext(tx + 10, tb + (th - width(`CB #: ${cb(a)}`, 8, true)) / 2, `CB #: ${cb(a)}`, 8);
       }
 
-      // ---- victim and complainant (non-offenders)
+      // ---- victim and complainant (non-offenders): three columns of lists
       const others = a.nonOffenders.filter(C.itemFilled);
       startSeg('NON-OFFENDER(S)', 60);
       subBand('VICTIM AND COMPLAINANT');
       if (!others.length) big('NONE');
       others.forEach((p, i) => {
-        ensure(60);
-        const t0 = y; const w1 = CW * 0.5; const x2 = CX + w1 + 6; const x3 = CX + CW * 0.76;
-        let py = y - 9;
-        text(CX, py, 'Name:', 9, true);
-        text(CX + width('Name: ', 9, true), py, `${clean(p.name).toUpperCase()}${clean(p.role) ? `  (${clean(p.role)})` : ''}`, 9.5, true); py -= 12;
-        if (clean(p.beat)) kv(CX + w1 - 58, py, 'Beat:', p.beat, { max: 58 });
-        py -= kv(CX + 4, py, 'Res:', [clean(p.address), clean(p.phone)].filter(Boolean).join('\n'), { max: w1 - 64 }) + 1;
-        if (clean(p.employer)) { if (clean(p.employerBeat)) kv(CX + w1 - 58, py, 'Beat:', p.employerBeat, { max: 58 }); py -= kv(CX + 4, py, 'Empl:', p.employer, { max: w1 - 64 }) + 1; }
-        let qy = y - 9;
-        for (const v2 of [clean(p.sex), clean(p.race)]) { if (v2) { text(x2, qy, v2, 9); qy -= 11; } }
-        qy -= kv(x2, qy, 'DOB:', US(p.dob), { max: x3 - x2 - 4 }) + 1;
-        qy -= kv(x2, qy, 'Age:', C.ageOn(p.dob, a.date), { max: x3 - x2 - 4 }) + 1;
-        qy -= kv(x2, qy, 'Comments:', p.comments, { max: x3 - x2 - 6 }) + 1;
-        let zy = y - 9;
-        kv(x3, zy, 'Injured?', yn(p.injured), { max: 60 }); kv(x3 + 64, zy, 'Deceased?', yn(p.deceased), { max: 70 }); zy -= 18;
-        kv(x3, zy, 'Hospitalized?', yn(p.hospitalized), { max: 130 }); zy -= 18;
-        kv(x3, zy, 'Treated and Released?', yn(p.treated), { max: 130 }); zy -= 12;
-        line(x2 - 4, t0 + 2, x2 - 4, Math.min(py, qy, zy) + 4, 0.4);
-        y = Math.min(py, qy, zy) - 2;
+        ensure(70);
+        const t0 = y; const w1 = (CW - 24) * 0.42; const w2 = (CW - 24) * 0.3; const w3 = (CW - 24) * 0.28;
+        const x2 = CX + w1 + 12; const x3 = x2 + w2 + 12;
+        text(CX, y - 9, 'Name:', 9, true);
+        text(CX + width('Name: ', 9, true), y - 9, `${clean(p.name).toUpperCase()}${clean(p.role) ? `  (${clean(p.role)})` : ''}`, 9.5, true);
+        const yy0 = y - 25;
+        const py = kvList(CX, yy0, [['Res:', p.address], ['Phone:', p.phone], ['Beat:', p.beat], ...(clean(p.employer) ? [['Empl:', p.employer], ['Empl Beat:', p.employerBeat]] : [])], w1);
+        const qy = kvList(x2, yy0, [['Sex:', p.sex], ['Race:', p.race], ['DOB:', US(p.dob)], ['Age:', C.ageOn(p.dob, a.date)]], w2);
+        const zy = kvList(x3, yy0, [['Injured?', yn(p.injured)], ['Deceased?', yn(p.deceased)], ['Hospitalized?', yn(p.hospitalized)], ['Treated / Released?', yn(p.treated)]], w3);
+        let ey = Math.min(py, qy, zy);
+        if (clean(p.comments)) ey = kvList(CX, ey, [['Comments:', p.comments]], CW);
+        line(x2 - 6, t0 - 14, x2 - 6, ey + 4, 0.4); line(x3 - 6, t0 - 14, x3 - 6, ey + 4, 0.4);
+        y = ey - 2;
         if (i < others.length - 1) { line(CX, y + 2, CX + CW, y + 2, 0.4); y -= 2; }
       });
       endSeg(60);
 
-      // ---- arrestee vehicle
+      // ---- arrestee vehicle: two columns of the same width
       startSeg('ARRESTEE VEHICLE', 56);
       if (C.VEHICLE_FIELDS.some((f) => clean(a[f.key]))) {
-        let vy = y - 9;
-        text(CX + 4, vy, 'Vehicle:', 9, true); kv(CX + CW * 0.28, vy, 'VEHICLE IMPOUNDED:', yn(a.impounded), { max: CW * 0.4 }); vy -= 12;
-        text(CX + 4, vy, [a.vehYear, a.vehMake, a.vehModel, a.vehStyle].map(clean).filter(Boolean).join(' - '), 9);
-        kv(CX + CW * 0.56, vy, 'VIN#:', a.vin, { max: CW * 0.26 }); kv(CX + CW * 0.83, vy, 'Lic#:', [clean(a.plate), clean(a.plateState)].filter(Boolean).join('  '), { max: CW * 0.17 }); vy -= 12;
-        kv(CX + 4, vy, 'Color:', a.vehColor, { max: CW * 0.5 }); kv(CX + CW * 0.83, vy, 'Inv#:', a.vehInventory, { max: CW * 0.17 }); vy -= 12;
-        kv(CX + 4, vy, 'Pound#:', a.poundNumber, { max: CW * 0.5 }); vy -= 12;
-        vy -= kv(CX + 4, vy, 'Disposition:', a.vehDisposition, { max: CW - 8 });
-        y = vy;
+        const vt = y; const vh = (CW - 12) / 2; const vx2 = CX + vh + 12;
+        const vy1 = kvList(CX, y - 9, [['Vehicle:', [a.vehYear, a.vehMake, a.vehModel, a.vehStyle].map(clean).filter(Boolean).join(' - ')], ['Color:', a.vehColor], ['Impounded:', yn(a.impounded)], ['Disposition:', a.vehDisposition]], vh);
+        const vy2 = kvList(vx2, y - 9, [['VIN #:', a.vin], ['Plate:', [clean(a.plate), clean(a.plateState)].filter(Boolean).join('  ')], ['Pound #:', a.poundNumber], ['Inv #:', a.vehInventory]], vh);
+        line(vx2 - 6, vt - 4, vx2 - 6, Math.min(vy1, vy2) + 2, 0.4);
+        y = Math.min(vy1, vy2);
       } else { y -= 4; big('NO VEHICLE'); }
       endSeg(56);
 
@@ -307,24 +279,21 @@
       text(CX, y - 9, 'Confiscated Properties :', 9.5, true); y -= 12;
       for (const l of wrap('All confiscated properties are recorded with their inventory numbers; the inventory number retrieves the records of evidence and recovered property.', 7.5, CW, true)) { text(CX, y - 7, l, 7.5, true); y -= 9; }
       y -= 4;
-      if (clean(a.property)) { for (const l of wrap(clean(a.property), 9, CW - 10)) { ensure(12); text(CX + 6, y - 9, l, 9); y -= 11; } } else big('NO PROPERTIES RECORDED');
+      if (clean(a.property)) greyText(wrap(clean(a.property), 9, CW - 12), 9, 11.5); else big('NO PROPERTIES RECORDED');
       endSeg(56);
 
-      // ---- incident narrative, carried over pages
+      // ---- incident narrative, carried over pages, on a grey ground
       startSeg('INCIDENT NARRATIVE', 80);
       for (const l of wrap('(The facts for probable cause to arrest AND to substantiate the charges include, but are not limited to, the following)', 8, CW, true)) { text(CX, y - 8, l, 8, true); y -= 10; }
-      y -= 2;
-      const narr = wrap(P().plain(a.narrative), 9.5, CW - 4);
-      for (const l of (clean(a.narrative) ? narr : [''])) { ensure(12); text(CX, y - 9, l, 9.5); y -= 11.5; }
+      y -= 3;
+      greyText(clean(a.narrative) ? wrap(P().plain(a.narrative), 9.5, CW - 12) : [''], 9.5, 12);
       endSeg(80);
 
-      // ---- court info and bond info, side by side
-      ensure(92);
-      const ct = y; const hw = (INNER - 4) / 2;
-      const courtRows = [['Desired Court Date:', US(a.desiredCourtDate)], ['Branch:', a.courtBranch], ['Court Sgt Handle?', yn(a.courtSgt)], ['Initial Court Date:', US(a.initialCourtDate)], ['Branch:', a.initialBranch], ['Docket #:', a.docket]];
-      const bondRows = [['Bond Date:', when(a.bondDate, a.bondTime)], ['Type:', a.bondType], ['Receipt #:', a.bondReceipt], ['Amount:', a.bond]];
-      let cy = ct - 13; for (const [l, v2] of courtRows) cy -= kv(CX, cy, l, v2, { max: hw - TAB - 12 }) + 1;
-      let by = ct - 13; for (const [l, v2] of bondRows) by -= kv(L + hw + 4 + TAB + 5, by, l, v2, { max: hw - TAB - 12 }) + 1;
+      // ---- court info and bond info, side by side, the same width
+      ensure(100);
+      const ct = y; const hw = (INNER - 4) / 2; const iw = hw - TAB - 12;
+      const cy = kvList(CX, ct - 13, [['Desired Court Date:', US(a.desiredCourtDate)], ['Branch:', a.courtBranch], ['Court Sgt Handle?', yn(a.courtSgt)], ['Initial Court Date:', US(a.initialCourtDate)], ['Branch:', a.initialBranch], ['Docket #:', a.docket]], iw);
+      const by = kvList(L + hw + 4 + TAB + 5, ct - 13, [['Bond Date:', when(a.bondDate, a.bondTime)], ['Type:', a.bondType], ['Receipt #:', a.bondReceipt], ['Amount:', a.bond]], iw);
       const cb2 = Math.min(cy, by, ct - 84) - 2;
       for (const [x0, label] of [[L, 'COURT INFO'], [L + hw + 4, 'BOND INFO']]) {
         rect(x0, cb2, hw, ct - cb2, 1.1); fill(x0 + 1, cb2 + 1, TAB, ct - cb2 - 2, 0.8); line(x0 + TAB + 1, cb2, x0 + TAB + 1, ct, 0.8);
@@ -342,20 +311,20 @@
       y -= 6;
       const person = (label, star, name, right, sign) => {
         text(CX, y - 10, label, 9, true);
-        text(CX + 140, y - 10, clean(star) ? `#${clean(star)}` : '', 9);
-        wrap(clean(name).toUpperCase(), 9, 128).slice(0, 2).forEach((l, j) => text(CX + 185, y - 10 - j * 10, l, 9));
-        if (right) text(CX + 318, y - 10, right, 9);
+        // v1.45: star, name and date in grey boxes on the same columns for every officer.
+        fill(CX + 138, y - 14, 42, 14, BOX); fill(CX + 183, y - 14, 132, 14, BOX); fill(CX + 318, y - 14, 110, 14, BOX);
+        text(CX + 141, y - 10, clean(star) ? `#${clean(star)}` : '', 9);
+        wrap(clean(name).toUpperCase(), 9, 126).slice(0, 1).forEach((l) => text(CX + 186, y - 10, l, 9));
+        if (right) text(CX + 321, y - 10, right, 9);
         // The signature field on the right, clear of the date and time.
-        if (sign) { const sx = CX + CW - 105; rect(sx, y - 18, 105, 18, 0.5); text(sx + 2, y - 5, 'SIGNATURE', 5.5); sigs.push({ name: sign, rect: [sx + 1, y - 17, sx + 104, y - 7] }); }
+        if (sign) { const sx = CX + CW - 100; rect(sx, y - 18, 100, 18, 0.5); text(sx + 2, y - 5, 'SIGNATURE', 5.5); sigs.push({ name: sign, rect: [sx + 1, y - 17, sx + 99, y - 7] }); }
         y -= sign ? 22 : 14;
       };
       person('Attesting Officer:', a.attestingStar, a.attestingOfficer, when(a.attestingDate, a.attestingTime), sigName('AttestingOfficerSignature'));
       subBand('ARRESTING OFFICER(S):', 'Beat');
-      person('1st Arresting Officer:', a.arrestingStar, a.arrestingOfficer, '');
-      text(PAGE_W - L - 70, y + 4, clean(a.arrestingBeat), 9);
-      person('Arresting Officer - Second:', a.secondStar, a.secondOfficer, '');
-      text(PAGE_W - L - 70, y + 4, clean(a.secondBeat), 9);
-      if (clean(a.assistingOfficers)) { y -= kv(CX, y - 10, 'Assisting Officers:', a.assistingOfficers, { max: CW }) - 2; y -= 6; }
+      person('1st Arresting Officer:', a.arrestingStar, a.arrestingOfficer, clean(a.arrestingBeat));
+      person('Arresting Officer - Second:', a.secondStar, a.secondOfficer, clean(a.secondBeat));
+      if (clean(a.assistingOfficers)) y = kvList(CX, y - 10, [['Assisting Officers:', a.assistingOfficers]], CW - 112) + 4;
       subBand('APPROVING SUPERVISOR:');
       person('Approval of Probable Cause :', a.supervisorStar, a.supervisor, when(a.approvalDate, a.approvalTime), sigName('SupervisorSignature'));
       endSeg(130);
