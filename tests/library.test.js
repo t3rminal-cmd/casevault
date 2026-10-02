@@ -42,7 +42,7 @@ test('writing behaviors: DEA-6 by default, built-ins can be edited, custom ones 
 
 test('the Library on the SSD: add, settings, text cache, move, delete', async () => {
   globalThis.location = new URL('http://127.0.0.1:8517/');
-  load('js/checker/nlp.js', 'js/drafts/draft-core.js', 'js/casefiles.js', 'js/fs.js', 'js/helper-fs.js', 'js/vault.js');
+  load('js/checker/nlp.js', 'js/drafts/draft-core.js', 'js/casefiles.js', 'js/fs.js', 'js/helper-fs.js', 'js/operation.js', 'js/vault.js');
   const Vault = get('Vault');
   await Vault.load(await Vault.create(new MemDirectoryHandle('V')));
   assert.deepStrictEqual(await Vault.listLibrary(), []);

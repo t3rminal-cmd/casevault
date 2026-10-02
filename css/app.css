@@ -2726,3 +2726,70 @@ input[list]::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
   .arrest-grid.arrest-g-offender, .arrest-grid.arrest-g-incident, .arrest-grid.arrest-g-4, .arrest-grid.arrest-g-court, .arrest-grid.arrest-g-personnel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .arrest-grid.arrest-g-incident > *, .arrest-grid.arrest-g-court > *, .arrest-grid.arrest-g-personnel > * { grid-column: auto !important; }
 }
+
+/* ---------- v1.46: Operations and General Files ---------- */
+.ops-page { max-width: 1100px; }
+.page-head { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: .4rem; }
+.page-head h1 { margin: 0; word-break: break-word; }
+.page-head .page-icon { color: var(--accent); font-size: 1.8rem; line-height: 1; display: inline-flex; }
+.page-head .page-title { display: grid; gap: .15rem; min-width: 0; flex: 1 1 18rem; }
+.page-head > .btn, .op-files-head > .btn { flex: none; }
+.page-head > h1 { flex: 1 1 auto; }
+.page-head .page-title .muted { display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
+.ops-page .back-link { display: inline-block; margin-bottom: .5rem; }
+.table-wrap.ops-table-wrap, .ops-page .table-wrap { border: 1px solid var(--border); background: var(--surface); overflow-x: auto; margin: .6rem 0 1rem; }
+table.data-table { width: 100%; border-collapse: collapse; }
+table.data-table th, table.data-table td { padding: .5rem .75rem; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+table.data-table th { font-size: .8rem; color: var(--muted); background: var(--surface-2); font-weight: 600; white-space: nowrap; }
+table.data-table tbody tr:last-child td { border-bottom: 0; }
+table.data-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.data-table .nowrap, .nowrap { white-space: nowrap; }
+table.data-table tr.archived-row td { color: var(--muted); }
+table.data-table .empty-cell { text-align: center; padding: 1.4rem; }
+.op-row-link, .case-num-link { display: inline-flex; align-items: center; gap: .4rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.op-row-link .bi { color: var(--accent); }
+.dup-flag { display: inline-flex; align-items: center; gap: .25rem; margin-left: .5rem; font-size: .74rem; color: var(--warn); background: var(--warn-soft); padding: .05rem .4rem; white-space: nowrap; }
+.warn-note { display: flex; align-items: center; gap: .3rem; color: var(--warn); background: var(--warn-soft); padding: .45rem .7rem; }
+.empty-state { border: 1px dashed var(--border); padding: 1.4rem; text-align: center; margin: .6rem 0 1rem; background: var(--surface); }
+.empty-state p { margin: .2rem 0; }
+.op-info { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .5rem; margin: .8rem 0; }
+.op-info-item { display: grid; gap: .2rem; min-width: 0; }
+.op-info-label { font-size: .76rem; color: var(--muted); }
+.op-info-value { background: var(--surface-2); padding: .4rem .6rem; overflow-wrap: anywhere; min-height: 2.1rem; }
+.op-notes { margin: 0 0 .8rem; display: grid; gap: .2rem; }
+.op-notes p { margin: 0; background: var(--surface-2); padding: .5rem .7rem; white-space: pre-wrap; }
+.op-files-head { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-top: 1.2rem; }
+.op-files-head .section-title { margin: 0; }
+.op-files-note { flex: 1 1 14rem; min-width: 0; }
+.op-cases-table .op-case-links { display: flex; gap: .3rem; }
+.op-danger { margin-top: 1.4rem; }
+.op-danger .case-actions-grid { grid-template-columns: minmax(0, 15rem); }
+.general-tools { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin: .8rem 0 0; }
+.general-tools input[type="search"] { flex: 1 1 18rem; min-width: 12rem; }
+.general-tools select { flex: 0 0 auto; width: auto; }
+.assign-select { width: auto; min-width: 9rem; }
+.op-form textarea { resize: vertical; }
+.pick-list { max-height: 50vh; overflow-y: auto; border: 1px solid var(--border); margin: .6rem 0; min-width: min(36rem, 80vw); }
+.pick-row { display: grid; grid-template-columns: auto minmax(6rem, auto) minmax(0, 1fr) auto; align-items: center; gap: .6rem; padding: .4rem .7rem; border-bottom: 1px solid var(--border); cursor: pointer; }
+.pick-row:last-child { border-bottom: 0; }
+.pick-row.disabled { cursor: not-allowed; opacity: .6; }
+.pick-num { font-weight: 600; font-variant-numeric: tabular-nums; }
+.pick-subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.add-existing input[type="search"] { width: 100%; }
+.match-list { margin: .4rem 0 .8rem; padding-left: 1.2rem; }
+.subject-warn { max-width: 34rem; }
+/* The case: number first, subject under it, then the Operation. */
+.case-head .case-subject { font-size: 1.05rem; font-weight: 600; margin: -.1rem 0 .25rem; overflow-wrap: anywhere; }
+.case-op-link { display: inline-flex; align-items: center; gap: .3rem; }
+.case-op-bar { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; padding: .45rem .7rem; margin-bottom: .7rem; background: var(--surface-2); }
+.case-op-label { display: inline-flex; align-items: center; gap: .4rem; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.case-op-label .bi { color: var(--accent); }
+.case-op-pick { display: inline-flex; align-items: center; gap: .4rem; font-size: .85rem; }
+.case-op-pick select { width: auto; min-width: 11rem; max-width: 22rem; }
+.case-item-meta.no-subject { font-style: italic; }
+.op-case-id { display: grid; min-width: 0; }
+.op-case-subject { font-size: .8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.op-open-name { color: inherit; }
+.op-folders-section > .section-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .6rem; }
+.op-folders-section > .section-head .section-title { margin: 0; }
+@media (max-width: 900px) { .op-info { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
