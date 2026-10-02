@@ -1192,7 +1192,9 @@
       const opIn = operationSelect(prefill.operationId || '', { name: 'operationId' });
       // One file number can hold several cases: offer the file numbers already in use.
       const fileNumbers = [...new Set((Vault.data.cases || []).map((x) => x.fileNumber).filter(Boolean))].sort();
-      const fileList = h('datalist', { id: 'file-numbers' }, fileNumbers.map((n) => h('option', { value: n })));
+      // Each with the Operations it's used in, shown on the right of the list (v1.38).
+      const opOfFile = (n) => [...new Set((Vault.data.cases || []).filter((x) => x.fileNumber === n).map((x) => opLabel(opOf(x))).filter(Boolean))].join(', ');
+      const fileList = h('datalist', { id: 'file-numbers' }, fileNumbers.map((n) => h('option', { value: n, label: opOfFile(n) || n })));
       const openedIn = h('input', { name: 'opened', type: 'date', value: today() });
       const folderNote = h('span', {});
       const numberErr = h('p', { class: 'error-text small span-2', role: 'alert', hidden: true });

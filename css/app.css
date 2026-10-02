@@ -2793,3 +2793,6 @@ table.data-table .empty-cell { text-align: center; padding: 1.4rem; }
 .op-folders-section > .section-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .6rem; }
 .op-folders-section > .section-head .section-title { margin: 0; }
 @media (max-width: 900px) { .op-info { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.op-form { width: min(42rem, 86vw); }
+.details-grid.details-row-title { grid-template-columns: minmax(0, 1.5fr) minmax(0, .7fr) minmax(0, 1.1fr) minmax(0, 1.1fr); }
+@media (max-width: 900px) { .details-grid.details-row-title { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
