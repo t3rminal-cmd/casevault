@@ -494,8 +494,105 @@
     }
     const foldAll = (want) => { foldButtons.forEach((f) => f(want)); keepFolds(); };
 
+    // v1.54: a line whose label is a switch: the Search Warrant or the Subpoena number, the ASA or
+    // the AUSA. The text moves with the switch; the other of the pair is left out of the report.
+    function switchLine(group, choices) {
+      let cur = data[`${group}Kind`] || choices[0][0];
+      const sel = h('select', { class: 'rf-switch', 'aria-label': `${choices.map((c) => c[1]).join(' or ')}` }, choices.map(([k, l]) => h('option', { value: k, selected: k === cur }, l)));
+      const inp = h('input', { autocomplete: 'off', value: data[cur] || '', 'aria-label': choices.find((c) => c[0] === cur)[1] });
+      inp.addEventListener('input', () => { data[cur] = inp.value; save(); });
+      const on = !(data.hidden || []).includes(cur);
+      const cb = h('input', { type: 'checkbox', checked: on, 'aria-label': 'Include this line', title: 'Untick if this line doesn\'t apply' });
+      const row = h('label', { class: `field rf-boxed rf-line rf-optional rf-switch-field${on ? '' : ' rf-line-off'}` }, cb, h('span', { class: 'rf-lab' }, sel), inp);
+      cb.addEventListener('change', () => {
+        data.hidden = data.hidden.filter((x) => x !== cur);
+        if (!cb.checked) data.hidden.push(cur);
+        row.classList.toggle('rf-line-off', !cb.checked);
+        save();
+      });
+      sel.addEventListener('change', () => {
+        const next = sel.value;
+        const wasOff = data.hidden.includes(cur);
+        data.hidden = data.hidden.filter((x) => x !== cur && x !== next);
+        if (wasOff) data.hidden.push(next);
+        data[next] = inp.value; data[cur] = '';
+        cur = next; data[`${group}Kind`] = cur;
+        inp.setAttribute('aria-label', choices.find((c) => c[0] === cur)[1]);
+        save();
+      });
+      return row;
+    }
+    function judgeLine() {
+      const sel = h('select', { class: 'rf-switch', 'aria-label': 'Judge or Magistrate' }, ['Judge', 'Magistrate'].map((t) => h('option', { value: t, selected: t === (data.judgeTitle || 'Judge') }, `${t} Approving`)));
+      sel.addEventListener('change', () => { data.judgeTitle = sel.value; save(); });
+      const inp = h('input', { autocomplete: 'off', value: data.judge || '', 'aria-label': 'Judge or magistrate' });
+      inp.addEventListener('input', () => { data.judge = inp.value; save(); });
+      const on = !(data.hidden || []).includes('judge');
+      const cb = h('input', { type: 'checkbox', checked: on, 'aria-label': 'Include this line', title: 'Untick if this line doesn\'t apply' });
+      const row = h('label', { class: `field rf-boxed rf-line rf-optional rf-switch-field${on ? '' : ' rf-line-off'}` }, cb, h('span', { class: 'rf-lab' }, sel), inp);
+      cb.addEventListener('change', () => { data.hidden = data.hidden.filter((x) => x !== 'judge'); if (!cb.checked) data.hidden.push('judge'); row.classList.toggle('rf-line-off', !cb.checked); save(); });
+      return row;
+    }
+    // v1.54: Pre-Recorded Funds: one line per denomination (how many, and their serial numbers),
+    // added and changed in a small box; one Recovered or Not Recovered for all, at the lower right.
+    function fundsEditor() {
+      const box = h('div', { class: 'rf-funds-list' });
+      const fundDialog = (g) => ui.openDialog((close) => {
+        const den = h('select', { 'aria-label': 'Denomination' }, F().DENOMINATIONS.map((v) => h('option', { value: v, selected: v === (g.denomination || '') }, v || 'Denomination')));
+        const qty = h('input', { type: 'number', min: 1, value: g.quantity || '', 'aria-label': 'Quantity', placeholder: 'How many bills' });
+        const ser = h('textarea', { rows: 5, 'aria-label': 'Serial numbers', placeholder: 'One serial number per line (or separated by commas)' });
+        ser.value = (g.serials || []).join('\n');
+        const count = () => ser.value.split(/[\n,;]+/).map((x) => x.trim()).filter(Boolean);
+        ser.addEventListener('input', () => { if (!qty.dataset.typed) qty.value = count().length || ''; });
+        qty.addEventListener('input', () => { qty.dataset.typed = '1'; });
+        const err = h('p', { class: 'error-text small' });
+        return h('form', { class: 'rf-fund-form cv-boxed', onsubmit: (e) => {
+          e.preventDefault();
+          if (!den.value) { err.textContent = 'Pick the denomination.'; return; }
+          close({ denomination: den.value, quantity: String(qty.value || count().length || ''), serials: count() });
+        } },
+        h('h2', {}, g.denomination ? 'Change Pre-Recorded Funds' : 'Add Pre-Recorded Funds'),
+        h('div', { class: 'rf-fund-grid' }, ui.field('Denomination', den), ui.field('Quantity', qty), ui.field('Serial Numbers', ser, 'span-2')),
+        h('p', { class: 'muted small' }, 'The quantity counts the serial numbers you enter; type another number when not every bill was recorded.'),
+        err,
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, g.denomination ? 'Save' : 'Add')));
+      });
+      const draw = () => {
+        box.replaceChildren(...(data.funds.length ? data.funds.map((g, i) => h('div', { class: 'rf-fund' },
+          h('strong', { class: 'rf-fund-den' }, `${g.denomination || '—'} × ${g.quantity || (g.serials || []).length || 0}`),
+          h('span', { class: 'rf-fund-serials' }, (g.serials || []).length ? (g.serials || []).join(', ') : h('span', { class: 'muted' }, 'No serial numbers')),
+          archived ? '' : h('span', { class: 'rf-fund-btns' },
+            h('button', { class: 'icon-btn', type: 'button', title: 'Change', onclick: async () => { const r = await fundDialog(g); if (r) { data.funds[i] = r; draw(); save(); } } }, ui.icon('pencil'), h('span', { class: 'sr-only' }, 'Change')),
+            h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Delete', onclick: () => { data.funds.splice(i, 1); draw(); save(); } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, 'Delete'))))) : [h('p', { class: 'muted small rf-none' }, 'No pre-recorded funds yet.')]));
+      };
+      draw();
+      const rec = h('select', { 'aria-label': 'Recovered or Not Recovered' }, F().RECOVERED.map((v) => h('option', { value: v, selected: v === (data.fundsRecovered || '') }, v || '— Recovered? —')));
+      rec.addEventListener('change', () => { data.fundsRecovered = rec.value; save(); });
+      const on = !F().isHidden(data, 'funds');
+      const cb = h('input', { type: 'checkbox', checked: on, 'aria-label': 'Include Pre-Recorded Funds', title: 'Untick if this doesn\'t apply' });
+      const wrap = h('div', { class: `rf-list rf-list-funds span-all${on ? '' : ' rf-line-off'}` });
+      cb.addEventListener('change', () => { data.hidden = data.hidden.filter((x) => x !== 'funds'); if (!cb.checked) data.hidden.push('funds'); wrap.classList.toggle('rf-line-off', !cb.checked); save(); });
+      wrap.append(h('label', { class: 'rf-list-head' }, cb, h('h4', {}, 'Pre-Recorded Funds')), box,
+        h('div', { class: 'rf-funds-foot' },
+          archived ? h('span') : h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', onclick: async () => { const r = await fundDialog({}); if (r) { data.funds.push(r); draw(); save(); } } }, 'Add Funds'),
+          h('div', { class: 'spacer' }), h('label', { class: 'field rf-boxed rf-funds-rec' }, rec)));
+      return wrap;
+    }
+    function reportLines(s) {
+      const out = [];
+      const byKey = Object.fromEntries(s.fields.map((f) => [f[0], f]));
+      const make = (k) => { const [key, label, kind, opts] = byKey[k]; return input(key, label, kind, opts); };
+      for (const [k] of s.fields) {
+        if (['courtDate', 'subpoenaGJ', 'asa', 'ausa', 'judge'].includes(k)) continue;
+        if (k === 'courtBranch') out.push(h('div', { class: 'rf-line-row rf-row-court' }, make('courtBranch'), make('courtDate')));
+        else if (k === 'searchWarrant') out.push(h('div', { class: 'rf-line-row rf-row-3' }, switchLine('doc', [['searchWarrant', 'Search Warrant Number'], ['subpoenaGJ', 'Subpoena GJ Number']]), switchLine('pros', [['asa', 'ASA Approving'], ['ausa', 'AUSA Approving']]), judgeLine()));
+        else if (k === 'funds') out.push(fundsEditor());
+        else out.push(make(k));
+      }
+      return out;
+    }
     const sections = F().SECTIONS.map((s) => part(s.id, s.title, s.icon,
-      h('div', { class: s.id === 'report' ? 'rf-lines' : `rf-grid${s.id === 'update' || s.id === 'people' ? ' rf-grid-4' : s.id === 'approval' ? ' rf-grid-officers' : s.id === 'assignment' ? ' rf-grid-assign' : ''}` }, s.fields.map(([k, label, kind, opts]) => input(k, label, kind, opts))),
+      h('div', { class: s.id === 'report' ? 'rf-lines' : `rf-grid${s.id === 'update' || s.id === 'people' ? ' rf-grid-4' : s.id === 'approval' ? ' rf-grid-officers' : s.id === 'assignment' ? ' rf-grid-assign' : ''}` }, s.id === 'report' ? reportLines(s) : s.fields.map(([k, label, kind, opts]) => input(k, label, kind, opts))),
       ...(s.lists || []).map(listEditor)));
 
     // ---- evidence inventoried: one card per exhibit (number given automatically)
@@ -524,7 +621,7 @@
             const img = h('img', { alt: `Exhibit ${tag}` });
             Vault.readFile(c.id, path).then((f) => { img.src = URL.createObjectURL(f); img.addEventListener('load', () => URL.revokeObjectURL(img.src), { once: true }); }).catch(() => { img.alt = 'Photo not found'; });
             // A label for each photo (v1.34): shown under it here and in its caption in the PDF.
-            const label = h('textarea', { class: 'rf-photo-label', rows: 2, maxlength: 120, placeholder: 'Label this photo', 'aria-label': `Label for photo ${tag}`, readonly: archived || null });
+            const label = h('input', { class: 'rf-photo-label', maxlength: 120, placeholder: 'Label this photo', 'aria-label': `Label for photo ${tag}`, readonly: archived || null });
             label.value = e.photoLabels[j] || '';
             label.addEventListener('input', () => { e.photoLabels[j] = label.value; save(); });
             return h('figure', { class: 'rf-photo-card' },

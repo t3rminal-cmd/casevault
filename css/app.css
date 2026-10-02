@@ -3056,3 +3056,44 @@ svg.ci > image { transform: scale(1.12); transform-origin: 50% 50%; }
 .case-bell, .case-bell .bi { color: var(--danger); }
 .tb-status .save-status { background: var(--surface) !important; border: 1px solid var(--border); box-shadow: inset 0 -3px 0 var(--state, transparent); }
 .tb-status .save-status.saved { --state: var(--ok); } .tb-status .save-status.saving { --state: var(--warn); } .tb-status .save-status.error { --state: var(--danger); }
+
+/* v1.54: Draft tab rows: Court Branch and Court Date on one row; Warrant or Subpoena, ASA or AUSA,
+   Judge or Magistrate on one row (the label of each is a switch). */
+.rf-line-row { display: grid; gap: .45rem; }
+.rf-line-row.rf-row-court { grid-template-columns: minmax(0, 2fr) minmax(12rem, 1fr); }
+.rf-line-row.rf-row-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.rf-line-row > .field { grid-column: auto !important; }
+.rf-line-row > .field.rf-boxed.rf-optional { display: grid; grid-template-columns: 1.2rem minmax(0, 1fr); gap: 0 .5rem; align-items: center; padding-left: .55rem; }
+.rf-line-row > .field.rf-boxed.rf-optional > input[type=checkbox] { grid-row: 1 / span 2; }
+.rf-line-row > .field.rf-boxed.rf-optional > :not(input[type=checkbox]) { grid-column: 2; }
+.rf-section .field.rf-switch-field > .rf-lab { display: block !important; }
+.rf-section .field.rf-switch-field select.rf-switch { min-height: 0 !important; padding: 0 1.6rem 0 0 !important; font-size: .68rem; font-weight: 700; color: var(--accent) !important; background: transparent; border: 0; width: auto; max-width: 100%; text-transform: uppercase; letter-spacing: .02em; cursor: pointer; }
+@media (max-width: 1100px) { .rf-line-row.rf-row-3, .rf-line-row.rf-row-court { grid-template-columns: minmax(0, 1fr); } }
+/* Pre-Recorded Funds: a line per denomination, Add Funds at the lower left, Recovered at the lower right. */
+.rf-funds-list { display: grid; gap: .3rem; }
+.rf-fund { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) auto; align-items: center; gap: .6rem; padding: .35rem .6rem; background: var(--rf-box, var(--surface-2)); }
+.rf-fund-den { white-space: nowrap; }
+.rf-fund-serials { overflow-wrap: anywhere; font-size: .88rem; }
+.rf-fund-btns { display: inline-flex; gap: .15rem; }
+.rf-funds-foot { display: flex; align-items: center; gap: .6rem; margin-top: .45rem; }
+.rf-funds-rec { min-width: 13rem; margin: 0; }
+.rf-fund-form { display: grid; gap: .6rem; width: min(30rem, 90vw); }
+.rf-fund-grid { display: grid; grid-template-columns: minmax(0, 1fr) 9rem; gap: .5rem; }
+.rf-fund-grid .span-2 { grid-column: span 2; }
+/* The evidence photo's label: one line. */
+.rf-photo-label { height: auto; min-height: 0; padding: .25rem .4rem; font-size: .8rem; }
+.rf-funds-rec select { padding-right: 1.8rem !important; min-width: 12rem; }
+
+/* v1.54: sections that fold away (Case Overview, LEO Partners, the Vault). */
+.fold-head { display: flex; align-items: center; gap: .5rem; }
+.fold-head > h3 { margin: 0; }
+section.foldable > .fold-head { margin-bottom: .6rem; }
+section.foldable.folded > .fold-head { margin-bottom: 0; }
+.fold-btn .bi { width: .95rem; height: .95rem; }
+.partner-tools { display: flex; justify-content: flex-end; margin-top: .5rem; }
+.partner-tools .btn[hidden] { display: none; }
+/* The Vault: each section a card with grey boxes. */
+.vault-sec { border: 1px solid var(--border); background: var(--surface); padding: .8rem 1rem; margin-bottom: .9rem; }
+.vault-sec .fact { background: var(--rf-box); padding: .45rem .6rem; }
+/* Mail: grey boxes. */
+.mail-form.cv-boxed .field textarea { min-height: 12rem; }

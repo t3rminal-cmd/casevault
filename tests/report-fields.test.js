@@ -344,7 +344,7 @@ test('v1.42: exhibit numbering from a start, funds without quantity, notificatio
   assert.strictEqual(F.nextFrom(1, [1, 2, 5]), 3);
   assert.strictEqual(F.nextFrom(20, [1, 20]), 21);
   assert.strictEqual(F.nextFrom(0, []), 1);
-  assert.deepStrictEqual(F.LISTS.funds.fields.map((f) => f[0]), ['denomination', 'serial', 'recovered']);
+  assert.deepStrictEqual(F.LISTS.funds.fields.map((f) => f[0]), ['denomination', 'quantity', 'serials']); // v1.54
   assert.deepStrictEqual(F.LISTS.notifications.fields.map((f) => f[0]), ['date', 'name', 'by']);
   const d = F.normalize({ notifications: [{ notes: 'Called the watch commander' }] });
   assert.strictEqual(d.notifications[0].name, 'Called the watch commander');
@@ -388,4 +388,32 @@ test('v1.48: Status and How Cleared spelled out; old codes read; the PDF keeps t
   const ops = P.layout(d, {}).flatMap((p) => p.ops).join('\n');
   assert.match(ops, /\(3-C\/C\) Tj/);
   assert.ok(!/Cleared Closed\) Tj/.test(ops));
+});
+
+test('v1.54: bills saved one by one become one entry per denomination; one Recovered for all', () => {
+  const d = F.normalize({ funds: [
+    { denomination: '$20', serial: 'AA01', recovered: 'Recovered' }, { denomination: '$20', serial: 'AA02', recovered: 'Recovered' },
+    { denomination: '$10', serial: 'BB01', recovered: 'Recovered' },
+  ] });
+  assert.deepStrictEqual(d.funds, [{ denomination: '$20', quantity: '2', serials: ['AA01', 'AA02'] }, { denomination: '$10', quantity: '1', serials: ['BB01'] }]);
+  assert.strictEqual(d.fundsRecovered, 'Recovered');
+  assert.deepStrictEqual(F.fundsLines(d), ['$20 x 2 - Serial Numbers AA01, AA02', '$10 x 1 - Serial Number BB01', 'Recovered']);
+  const again = F.normalize(d);
+  assert.deepStrictEqual(again.funds, d.funds, 'stays the same once converted');
+  const q = F.normalize({ funds: [{ denomination: '$100', quantity: '5', serials: [] }] });
+  assert.deepStrictEqual(F.fundsLines(q), ['$100 x 5']);
+});
+
+test('v1.54: Warrant or Subpoena, ASA or AUSA, Judge or Magistrate on one line each', () => {
+  const d = F.normalize({ searchWarrant: 'SW-1', asa: 'ASA Example', judge: 'Hon. Roe' });
+  assert.strictEqual(d.docKind, 'searchWarrant'); assert.strictEqual(d.prosKind, 'asa');
+  assert.ok(F.isHidden(d, 'subpoenaGJ') && F.isHidden(d, 'ausa') && !F.isHidden(d, 'asa'));
+  assert.strictEqual(F.lineLabel(d, 'judge'), 'Judge Approving Search Warrant');
+  const e = F.normalize({ subpoenaGJ: 'GJ-9', ausa: 'AUSA Example', judgeTitle: 'Magistrate' });
+  assert.strictEqual(e.docKind, 'subpoenaGJ'); assert.strictEqual(e.prosKind, 'ausa');
+  assert.strictEqual(F.lineLabel(e, 'ausa'), 'AUSA Approving Subpoena');
+  assert.strictEqual(F.lineLabel(e, 'judge'), 'Magistrate Approving Subpoena');
+  const txt = F.asText(e);
+  assert.match(txt, /Subpoena GJ Number: GJ-9/); assert.doesNotMatch(txt, /Search Warrant Number/);
+  assert.ok(!('extraCopies' in F.normalize({ extraCopies: '2' })), 'Extra Copies is gone');
 });

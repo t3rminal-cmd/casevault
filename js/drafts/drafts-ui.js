@@ -26,14 +26,16 @@
     if (token !== state.renderToken) return;
     Engine().refresh().then(() => { if (token === state.renderToken) drawStart(); });
 
-    const title = h('input', { maxlength: 150, placeholder: 'Affidavit for search warrant', 'aria-label': 'Report title' });
-    const type = h('select', { 'aria-label': 'Document type' }, Object.entries(CVDraft.DOC_TYPES).map(([k, t]) => h('option', { value: k }, t.label)));
+    const title = h('input', { maxlength: 150, 'aria-label': 'Report title' });
+    // v1.54: New Report offers three types (reports made before keep theirs).
+    const NEW_TYPES = [['summary', 'Case Summary'], ['affidavit', 'Affidavits'], ['other', 'Other']];
+    const type = h('select', { 'aria-label': 'Document type' }, NEW_TYPES.map(([k, l]) => h('option', { value: k }, l)));
     const tplSelect = h('select', { 'aria-label': 'Template' }, templates.map((t) => h('option', { value: t.file }, t.title)));
     // Picking a template suggests the matching document type (affidavit, subpoena, ...).
     const guessType = () => {
       const name = `${tplSelect.value} ${(templates.find((t) => t.file === tplSelect.value) || {}).title || ''}`.toLowerCase();
       const hit = CVDraft.docTypeOf(name); // v1.48: "DEA 6 sample" is DEA Style
-      if (hit !== 'other') type.value = hit;
+      if (NEW_TYPES.some(([k]) => k === hit)) type.value = hit;
     };
     tplSelect.addEventListener('change', guessType);
     // How to start: a dropdown (Blank, Template, Draft with AI). The template list shows under it

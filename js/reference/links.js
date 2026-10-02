@@ -29,13 +29,15 @@
     { id: 'osint-blockchair', tab: 'osint', name: 'Blockchair', url: 'https://blockchair.com/', icon: 'currency-bitcoin', note: 'Blockchain explorer: look up crypto addresses and transactions.' },
     { id: 'osint-mempool', tab: 'osint', name: 'Mempool', url: 'https://mempool.space/', icon: 'currency-bitcoin', note: 'Bitcoin explorer: addresses, transactions and fees.' },
     { id: 'leo-chainalysis', tab: 'osint', name: 'Chainalysis', url: 'https://reactor.chainalysis.com/', icon: 'currency-bitcoin', note: 'Chainalysis Reactor for crypto investigations, with your account.' },
+    { id: 'osint-geotime', tab: 'osint', name: 'Geotime LIVE', url: '', icon: 'map', note: 'Add your agency\'s Geotime LIVE web address in Vault → Quick links.' }, // v1.54
     { id: 'osint-tineye', tab: 'osint', name: 'TinEye', url: 'https://tineye.com/', icon: 'image', note: 'Reverse image search: where else a picture appears.' },
     { id: 'osint-google', tab: 'osint', name: 'Google', url: 'https://www.google.com/', icon: 'google', note: 'Google search.' },
     { id: 'osint-google-maps', tab: 'osint', name: 'Google Maps', url: 'https://www.google.com/maps', icon: 'map', note: 'Maps, addresses and Street View.' },
     { id: 'osint-google-images', tab: 'osint', name: 'Google Images', url: 'https://images.google.com/', icon: 'image', note: 'Reverse image search by Google.' },
     { id: 'leo-accurint', tab: 'leo', name: 'Accurint', url: 'https://www.accurint.com/', icon: 'person-lines-fill', note: 'LexisNexis Accurint for law enforcement, with your account.' },
     { id: 'leo-kodex', tab: 'leo', name: 'Kodex Portal', url: 'https://www.kodexglobal.com/', icon: 'send', note: 'Legal process and emergency requests to online platforms, with your account. Change the address to your portal\'s login page if it differs.' },
-    { id: 'leo-chicago-hidta', tab: 'leo', name: 'Chicago HIDTA', url: '', icon: 'building', note: 'Add your Chicago HIDTA portal\'s web address in Vault → Quick links.' },
+    // v1.54: fixed: its address can't be changed and it can't be hidden.
+    { id: 'leo-chicago-hidta', tab: 'leo', name: 'Chicago HIDTA', url: 'https://www.chicago-hidta.org/submission-form-2', icon: 'building', note: 'Chicago HIDTA submission form.', fixed: true },
     { id: 'leo-snapchat', tab: 'leo', name: 'Snapchat LE Portal', url: 'https://lawenforcement.snapchat.com/', icon: 'snapchat', note: 'Snap\'s Law Enforcement Service Portal: legal process and emergency requests, with your account.' },
     { id: 'leo-meta', tab: 'leo', name: 'Meta LE Portal', url: 'https://www.facebook.com/records/', icon: 'meta', note: 'Meta\'s Law Enforcement Online Request System (Facebook, Instagram, WhatsApp), with your account.' },
     { id: 'leo-cpd-directives', tab: 'leo', name: 'Chicago Police Directives', url: 'https://directives.chicagopolice.org/', icon: 'journal-bookmark', note: 'CPD directives: general and special orders.' },
@@ -58,7 +60,7 @@
     const s = saved && typeof saved === 'object' ? saved : {};
     const hidden = new Set(Array.isArray(s.hidden) ? s.hidden : []);
     const edits = s.edits && typeof s.edits === 'object' ? s.edits : {};
-    const base = DEFAULTS.map((d) => ({ ...d, ...(d.hash ? {} : pick(edits[d.id])), hidden: hidden.has(d.id), custom: false }));
+    const base = DEFAULTS.map((d) => ({ ...d, ...(d.hash || d.fixed ? {} : pick(edits[d.id])), hidden: !d.fixed && hidden.has(d.id), custom: false }));
     const custom = (Array.isArray(s.custom) ? s.custom : [])
       .filter((c) => c && c.id && TABS.some((t) => t.key === c.tab) && c.tab !== 'reference')
       .map((c) => ({ id: c.id, tab: c.tab, name: String(c.name || 'Link'), url: cleanUrl(c.url) || '', note: String(c.note || ''), icon: 'link-45deg', hidden: hidden.has(c.id), custom: true }));

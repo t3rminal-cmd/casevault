@@ -217,7 +217,7 @@
     const groupGap = () => { y -= 5; };
     const items = (key) => d[key].filter(RF.filled).map((it) => {
       // A bill on one line: "$20 - Serial AA00000001A - Not Recovered".
-      if (key === 'funds') return [it.denomination, it.serial ? `Serial ${it.serial}` : '', it.recovered].filter(Boolean).join(' - ');
+      if (key === 'funds') return RF.itemLine('funds', it); // v1.54: "$20 x 3 - Serial Numbers …"
       const line = RF.itemLine(key, it);
       // People: the name on its own line in bold, the details under it.
       if (['offendersList', 'victimsList', 'notArrested', 'personnel'].includes(key) && it.name) {
@@ -297,7 +297,7 @@
       text(M + 2, y - 9, by.trim(), 9.5);
       y -= 16;
       const done = new Set(['courtDate']);
-      const line1 = (k) => { done.add(k); if (RF.isHidden(d, k)) return; if (k === 'courtBranch') { const c = RF.courtLine(d, (kk) => val(kk)); if (c) labelled(c[0], c[1]); return; } labelled(labelOf(k), val(k)); };
+      const line1 = (k) => { done.add(k); if (RF.isHidden(d, k)) return; if (k === 'courtBranch') { const c = RF.courtLine(d, (kk) => val(kk)); if (c) labelled(c[0], c[1]); return; } labelled(RF.lineLabel ? RF.lineLabel(d, k) : labelOf(k), val(k)); };
       const list1 = (key, label) => { done.add(key); if (RF.isHidden(d, key)) return; labelled(label || RF.LISTS[key].title, items(key)); };
       // In the form's order: the operation, the people, the charges and the court, the warrant…
       // v1.44: in blocks with a little space between them: who; the court and the warrant; who else
@@ -316,7 +316,9 @@
       if (on('evidence')) labelled('Evidence Inventoried', d.evidence.map((e) => RF.exhibitLine(e)));
       list1('narcotics', 'Narcotics Recovered (Total Weight & Street Value)');
       line1('buyFunds');
-      list1('funds', 'Pre-Recorded Funds');
+      // v1.54: one line per denomination, then Recovered or Not Recovered once.
+      done.add('funds');
+      if (!RF.isHidden(d, 'funds')) labelled('Pre-Recorded Funds', RF.fundsLines(d));
       ['fundSheet', 'evidenceOfficer'].forEach(line1);
       groupGap();
       ['proofResidence', 'irNumber', 'cbNumber'].forEach(line1);
@@ -363,15 +365,15 @@
         if (sign) sigs.push({ name: sign, rect: [x + 2, yy - rowH + 2, x + w - 2, yy - 10] });
       };
       const pair = (x, yy, a, b, split = 0.68) => { cellT(x, yy, cw * split, a[0], a[1], a[2]); cellT(x + cw * split, yy, cw * (1 - split), b[0], b[1], b[2]); };
+      // v1.54: no Extra Copies box; the reporting officer's column is name, then a tall signature box.
+      pair(M, y, ['PRINT (REPORTING OFFICER)', val('reportingOfficer')], ['STAR', val('reportingStar')]);
       pair(M + cw, y, ['DATE SUBMITTED', val('dateSubmitted')], ['TIME', val('timeSubmitted')]);
-      cellT(M, y, cw, "EXTRA COPIES REQ'D", val('extraCopies'));
       pair(M + 2 * cw, y, ['SUPERVISOR APPROVAL', val('supervisor')], ['STAR', val('supervisorStar')]);
       y -= rowH;
-      pair(M, y, ['PRINT (REPORTING OFFICER)', val('reportingOfficer')], ['STAR', val('reportingStar')]);
+      { const rH = rowH * 2; fill(M, y - 10.5, cw, 10.5, 0.9); rect(M, y - rH, cw, rH, 0.6); text(M + 3, y - 8, 'SIGNATURE', 7); sigs.push({ name: 'ReportingOfficerSignature', rect: [M + 2, y - rH + 2, M + cw - 2, y - 10] }); }
       pair(M + cw, y, ['SECONDARY REPORTING OFFICER', val('secondOfficer')], ['STAR', val('secondStar')]);
       cellT(M + 2 * cw, y, cw, 'SIGNATURE', '', 'SupervisorSignature');
       y -= rowH;
-      cellT(M, y, cw, 'SIGNATURE', '', 'ReportingOfficerSignature');
       cellT(M + cw, y, cw, 'SIGNATURE', '', 'SecondOfficerSignature');
       // The secondary officer's date and time, small, in the corner of the signature box.
       if (val('secondDate')) text(M + 2 * cw - 4 - tw(val('secondDate'), 7), y - 8, val('secondDate'), 7);
