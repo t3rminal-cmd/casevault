@@ -29,27 +29,58 @@ BORDER = "#dfe3e8"
 
 
 
-def draw_logo(parent: tk.Misc, size: int, bg: str) -> tk.Canvas:
-    """CaseVault's logo (icons/icon.svg): a white folder with a blue padlock on a dark blue rounded square."""
-    c = tk.Canvas(parent, width=size, height=size, bg=bg, highlightthickness=0, bd=0)
-    k = size / 512.0
+HERO = ("#0b3d91", "#0d6efd", "#3d8bfd")  # the Overview banner's blues, left to right
 
-    def rrect(x0, y0, x1, y1, r, fill):
-        x0, y0, x1, y1, r = x0 * k, y0 * k, x1 * k, y1 * k, r * k
-        pts = [x0 + r, y0, x1 - r, y0, x1, y0, x1, y0 + r, x1, y1 - r, x1, y1, x1 - r, y1, x0 + r, y1, x0, y1, x0, y1 - r, x0, y0 + r, x0, y0]
-        c.create_polygon(pts, smooth=True, fill=fill, outline="")
 
-    rrect(0, 0, 512, 512, 112, "#1f3a5f")                                   # the square
-    c.create_polygon([p * k for p in (104, 150, 118, 136, 218, 136, 252, 172, 380, 172, 408, 190, 408, 230, 104, 230)],
-                     fill="#e8eef6", outline="")                             # the folder's back and tab
-    rrect(104, 196, 408, 392, 24, "#ffffff")                                 # the folder's front
-    c.create_arc(230 * k, 218 * k, 282 * k, 270 * k, start=0, extent=180, style="arc", outline="#1f5fa8", width=max(2, round(14 * k)))
-    c.create_line(230 * k, 244 * k, 230 * k, 264 * k, fill="#1f5fa8", width=max(2, round(14 * k)))
-    c.create_line(282 * k, 244 * k, 282 * k, 264 * k, fill="#1f5fa8", width=max(2, round(14 * k)))
-    rrect(214, 262, 298, 334, 12, "#1f5fa8")                                 # the padlock's body
-    c.create_oval(247 * k, 283 * k, 265 * k, 301 * k, fill="#ffffff", outline="")
-    c.create_rectangle(252 * k, 296 * k, 260 * k, 316 * k, fill="#ffffff", outline="")
-    return c
+def _mix(a: str, b: str, t: float) -> str:
+    """The colour t of the way from a to b (#rrggbb)."""
+    pa = [int(a[i:i + 2], 16) for i in (1, 3, 5)]
+    pb = [int(b[i:i + 2], 16) for i in (1, 3, 5)]
+    return "#" + "".join(f"{round(x + (y - x) * t):02x}" for x, y in zip(pa, pb))
+
+
+def hero_color(x: float, width: float) -> str:
+    """The banner's colour at x: dark blue fading to bright blue (v1.51)."""
+    t = 0.0 if width <= 0 else max(0.0, min(1.0, x / width))
+    return _mix(HERO[0], HERO[1], t / 0.55) if t < 0.55 else _mix(HERO[1], HERO[2], (t - 0.55) / 0.45)
+
+
+class HeroHeader:
+    """v1.51: a blue band like the Overview banner in CaseVault: the title and the version in white on
+    the left, a faint shield with a padlock and rings on the right. No CaseVault logo (it's on the
+    window's title bar already)."""
+
+    def __init__(self, parent: tk.Misc, title: str, sub: str, height: int = 92):
+        self.c = tk.Canvas(parent, height=height, highlightthickness=0, bd=0, bg=HERO[0])
+        self.title, self.sub, self.h = title, sub, height
+        self.c.bind("<Configure>", lambda e: self.draw())
+
+    def pack(self, **kw) -> None:
+        self.c.pack(**kw)
+
+    def configure(self, text: str) -> None:
+        self.sub = text
+        self.draw()
+
+    def draw(self) -> None:
+        c, h = self.c, self.h
+        w = max(c.winfo_width(), 200)
+        c.delete("all")
+        for x in range(0, w, 2):
+            c.create_rectangle(x, 0, x + 2, h, fill=hero_color(x, w), outline="")
+        # Rings and the shield, drawn in a lighter shade of the blue under them (Tk has no transparency).
+        cx, cy = w - 70, h - 18
+        for r in (78, 56, 34):
+            c.create_oval(cx - r, cy - r, cx + r, cy + r, outline=_mix(hero_color(cx, w), "#ffffff", 0.16), width=2)
+        face = _mix(hero_color(cx, w), "#ffffff", 0.2)
+        s = 0.62  # the shield: 64 x 76 at s = 1
+        pts = [(0, -38), (32, -26), (30, 6), (16, 28), (0, 38), (-16, 28), (-30, 6), (-32, -26)]
+        c.create_polygon([v for x, y in pts for v in (cx + x * s, cy - 18 + y * s)], fill=face, outline="", smooth=True)
+        lock = _mix(hero_color(cx, w), "#ffffff", 0.06)
+        c.create_arc(cx - 7, cy - 32, cx + 7, cy - 18, start=0, extent=180, style="arc", outline=lock, width=3)
+        c.create_rectangle(cx - 10, cy - 25, cx + 10, cy - 10, fill=lock, outline="")
+        c.create_text(22, 26, text=self.title, anchor="w", fill="#ffffff", font=(FONT, 16, "bold"))
+        c.create_text(22, 56, text=self.sub, anchor="nw", fill="#dbe8ff", font=(FONT, 9), width=max(200, w - 190))
 
 class UpdaterWindow:
     def __init__(self, root: tk.Tk, settings: config.Settings, controller: Optional[Controller] = None):
@@ -65,30 +96,14 @@ class UpdaterWindow:
         root.geometry("640x540")
         self._style()
 
+        # v1.51: the blue banner (like CaseVault's Overview) across the top, without the logo.
+        self.local = HeroHeader(root, "CaseVault Updater", local_text(settings))
+        self.local.pack(fill="x")
         outer = tk.Frame(root, bg=BG, padx=18, pady=16)
         outer.pack(fill="both", expand=True)
 
-        head = tk.Frame(outer, bg=BG)
-        head.pack(fill="x")
-        # The CaseVault logo, the folder with the padlock: the app's own icon when it can be read, else
-        # drawn here (v1.35: never the old "CV" square).
-        self.logo = None
-        try:
-            png = os.path.join(settings.app_dir, "icons", "icon-192.png")
-            if os.path.isfile(png):
-                self.logo = tk.PhotoImage(file=png).subsample(4, 4)
-        except tk.TclError:
-            self.logo = None
-        badge = tk.Label(head, image=self.logo, bg=BG, bd=0) if self.logo is not None else draw_logo(head, 48, BG)
-        badge.pack(side="left")
-        titles = tk.Frame(head, bg=BG, padx=12)
-        titles.pack(side="left", fill="x", expand=True)
-        tk.Label(titles, text="CaseVault Updater", bg=BG, font=(FONT, 15, "bold"), anchor="w").pack(fill="x")
-        self.local = tk.Label(titles, text=local_text(settings), bg=BG, fg=MUTED, font=(FONT, 9), anchor="w", justify="left", wraplength=480)
-        self.local.pack(fill="x")
-
         card = tk.Frame(outer, bg=CARD, highlightbackground=BORDER, highlightthickness=1, padx=16, pady=14)
-        card.pack(fill="both", expand=True, pady=(14, 12))
+        card.pack(fill="both", expand=True, pady=(0, 12))
         self.status = tk.Label(card, text="Press Check for Updates to see whether a newer CaseVault is on GitHub. Nothing is changed until you say Install.",
                                bg=CARD, font=(FONT, 10), anchor="w", justify="left", wraplength=520)
         self.status.pack(fill="x")

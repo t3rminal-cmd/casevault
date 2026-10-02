@@ -2965,3 +2965,27 @@ body.sidebar-collapsed #btn-side-search, body.sidebar-collapsed #btn-side-home {
 .disc-confirm-list .disc-size { text-align: right; }
 .disc-confirm-list tfoot td { font-weight: 600; border-top: 1px solid var(--border); }
 .disc-confirm-list .disc-total td { font-weight: 700; }
+
+/* v1.51: colour icons. An icon with a colour picture shows it; where one colour is needed (white on
+   a filled button, the Overview banner, the privacy screen) its plain shape shows instead. */
+svg.ci > image { display: inline; }
+svg.ci:not(.ci-only) > :not(image) { display: none; }
+.btn.primary svg.ci:not(.ci-only) > :not(image), .btn.danger svg.ci:not(.ci-only) > :not(image), .hero svg.ci:not(.ci-only) > :not(image),
+.privacy-screen svg.ci:not(.ci-only) > :not(image) { display: inline; }
+.btn.primary svg.ci:not(.ci-only) > image, .btn.danger svg.ci:not(.ci-only) > image, .hero svg.ci:not(.ci-only) > image,
+.privacy-screen svg.ci:not(.ci-only) > image { display: none; }
+/* A colour picture is a touch larger than a line icon so it reads at the same weight. */
+svg.ci { overflow: visible; }
+svg.ci > image { transform: scale(1.12); transform-origin: 50% 50%; }
+/* The Field Notes and Ask AI buttons: white squares with the colour notebook and chat bubble. */
+.fab, .fab-dock .notes-fab { background: var(--surface); color: var(--accent); border: 1px solid var(--border); }
+.fab svg { width: 1.6rem; height: 1.6rem; }
+.fab[aria-expanded="true"] { border-color: var(--accent); box-shadow: var(--shadow-lg), inset 0 0 0 1px var(--accent); }
+.partner-emblem.partner-art, .partner-badge.on .partner-emblem.partner-art { background: transparent; box-shadow: none; filter: none; }
+.partner-emblem.partner-art svg { width: 2.1rem; height: 2.1rem; }
+/* Closed and Archived: the green and the dark folder pictures, without a box around them. */
+.archived-cases > summary .sec-folder { background: transparent; border: 0; }
+.archived-cases > summary .sec-folder svg { width: 1.45rem; height: 1.45rem; }
+.archived-cases > summary .sec-folder { width: 1.5rem; height: 1.5rem; margin-right: .2rem; }
+.archived-cases > summary .sec-folder svg { width: 1.25rem; height: 1.25rem; }
+#fab-dock #btn-chat.fab, #fab-dock #btn-chat.fab:hover { background: var(--surface); color: var(--accent); border: 1px solid var(--border); }

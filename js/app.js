@@ -691,7 +691,7 @@
   // v1.50: Closed and Archived at the bottom: a grey folder, the word in capitals, a drop-down arrow.
   for (const sec of ['#closed-cases', '#archived-cases']) {
     const sum = $(`${sec} > summary`);
-    sum.prepend(h('span', { class: 'sec-folder' }, I('folder-fill')));
+    sum.prepend(h('span', { class: 'sec-folder' }, I(sec === '#closed-cases' ? 'folder-closed' : 'folder-archived')));
     sum.append(h('span', { class: 'sec-chev' }, I('chevron-down')));
   }
 
@@ -1782,24 +1782,24 @@
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'OK')));
     });
   }
-  /* LEO Partners as badges (v1.33): a colour and a plain icon for each agency (no agency seals),
+  /* LEO Partners as badges (v1.33; v1.51: CaseVault's own colour badge for each agency, not a seal),
    * the Chicago six-pointed star for Local PD and a police shield for the Sheriff. */
   const CHICAGO_STAR = 'M12.00 1.00 L9.70 8.02 L2.47 6.50 L7.40 12.00 L2.47 17.50 L9.70 15.98 L12.00 23.00 L14.30 15.98 L21.53 17.50 L16.60 12.00 L21.53 6.50 L14.30 8.02 Z';
   const emblem = (d) => { const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('class', 'bi'); const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); p.setAttribute('d', d); p.setAttribute('fill', 'currentColor'); svg.append(p); return svg; };
   const PARTNER_BADGES = {
-    DEA: { name: 'Drug Enforcement Administration', icon: 'capsule-pill', color: '#1f6f43' },
-    FBI: { name: 'Federal Bureau of Investigation', icon: 'fingerprint', color: '#1f3a6b' },
-    ATF: { name: 'Alcohol, Tobacco, Firearms and Explosives', icon: 'fire', color: '#8a2d1c' },
-    USMS: { name: 'U.S. Marshals Service', icon: 'marshal-star', color: '#5a4a1a' },
-    IRS: { name: 'IRS Criminal Investigation', icon: 'cash-coin', color: '#22636b' },
-    CBP: { name: 'Customs and Border Protection', icon: 'globe-americas', color: '#1d4f91' },
-    HSI: { name: 'Homeland Security Investigations', icon: 'shield-fill-check', color: '#2d4b73' },
-    ICE: { name: 'Immigration and Customs Enforcement', icon: 'shield-shaded', color: '#3b4f63' },
-    USSS: { name: 'U.S. Secret Service', icon: 'star-fill', color: '#7a5a12' },
-    USPIS: { name: 'U.S. Postal Inspection Service', icon: 'envelope-paper', color: '#2b5aa6' },
-    'State PD': { name: 'State Police', icon: 'patch-check-fill', color: '#33507a' },
-    'Local PD': { name: 'Police Department', svg: CHICAGO_STAR, color: '#1b74c5' },
-    'Sheriff Dept': { name: 'Sheriff\'s Office', icon: 'shield-fill', color: '#6b4f1d' },
+    DEA: { name: 'Drug Enforcement Administration', icon: 'capsule-pill', badge: 'badge-dea', color: '#1f6f43' },
+    FBI: { name: 'Federal Bureau of Investigation', icon: 'fingerprint', badge: 'badge-fbi', color: '#1f3a6b' },
+    ATF: { name: 'Alcohol, Tobacco, Firearms and Explosives', icon: 'fire', badge: 'badge-atf', color: '#8a2d1c' },
+    USMS: { name: 'U.S. Marshals Service', icon: 'marshal-star', badge: 'badge-usms', color: '#5a4a1a' },
+    IRS: { name: 'IRS Criminal Investigation', icon: 'cash-coin', badge: 'badge-irs', color: '#22636b' },
+    CBP: { name: 'Customs and Border Protection', icon: 'globe-americas', badge: 'badge-cbp', color: '#1d4f91' },
+    HSI: { name: 'Homeland Security Investigations', icon: 'shield-fill-check', badge: 'badge-hsi', color: '#2d4b73' },
+    ICE: { name: 'Immigration and Customs Enforcement', icon: 'shield-shaded', badge: 'badge-ice', color: '#3b4f63' },
+    USSS: { name: 'U.S. Secret Service', icon: 'star-fill', badge: 'badge-usss', color: '#7a5a12' },
+    USPIS: { name: 'U.S. Postal Inspection Service', icon: 'envelope-paper', badge: 'badge-uspis', color: '#2b5aa6' },
+    'State PD': { name: 'State Police', icon: 'patch-check-fill', badge: 'badge-state-pd', color: '#33507a' },
+    'Local PD': { name: 'Police Department', svg: CHICAGO_STAR, badge: 'badge-local-pd', color: '#1b74c5' },
+    'Sheriff Dept': { name: 'Sheriff\'s Office', icon: 'shield-fill', badge: 'badge-sheriff', color: '#6b4f1d' },
     Other: { name: 'Another agency', icon: 'building', color: '#5c6670' },
   };
   function partnersSection(c, save) {
@@ -1833,7 +1833,7 @@
       const b = PARTNER_BADGES[agency] || PARTNER_BADGES.Other;
       const tile = h('div', { class: `partner-chip partner-badge${on ? ' on' : ''}` },
         h('label', { class: 'partner-pick', title: on ? `${b.name}: working this case. Click to take it off.` : `${b.name}: click if working this case.` }, cb,
-          h('span', { class: 'partner-emblem', 'aria-hidden': 'true' }, b.svg ? emblem(b.svg) : I(b.icon)),
+          h('span', { class: `partner-emblem${b.badge ? ' partner-art' : ''}`, 'aria-hidden': 'true' }, b.badge ? I(b.badge) : b.svg ? emblem(b.svg) : I(b.icon)),
           h('span', { class: 'partner-words' }, h('strong', {}, agency === 'Sheriff Dept' ? 'Sheriff' : agency), h('span', { class: 'partner-full' }, names || b.name))),
         edit);
       tile.style.setProperty('--agency', b.color); // set from script: the page's CSP allows no inline style attributes

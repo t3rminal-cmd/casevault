@@ -7,8 +7,9 @@ pattern='(^|/)(CaseVault-Data|CaseVault-AI|CV-AI|cases|backups|checks|models|oll
 pattern+='|(^|/)(vault|case|timeline)\.json$|(^|/)notes\.md$|-check\.json$'
 pattern+='|\.(pdf|docx?|rtf|odt|xlsx?|csv|pptx?|msg|eml|pst|jpe?g|gif|bmp|tiff?|heic|webp|mp3|m4a|wav|mp4|mov|avi|zip|7z|rar|gguf|safetensors|bek)$'
 
-# App icons are the only images the repo is allowed to contain.
-hits=$(git ls-files | grep -Ei "$pattern" | grep -Ev '^icons/[^/]+\.(png|svg)$' || true)
+# App icons are the only images the repo is allowed to contain: icons/*.png|svg and, from v1.51,
+# the colour icons icons/color/<name>.png (lower-case names only).
+hits=$(git ls-files | grep -Ei "$pattern" | grep -Ev '^icons/[^/]+\.(png|svg)$' | grep -Ev '^icons/color/[a-z0-9-]+\.png$' || true)
 
 if [ -n "$hits" ]; then
   echo "::error::Possible case data is committed to the repository. Remove it (and purge it from history):"

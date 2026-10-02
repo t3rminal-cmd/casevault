@@ -215,6 +215,14 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.51
+
+- **New icons:** CaseVault has a new set of colour icons. Folders are coloured: Operations blue, General Files yellow, Closed green with a check, Archived dark. Trash, calendar, phone, map, notebook, chat, settings and more are in colour too. On blue (filled) buttons and on the Overview banner, the icons stay white. The banner itself is unchanged.
+- **LEO Partners:** each agency has its own colour badge (CaseVault's drawings, not official seals). They never go on a report or PDF.
+- **New logo:** the safe with the document is on the browser tab, at the top left and on the installed app.
+- **Field Notes and Ask AI** (bottom right) are white squares with the colour notebook and chat bubble.
+- **Updater:** the window opens with a blue fading banner like the Overview's: the title, the version on the SSD, and a shield with a padlock. The CaseVault logo is gone from it; it is still on the window's title bar.
+
 ### What's new in v1.50
 
 - **Privacy screen:** the blue 1s and 0s now fall on a muted near-black. With a PIN, a thin box in the lower right says **AUTHENTICATE**, and each digit shows as an asterisk.

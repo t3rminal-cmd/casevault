@@ -7,7 +7,8 @@ runs on its own, and it never touches `CaseVault-Data`.
 ## The window (how you'll normally use it)
 
 Double-click **`Check-For-Updates.bat`** in `V:\CaseVault-App\updater\`. The **CaseVault Updater**
-window opens and shows which version the SSD has.
+window opens with a blue banner (v1.2: like the Overview banner in CaseVault, with a shield and
+padlock) that shows which version the SSD has.
 
 1. **Check for Updates**: it checks GitHub, compares every file on the SSD and downloads only the
    ones that changed. The progress bar moves; nothing in CaseVault is changed yet.
