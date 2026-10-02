@@ -199,6 +199,11 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.41
+
+- **One draft, several reports:** each report sent from the Draft tab is named after its heading, such as **Supplementary Report - Purchase**, and so is its PDF in Files. If you change the **Officer Report Type** after sending (Purchase to Surveillance, say) and click **Send Draft to Reports**, CaseVault asks: **New Report** keeps the Purchase report as it was sent and adds a Surveillance report next to it; **Update** replaces the Purchase report (and its PDF). Sending again with the same type just updates that report. Two reports of the same type get "2", "3" on the end, so a PDF is never overwritten by another report's.
+- **Exhibit photo names match the Draft tab:** a photo added to Exhibit 1 is saved as **Exhibit 1a**, the next as **Exhibit 1b**. Photos saved before as "Exhibit 1" and "Exhibit 1 (2)" are renamed to 1a and 1b the next time you open the Draft tab (only when that name is free).
+
 ### What's new in v1.40
 
 - **Timeline:** **Clear** (next to Add to Timeline) empties the form: today's date, Event, no time, title or note. The date of each event now stays on one line next to its marker.

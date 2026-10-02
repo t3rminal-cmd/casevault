@@ -382,6 +382,14 @@
    */
   /** The report's title (v1.39): the Officer Report Type picked goes after it ("Supplementary Report - Purchase"). */
   const titleFor = (d) => (d && d.activity ? `Supplementary Report - ${d.activity}` : 'Supplementary Report');
+  /** A report title not already in `taken` (lower-case titles): "X", then "X 2", "X 3" (v1.41). */
+  function uniqueTitle(base, taken) {
+    const has = (t) => taken.has(t.toLowerCase());
+    if (!has(base)) return base;
+    let n = 2;
+    while (has(`${base} ${n}`)) n++;
+    return `${base} ${n}`;
+  }
   function toMarkdown(data, title = titleFor(data)) {
     const d = normalize(data);
     const esc = (s) => String(s == null ? '' : s).replace(/\|/g, '\\|').replace(/\s*\n\s*/g, '; ').trim();
@@ -461,7 +469,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { MULTI, SOCIAL_APPS, STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, exhibitLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { MULTI, SOCIAL_APPS, STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, exhibitLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

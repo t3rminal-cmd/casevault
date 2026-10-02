@@ -15,8 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.40)
+## Features (v1.41)
 
+- Draft tab: each sent report is named after its heading (Supplementary Report - Purchase). Change the Officer Report Type and send again, and CaseVault asks whether to make a **New Report** (the UCO's and the surveillance officer's reports of one buy) or update the one sent; two reports never share a title or a PDF
+- Exhibit photos are named like their labels on the Draft tab (Exhibit 1a, 1b), and older "Exhibit 1 (2)" names are renamed to match
 - Timeline: a **Clear** button next to Add to Timeline; each date on one line next to its marker
 - Reports tab is view only: click a report to see its PDF the way the Files tab shows it; drag the rows (or Alt+Up / Alt+Down on the grip) into your own order; **Send Back to Draft** from the list or the viewer; the Field Notes stay editable
 - Every report sent from the Draft tab prints exactly like the Draft tab's Print / PDF, including older ones sent before a Clear All
