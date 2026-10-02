@@ -27,7 +27,7 @@
 
   // Which document a sample is an example of (matches the draft's document type).
   const DOC_TYPES = [
-    ['any', 'Any Document'], ['dea6', 'DEA 6'], ['dea7', 'DEA 7'], ['dea7a', 'DEA 7a'], ['dea202', 'DEA 202'],
+    ['any', 'Any Document'], ['dea6', 'DEA Style'], ['dea7', 'DEA 7'], ['dea7a', 'DEA 7a'], ['dea202', 'DEA 202'],
     ['affidavit', 'Affidavit'], ['warrant', 'Warrant'], ['summary', 'Case Summary'], ['subpoena', 'Subpoena'], ['memo', 'Memo'], ['complaint', 'Criminal Complaint'],
   ];
 
@@ -66,7 +66,7 @@
   const BUILTIN_BEHAVIORS = [
     {
       id: 'dea6',
-      name: 'DEA 6 - Report of Investigation Style',
+      name: 'DEA Style - Report of Investigation',
       prompt: [
         'Write in the style of a DEA-6 Report of Investigation.',
         '- Third person, past tense, factual and objective. No opinions, speculation or conclusions the facts do not support.',

@@ -317,11 +317,11 @@
 
   // v1.39: the Draft tab's Update Information boxes that closing fills in, by disposition.
   const CLOSE_CODES = {
-    arrest: { status: '3 - C/C', cleared: '1 - Arrest' },
-    exceptional: { status: '4 - C/O', cleared: '5 - Other' },
-    unfounded: { status: '2 - Unf', cleared: '' },
-    inactive: { status: '1 - Sus', cleared: '' },
-    referred: { status: '4 - C/O', cleared: '3 - Ref Pros' },
+    arrest: { status: '3 - Cleared Closed', cleared: '1 - Arrest' },
+    exceptional: { status: '4 - Cleared Open', cleared: '5 - Other' },
+    unfounded: { status: '2 - Unfounded', cleared: '' },
+    inactive: { status: '1 - Suspended', cleared: '' },
+    referred: { status: '4 - Cleared Open', cleared: '3 - Referred for Prosecution' },
     other: { status: '', cleared: '' },
   };
 

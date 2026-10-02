@@ -36,7 +36,7 @@
       guide: 'An internal memo with a To / From / Date / Re header, then purpose, relevant facts, and recommended next steps.',
     },
     dea6: {
-      label: 'DEA 6',
+      label: 'DEA Style', // v1.48 (was "DEA 6")
       guide: 'A DEA-6 style Report of Investigation: header lines (File No., File Title, G-DEP Identifier, Program Code, By, At, Date Prepared), SYNOPSIS, DETAILS in numbered paragraphs in time order, and INDEXING of every person, business, vehicle and telephone number mentioned.',
     },
     dea7: {
@@ -57,6 +57,16 @@
     },
     other: { label: 'Other', guide: 'A clear, well-structured document.' },
   };
+
+  /** The document type a template's file name or title suggests (DEA 6 sample -> dea6). */
+  function docTypeOf(name) {
+    const n = String(name || '').toLowerCase();
+    if (/dea[\s_-]?6(?![0-9])/.test(n)) return 'dea6';
+    if (/dea[\s_-]?7a/.test(n)) return 'dea7a';
+    if (/dea[\s_-]?7(?![0-9a])/.test(n)) return 'dea7';
+    if (/dea[\s_-]?202/.test(n)) return 'dea202';
+    return Object.keys(DOC_TYPES).find((k) => k !== 'other' && n.includes(k)) || 'other';
+  }
 
   /* ---------------- file format ---------------- */
 
@@ -228,7 +238,7 @@
   // Shipped with the app; copied into CaseVault-Data/templates/ when the user asks for them.
   // v1.28: only the Supplemental Report is built in. The generic affidavit, subpoena, arrest report
   // and case summary were taken out; an unchanged copy of one on the SSD is removed (Vault).
-  const RETIRED_TEMPLATES = ['generic-affidavit.md', 'generic-subpoena.md', 'generic-arrest-report.md', 'generic-case-summary.md'];
+  const RETIRED_TEMPLATES = ['generic-affidavit.md', 'generic-subpoena.md', 'generic-arrest-report.md', 'generic-case-summary.md', 'generic-supplemental-report.md'];
   // Start an arrest report draft (Arrest details tab) uses your own arrest template; without one,
   // this built-in outline (v1.28: no longer listed under Templates).
   const ARREST_OUTLINE = `# Arrest Report
@@ -272,7 +282,10 @@ ${GENERIC_NOTE}
 ______________________________
 {{affiant.name}}, {{affiant.title}}, {{confirm: badge number}}
 `;
-  const STARTER_TEMPLATES = {
+  // v1.48: no built-in templates; your own (the DEA 6 sample) stay. The Supplemental Report starter
+  // that came before is retired: an unchanged copy on the SSD is removed (Vault).
+  const STARTER_TEMPLATES = {};
+  const RETIRED_SUPPLEMENTAL = {
     'generic-supplemental-report.md': `# Supplemental Report
 
 ${GENERIC_NOTE}
@@ -320,7 +333,7 @@ ______________________________
 {{affiant.name}}, {{affiant.title}}, {{confirm: star number}}
 Prepared {{today}}
 `,
-  };
+  }['generic-supplemental-report.md'];
 
   /* ---------------- plain text ---------------- */
 
@@ -355,7 +368,7 @@ Prepared {{today}}
   }
 
   const api = {
-    orderReports, DOC_TYPES, STARTER_TEMPLATES, RETIRED_TEMPLATES, ARREST_OUTLINE, PARTNER_AGENCIES, partnersText, parseDraft, serializeDraft, slugify, extractPlaceholders,
+    orderReports, DOC_TYPES, STARTER_TEMPLATES, RETIRED_SUPPLEMENTAL, RETIRED_TEMPLATES, docTypeOf, ARREST_OUTLINE, PARTNER_AGENCIES, partnersText, parseDraft, serializeDraft, slugify, extractPlaceholders,
     AFFIANT_FIELDS, SUSPECT_ROLES, ageOn, placeholderGroups, templateContext, fillTemplate, templateTitle, stripMarkdown,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

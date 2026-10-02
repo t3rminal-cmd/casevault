@@ -38,10 +38,9 @@ async function roundTrip(Vault, rootHandle) {
   // v1.28: the retired generic templates go from the SSD unless they were changed.
   await Vault.saveTemplate('generic-affidavit.md', '# Affidavit\n\n> **Generic example, not a legal form.** x\n');
   await Vault.saveTemplate('generic-subpoena.md', '# Subpoena\n\nMy own wording, kept.\n');
-  assert.deepStrictEqual((await Vault.addStarterTemplates()).length, 1, 'supplemental report');
-  assert.deepStrictEqual((await Vault.addStarterTemplates()).length, 0, 'never overwrites');
+  assert.deepStrictEqual((await Vault.addStarterTemplates()).length, 0, 'v1.48: no built-in templates');
   const templates = await Vault.listTemplates();
-  assert.deepStrictEqual(templates.map((t) => t.title), ['Subpoena', 'Supplemental Report']);
+  assert.deepStrictEqual(templates.map((t) => t.title), ['Subpoena']);
   await Vault.saveTemplate('agency-affidavit.md', '# Agency affidavit\n\nCase {{case.number}}');
   assert.strictEqual(await Vault.readTemplate('agency-affidavit.md'), '# Agency affidavit\n\nCase {{case.number}}');
 
@@ -68,7 +67,7 @@ test('drafts round-trip: direct mode (Chrome/Edge File System Access handles)', 
   const data = await ssd.getDirectoryHandle('CaseVault-Data');
   const draftsDir = await (await (await data.getDirectoryHandle('cases')).getDirectoryHandle(c.id)).getDirectoryHandle('drafts');
   assert.deepStrictEqual([...draftsDir.children.keys()], []);
-  assert.ok((await data.getDirectoryHandle('templates')).children.has('generic-supplemental-report.md'));
+  assert.ok(!(await data.getDirectoryHandle('templates')).children.has('generic-supplemental-report.md'), 'v1.48: no built-in template');
   Vault.close();
 });
 
@@ -92,7 +91,7 @@ test('drafts round-trip: helper mode (Firefox, through the helper HTTP API)', as
     // Same files and format as direct mode.
     const draftsDir = path.join(dir, 'CaseVault-Data', 'cases', c.id, 'drafts');
     assert.deepStrictEqual(fs.readdirSync(draftsDir), []);
-    assert.ok(fs.existsSync(path.join(dir, 'CaseVault-Data', 'templates', 'generic-supplemental-report.md')));
+    assert.ok(!fs.existsSync(path.join(dir, 'CaseVault-Data', 'templates', 'generic-supplemental-report.md')));
   }
   Vault.close();
 });
@@ -151,7 +150,8 @@ test('templates: {{affiant.*}} comes from "My details"; empty values become [CON
   const none = D.fillTemplate('{{affiant.name}} {{affiant.email}}', D.templateContext({}, new Date()));
   assert.strictEqual(none, '[CONFIRM: affiant.name] [CONFIRM: affiant.email]');
   assert.deepStrictEqual(D.AFFIANT_FIELDS, ['name', 'title', 'agency', 'address', 'phone', 'email']);
-  assert.deepStrictEqual(Object.keys(D.STARTER_TEMPLATES), ['generic-supplemental-report.md'], 'v1.28: only the Supplemental Report is built in');
+  assert.deepStrictEqual(Object.keys(D.STARTER_TEMPLATES), [], 'v1.48: no built-in templates');
+  assert.ok(D.RETIRED_TEMPLATES.includes('generic-supplemental-report.md'));
 });
 
 test('stripMarkdown gives clean plain text', () => {
@@ -287,4 +287,23 @@ test('orderReports: arranged order kept, new reports first (v1.40)', () => {
   const list = [{ slug: 'new' }, { slug: 'b' }, { slug: 'a' }, { slug: 'c' }];
   assert.deepStrictEqual(D.orderReports(list, ['a', 'gone', 'c', 'b']).map((d) => d.slug), ['new', 'a', 'c', 'b']);
   assert.deepStrictEqual(D.orderReports(list, null).map((d) => d.slug), ['new', 'b', 'a', 'c']);
+});
+
+test('v1.48: once, every template but the DEA 6 sample moves to templates/removed-v1.48 (nothing deleted)', async () => {
+  const { Vault, FS } = { ...app(), FS: get('FS') };
+  const { MemDirectoryHandle } = require('./helpers/mem-fs.js');
+  const dir = await Vault.create(new MemDirectoryHandle('T'));
+  await Vault.load(dir);
+  Vault.data.settings.templatesTrimmed = false; // as a vault from before v1.48
+  await Vault.saveTemplate('dea6-sample.md', '# DEA 6 Sample\n\nSynthetic text.');
+  await Vault.saveTemplate('my-affidavit.md', '# My Affidavit\n\nSynthetic text.');
+  await Vault.saveTemplate('memo.md', '# Memo\n\nSynthetic text.');
+  assert.deepStrictEqual((await Vault.listTemplates()).map((t) => t.title), ['DEA 6 Sample']);
+  const kept = await FS.getDir(await FS.getDir(dir, 'templates'), 'removed-v1.48');
+  assert.deepStrictEqual((await FS.list(kept)).map((e) => e.name).sort(), ['memo.md', 'my-affidavit.md']);
+  // Only once: a template added later stays.
+  await Vault.saveTemplate('later.md', '# Later\n\nSynthetic text.');
+  assert.deepStrictEqual((await Vault.listTemplates()).map((t) => t.title), ['DEA 6 Sample', 'Later']);
+  assert.strictEqual(D.DOC_TYPES.dea6.label, 'DEA Style');
+  assert.strictEqual(D.docTypeOf('dea6-sample.md DEA 6 Sample'), 'dea6');
 });

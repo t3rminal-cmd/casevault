@@ -241,7 +241,7 @@ test('v1.26: LEO partners text, Supplemental Report type and template, mail sign
     'DEA, USPIS, Local PD (Example Police Department), Sheriff Dept (Example County Sheriff)');
   assert.strictEqual(D.partnersText([]), '');
   assert.strictEqual(D.DOC_TYPES.supplemental.label, 'Supplemental Report');
-  assert.ok(D.STARTER_TEMPLATES['generic-supplemental-report.md'].includes('{{report.narcotics}}'));
+  assert.ok(D.RETIRED_SUPPLEMENTAL.includes('{{report.narcotics}}'));
   const M = require('../js/secure/mail.js');
   assert.deepStrictEqual(M.settingsOf({}).domains, ['chicagopolice.org', 'dea.gov', 'uspis.gov']);
   assert.deepStrictEqual(M.settingsOf({ domains: ['agency.gov'], preloaded: 2 }).domains, ['agency.gov'], 'your own list wins once saved');
@@ -300,13 +300,13 @@ test('v1.31: Officer\'s Report lines, UCO, no reclassification, and a report dra
   assert.ok(F.ROLES.includes('UCO') && !F.ROLES.includes('UC'));
   assert.strictEqual(F.normalize({ personnel: [{ name: 'Officer Alex Sample', role: 'UC' }] }).personnel[0].role, 'UCO');
   const DP = require('../js/draft-pdf.js');
-  const md = F.toMarkdown({ ...F.empty(), caseNumber: 'TEST-1', offense: 'Sample offense', narrative: 'Sample summary.' });
+  const md = F.toMarkdown({ ...F.empty(), rdNumber: 'TEST-1', offense: 'Sample offense', narrative: 'Sample summary.' });
   const b = DP.blocks(md);
   assert.strictEqual(b[0].kind, 'title');
   assert.ok(b.some((x) => x.kind === 'band' && x.text === 'Offense'));
-  assert.deepStrictEqual(b.find((x) => x.kind === 'table').rows[0].slice(0, 2), ['Agency Report Number', 'Event Number']);
+  assert.deepStrictEqual(b.find((x) => x.kind === 'table').rows[0].slice(0, 2), ['R.D. Number', 'Event Number']);
   const all = DP.layout(md, { agency: 'Example Agency' }).map((p) => p.ops.join('\n')).join('\n');
-  for (const s of ['SUPPLEMENTARY REPORT', 'OFFENSE', 'AGENCY REPORT NUMBER', 'TEST-1', 'Sample summary.', "OFFICER'S REPORT"]) assert.ok(all.includes(s), s);
+  for (const s of ['SUPPLEMENTARY REPORT', 'OFFENSE', 'R.D. NUMBER', 'TEST-1', 'Sample summary.', "OFFICER'S REPORT"]) assert.ok(all.includes(s), s);
   const pdf = Buffer.from(DP.build('# A Report\n\nSome **text**.\n\n- one\n- two\n\n| A | B | C |\n|---|---|---|\n| 1 | 2 | 3 |\n| 4 | 5 | 6 |\n')).toString('latin1');
   assert.ok(pdf.startsWith('%PDF-1.7') && pdf.includes('(A REPORT)') && pdf.includes('(Some text.)'));
 });
@@ -367,4 +367,25 @@ test('v1.47: exhibit photo captions are not bold, on any line', () => {
   const capOps = pages.flatMap((p) => p.ops).filter((o) => / 9\.5 Tf /.test(o));
   assert.ok(capOps.length >= 2, 'the caption wraps to two lines');
   assert.ok(capOps.every((o) => o.includes('/F1 ')), 'regular font throughout');
+});
+
+test('v1.48: R.D. Number replaces the Agency Report Number, on the form and in the PDF', () => {
+  assert.ok(!F.FIELDS.some(([k]) => k === 'caseNumber'));
+  const d = F.normalize({ caseNumber: 'RD-OLD-1' });
+  assert.strictEqual(d.rdNumber, 'RD-OLD-1', 'a form from before keeps its number');
+  assert.ok(!('caseNumber' in d));
+  const ops = P.layout(F.normalize({ rdNumber: 'RD-0001' }), {}).flatMap((p) => p.ops).join('\n');
+  assert.ok(!/Agency Report/i.test(ops));
+  assert.match(ops, /\(R\.D\. Number\) Tj/);
+  assert.match(ops, /\(RD-0001\) Tj/);
+});
+
+test('v1.48: Status and How Cleared spelled out; old codes read; the PDF keeps the short codes', () => {
+  const d = F.normalize({ status: '3 - C/C', cleared: '3 - Ref Pros' });
+  assert.strictEqual(d.status, '3 - Cleared Closed');
+  assert.strictEqual(d.cleared, '3 - Referred for Prosecution');
+  assert.strictEqual(F.shortCode('3 - Cleared Closed'), '3 - C/C');
+  const ops = P.layout(d, {}).flatMap((p) => p.ops).join('\n');
+  assert.match(ops, /\(3-C\/C\) Tj/);
+  assert.ok(!/Cleared Closed\) Tj/.test(ops));
 });
