@@ -215,6 +215,19 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.55
+
+- **Discovery receipt.** In **Files → Discovery**, the **Options** box has **Make a receipt to sign (PDF to Downloads)**, on by default. When the package is made, CaseVault also makes the **Discovery Receipt** PDF:
+  - It shows the case, date produced, Bates range, package, number of files and size, storage medium, **Turned Over By** (your name and title from My Profile) and **Turned Over To**.
+  - **Date of Receipt** and **Time of Receipt** are blank boxes, filled in by hand at the hand-off.
+  - Every item is listed with its Bates numbers, pages and SHA-256 fingerprint.
+  - An **Acknowledgment of Receipt** says the recipient received the items and that they are accurate and complete as listed.
+  - Signature lines (sign in ink) for the **Recipient**, the **Officer** and a **Witness**, each with printed name and date/time.
+  - The PDF is saved to **this computer's Downloads folder** (the browser's download), ready to print. That copy is on the PC, not the SSD: once it is printed and signed, delete it from Downloads. A copy is also kept with the case (Files → Discovery → Earlier productions → **Receipt**). The Done box has **Download Receipt** and **Print Receipt**. Productions made before v1.55 get a receipt the first time you click Receipt.
+  - The agency name comes from My Profile; there is no seal or form number.
+- **Discovery popups** have a new look: an icon header, the options grouped in three boxes (Recipient And Bates, Where And Password, Options), and summary tiles (files, size, Bates, produced to) in **Ready to Copy** and **Discovery Package Ready**.
+- **Closed folder and Operations.** A closed case whose Operation is still going used to show under the Operation's name in Closed, which looked like the Operation was closed. Now these cases are listed by case number under one folder, **Operation Files**, in Closed ("N closed cases of ongoing Operations"). When the Operation itself is closed, it moves to Closed with its name as before.
+
 ### What's new in v1.54
 
 - **Draft tab, Officer's Report:**

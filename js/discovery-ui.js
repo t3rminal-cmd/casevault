@@ -202,11 +202,55 @@
       prefix, batesFirst: items[0].batesFirst, batesLast: last, folder, destination: opts.destLabel || '', vlc: manifest.vlc, allowSave: manifest.allowSave, index: indexName,
       items: manifestItems.map((it, i) => ({ path: items[i].path, ...(items[i].caseId !== c.id ? { caseId: items[i].caseId, caseNumber: items[i].caseNumber } : {}), batesFirst: it.batesFirst, batesLast: it.batesLast, pages: it.pages, size: it.size, sha256: it.sha256 })),
     };
+    // 8. v1.55: the receipt to sign at the hand-off, kept with the case too.
+    if (opts.receipt && root.CVDiscoveryReceipt) {
+      step('Making the receipt…');
+      const pdf = receiptPdf(c, entry);
+      entry.receipt = await Vault.saveDiscoveryFile(c.id, receiptName(entry), new Blob([pdf], { type: 'application/pdf' }));
+      Object.defineProperty(entry, 'receiptPdf', { value: pdf, enumerable: false });
+    }
     const log = await readLog(c);
     log.productions.push(entry);
     await Vault.writeCaseJSON(c.id, LOG, log);
     progress('Done.', 1);
     return entry;
+  }
+
+  /* ---------- v1.55: the receipt ---------- */
+
+  const receiptName = (entry) => `Discovery Receipt ${entry.produced} ${CVDiscovery.bates(entry.prefix, entry.batesFirst)}.pdf`;
+  function receiptPdf(c, entry) {
+    const profile = (Vault.data.settings && Vault.data.settings.affiant) || {};
+    const bytes = (entry.items || []).reduce((n, it) => n + (it.size || 0), 0);
+    return CVDiscoveryReceipt.build(entry, {
+      caseLabel: [c.number ? `Case ${c.number}` : '', c.subject || c.title || ''].filter(Boolean).join(' · '),
+      officer: profile.name || '', officerTitle: profile.title || '', agency: profile.agency || '',
+      medium: entry.destination || '', sizeText: CVDiscovery.fmtSize(bytes),
+      printed: new Date().toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+    });
+  }
+  /** Saves a PDF to this computer's Downloads folder (the browser's download). */
+  function downloadPdf(bytes, name) {
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.hidden = true;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+  /** The receipt of a production: from the case folder, or made now (older productions). */
+  async function receiptOf(c, entry) {
+    if (entry.receipt) {
+      const f = await Vault.readDiscoveryFile(c.id, entry.receipt).catch(() => null);
+      if (f) return new Uint8Array(await f.arrayBuffer());
+    }
+    const pdf = receiptPdf(c, entry);
+    try {
+      entry.receipt = await Vault.saveDiscoveryFile(c.id, receiptName(entry), new Blob([pdf], { type: 'application/pdf' }));
+      const log = await readLog(c);
+      const mine = log.productions.find((p) => p.id === entry.id);
+      if (mine) { mine.receipt = entry.receipt; await Vault.writeCaseJSON(c.id, LOG, log); }
+    } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+    return pdf;
   }
 
   async function hashBlob(blob) {
@@ -269,6 +313,21 @@
     const picked = [];
     const canPick = typeof window.showDirectoryPicker === 'function';
 
+    // v1.55: the popups share one header: an icon tile, the title and a line under it.
+    const head = (ic, title, sub) => h('div', { class: 'disc-head' }, h('span', { class: 'disc-head-icon', 'aria-hidden': 'true' }, icon(ic)),
+      h('div', { class: 'disc-head-text' }, h('h2', {}, title), sub ? h('p', { class: 'muted small' }, sub) : null));
+    const tile = (label, value) => h('div', { class: 'disc-tile' }, h('span', { class: 'disc-tile-label' }, label), h('strong', { class: 'disc-tile-value' }, value));
+    const showReceipt = async (entry, closeFirst) => {
+      let pdf;
+      try { pdf = entry.receiptPdf || await receiptOf(c, entry); } catch (ex) { if (FS.isDisconnectError(ex)) { ui.onDriveLost(); return; } toast(`Could not make the receipt: ${ex.message}`, 'error'); return; }
+      if (closeFirst) closeFirst();
+      const name = receiptName(entry);
+      const viewer = CVPdfViewer.create(pdf, { h, icon, title: 'Discovery Receipt', fileName: name });
+      await openDialog((done) => h('div', { class: 'pdf-view' }, h('h2', {}, `Discovery Receipt ${D.batesRange(entry.prefix, entry.batesFirst, entry.batesLast)}`), viewer,
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => done() }, 'Done'))));
+      viewer.destroy();
+    };
+
     await openDialog((close) => {
       const search = h('input', { type: 'search', placeholder: 'Search by file, case number or subject', 'aria-label': 'Search the files' });
       const byNum = (a, b) => String(a.number || '').localeCompare(String(b.number || ''), undefined, { numeric: true });
@@ -289,6 +348,7 @@
       const pw2 = h('input', { type: 'password', autocomplete: 'new-password', 'aria-label': 'Password again' });
       const allow = h('input', { type: 'checkbox', checked: true });
       const vlc = h('input', { type: 'checkbox', checked: !!kit, disabled: !kit });
+      const receipt = h('input', { type: 'checkbox', checked: settings.discoveryReceipt !== false });
       const dest = h('select', { 'aria-label': 'Where to' },
         canPick ? h('option', { value: 'pick' }, 'A USB drive or folder…') : null,
         h('option', { value: 'ssd', title: 'CaseVault-Data\\exports on the SSD; burn it to a DVD from there' }, 'The SSD, for a DVD'));
@@ -345,8 +405,8 @@
         const box = h('dialog', { class: 'dialog disc-confirm', 'aria-label': 'Files to copy' });
         const done = (v) => { box.close(); box.remove(); resolve(v); };
         box.addEventListener('cancel', (e) => { e.preventDefault(); done(false); });
-        box.append(h('h2', {}, 'Ready to Copy'),
-          h('p', { class: 'small' }, `${picked.length} file${picked.length === 1 ? '' : 's'} go to ${destText}, encrypted, in the order below.`),
+        box.append(head('list-check', 'Ready to Copy', `Encrypted, in the order below, to ${destText}.`),
+          h('div', { class: 'disc-tiles' }, tile('Files', String(picked.length)), tile('Total', D.fmtSize(bytes + extra)), tile('Produced To', toIn.value.trim() || 'Not named'), tile('Receipt', receipt.checked ? 'Yes' : 'No')),
           h('div', { class: 'disc-confirm-list' }, h('table', { class: 'data-table' },
             h('thead', {}, h('tr', {}, ['#', 'File', 'Case', 'Size'].map((t) => h('th', {}, t)))),
             h('tbody', {}, picked.map((k, i) => { const { f, caseId } = fileOf(k); return h('tr', {}, h('td', {}, String(i + 1)), h('td', { class: 'disc-name' }, f.base), h('td', { class: 'nowrap' }, caseNum(caseId)), h('td', { class: 'nowrap disc-size' }, D.fmtSize(f.size))); })),
@@ -368,6 +428,8 @@
         h('summary', {}, `Earlier productions (${log.productions.length})`),
         h('ul', { class: 'plain-list' }, [...log.productions].reverse().map((p) => h('li', { class: 'disc-hist-row' },
           h('span', {}, `${p.produced} · ${D.batesRange(p.prefix, p.batesFirst, p.batesLast)}${p.producedTo ? ` · to ${p.producedTo}` : ''} · ${p.items.length} file${p.items.length === 1 ? '' : 's'}`),
+          h('span', { class: 'disc-btns' },
+          h('button', { class: 'btn small ghost', type: 'button', icon: 'file-earmark-pdf', title: p.receipt ? 'The receipt to sign for this production: view, print or download it' : 'Make the receipt to sign for this production', onclick: () => showReceipt(p, () => close(false)) }, 'Receipt'),
           p.index ? h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
             const f = await Vault.readDiscoveryFile(c.id, p.index).catch(() => null);
             if (!f) { toast('That index is no longer in the case folder.', 'error'); return; }
@@ -376,7 +438,7 @@
             await openDialog((done) => h('div', { class: 'pdf-view' }, h('h2', {}, `Discovery Index ${D.batesRange(p.prefix, p.batesFirst, p.batesLast)}`), viewer,
               h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => done() }, 'Done'))));
             viewer.destroy();
-          } }, 'Index') : null)))) : null;
+          } }, 'Index') : null))))) : null;
 
       const form = h('form', { class: 'disc', onsubmit: async (e) => {
         e.preventDefault();
@@ -393,16 +455,25 @@
         go.disabled = true; bar.hidden = false;
         const setBar = (text, f) => { bar.firstChild.style.width = `${Math.round(f * 100)}%`; bar.lastChild.textContent = text; };
         try {
-          const entry = await exportPackage(c, { password: pw.value, prefix, start: Number(startIn.value) || 1, producedTo: toIn.value, allowSave: allow.checked, vlc: vlc.checked, dest: dir, destLabel, paths: picked.map((k) => { const { caseId, f } = fileOf(k); return { caseId, path: f.name }; }) }, setBar);
+          const entry = await exportPackage(c, { password: pw.value, prefix, start: Number(startIn.value) || 1, producedTo: toIn.value, allowSave: allow.checked, vlc: vlc.checked, receipt: receipt.checked, dest: dir, destLabel, paths: picked.map((k) => { const { caseId, f } = fileOf(k); return { caseId, path: f.name }; }) }, setBar);
           pw.value = ''; pw2.value = '';
-          await Vault.updateSettings({ discoveryPrefix: prefix }).catch(() => {});
+          await Vault.updateSettings({ discoveryPrefix: prefix, discoveryReceipt: receipt.checked }).catch(() => {});
+          // v1.55: the receipt goes to this PC's Downloads folder, ready to print and sign.
+          if (entry.receiptPdf) downloadPdf(entry.receiptPdf, receiptName(entry));
           close(true);
+          const bytesOut = entry.items.reduce((n, it) => n + (it.size || 0), 0);
           await ui.openDialog((done) => h('div', { class: 'disc-done' },
-            h('h2', {}, 'Discovery package ready'),
-            h('p', {}, `${entry.items.length} file${entry.items.length === 1 ? '' : 's'}, Bates ${D.batesRange(entry.prefix, entry.batesFirst, entry.batesLast)}, in "${entry.folder}" (${entry.destination}).`),
-            h('p', { class: 'muted small' }, 'Give the password to the recipient separately (by phone, not in the same envelope or email). CaseVault does not keep it. The index PDF and the list of what was produced are kept with the case (Files → Discovery → Earlier productions).'),
-            dest.value === 'ssd' ? h('p', { class: 'muted small' }, 'For a DVD: put a blank disc in, open CaseVault-Data\\exports in File Explorer, select the package folder and choose Burn to disc (Share → Burn to disc). One DVD holds about 4.3 GB.') : null,
-            h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => done(true) }, 'OK'))));
+            head('check-circle-fill', 'Discovery Package Ready', `In "${entry.folder}" (${entry.destination}).`),
+            h('div', { class: 'disc-tiles' }, tile('Files', String(entry.items.length)), tile('Bates', D.batesRange(entry.prefix, entry.batesFirst, entry.batesLast).split(' to ').map((x, i) => [i ? ' to ' : '', h('span', { class: 'nowrap' }, x)]).flat()), tile('Size', D.fmtSize(bytesOut)), tile('Produced To', entry.producedTo || 'Not named')),
+            h('ul', { class: 'disc-steps' },
+              h('li', {}, 'Give the password to the recipient separately (by phone, not in the same envelope or email). CaseVault does not keep it.'),
+              entry.receiptPdf ? h('li', {}, 'The receipt was saved to this computer\'s Downloads folder. Print it; the recipient, you and a witness sign it in ink at the hand-off. A copy is kept with the case.') : null,
+              h('li', {}, 'The index PDF and the list of what was produced are kept with the case (Files → Discovery → Earlier productions).'),
+              dest.value === 'ssd' ? h('li', {}, 'For a DVD: put a blank disc in, open CaseVault-Data\\exports in File Explorer, select the package folder and choose Burn to disc (Share → Burn to disc). One DVD holds about 4.3 GB.') : null),
+            h('div', { class: 'dialog-actions' },
+              entry.receiptPdf ? h('button', { class: 'btn', type: 'button', icon: 'download', onclick: () => downloadPdf(entry.receiptPdf, receiptName(entry)) }, 'Download Receipt') : null,
+              entry.receiptPdf ? h('button', { class: 'btn', type: 'button', icon: 'printer', onclick: () => showReceipt(entry, () => done(true)) }, 'Print Receipt') : null,
+              h('button', { class: 'btn primary', type: 'button', onclick: () => done(true) }, 'OK'))));
         } catch (ex) {
           if (FS.isDisconnectError(ex)) { close(false); ui.onDriveLost(); return; }
           console.error(ex);
@@ -410,21 +481,26 @@
           go.disabled = false;
         }
       } },
-      h('h2', {}, 'Discovery'),
-      h('p', { class: 'muted small' }, 'Pick the files to produce. CaseVault writes a password-protected package: it opens in Chrome or Edge with the password, shows and prints every page with its Bates number, plays video and audio, and has nothing to download. The files in the case are not changed.'),
+      head('box-seam', 'Discovery', 'Pick the files to produce. CaseVault writes a password-protected package: it opens in Chrome or Edge with the password, shows and prints every page with its Bates number, plays video and audio, and has nothing to download. The files in the case are not changed.'),
       h('div', { class: 'disc-panes' },
         h('section', { class: 'disc-pane' }, h('div', { class: 'disc-pane-head' }, h('strong', {}, 'Files'), source, search), left),
         h('section', { class: 'disc-pane' }, h('div', { class: 'disc-pane-head' }, h('strong', {}, 'To Produce'), totals, h('div', { class: 'spacer' }),
           h('button', { class: 'btn small ghost', type: 'button', onclick: () => { picked.splice(0); draw(); } }, 'Clear')), right)),
-      h('div', { class: 'form-grid disc-opts' },
-        ui.field('Produced To', toIn),
-        ui.field('Bates Prefix', prefixIn, '', 'Each page gets PREFIX-000001 and on. The next number continues from the last production with this prefix.'),
-        ui.field('Bates Start Number', startIn),
-        ui.field('Where To', dest),
-        ui.field('Password', pw, '', 'At least 8 characters. CaseVault doesn\'t keep it: write it down for the recipient.'),
-        ui.field('Password Again', pw2),
-        h('label', { class: 'check-row span-2' }, allow, h('span', {}, 'Allow saving a copy of video, audio and other files the viewer can\'t show (for VLC)')),
-        h('label', { class: 'check-row span-2', title: kit ? `${kit.files} files, ${D.fmtSize(kit.bytes)}` : '' }, vlc, h('span', {}, kit ? 'Copy the VLC player along (from CaseVault-Data\\discovery-kit\\VLC)' : 'Copy the VLC player along: put a portable VLC in CaseVault-Data\\discovery-kit\\VLC first'))),
+      h('div', { class: 'disc-opts' },
+        h('fieldset', { class: 'disc-card' }, h('legend', {}, icon('people'), ' Recipient And Bates'),
+          ui.field('Produced To', toIn),
+          h('div', { class: 'disc-pair' },
+            ui.field('Bates Prefix', prefixIn, '', 'Each page gets PREFIX-000001 and on. The next number continues from the last production with this prefix.'),
+            ui.field('Start Number', startIn))),
+        h('fieldset', { class: 'disc-card' }, h('legend', {}, icon('shield-lock-fill'), ' Where And Password'),
+          ui.field('Where To', dest),
+          h('div', { class: 'disc-pair' },
+            ui.field('Password', pw, '', 'At least 8 characters. CaseVault doesn\'t keep it: write it down for the recipient.'),
+            ui.field('Password Again', pw2))),
+        h('fieldset', { class: 'disc-card' }, h('legend', {}, icon('list-check'), ' Options'),
+          h('label', { class: 'check-row', title: 'A PDF to print and sign in ink: who turned it over and to whom, every item with its Bates numbers, the date and time of receipt, and signatures of the recipient, the officer and a witness. It goes to this computer\'s Downloads folder; a copy stays with the case.' }, receipt, h('span', {}, 'Make a receipt to sign (PDF to Downloads)')),
+          h('label', { class: 'check-row' }, allow, h('span', {}, 'Allow saving video, audio and other files for VLC')),
+          h('label', { class: 'check-row', title: kit ? `From CaseVault-Data\\discovery-kit\\VLC: ${kit.files} files, ${D.fmtSize(kit.bytes)}` : 'Put a portable VLC in CaseVault-Data\\discovery-kit\\VLC first' }, vlc, h('span', {}, kit ? 'Copy the VLC player along' : 'Copy VLC along (none on the SSD)')))),
       err, bar,
       history,
       h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), go));
@@ -433,5 +509,5 @@
   }
 
   function init(kit) { ui = kit; }
-  root.CVDiscoveryUI = { init, open, exportPackage, readLog, nextStart, vlcKit };
+  root.CVDiscoveryUI = { init, open, exportPackage, readLog, nextStart, vlcKit, receiptOf, downloadPdf };
 })(this);
