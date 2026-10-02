@@ -15,8 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.42)
+## Features (v1.43)
 
+- The Supplementary Report PDF is laid out like a narcotics division supplementary report form: Times type, a ruled grid with small labels, Update Information tick boxes, Status and How Cleared with a mark under each choice, the officer's report as "LABEL:" lines, the summary of investigation and a three-column signature table; other pages carry Preparer and Approval initial boxes
+- The Arrest Report PDF is laid out like a records-system arrest report: the numbers stacked top right, an ARREST REPORTING band, each section named on a grey tab down the left, "Label: value" text, Court Info and Bond Info side by side, and the reporting personnel with signature fields
 - Overview: Upcoming Deadlines is gone (the banner shows what's due); an open operation folder shows each case number with all its tabs (Details, Timeline, Draft, Reports, Files, Mail, Checks) in that spot, so the folders never move; the timeline's titles are centered; a new two-tone operation folder icon
 - Sidebar: restyled; operations whose case numbers are all Closed sit in a Closed section at the bottom, above Archived
 - Field Notes single spaced, with no fading at the bottom of the Reports card; no hover boxes over the Field Notes and report names

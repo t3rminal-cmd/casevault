@@ -85,7 +85,8 @@ test('v1.30: arrest report fields, older arrest.json files, and the Arrest Repor
   a.arrestees.push({ ...C.emptyArrestee(), firstName: 'Casey', lastName: 'Example' });
   const pages = A.layout(a, { agency: 'Example Agency', caseNumber: 'TEST-0001' });
   const all = pages.map((p) => p.ops.join('\n')).join('\n');
-  for (const s of ['ARREST REPORT', 'OFFENDER', 'INCIDENT', 'CHARGES', 'RECOVERED NARCOTICS', 'NO NARCOTICS RECOVERED', 'WARRANT', 'NO WARRANT IDENTIFIED', 'VICTIM AND COMPLAINANT', 'Example Complainant', 'ARRESTEE VEHICLE', 'NO VEHICLE', 'PROPERTIES', 'INCIDENT NARRATIVE', 'COURT AND BOND', 'REPORTING PERSONNEL', 'PLACEHOLDER, Jordan', 'EXAMPLE, Casey', '35 years', 'TEST-0001']) assert.ok(all.includes(s), s);
+  // v1.43: section names on tabs (two lines when long), Court Info and Bond Info side by side.
+  for (const s of ['ARREST REPORT', 'ARREST REPORTING', 'OFFENDER', 'INCIDENT', 'CHARGES', '(RECOVERED)', '(NARCOTICS)', 'NO NARCOTICS RECOVERED', 'WARRANT', 'NO WARRANT IDENTIFIED', 'NON-OFFENDER', 'VICTIM AND COMPLAINANT', 'EXAMPLE COMPLAINANT', '(ARRESTEE)', '(VEHICLE)', 'NO VEHICLE', 'PROPERTIES', 'INCIDENT NARRATIVE', 'COURT INFO', 'BOND INFO', 'REPORTING PERSONNEL', 'ATTESTING OFFICER:', 'APPROVING SUPERVISOR:', 'PLACEHOLDER, Jordan', 'EXAMPLE, Casey', '35 years', 'TEST-0001']) assert.ok(all.includes(s), s);
   assert.ok(pages.length >= 3, 'the long narrative runs on; the second arrestee starts a new page');
   assert.ok(pages.some((p) => p.sigs.some((x) => x.name === 'AttestingOfficerSignature_2')), 'signature fields per arrestee');
   // A photo goes beside the Offender section as an image.

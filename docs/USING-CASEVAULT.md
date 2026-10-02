@@ -199,6 +199,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.43
+
+- **Supplementary Report PDF** (Draft tab → Print / PDF, Reports, Files) now looks like a narcotics division supplementary report form. It is set in Times, with the title and the **Agency Report Number** box at the top. Below that comes a ruled grid where each box has its small label: offense, IUCR, occurrence, victims, offenders and assignment. Then the **Update Information** tick boxes, **Status** and **How Cleared** with a round mark under the choice, and the Event, Incident, Raid and R.D. numbers. The officer's report follows as **LABEL:** lines, with each offender, officer, bill or vehicle on a line of its own, then the **Summary of Investigation** and a three-column signature table. Every other page starts with the four numbers and ends with **Preparer** and **Approval** initial boxes.
+- **Arrest Report PDF** (Arrest Details → Print / PDF) now looks like a records-system arrest report. **ARREST REPORT** and the agency are at the top left, with the CB, IR, YD, RD and Event numbers stacked on the right and an **ARREST REPORTING** band under them. Each section is framed and named on a grey tab down the left: Offender (with the description in a column and the photo on the right), Incident, Charges, Recovered Narcotics, Warrant, Non-Offender(s), Arrestee Vehicle, Properties, Incident Narrative, Court Info beside Bond Info, and Reporting Personnel with the signature fields. Later pages repeat the CB number and the arrestee's name.
+- Neither PDF has any agency's name, seal or form number built in: the agency comes from Vault → My Profile.
+
 ### What's new in v1.42
 
 - **Overview:** the Upcoming Deadlines list is gone; the banner at the top already says what's due. Click an operation's folder and its case numbers show where that list was, each with buttons for every tab (**Details, Timeline, Draft, Reports, Files, Mail, Checks**), under the operation's timeline. The folders themselves stay where they are. The timeline's title and each event's title are centered.
