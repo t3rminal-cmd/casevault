@@ -2691,3 +2691,38 @@ input[list]::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
 /* Files: the Size column wide enough for "000 KB". */
 .files-table-wrap col.col-size { width: 6.6rem; }
 .files-table-wrap td.num { white-space: nowrap; }
+
+/* ---------- v1.45: compact, symmetrical entry forms (Draft tab and Arrest Details) ---------- */
+/* Tighter rows: smaller gaps, shorter boxes, labels close to their box. */
+.rf-section { padding-top: .7rem; padding-bottom: .8rem; }
+.rf-section .rf-head { margin-bottom: .45rem; }
+.rf-grid, .rf-item-grid, .arrest-grid { gap: .45rem .75rem; }
+.rf-section .field > span, .card.arrestee .field > span { margin-bottom: .15rem; font-size: .78rem; }
+.rf-section input:not([type=checkbox]):not([type=radio]), .rf-section select,
+.card.arrestee input:not([type=checkbox]):not([type=radio]), .card.arrestee select { min-height: 2rem; padding-top: .3rem; padding-bottom: .3rem; font-size: .9rem; }
+.rf-section .rf-item { padding: .55rem .65rem; }
+.rf-section .rf-item-head { margin-bottom: .3rem; }
+.rf-section .rf-list { margin-top: .7rem; }
+.rf-lines { row-gap: .3rem; }
+/* Draft: no box left alone on a row. */
+.rf-update .rf-grid .field:has(select) { grid-column: span 2; }
+.rf-item-grid .field:has([aria-label$=" Tattoos / Scars"]) { grid-column: span 3; }
+.rf-item-grid .field:has([aria-label$=" Statute"]) { grid-column: span 1; }
+.rf-item-grid .field:has([aria-label$=" Statute Description"]) { grid-column: span 3; }
+/* Arrest Details: four columns throughout; the photo is the fourth column beside the offender. */
+.card.arrestee .arrest-section { margin-top: .7rem; padding-top: .6rem; }
+.card.arrestee .arrest-section > h3 { margin-bottom: .4rem; }
+.arrest-offender { grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); gap: .75rem; }
+.arrest-grid.arrest-g-offender { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.arrest-grid.arrest-g-offender .span-2 { grid-column: span 2; }
+.arrest-grid.arrest-g-offender textarea { min-height: 2rem; height: 2rem; resize: vertical; }
+.arrest-grid.arrest-g-incident, .arrest-grid.arrest-g-4, .arrest-grid.arrest-g-court, .arrest-grid.arrest-g-personnel { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.arrest-grid.arrest-g-incident .span-2 { grid-column: span 2; }
+.arrest-grid.arrest-g-incident textarea { min-height: 2rem; height: 2rem; resize: vertical; }
+.arrest-grid.arrest-g-incident > :nth-child(5), .arrest-grid.arrest-g-incident > :nth-child(11), .arrest-grid.arrest-g-incident > :nth-child(12) { grid-column: span 2; }
+.arrest-grid.arrest-g-court > :nth-child(9) { grid-column: span 2; }
+.arrest-grid.arrest-g-personnel > :nth-child(7) { grid-column: span 2; }
+@media (max-width: 900px) {
+  .arrest-grid.arrest-g-offender, .arrest-grid.arrest-g-incident, .arrest-grid.arrest-g-4, .arrest-grid.arrest-g-court, .arrest-grid.arrest-g-personnel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .arrest-grid.arrest-g-incident > *, .arrest-grid.arrest-g-court > *, .arrest-grid.arrest-g-personnel > * { grid-column: auto !important; }
+}

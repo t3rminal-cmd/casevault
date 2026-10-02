@@ -140,7 +140,7 @@
         // Title on the left, the agency under it; the agency report number in a box on the right.
         text(M, y - 14, title, 14, true);
         if (agency) text(M, y - 25, agency.toUpperCase(), 7.5, true);
-        const bw = 170;
+        const bw = (INNER / 8) * 2;
         rect(PAGE_W - M - bw, y - 30, bw, 30, 0.9);
         text(PAGE_W - M - bw + 3, y - 8, 'Agency Report Number', 7);
         if (on('numbers') && d.caseNumber) text(PAGE_W - M - bw + 6, y - 23, d.caseNumber, 11, true);
@@ -167,9 +167,11 @@
     const grid = (cells, minH = 27) => {
       const total = cells.reduce((n, c) => n + (c.w || 1), 0);
       const sizes = cells.map((c) => ((c.w || 1) / total) * INNER);
-      const lines = cells.map((c, i) => twrap(c.value || '', 10, sizes[i] - 6));
-      const labs = cells.map((c, i) => twrap(c.label || '', 7.5, sizes[i] - 4));
-      const lh = Math.max(...labs.map((l) => l.length)) * 8 + 3;
+      const lines = cells.map((c, i) => twrap(c.value || '', 10, sizes[i] - 8));
+      // v1.45: every label on one line (a long one in smaller type), so the boxes in a row line up.
+      const labSize = cells.map((c, i) => { let z = 7.5; while (z > 5.5 && tw(c.label || '', z) > sizes[i] - 4) z -= 0.25; return z; });
+      const labs = cells.map((c) => [c.label || '']);
+      const lh = 11;
       const h = Math.max(minH, lh + 4 + Math.max(...lines.map((l) => l.length)) * 11.5);
       ensure(h);
       let x = M;
@@ -177,7 +179,7 @@
         // v1.44: the value sits in a light grey box under its label (no dotted rule).
         fill(x + 1.5, y - h + 1.5, sizes[i] - 3, h - lh - 2.5, 0.93);
         rect(x, y - h, sizes[i], h, 0.6);
-        labs[i].forEach((l, j) => text(x + 2, y - 7.5 - j * 8, l, 7.5));
+        labs[i].forEach((l, j) => text(x + 2, y - 7.5 - j * 8, l, labSize[i]));
         lines[i].forEach((l, j) => text(x + 4, y - lh - 10 - j * 11.5, l, 10));
         x += sizes[i];
       });
@@ -186,7 +188,7 @@
     const g = (k, w = 1, label) => ({ label: label || labelOf(k), value: val(k), w });
 
     // "LABEL:  value" lines of the officer's report; the value wraps on the right, over a light rule.
-    const LW = 215;
+    const LW = (INNER / 8) * 3; // v1.45: the label column is three grid columns wide
     const labelled = (label, value) => {
       // A value is text, or a list of entries; an entry { head, tail } has its name in bold on a
       // line of its own and the details under it, with a little space between entries (v1.44).
@@ -225,10 +227,11 @@
 
     newPage();
 
-    // ---- the grid: offense and occurrence
+    // ---- the grid (v1.45: every row on the same eight columns, so the lines run straight down)
     if (on('offense')) {
-      grid([g('offense', 3), g('ucr', 1), g('activity', 1.6)]);
-      grid([g('address', 2.6), g('locationType', 1.5), g('locationCode', 0.9), g('date', 1.3), g('time', 0.8), g('beatOccurrence', 0.8, 'Beat of Occ.'), g('beatAssigned', 0.9)]);
+      grid([g('offense', 4), g('ucr', 2), g('activity', 2)]);
+      grid([g('address', 4), g('locationType', 2), g('locationCode', 2)]);
+      grid([g('date', 2), g('time', 2), g('beatOccurrence', 2, 'Beat of Occurrence'), g('beatAssigned', 2)]);
     }
     // ---- victims, offenders and the assignment
     const people = on('people'); const assign = on('assignment');
@@ -237,8 +240,9 @@
       const one = (list) => (list.length === 1 ? list[0].name || '' : list.length ? 'See below' : '');
       const P1 = (k, w, label) => (people ? g(k, w, label) : { label: label || labelOf(k), value: '', w });
       const A1 = (k, w, label) => (assign ? g(k, w, label) : { label: label || labelOf(k), value: '', w });
-      grid([P1('victims', 0.6, 'Victims'), { label: "Victim's Name", value: people ? one(vs) : '', w: 2 }, { label: 'Relation', value: people && vs[0] ? vs[0].relation || '' : '', w: 0.6 }, P1('methodCode', 0.8), A1('method', 1), A1('unit', 0.6, 'Unit'), A1('safeMethod', 0.8), A1('residence', 1.4, 'If Residence / Where')]);
-      grid([P1('offenders', 0.6, 'Offenders'), { label: "Offender's Name", value: people ? one(os) : '', w: 2 }, { label: 'Relation', value: people && os[0] ? os[0].relation || '' : '', w: 0.6 }, P1('arrested', 0.8, 'Num Arrested'), A1('arrestUnit', 1), A1('adults', 0.6), A1('juveniles', 0.8), A1('fire', 0.6), A1('gang', 0.8, 'Gang Related')]);
+      grid([P1('victims', 1, 'Victims'), { label: "Victim's Name", value: people ? one(vs) : '', w: 3 }, { label: 'Relation', value: people && vs[0] ? vs[0].relation || '' : '', w: 1 }, P1('methodCode', 1), A1('method', 1), A1('unit', 1, 'Unit')]);
+      grid([P1('offenders', 1, 'Offenders'), { label: "Offender's Name", value: people ? one(os) : '', w: 3 }, { label: 'Relation', value: people && os[0] ? os[0].relation || '' : '', w: 1 }, P1('arrested', 1, 'Num Arrested'), A1('arrestUnit', 1), A1('safeMethod', 1)]);
+      grid([A1('residence', 4, 'If Residence, Where'), A1('adults', 1), A1('juveniles', 1), A1('fire', 1), A1('gang', 1, 'Gang Related')]);
     }
     // ---- update information, status, how cleared
     if (on('update')) {
@@ -257,7 +261,7 @@
         y -= 15;
       }
       const opts = (k) => RF.FIELDS.find(([key]) => key === k)[3].filter(Boolean);
-      const split = INNER * 0.56;
+      const split = INNER / 2; // v1.45: Status and How Cleared take half each
       const halves = [[M, split, 'Status', 'status'], [M + split, INNER - split, 'How Cleared', 'cleared']];
       rect(M, y - 34, split, 34, 0.6); rect(M + split, y - 34, INNER - split, 34, 0.6);
       for (const [x, w, head, k] of halves) {
@@ -273,10 +277,8 @@
     }
     // ---- event, incident, raid and R.D. numbers
     if (on('numbers')) {
-      ensure(20);
-      line(M, y, PAGE_W - M, y, 1.2);
-      numbersRow(y - 13, true);
-      y -= 19;
+      // v1.45: the four numbers as boxes on the grid, like every other row.
+      grid([{ label: 'Event Number', value: d.eventNumber, w: 2 }, { label: 'Incident Number', value: d.incidentNumber, w: 2 }, { label: 'Raid Number', value: d.raidNumber, w: 2 }, { label: 'R.D. Number', value: d.rdNumber, w: 2 }]);
     }
     // ---- officer's report
     if (on('report')) {

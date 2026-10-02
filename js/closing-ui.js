@@ -110,7 +110,7 @@
       el.addEventListener(f.type === 'select' || f.type === 'yn' ? 'change' : 'input', () => { obj[f.key] = el.value; changed(); if (onChange) onChange(); });
       return el;
     };
-    const fieldset = (obj, fields, onChange) => h('div', { class: 'form-grid arrest-grid' }, fields.map((f) => ui.field(f.label, input(obj, f, onChange), f.type === 'textarea' ? 'span-2' : '')));
+    const fieldset = (obj, fields, onChange, cls = '') => h('div', { class: `form-grid arrest-grid${cls ? ` ${cls}` : ''}` }, fields.map((f) => ui.field(f.label, input(obj, f, onChange), f.type === 'textarea' ? 'span-2' : '')));
     const section = (title, ...kids) => h('section', { class: 'arrest-section' }, h('h3', {}, title), ...kids);
 
     // A list of entries (narcotics, warrants, victims and complainants): a box per entry.
@@ -179,7 +179,7 @@
         const ageOut = h('output', { class: 'arrest-age' });
         const showAge = () => { const n = K().ageOn(a.dob, a.date); ageOut.textContent = n ? `${n} years` : '—'; };
         showAge();
-        const offender = fieldset(a, K().ARRESTEE_FIELDS, showAge);
+        const offender = fieldset(a, K().ARRESTEE_FIELDS, showAge, 'arrest-g-offender');
         offender.insertBefore(ui.field('Age', ageOut), offender.children[6] || null);
         return h('section', { class: 'card arrestee' },
           h('div', { class: 'row' }, h('h2', {}, name), h('div', { class: 'spacer' }),
@@ -191,7 +191,7 @@
             } }, 'Remove Arrestee')),
           section('Report Numbers', (() => { const g = fieldset(a, K().NUMBER_FIELDS); g.classList.add('arrest-numbers'); return g; })()),
           section('Offender', h('div', { class: 'arrest-offender' }, offender, photoPicker(a))),
-          section('Incident', fieldset(a, K().INCIDENT_FIELDS, showAge)),
+          section('Incident', fieldset(a, K().INCIDENT_FIELDS, showAge, 'arrest-g-incident')),
           section('Charges',
             h('div', { class: 'table-scroll' }, h('table', { class: 'files charges-table' },
               h('thead', {}, h('tr', {}, K().CHARGE_FIELDS.map((f) => h('th', {}, f.label)), h('th', {}, ''))), charges)),
@@ -207,11 +207,11 @@
           section('Recovered Narcotics', listEditor(a, 'narcotics', 'No narcotics recovered.', '+ Add Narcotic')),
           section('Warrant', listEditor(a, 'warrants', 'No warrant identified.', '+ Add Warrant')),
           section('Victim and Complainant', listEditor(a, 'nonOffenders', 'None added.', '+ Add Victim or Complainant')),
-          section('Arrestee Vehicle', fieldset(a, K().VEHICLE_FIELDS)),
+          section('Arrestee Vehicle', fieldset(a, K().VEHICLE_FIELDS, null, 'arrest-g-4')),
           section('Properties', fieldset(a, [{ key: 'property', label: 'Confiscated properties: inventory numbers and description', type: 'textarea' }])),
           section('Incident Narrative', fieldset(a, [{ key: 'narrative', label: 'The facts for probable cause to arrest and to support the charges', type: 'textarea' }])),
-          section('Court and Bond', fieldset(a, [...K().COURT_FIELDS, ...K().BOND_FIELDS])),
-          section('Reporting Personnel', fieldset(a, K().PERSONNEL_FIELDS)));
+          section('Court and Bond', fieldset(a, [...K().COURT_FIELDS, ...K().BOND_FIELDS], null, 'arrest-g-court')),
+          section('Reporting Personnel', fieldset(a, K().PERSONNEL_FIELDS, null, 'arrest-g-personnel')));
       }));
     };
     draw();

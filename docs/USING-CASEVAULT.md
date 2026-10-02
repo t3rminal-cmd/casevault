@@ -199,6 +199,23 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.45
+
+- **Supplementary Report PDF**: same sections and order, laid out more neatly.
+  - Every row of boxes sits on the same eight columns, so the lines run straight down the page.
+  - Each label fits on one line.
+  - Status and How Cleared take half the width each.
+  - The Event, Incident, Raid and R.D. numbers are four equal boxes.
+  - The officer's report labels are all one width, so the grey boxes start in the same place.
+- **Arrest Report PDF**: every value is now in a light grey box.
+  - Within each section the labels share one width, so the boxes line up.
+  - Incident, Arrestee Vehicle, Court Info and Bond Info have two columns of the same width.
+  - Charges, Recovered Narcotics and Warrants are grey rows on fixed columns.
+  - The narrative and the properties sit on a grey background.
+- **Draft tab and Arrest Details tab**: the entry boxes are more compact (tighter rows, shorter boxes).
+  - On the Draft tab, Status and How Cleared fill a row together; Veteran shares a row with Tattoos / Scars; and a charge's Statute shares a row with its description.
+  - On Arrest Details, every section uses four columns, and the arrestee's photo is the fourth column beside the offender's details. No box is left alone on a row.
+
 ### What's new in v1.44
 
 - **PDFs:** times print as military time without the colon (**1435**), in both reports and in the report text. On the Supplementary Report every value sits in a light grey box (no dotted lines). Each offender, victim, officer or person present has their name in bold on its own line, with the details under it. The officer's report lines come in blocks with a little space between them: who; the court and the warrant; who else was there; the evidence and the money; the record numbers; vehicles and notifications. The layout is the same as v1.43.
