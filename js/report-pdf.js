@@ -2,7 +2,7 @@
  * to case files, Email for E-Sign).
  *
  * v1.43: laid out like a narcotics division supplementary report form, in Times: the title and
- * the agency report number box, a ruled grid with small labels (offense, occurrence, victims,
+ * the R.D. Number box, a ruled grid with small labels (offense, occurrence, victims,
  * offenders, assignment), Update Information tick boxes, Status and How Cleared with a round mark
  * under each choice, the event / incident / raid / R.D. numbers, the officer's report as
  * "LABEL:" lines (lists one entry a line), the summary of investigation, and the signature table.
@@ -137,13 +137,13 @@
       pages.push({ ops, sigs, imgs: [], signed: false });
       y = PAGE_H - M;
       if (pages.length === 1) {
-        // Title on the left, the agency under it; the agency report number in a box on the right.
+        // Title on the left, the agency under it; the R.D. Number in a box on the right (v1.48).
         text(M, y - 14, title, 14, true);
         if (agency) text(M, y - 25, agency.toUpperCase(), 7.5, true);
         const bw = (INNER / 8) * 2;
         rect(PAGE_W - M - bw, y - 30, bw, 30, 0.9);
-        text(PAGE_W - M - bw + 3, y - 8, 'Agency Report Number', 7);
-        if (on('numbers') && d.caseNumber) text(PAGE_W - M - bw + 6, y - 23, d.caseNumber, 11, true);
+        text(PAGE_W - M - bw + 3, y - 8, 'R.D. Number', 7);
+        if (on('numbers') && d.rdNumber) text(PAGE_W - M - bw + 6, y - 23, d.rdNumber, 11, true);
         y -= 36;
       } else {
         numbersRow(y - 10, false);
@@ -268,7 +268,7 @@
         center(x, w, y - 9.5, head, 8.5, true);
         const list = opts(k); const cw = w / list.length;
         list.forEach((o, i) => {
-          const lab = o.replace(/ - /, '-');
+          const lab = RF.shortCode(o).replace(/ - /, '-'); // v1.48: the form's short codes
           center(x + i * cw, cw, y - 20, lab, 7.5);
           circle(x + i * cw + cw / 2, y - 28, 3, d[k] === o);
         });
@@ -278,7 +278,8 @@
     // ---- event, incident, raid and R.D. numbers
     if (on('numbers')) {
       // v1.45: the four numbers as boxes on the grid, like every other row.
-      grid([{ label: 'Event Number', value: d.eventNumber, w: 2 }, { label: 'Incident Number', value: d.incidentNumber, w: 2 }, { label: 'Raid Number', value: d.raidNumber, w: 2 }, { label: 'R.D. Number', value: d.rdNumber, w: 2 }]);
+      // v1.48: the R.D. Number is in the box at the top; the other three share the row.
+      grid([{ label: 'Event Number', value: d.eventNumber }, { label: 'Incident Number', value: d.incidentNumber }, { label: 'Raid Number', value: d.raidNumber }]);
     }
     // ---- officer's report
     if (on('report')) {

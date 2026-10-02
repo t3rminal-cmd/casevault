@@ -109,7 +109,7 @@
   const pdfPathOf = (c, title) => CVCaseFiles.joinPath('Supplementary Report', FS.safeName(CVCaseFiles.fileName(c, 'Supplementary Report', `${title}.pdf`, title)));
   const hasEntries = (d) => {
     const x = F().normalize(d);
-    return F().FIELDS.some(([k, , kind]) => k !== 'caseNumber' && (kind === 'check' ? !!x[k] : String(x[k] || '').trim()))
+    return F().FIELDS.some(([k, , kind]) => k !== 'rdNumber' && (kind === 'check' ? !!x[k] : String(x[k] || '').trim()))
       || Object.keys(F().LISTS).some((k) => x[k].some(F().filled)) || x.evidence.length > 0 || !!String(x.narrative || '').trim();
   };
   /** Send Back to Draft (v1.39): the report's form goes back on the Draft tab. Asks first when the
@@ -170,7 +170,7 @@
     const { h, state, Save, toast, go } = ui;
     const data = await load(c);
     if (token !== state.renderToken) return;
-    if (!data.caseNumber && (c.agencyNumber || c.number)) data.caseNumber = c.agencyNumber || c.number; // Agency Report Number
+    if (!data.rdNumber && c.number) data.rdNumber = c.number; // v1.48: the R.D. Number starts as the Case Number
     const archived = Vault.isArchived(c.id);
     const key = `report-fields:${c.id}`;
     const save = (delay = 700) => {
@@ -298,6 +298,16 @@
               };
               drawMulti();
               inputs[k] = holder;
+              // v1.48: the phone numbers start folded away; Show Phone Numbers opens them.
+              if (kind === 'phones') {
+                holder.hidden = true;
+                const count = () => it[k].filter((x) => String(x || '').trim()).length;
+                const tog = h('button', { class: 'btn small rf-phones-toggle', type: 'button', 'data-ro-ok': 'true', 'aria-expanded': 'false' });
+                const drawTog = () => { tog.textContent = holder.hidden ? `Show Phone Numbers${count() ? ` (${count()})` : ''}` : 'Hide Phone Numbers'; tog.setAttribute('aria-expanded', String(!holder.hidden)); };
+                tog.addEventListener('click', () => { holder.hidden = !holder.hidden; drawTog(); });
+                drawTog();
+                return h('div', { class: 'field rf-wide rf-phones' }, tog, holder);
+              }
               return ui.field(label, holder, 'rf-wide');
             }
             // Height in feet and inches, weight in pounds; for an unknown offender, from–to (v1.25).
@@ -625,11 +635,13 @@
           let snap = null;
           try { snap = await Vault.readCaseJSON(c.id, formFile(slug)); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
           const prevBase = snap ? F().titleFor(F().normalize(snap)) : prevTitle;
-          if (prevBase !== want) {
+          // v1.48: every report sent is its own, so sending again always asks (New Report first):
+          // the UCO's and the surveillance officer's reports of one buy can both be Purchase.
+          {
             const choice = await ui.openDialog((close) => h('form', { class: 'send-choice', onsubmit: (e) => { e.preventDefault(); close('new'); } },
               h('h2', {}, 'Make a new report?'),
-              h('p', {}, `This draft was sent as ${prevTitle}. It's now ${want}.`),
-              h('p', { class: 'muted small' }, `New Report keeps ${prevTitle} as it was sent and adds ${want} under Reports and Files. Update replaces ${prevTitle}.`),
+              h('p', {}, prevBase !== want ? `This draft was sent as ${prevTitle}. It's now ${want}.` : `This draft was already sent as ${prevTitle}.`),
+              h('p', { class: 'muted small' }, `New Report keeps ${prevTitle} exactly as it was sent (its sections, evidence and PDF) and adds ${want} under Reports and Files. Update replaces ${prevTitle}.`),
               h('div', { class: 'dialog-actions' },
                 h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
                 h('button', { class: 'btn', type: 'button', onclick: () => close('update') }, `Update ${prevTitle}`),
@@ -668,7 +680,7 @@
       const fresh = F().normalize({});
       for (const k of Object.keys(data)) delete data[k];
       Object.assign(data, fresh);
-      if (c.agencyNumber || c.number) data.caseNumber = c.agencyNumber || c.number;
+      if (c.number) data.rdNumber = c.number;
       data.sentSlug = '';
       save(0);
       await Save.flushAll();
@@ -691,6 +703,52 @@
       part('evidence', 'Evidence Inventoried', 'box-seam', evRows, archived ? null : h('div', { class: 'contact-add rf-evidence-add' }, addExhibit, numbering)),
       part('summary', 'Summary of Investigation', 'journal-text', fmt, rich.el, narrative),
       sections[sections.length - 1]); // Submission and Approval comes last, as on the printed report
+    // v1.48: every field is one grey box with its label inside; an empty box shows the label as its
+    // placeholder, and the label moves to the top of the box once there is a value.
+    labelsInside(panel);
+    requestAnimationFrame(() => fitPlaceholders(panel));
+    new MutationObserver(() => { labelsInside(panel); requestAnimationFrame(() => fitPlaceholders(panel)); }).observe(panel, { childList: true, subtree: true });
+  }
+
+  // A label that doesn't fit its box as a placeholder stays on top instead (no cut-off words).
+  let measureCtx = null;
+  function fitPlaceholders(root) {
+    measureCtx = measureCtx || document.createElement('canvas').getContext('2d');
+    for (const f of root.querySelectorAll('.rf-section .field.rf-boxed')) {
+      const inp = f.querySelector(':scope > input:not([type=checkbox]), :scope > textarea, :scope > .combo > input, :scope > select');
+      if (!inp || !inp.offsetWidth) continue;
+      const cs = getComputedStyle(inp);
+      measureCtx.font = `500 ${cs.fontSize} ${cs.fontFamily}`;
+      if (inp.tagName !== 'SELECT' && inp.placeholder && !inp.dataset.label) inp.dataset.label = inp.placeholder;
+      const text = inp.tagName === 'SELECT' ? '' : (inp.dataset.label || '');
+      const room = inp.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (inp.closest('.combo') || inp.tagName === 'SELECT' ? 30 : 4);
+      const lab = inp.tagName === 'SELECT' ? (inp.dataset.label || '') : text;
+      const long = !!lab && measureCtx.measureText(lab).width + 8 > room;
+      f.classList.toggle('rf-ph-long', long);
+      // Too long: no placeholder at all, the label stays on top; else the label is the placeholder.
+      if (inp.tagName !== 'SELECT' && f.classList.contains('rf-ph') && inp.dataset.label) inp.placeholder = long ? '' : inp.dataset.label;
+      // A list too narrow for its label shows the label on top and a dash as its empty choice.
+      if (inp.tagName === 'SELECT' && inp.dataset.label && inp.options[0]) inp.options[0].textContent = long ? '—' : inp.dataset.label;
+    }
+  }
+  window.addEventListener('resize', () => { const r = document.querySelector('.tab-panel'); if (r) fitPlaceholders(r); });
+
+  const WIDGETS = ['date-field', 'time-field', 'combo', 'rf-measure', 'rf-with-btn', 'rf-multi'];
+  function labelsInside(root) {
+    for (const f of root.querySelectorAll('.rf-section .field:not(.check-row):not(.rf-boxed)')) {
+      const lab = [...f.children].find((el) => el.tagName === 'SPAN' && !WIDGETS.some((w) => el.classList.contains(w)));
+      f.classList.add('rf-boxed');
+      if (!lab) continue;
+      lab.classList.add('rf-lab');
+      const text = lab.textContent.trim();
+      // Text boxes (also inside a searchable list) take the label as their placeholder.
+      for (const inp of f.querySelectorAll(':scope > input:not([type=checkbox]):not(.rf-num), :scope > textarea, :scope > .combo > input')) {
+        if (!inp.placeholder) { inp.placeholder = text; f.classList.add('rf-ph'); }
+      }
+      // A list's empty choice reads as the label.
+      const sel = f.querySelector(':scope > select');
+      if (sel && sel.options[0] && sel.options[0].value === '') { sel.options[0].textContent = text; sel.dataset.label = text; f.classList.add('rf-ph'); }
+    }
   }
   const headingOf = (d) => F().titleFor(d);
 

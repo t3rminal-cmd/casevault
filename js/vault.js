@@ -24,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.47.0';
+  const APP_VERSION = '1.48.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -80,7 +80,7 @@ const Vault = (() => {
       vaultId: crypto.randomUUID(),
       created: nowISO(),
       updated: nowISO(),
-      settings: { ...DEFAULT_SETTINGS },
+      settings: { ...DEFAULT_SETTINGS, templatesTrimmed: true },
       cases: [],
       operations: [],
       operationsVersion: OPERATIONS_VERSION,
@@ -1240,9 +1240,29 @@ const Vault = (() => {
     }
   }
 
+  /** v1.48, once per vault: only the DEA 6 sample stays under Templates. The others are moved (not
+   * deleted) to templates\removed-v1.48, where they can be taken back from. */
+  async function trimTemplates(dir) {
+    if (!vault || vault.settings.templatesTrimmed) return;
+    const moved = [];
+    for (const e of await FS.list(dir)) {
+      if (e.kind !== 'file' || !/\.md$/i.test(e.name)) continue;
+      const text = await FS.readText(dir, e.name);
+      if (CVDraft.docTypeOf(`${e.name} ${CVDraft.templateTitle(text, e.name)}`) === 'dea6') continue;
+      const keep = await FS.getDir(dir, 'removed-v1.48', true);
+      await FS.writeText(keep, await FS.uniqueName(keep, e.name), text);
+      await FS.remove(dir, e.name);
+      moved.push(e.name);
+    }
+    vault.settings.templatesTrimmed = true;
+    await saveVault();
+    return moved;
+  }
+
   async function listTemplates() {
     const dir = await templatesDir();
     await removeRetiredTemplates(dir);
+    await trimTemplates(dir).catch((err) => { if (FS.isDisconnectError(err)) throw err; console.warn('Could not tidy the templates', err); });
     const out = [];
     for (const e of await FS.list(dir)) {
       if (e.kind !== 'file' || !/\.md$/i.test(e.name)) continue;

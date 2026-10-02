@@ -15,6 +15,14 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.48)
+
+- Supplementary Report PDF: the R.D. Number in the top box
+- Draft tab: each field in its own grey box with the label inside (the placeholder when empty), section headers in capitals, phone numbers folded away at first, Status and How Cleared spelled out (short codes stay on the PDF)
+- Square drop-down lists (Chrome and Edge)
+- Each report sent from the Draft tab is its own: sending again asks New Report (default) or Update
+- Templates: only the DEA 6 sample stays (the others move to templates\removed-v1.48); the DEA 6 type is called DEA Style
+
 ## Features (v1.47)
 
 - Overview: **General Files** between Operations and Recently Updated, one amber folder per year (newest first) for the cases not in an Operation; General Files folders are amber everywhere, Operations stay blue

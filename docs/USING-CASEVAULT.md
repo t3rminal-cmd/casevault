@@ -213,6 +213,21 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.48
+
+- **Supplementary Report PDF:** the box at the top right is the **R.D. Number**. Event, Incident and Raid Number share the row under it. A form saved before keeps the number from that box as its R.D. Number. On the Draft tab the R.D. Number starts as the case's Case Number.
+- **Draft tab:**
+  - Every field is its own grey box with its label inside it. An empty box shows its label as the placeholder; once there is a value, the label sits small at the top of the box. A label too long to fit as a placeholder stays at the top, in full.
+  - The section headers are in capitals.
+  - An offender's phone numbers start folded away: **Show Phone Numbers** (with how many there are) opens them.
+  - **Status** and **How Cleared** are spelled out (0 - In Progress, 3 - Cleared Closed, 3 - Referred for Prosecution…). Forms saved before read the same. The PDF keeps the short codes in its row of circles, as on the printed form.
+- **Square drop-down lists** everywhere in Chrome and Edge: the list that opens under a box such as Status no longer has rounded corners.
+- **Every report you send is its own:** sending the Draft tab again always asks **New Report** (the default) or **Update**. New Report leaves the report sent before exactly as it was, with its own sections, evidence and PDF. For example, a Purchase report without Evidence Inventoried and then a Surveillance report with it, or two Purchase reports (the UCO's and the surveillance officer's).
+- **Templates:**
+  - Only your DEA 6 sample stays. The first time v1.48 opens your vault, every other template is moved, not deleted, to `CaseVault-Data\templates\removed-v1.48`. Copy one back to `templates` to use it again.
+  - There are no built-in starter templates.
+  - The DEA 6 document type is now called **DEA Style**.
+
 ### What's new in v1.47
 
 - **Overview:** a new **General Files** section sits between Operations and Recently Updated. It has a folder for each year (newest first) holding the cases that aren't in an Operation, filed by the year they were opened. Click a year to see its cases, each with Details, Reports and Files. **All Cases** opens the General Files page. The Operations section now holds only Operations.

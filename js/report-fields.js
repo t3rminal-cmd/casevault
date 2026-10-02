@@ -28,11 +28,11 @@
   // location, check (a tick box), line (a long one-line entry, label on the left).
   const SECTIONS = [
     { id: 'numbers', title: 'Case Numbers', icon: 'hash', fields: [
-      ['caseNumber', 'Agency Report Number', 'text'],
+      // v1.48: the R.D. Number is the report's number (the Agency Report Number box is gone).
+      ['rdNumber', 'R.D. Number', 'text'],
       ['eventNumber', 'Event Number', 'text'],
       ['incidentNumber', 'Incident Number', 'text'],
       ['raidNumber', 'Raid Number', 'text'],
-      ['rdNumber', 'R.D. Number', 'text'],
       ['activity', 'Officer Report Type', 'select', ['', 'Investigation', 'Purchase', 'Surveillance', 'Correction']],
     ] },
     { id: 'offense', title: 'Offense', icon: 'file-earmark-text', fields: [
@@ -72,8 +72,9 @@
       ['offenderUpdated', 'Offender Updated', 'check'],
       ['propertyUpdated', 'Property Updated', 'check'],
       ['circumstancesUpdated', 'Circumstances Updated', 'check'],
-      ['status', 'Status', 'select', ['', '0 - Prog', '1 - Sus', '2 - Unf', '3 - C/C', '4 - C/O', '5 - C/C/X', '6 - C/O/X', '7 - C/N/C']],
-      ['cleared', 'How Cleared', 'select', ['', '1 - Arrest', '2 - Juv-Ct', '3 - Ref Pros', '4 - Comm Adj', '5 - Other']],
+      // v1.48: spelled out (the codes saved before still read, see SPELLED).
+      ['status', 'Status', 'select', ['', '0 - In Progress', '1 - Suspended', '2 - Unfounded', '3 - Cleared Closed', '4 - Cleared Open', '5 - Cleared Closed Exceptionally', '6 - Cleared Open Exceptionally', '7 - Closed, Non-Criminal']],
+      ['cleared', 'How Cleared', 'select', ['', '1 - Arrest', '2 - Juvenile Court', '3 - Referred for Prosecution', '4 - Community Adjustment', '5 - Other']],
     ] },
     { id: 'report', title: "Officer's Report", icon: 'card-checklist', fields: [
       // v1.31: in this order; AUSA, IR and CB numbers added.
@@ -144,6 +145,14 @@
     const parts = [hide('courtBranch') ? '' : show('courtBranch', d.courtBranch), hide('courtDate') ? '' : show('courtDate', d.courtDate)].filter(Boolean);
     return [hide('courtBranch') ? 'Court Date' : 'Court Branch and Court Officer', parts.join(', ')];
   };
+  /** The short Status and How Cleared codes used before v1.48, spelled out. */
+  const SPELLED = {
+    '0 - Prog': '0 - In Progress', '1 - Sus': '1 - Suspended', '2 - Unf': '2 - Unfounded', '3 - C/C': '3 - Cleared Closed', '4 - C/O': '4 - Cleared Open',
+    '5 - C/C/X': '5 - Cleared Closed Exceptionally', '6 - C/O/X': '6 - Cleared Open Exceptionally', '7 - C/N/C': '7 - Closed, Non-Criminal',
+    '2 - Juv-Ct': '2 - Juvenile Court', '3 - Ref Pros': '3 - Referred for Prosecution', '4 - Comm Adj': '4 - Community Adjustment',
+  };
+  /** The short code of a spelled-out Status or How Cleared, for the PDF's row of circles. */
+  const shortCode = (v) => Object.keys(SPELLED).find((k) => SPELLED[k] === v) || v;
   // Units the narcotic calculator prices by (js/reference).
   const NARCOTIC_UNITS = ['', 'gram', 'ounce', 'pound', 'kilogram', 'pill', 'mL'];
   const LISTS = {
@@ -217,6 +226,12 @@
     for (const o of d.offendersList) { o.unknown = !!o.unknown; if (o.unknown && !String(o.name || '').trim()) o.name = UNKNOWN; }
     for (const k of ['victimName', 'victimRelation', 'victimDetails', 'offenderName', 'offenderRelation', 'offenderDetails', 'gangAffiliation', 'vehicle', 'impound', 'lieutenant', 'lieutenantStar', 'totalWeight', 'streetValue', 'purchasePrice']) delete d[k];
     d.hidden = Array.isArray(d.hidden) ? d.hidden.filter((x) => typeof x === 'string') : [];
+    // v1.48: Status and How Cleared spelled out.
+    if (SPELLED[d.status]) d.status = SPELLED[d.status];
+    if (SPELLED[d.cleared]) d.cleared = SPELLED[d.cleared];
+    // v1.48: a form saved with only the old Agency Report Number keeps it as the R.D. Number.
+    if (!String(d.rdNumber || '').trim() && old('caseNumber')) d.rdNumber = old('caseNumber');
+    delete d.caseNumber;
     d.schema = 4;
     return d;
   }
@@ -426,7 +441,7 @@
         items.map((it, i) => [String(i + 1), ...L.fields.filter(([k]) => !(key === 'narcotics' && k === 'unit')).map(([k, , kind]) => valueText(key, it, k, kind))]));
     };
 
-    if (on('numbers')) { row(['caseNumber', 'eventNumber', 'incidentNumber', 'raidNumber', 'rdNumber']); row(['activity']); }
+    if (on('numbers')) { row(['rdNumber', 'eventNumber', 'incidentNumber', 'raidNumber']); row(['activity']); }
     if (on('offense')) {
       band('Offense');
       row(['offense', 'ucr']); row(['address', 'locationType', 'locationCode']); row(['date', 'time', 'beatOccurrence', 'beatAssigned']);
@@ -482,7 +497,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { MULTI, SOCIAL_APPS, STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

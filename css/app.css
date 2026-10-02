@@ -2811,3 +2811,58 @@ table.data-table .empty-cell { text-align: center; padding: 1.4rem; }
 .year-tile .op-folder-count { border-color: var(--gf); color: var(--gf); }
 .op-group.general-group { border-left-color: var(--gf); }
 .closed-cases .op-group.general-group, .archived-cases .op-group.general-group { border-left-color: var(--muted); }
+
+/* v1.48: the list that drops down from a select is square too (Chrome and Edge draw it themselves
+   once the select uses appearance: base-select; other browsers keep their own list). */
+@supports (appearance: base-select) {
+  select:not([multiple]):not([size]), select::picker(select) { -webkit-appearance: base-select; appearance: base-select; }
+  select { display: inline-flex; align-items: center; }
+  select::picker-icon { display: none; }
+  select::picker(select) { border-radius: 0; border: 1px solid var(--border); background: var(--surface); color: var(--text); padding: 0; box-shadow: var(--shadow); max-height: 22rem; }
+  select option { padding: .35rem .7rem; min-height: 1.9rem; border-radius: 0; }
+  select option::checkmark { display: none; }
+  select option:checked { background: var(--accent-soft); font-weight: 600; }
+  select option:hover, select option:focus-visible { background: var(--surface-2); outline: none; }
+}
+
+/* v1.48: the Draft tab: each field is its own grey box with its label inside it, and the section
+   headers in capitals. An empty text box or list shows the label as its placeholder; with a value,
+   the label sits small at the top of the box. */
+.rf-section { --rf-box: color-mix(in srgb, var(--surface-2) 70%, var(--surface)); }
+.rf-section .rf-head h3 { text-transform: uppercase; letter-spacing: .04em; }
+.rf-section .rf-head h3::after { text-transform: none; letter-spacing: normal; }
+.rf-section .field.rf-boxed { background: var(--rf-box); border: 1px solid transparent; padding: .28rem .55rem .3rem; gap: .05rem; min-width: 0; }
+.rf-section .field.rf-boxed:focus-within { border-color: var(--accent); }
+.rf-section .field.rf-boxed > .rf-lab { font-size: .68rem; line-height: 1.2; font-weight: 600; color: var(--muted); text-transform: none; }
+.rf-section .field.rf-boxed input:not([type=checkbox]):not([type=radio]), .rf-section .field.rf-boxed select, .rf-section .field.rf-boxed textarea {
+  background: transparent; border: 0; box-shadow: none; padding: .12rem 0; min-height: 1.6rem; }
+.rf-section .field.rf-boxed input:focus, .rf-section .field.rf-boxed select:focus, .rf-section .field.rf-boxed textarea:focus { outline: none; }
+.rf-section .field.rf-boxed .rf-measure input.rf-num { background: var(--surface); padding: .12rem .35rem; }
+.rf-section .field.rf-boxed .combo-toggle { background: transparent; border-left: 0; }
+.rf-section .field.rf-boxed ::placeholder { color: var(--muted); opacity: 1; font-weight: 500; }
+/* Empty: no label on top, the placeholder (or the list's first choice) says what goes there. */
+.rf-section .field.rf-ph:has(> input:placeholder-shown:not(:focus)) > .rf-lab,
+.rf-section .field.rf-ph:has(> textarea:placeholder-shown:not(:focus)) > .rf-lab,
+.rf-section .field.rf-ph:has(> .combo > input:placeholder-shown:not(:focus)) > .rf-lab,
+.rf-section .field.rf-ph:has(> select option[value=""]:checked) > .rf-lab { display: none; }
+.rf-section .field.rf-ph > input:placeholder-shown:not(:focus), .rf-section .field.rf-ph > textarea:placeholder-shown:not(:focus),
+.rf-section .field.rf-ph > .combo > input:placeholder-shown:not(:focus), .rf-section .field.rf-ph:has(> select option[value=""]:checked) > select { padding-top: .53rem; padding-bottom: .54rem; }
+.rf-section .field.rf-ph:has(> select option[value=""]:checked) > select { color: var(--muted); font-weight: 500; }
+/* The Officer's Report lines: tick box, then the box. */
+.rf-lines > .field.rf-boxed { grid-template-columns: 1.2rem minmax(0, 1fr); gap: 0 .5rem; padding-left: .55rem; align-items: center; }
+.rf-lines > .field.rf-boxed > .rf-lab { grid-column: 2; text-transform: uppercase; font-size: .66rem; }
+.rf-lines > .field.rf-boxed > :not(input[type=checkbox]):not(.rf-lab) { grid-column: 2; }
+.rf-lines > .field.rf-boxed > input[type=checkbox] { grid-row: 1 / span 2; }
+.rf-lines > .field.rf-boxed.rf-ph:has(> input:placeholder-shown:not(:focus)) > input[type=checkbox],
+.rf-lines > .field.rf-boxed.rf-ph:has(> .combo > input:placeholder-shown:not(:focus)) > input[type=checkbox] { grid-row: 1; }
+.rf-lines > .field.rf-boxed:not(.rf-optional) { padding-left: .55rem; }
+.rf-lines > .field.rf-boxed:not(.rf-optional) > :first-child { grid-column: 2; }
+.rf-section .rf-item { background: var(--surface); }
+.rf-section .field.rf-boxed .date-field, .rf-section .field.rf-boxed .time-field, .rf-section .field.rf-boxed .date-field > input, .rf-section .field.rf-boxed .time-field > input { background: transparent; border: 0; box-shadow: none; }
+.rf-section .field.rf-boxed .date-field button, .rf-section .field.rf-boxed .time-field button { background: transparent; border: 0; }
+/* A label too long to fit as a placeholder stays on top, in full. */
+.rf-section .field.rf-ph.rf-ph-long > .rf-lab { display: block !important; }
+.rf-section .field.rf-ph.rf-ph-long > input, .rf-section .field.rf-ph.rf-ph-long > .combo > input, .rf-section .field.rf-ph.rf-ph-long > select { padding-top: .12rem !important; padding-bottom: .12rem !important; }
+.rf-section .field.rf-ph.rf-ph-long ::placeholder { color: transparent; }
+.rf-section .rf-phones { display: flex; flex-direction: column; align-items: flex-start; gap: .4rem; }
+.rf-section .rf-phones > .rf-multi { align-self: stretch; }

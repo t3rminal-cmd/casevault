@@ -32,8 +32,8 @@
     // Picking a template suggests the matching document type (affidavit, subpoena, ...).
     const guessType = () => {
       const name = `${tplSelect.value} ${(templates.find((t) => t.file === tplSelect.value) || {}).title || ''}`.toLowerCase();
-      const hit = Object.keys(CVDraft.DOC_TYPES).find((k) => k !== 'other' && name.includes(k));
-      if (hit) type.value = hit;
+      const hit = CVDraft.docTypeOf(name); // v1.48: "DEA 6 sample" is DEA Style
+      if (hit !== 'other') type.value = hit;
     };
     tplSelect.addEventListener('change', guessType);
     // How to start: a dropdown (Blank, Template, Draft with AI). The template list shows under it
@@ -43,7 +43,7 @@
     const aiNote = h('span', { class: 'muted small block' });
     const tplRow = h('div', { class: 'start-template', hidden: true }, templates.length
       ? tplSelect
-      : h('span', { class: 'muted small block' }, 'No templates yet. ', h('button', { class: 'linkish', type: 'button', onclick: addStarters }, 'Add the starter templates'), ' or manage them under Vault → Templates.'));
+      : h('span', { class: 'muted small block' }, 'No templates yet. Add or import one under Vault → Templates.'));
     const startBox = h('div', { class: 'start-box' }, startSel, tplRow, aiNote);
     function drawStart() {
       const ready = aiReady();
@@ -60,13 +60,6 @@
     startSel.addEventListener('change', drawStart);
     drawStart();
 
-    async function addStarters() {
-      try {
-        const added = await Save.track('templates', () => Vault.addStarterTemplates());
-        toast(`Added ${added.length} starter template${added.length === 1 ? '' : 's'} to CaseVault-Data\\templates.`, 'success');
-        ui.refresh();
-      } catch { /* reported by Save */ }
-    }
 
     // New ▾ (v1.31): Notes opens the Field Notes; Report asks for a title, type and how to start.
     let closeNew = null;
@@ -966,7 +959,7 @@
         const caseObj = await Vault.getCase(id);
         const text = CVDraft.fillTemplate(await Vault.readTemplate(t.file), CVDraft.templateContext(caseObj, new Date(), Vault.data.settings.affiant, await CVClosingUI.templateExtra(caseObj)));
         const name = t.title;
-        const hit = Object.keys(CVDraft.DOC_TYPES).find((k) => k !== 'other' && `${t.file} ${t.title}`.toLowerCase().includes(k)) || 'other';
+        const hit = CVDraft.docTypeOf(`${t.file} ${t.title}`);
         const slug = await Vault.newDraftSlug(id, name);
         await Save.track(`draft:${id}:${slug}`, () => Vault.saveDraft(id, slug, { title: name, type: hit, ai: false, created: new Date().toISOString(), template: t.file }, text));
         const d = document.getElementById('dialog');
@@ -1055,9 +1048,6 @@
       h('div', { class: 'row template-actions' },
         h('button', { class: 'btn small', type: 'button', onclick: () => edit('', '# New template\n\nCase No. {{case.number}}\n') }, 'New template'),
         h('button', { class: 'btn small', type: 'button', onclick: () => importInput.click() }, 'Import Word, .md or .txt…'),
-        h('button', { class: 'btn small', type: 'button', onclick: async () => {
-          try { const added = await Save.track('templates', () => Vault.addStarterTemplates()); toast(added.length ? `Added ${added.length} starter template${added.length === 1 ? '' : 's'}.` : 'The starter templates are already there.', 'success'); draw(); } catch { /* reported */ }
-        } }, 'Add starter templates'),
         importInput),
       editor);
   }

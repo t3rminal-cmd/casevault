@@ -55,7 +55,7 @@ test('Library, behavior and reference text reach the AI in their places, within 
   const order = ['## Directives to follow', '## Writing examples', '## Reference material'].map((hd) => user.content.indexOf(hd));
   assert.ok(order.every((x) => x > 0) && order[0] < order[1] && order[1] < order[2], 'directives, then examples, then references');
   assert.match(user.content, /### DEA-6 sample\nDETAILS/);
-  assert.match(user.content, /Write a first draft of: DEA 6\./);
+  assert.match(user.content, /Write a first draft of: DEA Style\./);
   const huge = CP.draftMessages({ examples: [{ title: 'A', text: 'x'.repeat(90000) }, { title: 'B', text: 'y'.repeat(90000) }], numCtx: 4096 })[1].content;
   assert.ok(huge.length < 12000, `library text is capped (${huge.length})`);
   assert.ok(huge.includes('### A') && huge.includes('### B'), 'both examples get a share');
