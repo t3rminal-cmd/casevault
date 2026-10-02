@@ -1367,6 +1367,43 @@
     }
   }
 
+  /* v1.54: fold a section away with the button in its heading (▾ / ▸). Which ones are folded is a
+   * screen preference of this PC (localStorage), never case data. */
+  const FOLD_STORE = 'casevault-folded-sections';
+  const foldedSet = () => { try { return new Set(JSON.parse(localStorage.getItem(FOLD_STORE) || '[]')); } catch { return new Set(); } };
+  function makeFoldable(section, key, { open: startOpen = true } = {}) {
+    const head = section.querySelector(':scope > h3');
+    if (!head || section.querySelector(':scope > .fold-body')) return section;
+    const body = h('div', { class: 'fold-body' });
+    for (const n of [...section.childNodes]) if (n !== head) body.append(n);
+    const btn = h('button', { class: 'icon-btn fold-btn', type: 'button' });
+    const row = h('div', { class: 'fold-head' });
+    head.replaceWith(row);
+    row.append(head, h('div', { class: 'spacer' }), btn);
+    section.append(body);
+    section.classList.add('foldable');
+    const set = foldedSet();
+    let folded = set.has(key) || (!startOpen && !set.has(`open:${key}`));
+    const show = () => {
+      body.hidden = folded;
+      section.classList.toggle('folded', folded);
+      const label = `${folded ? 'Show' : 'Hide'} ${head.textContent.trim()}`;
+      btn.title = label; btn.setAttribute('aria-expanded', String(!folded));
+      btn.replaceChildren(I(folded ? 'chevron-right' : 'chevron-down'), h('span', { class: 'sr-only' }, label));
+    };
+    btn.addEventListener('click', () => {
+      folded = !folded;
+      const st = foldedSet();
+      st.delete(key); st.delete(`open:${key}`);
+      if (folded && startOpen) st.add(key);
+      if (!folded && !startOpen) st.add(`open:${key}`);
+      try { localStorage.setItem(FOLD_STORE, JSON.stringify([...st])); } catch { /* this visit only */ }
+      show();
+    });
+    show();
+    return section;
+  }
+
   /** A labelled box. tip: the explanation, shown in the hover box (no brackets in labels). */
   function field(label, input, cls = '', tip = '') {
     return h('label', { class: `field ${cls}`, title: tip || null }, h('span', {}, label), input);
@@ -1598,14 +1635,14 @@
         h('p', { class: 'muted span-2 small' },
           `Folder: ${CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}`)}`
           + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),
-      partnersSection(c, save),
+      makeFoldable(partnersSection(c, save), 'overview-partners'),
       // ---- Case Overview: shared by the operation's case numbers (v1.27)
       h('hr', { class: 'overview-sep' }),
       h('div', { class: 'overview-head' }, h('h2', {}, 'Case Overview'),
         h('p', { class: 'muted small' }, members.length > 1 ? `Suspects, contacts and deconfliction for the whole Operation: the same on all ${members.length} case numbers.` : op ? 'Suspects, contacts and deconfliction. Case numbers added to this Operation share them.' : 'Suspects, contacts and deconfliction for this case.')),
-      suspectsSection(c, save),
-      contactsSection(c, save),
-      deconflictionSection(c, save),
+      makeFoldable(suspectsSection(c, save), 'overview-suspects'),
+      makeFoldable(contactsSection(c, save), 'overview-contacts'),
+      makeFoldable(deconflictionSection(c, save), 'overview-deconfliction'),
       // Everything saves by itself as you type; the button saves now and says so.
       archived ? null : h('div', { class: 'details-save' },
         h('button', { class: 'btn primary', type: 'button', icon: 'save', title: 'Save this case to the SSD now. Changes also save by themselves a moment after you type.', onclick: async () => {
@@ -1704,7 +1741,7 @@
       }) : [h('p', { class: 'muted small suspect-empty' }, 'No suspects yet.')]));
     };
     draw();
-    return h('section', { class: 'contacts suspects', 'aria-labelledby': 'suspects-title' },
+    return h('section', { class: 'contacts suspects cv-boxed', 'aria-labelledby': 'suspects-title' },
       h('h3', { id: 'suspects-title', icon: 'person-exclamation', title: 'The people this case is about. The age is worked out from the date of birth. The main suspect fills {{suspect.name}}, {{suspect.dob}}, {{suspect.age}} and so on in templates; {{suspects}} lists them all.' }, 'Suspects'),
       h('datalist', { id: 'suspect-hair' }, CVReportFields.PICKS.hair.map((x) => h('option', { value: x }))),
       h('datalist', { id: 'suspect-eyes' }, CVReportFields.PICKS.eyes.map((x) => h('option', { value: x }))),
@@ -1812,7 +1849,17 @@
       for (const name of names) c.partners.push({ agency, name });
       return names.length;
     };
-    const draw = () => box.replaceChildren(...CVDraft.PARTNER_AGENCIES.map((agency) => {
+    // v1.54: only the agencies working this case show; "Show All Agencies" brings the rest back to
+    // pick from. With none picked, all show.
+    let showAll = false;
+    const toggle = h('button', { class: 'btn small ghost partner-toggle', type: 'button' });
+    toggle.addEventListener('click', () => { showAll = !showAll; draw(); });
+    const draw = () => {
+      const picked = new Set(c.partners.map((p) => p.agency));
+      const all = showAll || !picked.size;
+      toggle.hidden = !picked.size;
+      toggle.replaceChildren(I(all ? 'eye-slash' : 'eye'), all ? ' Show Only Working This Case' : ` Show All Agencies (${CVDraft.PARTNER_AGENCIES.length - picked.size} more)`);
+      box.replaceChildren(...CVDraft.PARTNER_AGENCIES.filter((agency) => all || picked.has(agency)).map((agency) => {
       const mine = c.partners.filter((p) => p.agency === agency);
       const on = mine.length > 0;
       const names = mine.map((p) => p.name).filter(Boolean).join('; ');
@@ -1840,10 +1887,11 @@
       tile.style.setProperty('--agency', b.color); // set from script: the page's CSP allows no inline style attributes
       return tile;
     }));
+    };
     draw();
     return h('section', { class: 'contacts partners', 'aria-labelledby': 'partners-title' },
       h('h3', { id: 'partners-title', icon: 'shield-check', title: 'The agencies working this case with you. Templates can use {{case.partners}}.' }, 'LEO Partners'),
-      box);
+      box, h('div', { class: 'partner-tools' }, toggle));
   }
 
   /* Contacts on the Details tab: the case officer, the prosecutor (ASA or AUSA) and anyone else
@@ -2874,6 +2922,8 @@
         scrollToSection(el);
         setTimeout(() => { for (const b of nav.children) b.classList.toggle('active', b.dataset.target === section); }, 200);
       }, 60);
+      // v1.54: each section is a card that folds away with the button in its heading.
+      sections.forEach((sec) => { sec.classList.add('vault-sec', 'cv-boxed'); makeFoldable(sec, `vault-${sec.dataset.section}`); });
       return h('div', { class: 'vault-panel' },
         h('div', { class: 'vault-panel-head' }, h('span', { class: 'vault-badge' }, I('safe2')), h('div', {}, h('h2', {}, 'Vault'), h('p', { class: 'muted small explain' }, `${Vault.root.name} · ${v.cases.length} case${v.cases.length === 1 ? '' : 's'}`)),
           h('div', { class: 'spacer' }), h('button', { class: 'btn primary', type: 'button', icon: 'check2', onclick: () => close() }, 'Done')),

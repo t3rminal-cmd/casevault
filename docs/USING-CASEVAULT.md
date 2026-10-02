@@ -215,6 +215,22 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.54
+
+- **Draft tab, Officer's Report:**
+  - **Court Branch and Court Officer** and **Court Date** share one line.
+  - Three boxes share the next line, and each label is a switch: **Search Warrant Number / Subpoena GJ Number**, **ASA Approving / AUSA Approving**, and **Judge Approving / Magistrate Approving**. Click the label to pick. The text stays when you switch, only the one you picked goes in the report and the PDF, and the PDF's label follows (e.g. *AUSA Approving Subpoena*).
+  - **Pre-Recorded Funds:** **Add Funds** opens a small box. Pick the denomination and enter the serial numbers, one per line; the quantity counts them, or type it when not every bill was recorded. Each denomination shows as one line (e.g. *$20 × 3 AA01, AA02, AA03*) with Change and Delete. One **Recovered / Not Recovered** list at the lower right covers them all. Bills entered one by one before v1.54 are grouped by denomination by themselves.
+  - The label under an evidence photo is one line.
+  - **Extra Copies Required** is gone, from the form and from the PDF's signature table. That table now has the reporting officer's name with a tall signature box under it.
+- **Reports → New Report:** the Type is **Case Summary**, **Affidavits** or **Other**, and the Title box is empty. Reports made before keep their type.
+- **Arrest Report PDF:** *2nd Arresting Officer* is written like the 1st, so it no longer runs into the star box, and there is room before *Approving Supervisor*.
+- **Mail tab** and **Vault:** fields are in grey boxes like the Draft tab. Each Vault section is a card that folds away with ▾ / ▸, and so do **LEO Partners**, **Suspects**, **Contacts** and **Deconfliction** on the Details tab. What you fold stays folded on this PC.
+- **LEO Partners** shows only the agencies working this case. **Show All Agencies** brings back the others to pick from; **Show Only Working This Case** hides them again.
+- **Quick Links:**
+  - **OSINT** has **Geotime LIVE**. Its address isn't known to CaseVault: add your agency's in Vault → Quick links.
+  - **LEO** has **Chicago HIDTA** going to its submission form (https://www.chicago-hidta.org/submission-form-2). It is fixed: always shown, and its address can't be changed.
+
 ### What's new in v1.53
 
 - **Square drop-down lists everywhere.** Clicking a drop-down (or Alt+↓, F4, Space or Enter) now opens CaseVault's own square list instead of the browser's rounded one. ↑ ↓ choose, a letter jumps to it, Enter picks, Esc closes.

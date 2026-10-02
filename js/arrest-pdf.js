@@ -323,8 +323,10 @@
       person('Attesting Officer:', a.attestingStar, a.attestingOfficer, when(a.attestingDate, a.attestingTime), sigName('AttestingOfficerSignature'));
       subBand('ARRESTING OFFICER(S):', 'Beat');
       person('1st Arresting Officer:', a.arrestingStar, a.arrestingOfficer, clean(a.arrestingBeat));
-      person('Arresting Officer - Second:', a.secondStar, a.secondOfficer, clean(a.secondBeat));
+      // v1.54: "2nd" like the 1st (the long label ran into the star box), and room before the supervisor.
+      person('2nd Arresting Officer:', a.secondStar, a.secondOfficer, clean(a.secondBeat));
       if (clean(a.assistingOfficers)) y = kvList(CX, y - 10, [['Assisting Officers:', a.assistingOfficers]], CW - 112) + 4;
+      y -= 8;
       subBand('APPROVING SUPERVISOR:');
       person('Approval of Probable Cause :', a.supervisorStar, a.supervisor, when(a.approvalDate, a.approvalTime), sigName('SupervisorSignature'));
       endSeg(130);

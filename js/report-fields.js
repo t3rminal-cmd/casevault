@@ -112,7 +112,6 @@
       ['supervisorStar', 'Supervisor Star', 'text'],
       ['dateApproved', 'Date Approved', 'date'],
       ['timeApproved', 'Time Approved', 'time'],
-      ['extraCopies', 'Extra Copies Required', 'text', 'span'],
     ] },
   ];
   // Parts of the report that can be left out ("doesn't apply"): the sections above, and these.
@@ -155,12 +154,16 @@
   const shortCode = (v) => Object.keys(SPELLED).find((k) => SPELLED[k] === v) || v;
   // Units the narcotic calculator prices by (js/reference).
   const NARCOTIC_UNITS = ['', 'gram', 'ounce', 'pound', 'kilogram', 'pill', 'mL'];
+  const DENOMINATIONS = ['', '$1', '$2', '$5', '$10', '$20', '$50', '$100'];
+  const RECOVERED = ['', 'Recovered', 'Not Recovered'];
   const LISTS = {
     narcotics: { title: 'Narcotics Recovered', item: 'Narcotic', fields: [['drug', 'Narcotics Type Recovered', 'narcotic'], ['amount', 'Total Weight', 'text'], ['unit', 'Unit', 'select', NARCOTIC_UNITS], ['price', 'Purchase Price', 'money'], ['value', 'Street Value', 'money']] },
     victimsList: { title: 'Victims', item: 'Victim', fields: [['name', 'Name', 'victim'], ['officer', 'Officer Name', 'text'], ...PERSON.slice(1)] },
     // v1.39: an offender's phone numbers and monikers (with the social media app each is used on).
     offendersList: { title: 'Offenders', item: 'Offender', fields: [...PERSON, ['phones', 'Phone Numbers', 'phones'], ['socials', 'Monikers / Social Media', 'socials']] },
-    funds: { title: 'Pre-Recorded Funds', item: 'Bill', fields: [['denomination', 'Denomination', 'select', ['', '$1', '$2', '$5', '$10', '$20', '$50', '$100']], ['serial', 'Serial Number', 'text'], ['recovered', 'Recovered', 'select', ['', 'Recovered', 'Not Recovered']]] },
+    // v1.54: one entry per denomination, with how many bills and their serial numbers; one Recovered
+    // or Not Recovered for all of them (fundsRecovered).
+    funds: { title: 'Pre-Recorded Funds', item: 'Denomination', fields: [['denomination', 'Denomination', 'select', DENOMINATIONS], ['quantity', 'Quantity', 'text'], ['serials', 'Serial Numbers', 'serials']] },
     charges: { title: 'Charges', item: 'Charge', fields: [['statute', 'Statute', 'charge'], ['description', 'Statute Description', 'chargeWide']] },
     gangs: { title: 'Gang Affiliations', item: 'Gang', fields: [['name', 'Gang', 'gang'], ['faction', 'Faction / Set', 'text']] },
     notArrested: { title: 'Persons Present Not Arrested', item: 'Person', fields: [['name', 'Name', 'text'], ['phone', 'Contact Number', 'phone'], ['address', 'Address', 'wide']] },
@@ -187,7 +190,7 @@
 
   const empty = () => ({ schema: 4, ...Object.fromEntries(FIELDS.map(([k, , kind]) => [k, kind === 'check' ? false : ''])), ...Object.fromEntries(Object.keys(LISTS).map((k) => [k, []])), evidence: [], narrative: '', hidden: [] });
 
-  const MULTI = ['phones', 'socials']; // fields that hold several entries
+  const MULTI = ['phones', 'socials', 'serials']; // fields that hold several entries
   const SOCIAL_APPS = ['', 'Facebook', 'Instagram', 'Snapchat', 'TikTok', 'X (Twitter)', 'WhatsApp', 'Telegram', 'Signal', 'YouTube', 'Discord', 'Cash App', 'Other'];
   const blankItem = (list) => Object.fromEntries(LISTS[list].fields.map(([k, , kind]) => [k, MULTI.includes(kind) ? [] : '']));
   const hasText = (v) => (Array.isArray(v) ? v.some(hasText) : v && typeof v === 'object' ? Object.values(v).some(hasText) : !!String(v || '').trim());
@@ -232,10 +235,56 @@
     // v1.48: a form saved with only the old Agency Report Number keeps it as the R.D. Number.
     if (!String(d.rdNumber || '').trim() && old('caseNumber')) d.rdNumber = old('caseNumber');
     delete d.caseNumber;
+    // v1.54: bills saved one by one (denomination, serial, recovered) become one entry per denomination.
+    const groups = [];
+    for (const it of d.funds) {
+      const serials = Array.isArray(it.serials) ? it.serials.map((x) => String(x || '').trim()).filter(Boolean) : [];
+      if (it.serial && String(it.serial).trim()) serials.push(String(it.serial).trim());
+      const isOld = 'serial' in it || ('recovered' in it && !('quantity' in it && it.quantity !== ''));
+      const den = String(it.denomination || '').trim();
+      const g = isOld && den ? groups.find((x) => x.denomination === den && x._old) : null;
+      if (g) { g.serials.push(...serials); g.quantity = String(Number(g.quantity || 0) + 1); if (it.recovered) g._rec.push(it.recovered); continue; }
+      groups.push({ denomination: den, quantity: String(it.quantity || (isOld && (den || serials.length) ? 1 : '') || ''), serials, _old: isOld, _rec: it.recovered ? [it.recovered] : [] });
+    }
+    const recs = [...new Set(groups.flatMap((g) => g._rec))];
+    if (!d.fundsRecovered && recs.length === 1) d.fundsRecovered = recs[0];
+    if (!RECOVERED.includes(d.fundsRecovered || '')) d.fundsRecovered = '';
+    d.funds = groups.map(({ denomination, quantity, serials }) => ({ denomination, quantity, serials }));
+    // v1.54: the Warrant/Subpoena, ASA/AUSA and Judge/Magistrate lines.
+    if (!['searchWarrant', 'subpoenaGJ'].includes(d.docKind)) d.docKind = activeOf(d, 'doc');
+    if (!['asa', 'ausa'].includes(d.prosKind)) d.prosKind = activeOf(d, 'pros');
+    if (d.judgeTitle !== 'Magistrate') d.judgeTitle = 'Judge';
+    delete d.extraCopies;
     d.schema = 4;
     return d;
   }
-  const isHidden = (d, id) => (d.hidden || []).includes(id);
+  // v1.54: one line holds the search warrant or the subpoena number, one the ASA or the AUSA; the
+  // other of each pair is left out of the report and the PDF.
+  const SWITCH = { doc: ['searchWarrant', 'subpoenaGJ'], pros: ['asa', 'ausa'] };
+  function activeOf(d, group) {
+    const [a, b] = SWITCH[group];
+    const want = d[`${group}Kind`];
+    if (want === a || want === b) return want;
+    return String(d[b] || '').trim() && !String(d[a] || '').trim() ? b : a;
+  }
+  const isHidden = (d, id) => (d.hidden || []).includes(id) || Object.keys(SWITCH).some((g) => SWITCH[g].includes(id) && activeOf(d, g) !== id);
+  /** The label of an Officer's Report line, following the switches. */
+  function lineLabel(d, k) {
+    const doc = activeOf(d, 'doc') === 'subpoenaGJ' ? 'Subpoena' : 'Search Warrant';
+    if (k === 'asa' || k === 'ausa') return `${k.toUpperCase()} Approving ${doc}`;
+    if (k === 'judge') return `${d.judgeTitle === 'Magistrate' ? 'Magistrate' : 'Judge'} Approving ${doc}`;
+    return (FIELDS.find(([key]) => key === k) || [k, k])[1];
+  }
+  /** Pre-recorded funds as lines: "$20 x 3 - Serial Numbers AA01, AA02, AA03", then the recovered line. */
+  function fundsLines(d) {
+    const out = (d.funds || []).filter(filled).map((g) => {
+      const n = String(g.quantity || '').trim() || (g.serials && g.serials.length ? String(g.serials.length) : '');
+      const serials = (g.serials || []).filter((x) => String(x || '').trim());
+      return [[g.denomination, n ? `x ${n}` : ''].filter(Boolean).join(' '), serials.length ? `Serial Number${serials.length === 1 ? '' : 's'} ${serials.join(', ')}` : ''].filter(Boolean).join(' - ');
+    });
+    if (out.length && d.fundsRecovered) out.push(d.fundsRecovered);
+    return out;
+  }
 
   /** A photo's label under its exhibit: 1a, 1b … 1z, 1aa. */
   function photoLabel(n, j) {
@@ -276,7 +325,7 @@
 
   /** A value as it reads in the report: weights get "lbs", a narcotic amount its unit. */
   function valueText(list, it, k, kind) {
-    if (kind === 'phones') return (Array.isArray(it[k]) ? it[k] : []).map((x) => String(x || '').trim()).filter(Boolean).join(', ');
+    if (kind === 'phones' || kind === 'serials') return (Array.isArray(it[k]) ? it[k] : []).map((x) => String(x || '').trim()).filter(Boolean).join(', ');
     if (kind === 'socials') return (Array.isArray(it[k]) ? it[k] : []).filter(hasText).map((x) => `${String(x.name || '').trim()}${x.app ? ` (${x.app})` : ''}`).join('; ');
     let v = String(it[k] == null ? '' : it[k]).trim();
     if (!v) return '';
@@ -301,6 +350,7 @@
 
   /** One list entry as text: "DOE, John, DOB 01.02.1990, 5'10\", 180 lbs, Black hair…" */
   function itemLine(list, it) {
+    if (list === 'funds') return fundsLines({ funds: [it] })[0] || '';
     return fieldsFor(list, it).map(([k, label, kind]) => {
       if (list === 'narcotics' && k === 'unit') return ''; // shown with the amount
       const v = valueText(list, it, k, kind);
@@ -390,10 +440,15 @@
     for (const s of SECTIONS) {
       if (isHidden(d, s.id)) continue;
       for (const [k, label, kind] of s.fields) {
-        if (kind === 'list') { if (!isHidden(d, k)) for (const it of d[k].filter(filled)) lines.push(`${LISTS[k].item}: ${itemLine(k, it)}`); continue; }
+        if (kind === 'list') {
+          if (isHidden(d, k)) continue;
+          if (k === 'funds') { for (const l of fundsLines(d)) lines.push(`Pre-Recorded Funds: ${l}`); continue; }
+          for (const it of d[k].filter(filled)) lines.push(`${LISTS[k].item}: ${itemLine(k, it)}`);
+          continue;
+        }
         if (isHidden(d, k)) continue;
         const v = shown(k, d[k]);
-        if (v) lines.push(`${label}: ${v.replace(/\s*\n\s*/g, '; ')}`);
+        if (v) lines.push(`${s.id === 'report' ? lineLabel(d, k) : label}: ${v.replace(/\s*\n\s*/g, '; ')}`);
       }
       for (const k of s.lists || []) if (!isHidden(d, k)) for (const it of d[k].filter(filled)) lines.push(`${LISTS[k].item}: ${itemLine(k, it)}`);
     }
@@ -470,10 +525,10 @@
         if (kind === 'list' || k === 'courtDate') continue;
         if (k === 'courtBranch') { const c = courtLine(d, shown); if (c) lines.push(c); continue; }
         if (isHidden(d, k)) continue;
-        lines.push([l, shown(k, d[k])]);
+        lines.push([lineLabel(d, k), shown(k, d[k])]);
       }
       table(["Officer's Report", 'Entry'], lines);
-      list('funds');
+      if (!isHidden(d, 'funds') && fundsLines(d).length) table(['Pre-Recorded Funds'], fundsLines(d).map((x) => [x]));
       list('narcotics');
       for (const key of report.lists) list(key);
     }
@@ -490,14 +545,13 @@
         ['Secondary Reporting Officer', d.secondOfficer, d.secondStar, shown('secondDate', d.secondDate), d.secondTime, ''],
         ['Supervisor Approval', d.supervisor, d.supervisorStar, shown('dateApproved', d.dateApproved), d.timeApproved, ''],
       ]);
-      if (d.extraCopies) row(['extraCopies']);
     }
     return out.join('\n');
   }
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

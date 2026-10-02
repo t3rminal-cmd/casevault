@@ -60,7 +60,7 @@
       h('button', { type: 'button', class: 'ql-move', title: 'Move left', onclick: () => move(-1) }, ui.icon('chevron-left'), h('span', { class: 'sr-only' }, `Move ${l.name} left`)),
       tile,
       h('button', { type: 'button', class: 'ql-move', title: 'Move right', onclick: () => move(1) }, ui.icon('chevron-right'), h('span', { class: 'sr-only' }, `Move ${l.name} right`)),
-      h('button', { type: 'button', class: 'ql-toggle', title: l.hidden ? 'Show this link' : 'Hide this link', onclick: async () => {
+      l.fixed ? h('span', { class: 'ql-toggle', title: 'Always shown' }) : h('button', { type: 'button', class: 'ql-toggle', title: l.hidden ? 'Show this link' : 'Hide this link', onclick: async () => {
         const hidden = new Set(savedLinks().hidden || []);
         if (hidden.has(l.id)) hidden.delete(l.id); else hidden.add(l.id);
         try { await saveLinks({ hidden: [...hidden] }); redraw(); } catch { /* reported */ }
@@ -123,8 +123,8 @@
         addRow(t.key))));
     };
     const row = (l) => {
-      const name = h('input', { value: l.name, maxlength: 60, 'aria-label': 'Name' });
-      const url = h('input', { value: l.url || '', placeholder: 'Web address: portal.example.org', 'aria-label': `${l.name} web address`, spellcheck: 'false' });
+      const name = h('input', { value: l.name, maxlength: 60, 'aria-label': 'Name', readonly: l.fixed || null });
+      const url = h('input', { value: l.url || '', placeholder: 'Web address: portal.example.org', 'aria-label': `${l.name} web address`, spellcheck: 'false', readonly: l.fixed || null });
       const save = async ({ redraw = true } = {}) => {
         const clean = LK().cleanUrl(url.value);
         if (clean === null) { toast('That is not a web address (it must start with https://).', 'error'); return false; }
@@ -140,6 +140,8 @@
       savers.push(save);
       name.addEventListener('change', () => save());
       url.addEventListener('change', () => save());
+      // v1.54: a fixed link (Chicago HIDTA) is always shown and keeps its address.
+      if (l.fixed) return h('li', { class: 'links-row links-fixed', title: 'Built in: always shown, its address can\'t be changed' }, h('span', { class: 'links-icon' }, ui.icon(l.icon)), name, url, h('span', { class: 'muted small' }, 'Always'), h('span'));
       const hidden = h('input', { type: 'checkbox', checked: !l.hidden });
       hidden.addEventListener('change', async () => {
         const set = new Set(savedLinks().hidden || []);

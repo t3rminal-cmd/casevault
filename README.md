@@ -15,6 +15,15 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.54)
+
+- Draft tab: Court Branch and Court Date on one line; Search Warrant or Subpoena number, ASA or AUSA, Judge or Magistrate on one line, each label a switch (only the chosen one goes in the report); Pre-Recorded Funds as one line per denomination (quantity and serial numbers, added in a small box) with one Recovered / Not Recovered; evidence photo labels on one line; no Extra Copies box (the PDF's signature table is rearranged)
+- New Report types: Case Summary, Affidavits, Other; no sample text in the Title
+- Arrest Report PDF: "2nd Arresting Officer" lines up with the 1st, with room before the Approving Supervisor
+- Mail tab and the Vault in grey boxes; every Vault section, LEO Partners, Suspects, Contacts and Deconfliction fold away with ▾ / ▸
+- LEO Partners shows only the agencies working the case (Show All Agencies brings the rest back)
+- Quick links: Geotime LIVE (OSINT, add your agency's address), and Chicago HIDTA's submission form, fixed in LEO
+
 ## Features (v1.53)
 
 - Square drop-down lists in every browser: CaseVault draws its own list for every drop-down (`js/select.js`), so no Windows/Edge rounded pop-up appears; the browser's typing history and suggestion pop-ups stay off as before
