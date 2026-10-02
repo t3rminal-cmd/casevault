@@ -199,6 +199,19 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.44
+
+- **PDFs:** times print as military time without the colon (**1435**), in both reports and in the report text. On the Supplementary Report every value sits in a light grey box (no dotted lines). Each offender, victim, officer or person present has their name in bold on its own line, with the details under it. The officer's report lines come in blocks with a little space between them: who; the court and the warrant; who else was there; the evidence and the money; the record numbers; vehicles and notifications. The layout is the same as v1.43.
+- **Details tab:** **Title or Operation Name**, **Status**, **Opened** and **Closed** share one row, and **File Number**, **Original Case Number**, **Federal Jacket Number** and **Client** share the next. The Tags box is gone (tags saved before are kept and still found by the search box). The U.S. Marshals badge is now a star in a ring.
+- **Overview:** an open operation's case numbers have three buttons: **Details**, **Reports** and **Files**.
+- **Draft tab:**
+  - **Method Code** and **Safe Method** have a list with **DNA** (does not apply); anything else can still be typed.
+  - Number of Victims, Number of Offenders, Number Arrested and Method Code fit in one row.
+  - For a person, Gender, Gender Identity, Race and Complexion fit in one row, and so do Height, Weight, Hair Color and Eye Color. The long race names are shortened on screen; the full name is what is saved.
+  - In Assignment, Method Assigned, Unit Number, Safe Method, Arrest Unit and If Residence, Where share a row, and Adults, Juveniles, Fire and Gang Related share the next.
+  - **Not Recovered** is no longer cut off in Pre-Recorded Funds.
+- **Files:** the Size column is wide enough for "000 KB".
+
 ### What's new in v1.43
 
 - **Supplementary Report PDF** (Draft tab → Print / PDF, Reports, Files) now looks like a narcotics division supplementary report form. It is set in Times, with the title and the **Agency Report Number** box at the top. Below that comes a ruled grid where each box has its small label: offense, IUCR, occurrence, victims, offenders and assignment. Then the **Update Information** tick boxes, **Status** and **How Cleared** with a round mark under the choice, and the Event, Incident, Raid and R.D. numbers. The officer's report follows as **LABEL:** lines, with each offender, officer, bill or vehicle on a line of its own, then the **Summary of Investigation** and a three-column signature table. Every other page starts with the four numbers and ends with **Preparer** and **Approval** initial boxes.

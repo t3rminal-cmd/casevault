@@ -56,8 +56,8 @@
       ['method', 'Method Assigned', 'select', ['', 'Field', 'Supervisor', 'On View', 'OEMC']],
       ['unit', 'Unit Number', 'text'],
       ['safeMethod', 'Safe Method', 'text'],
-      ['residence', 'If Residence, Where', 'text'],
       ['arrestUnit', 'Arrest Unit', 'text'],
+      ['residence', 'If Residence, Where', 'text'],
       ['adults', 'Adults', 'number'],
       ['juveniles', 'Juveniles', 'number'],
       ['fire', 'Fire', 'yesno'],
@@ -340,8 +340,11 @@
     if (!f) return String(v || '');
     if (f[2] === 'check') return v ? 'Yes' : '';
     if (f[2] === 'date') return longDate(v);
+    if (f[2] === 'time') return militaryTime(v);
     return String(v == null ? '' : v).trim();
   };
+  /** v1.44: military time as written on reports, without the colon: "14:35" -> "1435". */
+  const militaryTime = (v) => { const t = String(v == null ? '' : v).trim(); const m = /^(\d{1,2}):(\d{2})$/.exec(t); return m ? `${m[1].padStart(2, '0')}${m[2]}` : t; };
 
   /** One exhibit as a line: "Exhibit 3, Inventory 123456: Narcotics, Cocaine, 12.4 g. Three bags…" */
   function exhibitLine(e) {
@@ -479,7 +482,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { MULTI, SOCIAL_APPS, STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { MULTI, SOCIAL_APPS, STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

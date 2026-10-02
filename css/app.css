@@ -2669,3 +2669,25 @@ input[list]::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
 .rf-list-funds .rf-item:not(:first-child) .rf-item-head > strong { padding-top: 0; }
 .rf-list-funds .rf-item:not(:first-child) { align-items: center; }
 .rf-list-funds .rf-item:not(:first-child) .rf-item-head > button { align-self: center; margin-bottom: 0; }
+
+/* ---------- v1.44 ---------- */
+/* Details: four boxes to a row (Title, Status, Opened, Closed; File, Original Case, Federal Jacket, Client). */
+.details-grid.details-row4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.details-grid.details-row-title { grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)); }
+.details-grid.details-row4 > .span-2, .details-grid.details-row4 > p { grid-column: 1 / -1; }
+@media (max-width: 900px) { .details-grid.details-row4, .details-grid.details-row-title { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Overview: an open operation's case numbers link to Details, Reports and Files only. */
+.op-case-links { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Draft tab: a person's Gender, Gender Identity, Race and Complexion in one row. */
+.rf-item-grid .field:has(select[aria-label$=" Race"]) { grid-column: auto; }
+/* Assignment: Method Assigned, Unit Number, Safe Method, Arrest Unit, If Residence in one row;
+   Adults, Juveniles, Fire, Gang Related in the next. */
+.rf-grid.rf-grid-assign { grid-template-columns: repeat(20, minmax(0, 1fr)); }
+.rf-grid.rf-grid-assign > :nth-child(-n+5) { grid-column: span 4; }
+.rf-grid.rf-grid-assign > :nth-child(n+6) { grid-column: span 5; }
+@media (max-width: 1100px) { .rf-grid.rf-grid-assign { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rf-grid.rf-grid-assign > * { grid-column: auto !important; } }
+/* Funds: Recovered wide enough for "Not Recovered". */
+.rf-list-funds .rf-item-grid { grid-template-columns: minmax(6rem, 8rem) minmax(0, 1.6fr) minmax(12.5rem, 13rem); }
+/* Files: the Size column wide enough for "000 KB". */
+.files-table-wrap col.col-size { width: 6.6rem; }
+.files-table-wrap td.num { white-space: nowrap; }

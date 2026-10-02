@@ -223,6 +223,8 @@
       const setField = (k, v) => { data[k] = v; if (els[k]) els[k].value = v; };
       // The input keeps its own listeners; a searchable list wraps it (box), not replaces it.
       let box = el;
+      // v1.44: Method Code and Safe Method offer DNA (does not apply); anything else can be typed.
+      if (key === 'methodCode' || key === 'safeMethod') box = CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }], onPick: () => save() });
       if (kind === 'ucr') {
         // From Common UCR; an empty Offense Classification takes the UCR group (Narcotics…).
         // v1.39: picking an IUCR code puts its description in Offense Classification (for 2170:
@@ -327,7 +329,10 @@
               return ui.field(F().labelFor(it, k, label), el, range && kind !== 'age' ? 'rf-span2' : '');
             }
             if (kind === 'select') {
-              el = h('select', {}, opts.map((o) => h('option', { value: o, selected: o === (it[k] || '') }, o || '—')));
+              // v1.44: long race names shortened on screen (the saved value is the full name) so a
+              // person's Gender, Gender Identity, Race and Complexion fit on one row.
+              const SHORT = { 'American Indian / Alaska Native': 'Am. Indian / AK Native', 'Asian / Pacific Islander': 'Asian / Pac. Islander' };
+              el = h('select', {}, opts.map((o) => h('option', { value: o, selected: o === (it[k] || ''), title: SHORT[o] ? o : null }, SHORT[o] || o || '—')));
               el.addEventListener('change', () => { it[k] = el.value; save(); });
             } else if (kind === 'age') {
               // Worked out from the date of birth.
@@ -480,7 +485,7 @@
     const foldAll = (want) => { foldButtons.forEach((f) => f(want)); keepFolds(); };
 
     const sections = F().SECTIONS.map((s) => part(s.id, s.title, s.icon,
-      h('div', { class: s.id === 'report' ? 'rf-lines' : `rf-grid${s.id === 'update' ? ' rf-grid-4' : s.id === 'approval' ? ' rf-grid-officers' : ''}` }, s.fields.map(([k, label, kind, opts]) => input(k, label, kind, opts))),
+      h('div', { class: s.id === 'report' ? 'rf-lines' : `rf-grid${s.id === 'update' || s.id === 'people' ? ' rf-grid-4' : s.id === 'approval' ? ' rf-grid-officers' : s.id === 'assignment' ? ' rf-grid-assign' : ''}` }, s.fields.map(([k, label, kind, opts]) => input(k, label, kind, opts))),
       ...(s.lists || []).map(listEditor)));
 
     // ---- evidence inventoried: one card per exhibit (number given automatically)

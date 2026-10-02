@@ -106,7 +106,6 @@
     const text = (x, yy, s, size = 10, bold = false) => { if (s !== '' && s != null) ops.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${x.toFixed(2)} ${yy.toFixed(2)} Td ${pdfString(s)} Tj ET`); };
     const center = (x, w, yy, s, size, bold) => text(x + (w - tw(s, size, bold)) / 2, yy, s, size, bold);
     const line = (x1, y1, x2, y2, w = 0.6) => ops.push(`${w} w ${x1.toFixed(2)} ${y1.toFixed(2)} m ${x2.toFixed(2)} ${y2.toFixed(2)} l S`);
-    const dashed = (x1, y1, x2) => ops.push(`[1.5 1.5] 0 d 0.4 w ${x1.toFixed(2)} ${y1.toFixed(2)} m ${x2.toFixed(2)} ${y1.toFixed(2)} l S [] 0 d`);
     const rect = (x, yy, w, h, lw = 0.6) => ops.push(`${lw} w ${x.toFixed(2)} ${yy.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re S`);
     const fill = (x, yy, w, h, gray = 0.9) => ops.push(`${gray} g ${x.toFixed(2)} ${yy.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re f 0 g`);
     const circle = (cx, cy, r, filled) => {
@@ -175,10 +174,11 @@
       ensure(h);
       let x = M;
       cells.forEach((c, i) => {
+        // v1.44: the value sits in a light grey box under its label (no dotted rule).
+        fill(x + 1.5, y - h + 1.5, sizes[i] - 3, h - lh - 2.5, 0.93);
         rect(x, y - h, sizes[i], h, 0.6);
         labs[i].forEach((l, j) => text(x + 2, y - 7.5 - j * 8, l, 7.5));
-        dashed(x + 1, y - lh, x + sizes[i] - 1);
-        lines[i].forEach((l, j) => text(x + 3, y - lh - 10 - j * 11.5, l, 10));
+        lines[i].forEach((l, j) => text(x + 4, y - lh - 10 - j * 11.5, l, 10));
         x += sizes[i];
       });
       y -= h;
@@ -188,22 +188,40 @@
     // "LABEL:  value" lines of the officer's report; the value wraps on the right, over a light rule.
     const LW = 215;
     const labelled = (label, value) => {
+      // A value is text, or a list of entries; an entry { head, tail } has its name in bold on a
+      // line of its own and the details under it, with a little space between entries (v1.44).
       const vals = Array.isArray(value) ? value : [value || ''];
-      const lines = vals.flatMap((v) => twrap(v, 10, INNER - LW - 6));
+      const rows = [];
+      vals.forEach((v, n) => {
+        if (n) rows.push({ gap: 4 });
+        if (v && typeof v === 'object') {
+          for (const l of twrap(v.head || '', 10, INNER - LW - 8, true)) rows.push({ t: l, bold: true });
+          for (const l of twrap(v.tail || '', 10, INNER - LW - 18)) rows.push({ t: l, indent: 8 });
+        } else for (const l of twrap(v, 10, INNER - LW - 8)) rows.push({ t: l });
+      });
       const labels = twrap(`${label.toUpperCase()}:`, 8.5, LW - 14);
-      const h = Math.max(16, 4 + Math.max(lines.length * 12, labels.length * 10));
+      const bodyH = rows.reduce((n, r) => n + (r.gap || 12), 0);
+      const h = Math.max(17, 5 + Math.max(bodyH, labels.length * 10));
       ensure(h);
+      fill(M + LW, y - h + 2, INNER - LW, h - 3, 0.93);
       labels.forEach((l, j) => text(M + 2, y - 11 - j * 10, l, 8.5));
-      (lines.length ? lines : ['']).forEach((l, j) => text(M + LW + 3, y - 11 - j * 12, l, 10));
-      fill(M + LW, y - h + 2, INNER - LW, h - 3, 0.95);
-      // (the fill is drawn under the text: move it to the front of this row's operations)
-      ops.splice(ops.length - 1 - labels.length - (lines.length || 1), 0, ops.pop());
+      let yy = y - 11;
+      for (const r of rows) { if (r.gap) { yy -= r.gap; continue; } text(M + LW + 4 + (r.indent || 0), yy, r.t, 10, !!r.bold); yy -= 12; }
       y -= h;
     };
-    const items = (key) => d[key].filter(RF.filled).map((it) => (key === 'funds'
+    // A group of lines ends with a little space, so the report reads in blocks.
+    const groupGap = () => { y -= 5; };
+    const items = (key) => d[key].filter(RF.filled).map((it) => {
       // A bill on one line: "$20 - Serial AA00000001A - Not Recovered".
-      ? [it.denomination, it.serial ? `Serial ${it.serial}` : '', it.recovered].filter(Boolean).join(' - ')
-      : RF.itemLine(key, it)));
+      if (key === 'funds') return [it.denomination, it.serial ? `Serial ${it.serial}` : '', it.recovered].filter(Boolean).join(' - ');
+      const line = RF.itemLine(key, it);
+      // People: the name on its own line in bold, the details under it.
+      if (['offendersList', 'victimsList', 'notArrested', 'personnel'].includes(key) && it.name) {
+        const tail = line.startsWith(it.name) ? line.slice(it.name.length).replace(/^,\s*/, '') : line;
+        return { head: it.name, tail };
+      }
+      return line;
+    });
 
     newPage();
 
@@ -274,19 +292,27 @@
       const line1 = (k) => { done.add(k); if (RF.isHidden(d, k)) return; if (k === 'courtBranch') { const c = RF.courtLine(d, (kk) => val(kk)); if (c) labelled(c[0], c[1]); return; } labelled(labelOf(k), val(k)); };
       const list1 = (key, label) => { done.add(key); if (RF.isHidden(d, key)) return; labelled(label || RF.LISTS[key].title, items(key)); };
       // In the form's order: the operation, the people, the charges and the court, the warrant…
+      // v1.44: in blocks with a little space between them: who; the court and the warrant; who else
+      // was there; the evidence and the money; the record numbers; vehicles and notifications.
       line1('operation');
       if (people) list1('offendersList', 'Offender(s)');
       list1('gangs', 'Gang Affiliation(s)');
       list1('charges', 'Charge(s)');
+      groupGap();
       ['within1000', 'courtBranch', 'searchWarrant', 'subpoenaGJ', 'asa', 'ausa', 'judge'].forEach(line1);
+      groupGap();
       list1('notArrested', 'Person(s) Present Not Arrested');
       list1('personnel', 'Police Personnel on Scene');
       if (people) list1('victimsList', 'Victim(s)');
+      groupGap();
       if (on('evidence')) labelled('Evidence Inventoried', d.evidence.map((e) => RF.exhibitLine(e)));
       list1('narcotics', 'Narcotics Recovered (Total Weight & Street Value)');
       line1('buyFunds');
       list1('funds', 'Pre-Recorded Funds');
-      ['fundSheet', 'evidenceOfficer', 'proofResidence', 'irNumber', 'cbNumber'].forEach(line1);
+      ['fundSheet', 'evidenceOfficer'].forEach(line1);
+      groupGap();
+      ['proofResidence', 'irNumber', 'cbNumber'].forEach(line1);
+      groupGap();
       list1('vehicles', 'Vehicle(s) Impounded / Towed');
       list1('notifications', 'Notifications');
       // Anything else of the report part, so nothing entered is left out.
