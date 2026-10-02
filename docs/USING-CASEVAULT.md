@@ -115,7 +115,7 @@ OSINT and LEO links open the website **in a new browser tab**, outside CaseVault
 
 With no case open, CaseVault shows the **Overview**: a welcome banner with the date and time, how many cases are open, whether a deadline is due soon (and the next one, one click away), and buttons for **New Case**, **Ask AI**, **Reference**, **Library** and the **Vault**. Below it are the case counts, your operations, upcoming deadlines, recently updated cases and the quick links.
 
-**Operations:** every Operation is a blue folder with its **Operation Number - Operation Name** under it (a number on the folder shows how many cases it holds; a red bell, a deadline due), in Operation Number order, and **General Files** (a plain folder) holds the cases that aren't in an Operation. **All Operations** and **General Files** above the folders open those pages. Click a folder to open it: each case number in it is a card with its status and, in a row, **Reports**, **Photos** (every picture in the case) and **Files** (click the case number for its Details). The operation's **Timeline** (every case number's events, each marked with its case number) opens in its own section above Upcoming Deadlines, drawn as a line you scroll sideways (v1.33): each event or deadline is a dot with its date above and a card below, a red **Today** marker shows where you are, and clicking any of them opens the Timeline tab. **Add Case Number** creates a new case linked to the Operation (in General Files, **New Case**). Click the folder again to close it.
+**Operations:** every Operation is a blue folder with its **Operation Number - Operation Name** under it (a number on the folder shows how many cases it holds; a red bell, a deadline due), in Operation Number order, and **All Operations** opens the Operations page. Below it, **General Files** (amber folders, v1.47) holds the cases that aren't in an Operation, a folder for each year they were opened, newest first; **All Cases** opens the General Files page. Click a folder to open it: each case number in it is a card with its status and, in a row, **Reports**, **Photos** (every picture in the case) and **Files** (click the case number for its Details). The operation's **Timeline** (every case number's events, each marked with its case number) opens in its own section above Upcoming Deadlines, drawn as a line you scroll sideways (v1.33): each event or deadline is a dot with its date above and a card below, a red **Today** marker shows where you are, and clicking any of them opens the Timeline tab. **Add Case Number** creates a new case linked to the Operation (in General Files, **New Case**). Click the folder again to close it.
 
 ## Operations and General Files
 
@@ -212,6 +212,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 **Resize** the case list by dragging its right edge (double-click the edge to go back to the normal width). **Lock** it with the padlock next to the hide button: the list then stays exactly as it is, shown or hidden and at its width, and can't be hidden, resized or toggled with `Ctrl + \` until you click the padlock again. The width and the lock are kept in `vault.json` on the SSD, so they stay the same in Edge and Firefox and on another PC.
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
+
+### What's new in v1.47
+
+- **Overview:** a new **General Files** section sits between Operations and Recently Updated. It has a folder for each year (newest first) holding the cases that aren't in an Operation, filed by the year they were opened. Click a year to see its cases, each with Details, Reports and Files. **All Cases** opens the General Files page. The Operations section now holds only Operations.
+- **General Files folders are amber** (Operations stay blue): on the Overview, in the case list, on the General Files page and on a case's header and Details bar.
+- **Supplementary Report PDF:** the caption under each exhibit photo is no longer bold. Before, only its first line was.
 
 ### What's new in v1.46
 

@@ -398,7 +398,7 @@
         const x = M + (INNER - w) / 2; const yy = top - boxH + (boxH - hgt) / 2;
         ops.push(`q ${w.toFixed(2)} 0 0 ${hgt.toFixed(2)} ${x.toFixed(2)} ${yy.toFixed(2)} cm /Im${ph.index} Do Q`);
         pages[pages.length - 1].imgs.push(ph.index);
-        cap.forEach((l, n) => text(M + 4, top - boxH - 12 - n * 11, l, 9.5, n === 0));
+        cap.forEach((l, n) => text(M + 4, top - boxH - 12 - n * 11, l, 9.5)); // v1.47: not bold
       });
     }
 

@@ -15,6 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.47)
+
+- Overview: **General Files** between Operations and Recently Updated, one amber folder per year (newest first) for the cases not in an Operation; General Files folders are amber everywhere, Operations stay blue
+- Supplementary Report PDF: exhibit photo captions in regular type (no bold first line)
+
 ## Features (v1.46)
 
 - **Operations and General Files:** an Operation is its own record (Operation Number, Name, Status, Start and End Date, Notes), shown as "Number - Name"; every case lives in General Files and is linked to none or one Operation. An Operation's Files are its linked cases (nothing is copied). Create, edit (renames every case once), delete (the cases and files stay, independent), add a new or an existing case, unlink with a confirmation

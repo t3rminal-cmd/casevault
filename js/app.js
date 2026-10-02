@@ -586,7 +586,7 @@
     const meta = op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : `${group.total} independent case${group.total === 1 ? '' : 's'}`;
     const det = h('details', { class: `op-group${op ? '' : ' general-group'}`, open },
       h('summary', { class: 'op-head', title: op ? `${label}: open the Operation` : 'General Files: every case; these are the ones not in an Operation' },
-        h('span', { class: 'op-folder' }, I(op ? 'op-folder' : 'folder-fill')),
+        h('span', { class: `op-folder${op ? '' : ' gf-icon'}` }, I(op ? 'op-folder' : 'folder-fill')),
         h('span', { class: 'op-text' },
           h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, label),
             bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
@@ -792,6 +792,7 @@
       // v1.42: no Upcoming Deadlines (the banner shows what's due); the open operation's case
       // numbers, each with its tabs, sit here instead, so the folders above never move.
       opBox,
+      generalYearFolders(cases),
       h('div', { class: 'dash-section' }, h('div', { class: 'section-head' }, h('h2', { class: 'section-title' }, 'Recently updated'), h('div', { class: 'spacer' }),
         recent.length ? h('button', { class: 'btn small ghost', type: 'button', title: 'Empties this list. Cases you change after this show here again.', onclick: async () => {
           try { await Save.track('settings', () => Vault.updateSettings({ recentClearedAt: new Date().toISOString() })); showDashboard(); } catch { /* reported */ }
@@ -1011,7 +1012,7 @@
     draw();
     $('#main').replaceChildren(h('section', { class: 'ops-page general-page' },
       h('div', { class: 'page-head' },
-        h('span', { class: 'page-icon' }, I('folder-fill')),
+        h('span', { class: 'page-icon gf-icon' }, I('folder-fill')),
         h('div', { class: 'page-title' }, h('h1', {}, 'General Files'), h('div', { class: 'muted small' }, 'Every case, in an Operation or not. An Operation only links cases; they are always kept here.')),
         h('div', { class: 'spacer' }),
         h('a', { class: 'btn', href: '#/operations', icon: 'op-folder' }, 'Operations'),
@@ -1031,22 +1032,65 @@
   const OP_TABS = [['details', 'Details'], ['reports', 'Reports'], ['files', 'Files']];
   // Empty space: anything that isn't a control, a link, a folder, the open folder's cases or the
   // timeline, and nothing inside a dialog or the sidebar.
+  // v1.47: the General Files year folders close the same way.
+  const yearFolderState = { open: '', close: null };
   document.addEventListener('click', (e) => {
-    if (!opFolderState.open || !opFolderState.close) return;
+    if (!(opFolderState.open && opFolderState.close) && !(yearFolderState.open && yearFolderState.close)) return;
     const t = e.target;
     if (!(t instanceof Element) || !t.closest('#main')) return;
     if (t.closest('a, button, input, select, textarea, label, summary, details, [role="button"], [contenteditable], .op-folder-tile, .op-open, .op-open-section, .op-timeline-section, .htl-wrap, .dialog')) return;
     if (window.getSelection && String(window.getSelection())) return; // selecting text isn't a click away
-    opFolderState.close();
+    if (opFolderState.open && opFolderState.close) opFolderState.close();
+    if (yearFolderState.open && yearFolderState.close) yearFolderState.close();
   });
+  /** A case as a card on the Overview: its number, subject (and Operation), status and tabs. */
+  function overviewCard(c, withOp = false) {
+    const to = (tab, sub) => `#/case/${encodeURIComponent(c.id)}/${tab}${sub ? `/${sub}` : ''}`;
+    const op = withOp ? opOf(c) : null;
+    return h('div', { class: 'op-case-card' },
+      h('a', { class: 'op-case-top', href: to('details') }, h('span', { class: 'op-case-id' }, h('span', { class: 'op-case-num' }, c.number || 'No case number yet'),
+        h('span', { class: 'op-case-subject muted' }, [c.subject || 'No subject yet', op ? opLabel(op) : ''].filter(Boolean).join(' · '))), statusPill(c.status)),
+      h('nav', { class: 'op-case-links', 'aria-label': `${c.number || 'Case'} tabs` },
+        ...OP_TABS.map(([tab, label]) => h('a', { class: 'op-tab-link', href: to(tab) }, label))));
+  }
+  /* General Files on the Overview (v1.47): the cases that aren't in an Operation, a folder for each
+   * year they were opened (newest first), between Operations and Recently Updated. Click a year to
+   * see its cases under the folders. */
+  function generalYearFolders(cases) {
+    const loose = cases.filter((c) => !isArchivedEntry(c) && (!c.operationId || !Vault.getOperation(c.operationId)));
+    const yearOf = (c) => (/^\d{4}/.exec(String(c.opened || '')) || [''])[0];
+    const years = [...new Set(loose.map(yearOf))].sort((a, b) => (!a) - (!b) || b.localeCompare(a));
+    const list = years.map((y) => ({ k: y || 'none', name: y || 'No Date', group: loose.filter((c) => yearOf(c) === y).sort(byNumber) }));
+    const box = h('div', { class: 'dash-section op-folders-section general-years-section' });
+    const draw = () => {
+      const open = list.find((o) => o.k === yearFolderState.open);
+      const tiles = h('div', { class: 'op-folders', role: 'list' }, list.map((o) => {
+        const bell = o.group.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date) && c.status !== 'Closed');
+        return h('button', { type: 'button', role: 'listitem', class: `op-folder-tile year-tile ${open === o ? 'open' : ''}`, 'aria-expanded': String(open === o),
+          title: `${o.name}: ${o.group.length} case${o.group.length === 1 ? '' : 's'} not in an Operation`,
+          onclick: () => { yearFolderState.open = open === o ? '' : o.k; draw(); } },
+        h('span', { class: 'op-folder-art' }, I('folder-fill'), o.group.length > 1 ? h('span', { class: 'op-folder-count' }, String(o.group.length)) : null),
+        h('span', { class: 'op-folder-name' }, o.name, bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null));
+      }));
+      const inside = open ? h('div', { class: 'op-open' },
+        h('div', { class: 'op-open-head' }, h('strong', {}, `General Files ${open.name}`), h('span', { class: 'muted small' }, `${open.group.length} case${open.group.length === 1 ? '' : 's'}`),
+          h('div', { class: 'spacer' }), h('button', { type: 'button', class: 'btn small', onclick: () => newCase() }, 'New Case')),
+        h('div', { class: 'op-open-cases' }, open.group.map((c) => overviewCard(c)))) : null;
+      box.replaceChildren(...[h('div', { class: 'section-head' }, h('h2', { class: 'section-title' }, 'General Files'), h('div', { class: 'spacer' }),
+        h('a', { class: 'btn small ghost', href: '#/general' }, 'All Cases')),
+        list.length ? tiles : h('p', { class: 'muted' }, 'Every case is in an Operation. Cases that aren\'t show here by the year they were opened.'), inside].filter(Boolean));
+    };
+    yearFolderState.close = () => { if (yearFolderState.open && box.isConnected) { yearFolderState.open = ''; draw(); } };
+    draw();
+    return box;
+  }
   function operationFolders(cases, tlBox = null, opBox = null) {
     const active = cases.filter((c) => !isArchivedEntry(c));
     // v1.46: a folder for each Operation (Operation Number order, as in the case list), then
     // General Files with the cases that aren't in one.
     const list = Vault.listOperations().map((op) => ({ k: op.id, op, name: opLabel(op), group: active.filter((c) => c.operationId === op.id).sort(byNumber) }))
       .sort((a, b) => byFileNumber(a.op.number, b.op.number) || a.op.name.localeCompare(b.op.name));
-    const loose = active.filter((c) => !c.operationId || !Vault.getOperation(c.operationId)).sort(byNumber);
-    if (loose.length || !list.length) list.push({ k: GENERAL, op: null, name: 'General Files', group: loose });
+    // v1.47: General Files has its own section below, by year.
     const box = h('div', { class: 'dash-section op-folders-section' });
     const draw = () => {
       const open = list.find((o) => o.k === opFolderState.open);
@@ -1062,16 +1106,10 @@
         h('div', { class: 'op-open-head' }, h('a', { href: open.op ? `#/operation/${encodeURIComponent(open.op.id)}` : '#/general', class: 'op-open-name' }, h('strong', {}, open.name)), h('span', { class: 'muted small' }, `${open.group.length} case number${open.group.length === 1 ? '' : 's'}`),
           h('div', { class: 'spacer' }),
           h('button', { type: 'button', class: 'btn small', onclick: () => newCase(open.op ? { operationId: open.op.id } : {}) }, open.op ? 'Add Case Number' : 'New Case')),
-        h('div', { class: 'op-open-cases' }, open.group.length ? open.group.map((c) => {
-          const to = (tab, sub) => `#/case/${encodeURIComponent(c.id)}/${tab}${sub ? `/${sub}` : ''}`;
-          return h('div', { class: 'op-case-card' },
-            h('a', { class: 'op-case-top', href: to('details') }, h('span', { class: 'op-case-id' }, h('span', { class: 'op-case-num' }, c.number || 'No case number yet'), h('span', { class: 'op-case-subject muted' }, c.subject || 'No subject yet')), statusPill(c.status)),
-            h('nav', { class: 'op-case-links', 'aria-label': `${c.number || 'Case'} tabs` },
-              ...OP_TABS.map(([tab, label]) => h('a', { class: 'op-tab-link', href: to(tab) }, label))));
-        }) : [h('p', { class: 'muted' }, open.op ? 'No cases in this Operation yet. Add Case Number creates one here.' : 'No independent cases.')])) : null;
+        h('div', { class: 'op-open-cases' }, open.group.length ? open.group.map((c) => overviewCard(c)) : [h('p', { class: 'muted' }, open.op ? 'No cases in this Operation yet. Add Case Number creates one here.' : 'No independent cases.')])) : null;
       box.replaceChildren(...[h('div', { class: 'section-head' }, h('h2', { class: 'section-title' }, 'Operations'), h('div', { class: 'spacer' }),
-        h('a', { class: 'btn small ghost', href: '#/operations' }, 'All Operations'), h('a', { class: 'btn small ghost', href: '#/general' }, 'General Files')),
-        tiles, opBox ? null : inside].filter(Boolean));
+        h('a', { class: 'btn small ghost', href: '#/operations' }, 'All Operations')),
+        list.length ? tiles : h('p', { class: 'muted' }, 'No Operations yet. All Operations → New Operation makes one.'), opBox ? null : inside].filter(Boolean));
       if (opBox) { opBox.hidden = !inside; opBox.replaceChildren(...(inside ? [inside] : [])); }
       if (tlBox) drawTimeline(open);
     };
@@ -1437,7 +1475,7 @@
   function caseSubtitle(c) {
     // v1.27: the file and case numbers and the opened date are on the Details tab itself.
     const op = opOf(c);
-    return [op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, class: 'case-op-link', title: 'Open the Operation' }, I('op-folder'), opLabel(op)) : h('a', { href: '#/general', class: 'case-op-link', title: 'Not in an Operation: open General Files' }, I('folder-fill'), 'General Files'),
+    return [op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, class: 'case-op-link', title: 'Open the Operation' }, I('op-folder'), opLabel(op)) : h('a', { href: '#/general', class: 'case-op-link gf-link', title: 'Not in an Operation: open General Files' }, I('folder-fill'), 'General Files'),
       c.agencyNumber && `Agency ${c.agencyNumber}`, c.client, statusPill(c.status)]
       .filter(Boolean).flatMap((x, i) => (i ? [' · ', x] : [x]));
   }
@@ -1535,7 +1573,7 @@
       // ---- the operation, the same on every one of its case numbers: name, status, dates
       h('section', { class: 'op-card' },
         h('div', { class: 'case-op-bar', 'data-ro-ok': archived ? null : 'true' },
-          h('span', { class: 'case-op-label' }, I(op ? 'op-folder' : 'folder-fill'), op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}` }, opLabel(op)) : 'General Files: not in an Operation'),
+          h('span', { class: `case-op-label${op ? '' : ' gf-link'}` }, I(op ? 'op-folder' : 'folder-fill'), op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}` }, opLabel(op)) : 'General Files: not in an Operation'),
           h('div', { class: 'spacer' }),
           archived ? null : h('label', { class: 'case-op-pick' }, h('span', {}, op ? 'Move to' : 'Assign to'), opPick),
           archived || !op ? null : h('button', { class: 'btn small', type: 'button', icon: 'link-45deg', onclick: async () => { await Save.flushAll(); if (await unlinkCaseAsk(Vault.data.cases.find((x) => x.id === c.id) || c)) { renderCaseList(); showCase(c.id, 'details'); } } }, 'Unlink')),

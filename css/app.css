@@ -2796,3 +2796,18 @@ table.data-table .empty-cell { text-align: center; padding: 1.4rem; }
 .op-form { width: min(42rem, 86vw); }
 .details-grid.details-row-title { grid-template-columns: minmax(0, 1.5fr) minmax(0, .7fr) minmax(0, 1.1fr) minmax(0, 1.1fr); }
 @media (max-width: 900px) { .details-grid.details-row-title { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* v1.47: General Files folders are manila amber, so they never look like an Operation's blue folder. */
+:root { --gf: #c98a12; --gf-soft: rgba(201, 138, 18, .16); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --gf: #e0a83a; --gf-soft: rgba(224, 168, 58, .16); } }
+:root[data-theme="dark"] { --gf: #e0a83a; --gf-soft: rgba(224, 168, 58, .16); }
+.year-tile .op-folder-art, .year-tile .op-folder-art svg, .year-tile.open .op-folder-art { color: var(--gf); }
+.op-head > .op-folder.gf-icon { background: var(--gf-soft); color: var(--gf); }
+.closed-cases .op-head > .op-folder.gf-icon { background: var(--surface-2); color: var(--muted); }
+.page-head .page-icon.gf-icon, .gf-link .bi, .case-op-label.gf-link .bi { color: var(--gf); }
+.year-tile.open { border-color: var(--gf); background: var(--gf-soft); }
+.op-head > .op-folder.gf-icon svg, .op-head > .op-folder.gf-icon .bi { color: var(--gf); }
+.closed-cases .op-head > .op-folder.gf-icon svg { color: var(--muted); }
+.year-tile .op-folder-count { border-color: var(--gf); color: var(--gf); }
+.op-group.general-group { border-left-color: var(--gf); }
+.closed-cases .op-group.general-group, .archived-cases .op-group.general-group { border-left-color: var(--muted); }
