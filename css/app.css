@@ -3022,3 +3022,37 @@ svg.ci > image { transform: scale(1.12); transform-origin: 50% 50%; }
 .lc-empty { align-self: center; }
 @media (max-width: 1000px) { .lc-body { grid-template-columns: minmax(0, 1fr); } }
 .lc-item > * { order: 0 !important; }
+
+/* v1.53: CaseVault's own square list for every drop-down (js/select.js). */
+.sel-pop { position: fixed; z-index: 1000; max-height: min(22rem, 70vh); overflow-y: auto; background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow); padding: 2px 0; font-size: .92rem; }
+.sel-opt { padding: .38rem .75rem; cursor: pointer; white-space: nowrap; }
+.sel-opt.in-group { padding-left: 1.3rem; }
+.sel-opt.active { background: var(--surface-2); }
+.sel-opt.on { background: var(--accent-soft); font-weight: 600; }
+.sel-opt.on.active { background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface-2)); }
+.sel-opt.disabled { color: var(--muted); cursor: default; opacity: .6; }
+.sel-group { padding: .35rem .6rem .15rem; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+
+/* v1.53: a softer, warmer off-white, and the colour icons on white tiles (not on tinted ones), so
+   the icons carry the colour. The state of the header buttons shows as a coloured line under them. */
+:root:not([data-theme="dark"]) { --bg: #f7f6f2; --surface: #ffffff; --surface-2: #efeee9; --border: #e2e0da; --topbar-bg: rgba(255, 255, 255, .92); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #161b22; --surface: #0d1117; --surface-2: #1f2630; --border: #30363d; --topbar-bg: rgba(13, 17, 23, .85); } }
+.stat-icon:has(> svg.ci), .ql-icon:has(> svg.ci), .fact-icon:has(> svg.ci), .chat-empty-icon:has(> svg.ci), .rpt-icon:has(> svg.ci), .page-icon:has(> svg.ci),
+.op-head > .op-folder:has(> svg.ci), .stat-pending .stat-icon:has(> svg.ci), .stat-closed .stat-icon:has(> svg.ci) { background: var(--surface); border: 1px solid var(--border); }
+.closed-cases .op-head > .op-folder:has(> svg.ci), .op-head > .op-folder.gf-icon:has(> svg.ci) { background: var(--surface); }
+.tb-status .tb-square:has(> svg.ci), .tb-status .net-status, .tb-status .engine-status, .tb-status .mem-status { background: var(--surface) !important; border: 1px solid var(--border); box-shadow: inset 0 -3px 0 var(--state, transparent); }
+.tb-status .net-status.off { --state: var(--ok); } .tb-status .net-status.on { --state: var(--danger); }
+.tb-status .engine-status.offline { --state: var(--danger); } .tb-status .engine-status.connected { --state: var(--ok); }
+.tb-status .mem-status:not(.warn):not(.high) { --state: var(--ok); } .tb-status .mem-status.warn { --state: var(--warn); } .tb-status .mem-status.high { --state: var(--danger); }
+/* On a filled (blue or red) button a colour icon sits on a small white tile. */
+.btn.primary svg.ci:not(.ci-only) > image, .btn.danger svg.ci:not(.ci-only) > image { display: inline; }
+.btn.primary svg.ci:not(.ci-only) > :not(image), .btn.danger svg.ci:not(.ci-only) > :not(image) { display: none; }
+.btn.primary svg.ci, .btn.danger svg.ci { background: #fff; padding: 1px; box-sizing: content-box; }
+/* The Overview banner keeps its white line icons (unchanged). */
+.hero svg.ci:not(.ci-only) > :not(image) { display: inline !important; }
+.hero svg.ci:not(.ci-only) > image { display: none !important; }
+.hero svg.ci { background: none !important; padding: 0 !important; }
+/* The deadline bell is red. */
+.case-bell, .case-bell .bi { color: var(--danger); }
+.tb-status .save-status { background: var(--surface) !important; border: 1px solid var(--border); box-shadow: inset 0 -3px 0 var(--state, transparent); }
+.tb-status .save-status.saved { --state: var(--ok); } .tb-status .save-status.saving { --state: var(--warn); } .tb-status .save-status.error { --state: var(--danger); }

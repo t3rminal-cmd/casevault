@@ -15,6 +15,12 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.53)
+
+- Square drop-down lists in every browser: CaseVault draws its own list for every drop-down (`js/select.js`), so no Windows/Edge rounded pop-up appears; the browser's typing history and suggestion pop-ups stay off as before
+- More colour icons drawn in the same style (search, hide, offline, AI robot, PDF and Word, review, export, save, pencil, the Files folders, camera, printer, clock…), on white tiles so they stand out; filled buttons show them on a small white square; the Overview banner is unchanged
+- The deadline bell is red; the page is a softer off-white; the header buttons show their state as a coloured line under them
+
 ## Features (v1.52)
 
 - **Link Chart** tab on every case: subjects at the top, suppliers, couriers and associates under them, and monikers, webpages, dark-web names, phones, wallets and places hanging off whoever uses them. Square photos from the case files (the same size on every card), platform pictures for Webpage, Dark Web, Google, Snapchat, Facebook / Instagram and Telegram, dashed lines for other connections. A big crew goes in rows so the chart fits a portrait page. PDF View, and Save PDF to Case (Files → Link Charts). Kept in the case folder as `linkchart.json`

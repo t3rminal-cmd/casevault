@@ -215,6 +215,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.53
+
+- **Square drop-down lists everywhere.** Clicking a drop-down (or Alt+↓, F4, Space or Enter) now opens CaseVault's own square list instead of the browser's rounded one. ↑ ↓ choose, a letter jumps to it, Enter picks, Esc closes.
+- **More colour icons:** search, hide, offline, the AI robot, PDF View, Word View, Draft with AI, Review, Export, Save, the Files folders and others are drawn in the same style as the rest. On a blue button the icon sits on a small white square.
+- **Colours:** the page is a softer off-white, and icons sit on white tiles. The header buttons show their state with a coloured line under them: green is fine, red is off or a problem. The deadline bell is red.
+
 ### What's new in v1.52
 
 - **Link Chart** tab on every case (after Files): who is under whom, with photos, monikers and webpages, ready to print in portrait. See *Link Chart* under *Files*.
