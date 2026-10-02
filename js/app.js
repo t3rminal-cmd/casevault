@@ -572,18 +572,30 @@
     const id = typeof c === 'string' ? c : c && c.operationId;
     return id ? (Vault.data?.cases || []).filter((x) => !isArchivedEntry(x) && x.operationId === id).sort((a, b) => (b.updated || '').localeCompare(a.updated || '')) : [];
   }
-  // Which folders are folded is kept in vault.json on the SSD (v1.28), by Operation id (v1.46) or
-  // 'general'. Operation names are case data, so they never go in the browser's storage.
+  // v1.50: the folders start folded. The one holding what's on screen (the case, the Operation, or
+  // General Files) is open; one opened or folded with its arrow stays that way until you go to
+  // another page. (v1.28 to v1.49 kept which were folded in vault.json.)
   try { localStorage.removeItem('casevault-op-closed'); } catch { /* nothing kept */ }
-  const closedOps = () => new Set(((Vault.data && Vault.data.settings && Vault.data.settings.foldedOps) || []).filter((x) => typeof x === 'string'));
+  const sideFold = new Map(); // folder key -> true (opened) / false (folded), until the next page
+  let sideFoldHash = '';
+  function folderOpen(group) {
+    if (location.hash !== sideFoldHash) { sideFold.clear(); sideFoldHash = location.hash; }
+    if (sideFold.has(group.key)) return sideFold.get(group.key);
+    if ($('#case-search').value.trim()) return true;
+    if (state.caseId && group.cases.some((c) => c.id === state.caseId)) return true;
+    const opm = location.hash.match(/^#\/operation\/([^/]+)/);
+    if (opm && group.op && !group.partial && group.op.id === decodeURIComponent(opm[1])) return true;
+    return group.key === GENERAL && /^#\/general\b/.test(location.hash);
+  }
   const byNumber = (a, b) => String(a.number || '').localeCompare(String(b.number || ''), undefined, { numeric: true });
   /** A folder in the case list: { key, op (null for General Files), cases }. */
   function operationGroup(group) {
     const { key, op, cases } = group;
     const label = op ? opLabel(op) : 'General Files';
-    const open = !!$('#case-search').value.trim() || !closedOps().has(key);
+    const open = folderOpen(group);
     const bell = cases.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date));
-    const meta = op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : `${group.total} independent case${group.total === 1 ? '' : 's'}`;
+    const meta = group.partial ? `${group.cases.length} closed case${group.cases.length === 1 ? '' : 's'} · ${op.status}`
+      : op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : `${group.total} independent case${group.total === 1 ? '' : 's'}`;
     const det = h('details', { class: `op-group${op ? '' : ' general-group'}`, open },
       h('summary', { class: 'op-head', title: op ? `${label}: open the Operation` : 'General Files: every case; these are the ones not in an Operation' },
         h('span', { class: `op-folder${op ? '' : ' gf-icon'}` }, I(op ? 'op-folder' : 'folder-fill')),
@@ -601,11 +613,9 @@
       location.hash = op ? `#/operation/${encodeURIComponent(op.id)}` : '#/general';
     });
     det.addEventListener('toggle', () => {
-      // A <details> drawn open fires "toggle" too: save only a real change (v1.29).
-      const set = closedOps();
-      if (det.open === !set.has(key)) return;
-      if (det.open) set.delete(key); else set.add(key);
-      Save.track('settings', () => Vault.updateSettings({ foldedOps: [...set] })).then(() => drawTitlesOnly()).catch(() => {});
+      // A <details> drawn open fires "toggle" too: keep only a real change (v1.29).
+      if (det.open === folderOpen(group)) return;
+      sideFold.set(key, det.open);
     });
     return h('li', { class: 'op-item' }, det);
   }
@@ -626,7 +636,12 @@
       const hit = q && opLabel(op).toLowerCase().includes(q);
       const mine = (hit ? total : cases.filter((c) => c.operationId === op.id)).sort(byNumber);
       if (searching && q && !hit && !mine.length) continue;
-      groups.push({ key: op.id, op, cases: mine, total: total.length, closed: op.status === 'Closed' || (total.length > 0 && total.every((c) => c.status === 'Closed')) });
+      const closed = op.status === 'Closed' || (total.length > 0 && total.every((c) => c.status === 'Closed'));
+      groups.push({ key: op.id, op, cases: mine, total: total.length, closed });
+      // v1.50: a closed case of an Operation that is still open stays in its folder, and shows under
+      // Closed too, in a folder of the same Operation.
+      const shut = mine.filter((c) => c.status === 'Closed');
+      if (!closed && shut.length) groups.push({ key: `${op.id}:closed`, op, cases: shut, total: total.length, closed: true, partial: true });
     }
     const loose = cases.filter((c) => !c.operationId || !Vault.getOperation(c.operationId)).sort(byNumber);
     const looseAll = all.filter((c) => !c.operationId || !Vault.getOperation(c.operationId));
@@ -642,7 +657,6 @@
 
   function renderCaseList() {
     const list = $('#case-list');
-    if ($('#btn-titles-only')) drawTitlesOnly();
     const section = $('#archived-cases');
     if (!Vault.data) { list.replaceChildren(); section.hidden = true; return; }
     const cases = filteredCases();
@@ -674,28 +688,12 @@
   }
 
   $('#case-search').addEventListener('input', debounce(renderCaseList, 120));
-
-  // Titles only (v1.37): one button folds every operation so only the titles show, and unfolds them
-  // again. Each operation also folds on its own: click its title.
-  function allOpKeys() { return opGroups((Vault.data?.cases || []).filter((c) => !isArchivedEntry(c))).map((g) => g.key); }
-  const titlesOnlyBtn = h('button', { id: 'btn-titles-only', class: 'icon-btn', type: 'button' });
-  function drawTitlesOnly() {
-    if (!Vault.data) return;
-    const keys = allOpKeys();
-    const folded = keys.length > 0 && keys.every((k) => closedOps().has(k));
-    const label = folded ? 'Show the case numbers in each folder' : 'Titles only: hide the case numbers in each folder';
-    titlesOnlyBtn.title = label;
-    titlesOnlyBtn.dataset.tip = label;
-    titlesOnlyBtn.setAttribute('aria-pressed', String(folded));
-    titlesOnlyBtn.replaceChildren(I(folded ? 'arrows-expand' : 'arrows-collapse'), h('span', { class: 'sr-only' }, label));
+  // v1.50: Closed and Archived at the bottom: a grey folder, the word in capitals, a drop-down arrow.
+  for (const sec of ['#closed-cases', '#archived-cases']) {
+    const sum = $(`${sec} > summary`);
+    sum.prepend(h('span', { class: 'sec-folder' }, I('folder-fill')));
+    sum.append(h('span', { class: 'sec-chev' }, I('chevron-down')));
   }
-  titlesOnlyBtn.addEventListener('click', async () => {
-    const keys = allOpKeys();
-    const folded = keys.length > 0 && keys.every((k) => closedOps().has(k));
-    try { await Save.track('settings', () => Vault.updateSettings({ foldedOps: folded ? [] : keys })); } catch { return; }
-    renderCaseList();
-  });
-  $('.sidebar-tools .search-wrap').after(titlesOnlyBtn);
 
   /* =====================================================================
    * Routing: #/  or  #/case/<id>/<tab>
@@ -945,7 +943,7 @@
           h('td', { class: 'nowrap' }, h('div', { class: 'op-case-links' }, OP_TABS.map(([tab, label]) => h('a', { class: 'op-tab-link', href: caseLink(c, tab) }, label)))),
           h('td', { class: 'nowrap' }, isArchivedEntry(c)
             ? h('span', { class: 'muted small', title: 'Archived cases are read-only. Restore it to unlink it.' }, 'Archived')
-            : h('button', { class: 'btn small', type: 'button', icon: 'link-45deg', onclick: async () => { if (await unlinkCaseAsk(c)) redraw(); } }, 'Unlink')))))))
+            : h('button', { class: 'btn small', type: 'button', icon: 'folder-symlink', title: 'Move this case to General Files or another Operation', onclick: async () => { if (await moveCaseDialog(c)) redraw(); } }, 'Move File')))))))
         : h('div', { class: 'empty-state' }, h('p', {}, 'No cases in this Operation yet.'), h('p', { class: 'muted small' }, 'New Case in this Operation creates one; Add Existing Case links one from General Files.')),
       h('section', { class: 'case-actions op-danger', 'aria-labelledby': 'op-actions-title' },
         h('h3', { id: 'op-actions-title', icon: 'sliders' }, 'Operation actions'),
@@ -989,14 +987,8 @@
         const op = opOf(c);
         const dup = dups.has(CVOperation.normNumber(c.number));
         const arch = isArchivedEntry(c);
-        let action = null;
-        if (!arch && op) action = h('button', { class: 'btn small', type: 'button', icon: 'link-45deg', onclick: async () => { if (await unlinkCaseAsk(c)) redraw(); } }, 'Unlink');
-        else if (!arch && Vault.listOperations().length) {
-          const pick = operationSelect('', { 'aria-label': `Assign case ${c.number || ''} to an Operation`, class: 'assign-select' });
-          pick.options[0].textContent = 'Assign to…';
-          pick.addEventListener('change', async () => { if (pick.value && await linkCase(c.id, pick.value)) redraw(); else pick.value = ''; });
-          action = pick;
-        }
+        // v1.50: one Move File button (it was Unlink, or an "Assign to…" list).
+        const action = arch ? null : h('button', { class: 'btn small', type: 'button', icon: 'folder-symlink', title: 'Move this case into an Operation, to another one, or back to General Files', onclick: async () => { if (await moveCaseDialog(c)) redraw(); } }, 'Move File');
         return h('tr', { class: arch ? 'archived-row' : '' },
           h('td', {}, h('a', { href: caseLink(c), class: 'case-num-link' }, c.number || 'No case number'),
             dup ? h('span', { class: 'dup-flag', title: 'Another case has the same Case Number (made before numbers had to be unique). Nothing was changed.' }, I('exclamation-triangle-fill'), 'Duplicate') : null),
@@ -1337,16 +1329,37 @@
     }
   }
 
-  /** Unlink a case from its Operation, after asking. The case and its files stay in General Files. */
-  async function unlinkCaseAsk(entry) {
-    const op = opOf(entry);
-    if (!op) return false;
-    const ok = await confirmDialog({ title: 'Unlink case', message: `Unlink case ${entry.number || entry.title} from ${opLabel(op)}? The case and all its files are kept and stay in General Files as an independent case.`, confirmText: 'Unlink' });
-    if (!ok) return false;
+  /* Move File (v1.50): one box to move a case between General Files and the Operations: out of
+   * an Operation into General Files (independent), from General Files into an Operation, or from
+   * one Operation to another. The case and its files never move on the SSD; only the link changes.
+   * -> true when it moved. */
+  async function moveCaseDialog(entry) {
+    await Save.flushAll();
+    const cur = opOf(entry);
+    const ops = [...Vault.listOperations()].sort((a, b) => byFileNumber(a.number, b.number) || a.name.localeCompare(b.name));
+    const choices = [['', 'General Files (independent case)', 'folder-fill'], ...ops.map((op) => [op.id, opLabel(op), 'op-folder'])].filter(([id]) => id !== (cur ? cur.id : ''));
+    if (!choices.length) { toast('There is nowhere else to move it yet. Make an Operation first.', 'info', 5000); return false; }
+    const want = await openDialog((close) => {
+      let pick = choices[0][0];
+      const rows = choices.map(([id, label, icon], i) => {
+        const radio = h('input', { type: 'radio', name: 'move-dest', value: id, checked: i === 0 });
+        radio.addEventListener('change', () => { pick = id; });
+        return h('label', { class: `move-dest${id ? '' : ' gf-link'}` }, radio, I(icon), h('span', {}, label));
+      });
+      return h('form', { class: 'move-file', onsubmit: (e) => { e.preventDefault(); close(pick); } },
+        h('h2', {}, 'Move File'),
+        h('p', { class: 'muted small' }, `Case ${entry.number || entry.title || ''} is in ${cur ? opLabel(cur) : 'General Files'}. Where should it go? Its files stay where they are on the SSD; only where it's listed changes.`),
+        h('div', { class: 'move-dests', role: 'radiogroup', 'aria-label': 'Move to' }, rows),
+        h('div', { class: 'dialog-actions' },
+          h('button', { class: 'btn', type: 'button', onclick: () => close(undefined) }, 'Cancel'),
+          h('button', { class: 'btn primary', type: 'submit', icon: 'folder-symlink' }, 'Move')));
+    });
+    if (want === undefined) return false;
     try {
-      await Save.track(`link:${entry.id}`, () => Vault.unlinkCase(entry.id));
+      if (cur) await Save.track(`link:${entry.id}`, () => Vault.unlinkCase(entry.id));
       if (state.caseObj && state.caseObj.id === entry.id) state.caseObj = null;
-      toast(`Case ${entry.number || ''} is now independent, in General Files.`, 'success', 3000);
+      if (want) return await linkCase(entry.id, want);
+      toast(`Case ${entry.number || ''} moved to General Files.`, 'success', 3000);
       return true;
     } catch (err) {
       if (err && err.name === 'ValidationError') toast(err.message, 'error', 7000);
@@ -1556,27 +1569,16 @@
       renderCaseList();
     });
     const dupNow = CVOperation.caseWithNumber(Vault.data.cases, c.number, c.id);
-    // Which Operation the case is in, and the buttons to change it.
-    const opPick = operationSelect(c.operationId || '', { 'aria-label': 'Operation' });
-    opPick.addEventListener('change', async () => {
-      const want = opPick.value;
-      opPick.value = c.operationId || '';
-      await Save.flushAll();
-      if (c.operationId && want !== c.operationId) {
-        if (!(await unlinkCaseAsk(Vault.data.cases.find((x) => x.id === c.id) || c))) return;
-      }
-      if (want) await linkCase(c.id, want);
-      renderCaseList();
-      showCase(c.id, 'details');
-    });
     panel.replaceChildren(
       // ---- the operation, the same on every one of its case numbers: name, status, dates
       h('section', { class: 'op-card' },
         h('div', { class: 'case-op-bar', 'data-ro-ok': archived ? null : 'true' },
           h('span', { class: `case-op-label${op ? '' : ' gf-link'}` }, I(op ? 'op-folder' : 'folder-fill'), op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}` }, opLabel(op)) : 'General Files: not in an Operation'),
           h('div', { class: 'spacer' }),
-          archived ? null : h('label', { class: 'case-op-pick' }, h('span', {}, op ? 'Move to' : 'Assign to'), opPick),
-          archived || !op ? null : h('button', { class: 'btn small', type: 'button', icon: 'link-45deg', onclick: async () => { await Save.flushAll(); if (await unlinkCaseAsk(Vault.data.cases.find((x) => x.id === c.id) || c)) { renderCaseList(); showCase(c.id, 'details'); } } }, 'Unlink')),
+          // v1.50: Move File (it was "Assign to" / "Move to" and Unlink).
+          archived ? null : h('button', { class: 'btn small', type: 'button', icon: 'folder-symlink', title: 'Move this case into an Operation, to another one, or back to General Files', onclick: async () => {
+            if (await moveCaseDialog(Vault.data.cases.find((x) => x.id === c.id) || c)) { renderCaseList(); showCase(c.id, 'details'); }
+          } }, 'Move File')),
         h('form', { class: 'form-grid details-grid op-top details-row4 details-row-title', onsubmit: (e) => e.preventDefault() },
           field('Subject Name', subjectIn, '', 'The person the case is about. Shown under the Case Number. Several cases can have the same subject.'),
           h('label', { class: 'field' }, h('span', {}, 'Status'), statusSelect, statusNote),
@@ -1881,7 +1883,7 @@
       if (last) last.focus();
     } }, 'Add contact');
 
-    return h('section', { class: 'contacts', 'aria-labelledby': 'contacts-title' },
+    return h('section', { class: 'contacts cv-boxed', 'aria-labelledby': 'contacts-title' },
       h('h3', { id: 'contacts-title', icon: 'people', title: 'Who to reach on this case. The case officer and prosecutor fill {{case.officer.name}}, {{case.prosecutor.email}} and so on in templates.' }, 'Contacts'),
       roles,
       h('div', { class: 'contact-row' }, h('div', { class: 'field contact-role' }, h('span', {}, 'Role'), h('strong', { class: 'contact-fixed' }, 'Case Officer')), ...person(k.officer, 'Case officer')),
@@ -1944,7 +1946,7 @@
       const last = rows.lastElementChild && rows.lastElementChild.querySelector('.decon-wide input');
       if (last) last.focus();
     } }, 'Add Deconfliction');
-    return h('section', { class: 'contacts deconfliction', 'aria-labelledby': 'decon-title' },
+    return h('section', { class: 'contacts deconfliction cv-boxed', 'aria-labelledby': 'decon-title' },
       h('h3', { id: 'decon-title', icon: 'shield-exclamation', title: 'Each deconfliction check for this case, and whether it showed a conflict.' }, 'Deconfliction'),
       rows,
       h('div', { class: 'contact-add' }, add));
@@ -2161,7 +2163,7 @@
       f.title.focus();
     });
 
-    const form = h('form', { class: 'timeline-form', onsubmit: async (e) => {
+    const form = h('form', { class: 'timeline-form cv-boxed', onsubmit: async (e) => {
       e.preventDefault();
       const data = { date: f.date.value, time: f.time.value, kind: f.kind.value, title: f.title.value.trim(), note: f.note.value.trim() };
       if (!data.date || !data.title) return;
@@ -3094,6 +3096,34 @@
   }
   lockBtn.addEventListener('click', () => setSidebarLock(!document.body.classList.contains('sidebar-locked')));
   $('#btn-sidebar-collapse').after(lockBtn); // v1.34: hide button far left, padlock far right
+  // v1.50: next to the hide-the-list button: Search (an icon that opens the search box), Home and
+  // Hide (the privacy screen, moved here from the header, so the header keeps just the menu).
+  const searchBtn = h('button', { id: 'btn-side-search', class: 'icon-btn', type: 'button', title: 'Search cases', 'aria-controls': 'case-search', 'aria-expanded': 'false' }, I('search'), h('span', { class: 'sr-only' }, 'Search cases'));
+  const homeBtn = h('a', { id: 'btn-side-home', class: 'icon-btn', href: '#/', title: 'Home: the Overview' }, I('house-door'), h('span', { class: 'sr-only' }, 'Home'));
+  const privacyBtn = $('#btn-privacy');
+  privacyBtn.classList.remove('tb-square');
+  $('#btn-sidebar-collapse').after(searchBtn, homeBtn, privacyBtn);
+  const tools = $('.sidebar-tools');
+  const showSearch = (on) => {
+    tools.classList.toggle('search-open', on);
+    searchBtn.setAttribute('aria-expanded', String(on));
+    searchBtn.classList.toggle('on', on);
+  };
+  showSearch(false);
+  searchBtn.addEventListener('click', () => {
+    if (document.body.classList.contains('sidebar-collapsed')) { if (document.body.classList.contains('sidebar-locked')) return; setSidebar(false, { focus: false }); }
+    const on = !tools.classList.contains('search-open') || document.activeElement !== $('#case-search');
+    showSearch(on || !!$('#case-search').value.trim());
+    if (on) $('#case-search').focus();
+  });
+  $('#case-search').addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    if ($('#case-search').value) { $('#case-search').value = ''; renderCaseList(); }
+    showSearch(false);
+    searchBtn.focus();
+  });
+  $('#case-search').addEventListener('blur', () => { if (!$('#case-search').value.trim()) showSearch(false); });
   setSidebarLock(false, { save: false });
 
   // Drag the case list's right edge to make it wider or narrower (or focus it and use ← →).

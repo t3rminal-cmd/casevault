@@ -26,3 +26,12 @@ test('dates are shown long (v1.32) and typed several ways', () => {
   })) assert.strictEqual(F.parseDate(typed), want, typed);
   for (const bad of ['', '13.01.2026', '02.30.2026', '12.01', 'soon']) assert.strictEqual(F.parseDate(bad), '', bad);
 });
+
+test('v1.50 calendar: six weeks from the Sunday on or before the 1st', () => {
+  const F = require('../js/formats.js');
+  const g = F.monthGrid(2026, 9); // October 2026 starts on a Thursday
+  assert.strictEqual(g.length, 42);
+  assert.deepStrictEqual(g.slice(0, 5).map((d) => [d.iso, d.inMonth]), [['2026-09-27', false], ['2026-09-28', false], ['2026-09-29', false], ['2026-09-30', false], ['2026-10-01', true]]);
+  assert.strictEqual(g.filter((d) => d.inMonth).length, 31);
+  assert.strictEqual(F.monthGrid(2028, 1).filter((d) => d.inMonth).length, 29, 'leap year February');
+});

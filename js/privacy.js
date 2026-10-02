@@ -139,8 +139,9 @@
 
   /* ---------------- page wiring (browser) ---------------- */
 
-  // Falling 1s and 0s in blue on white, like "the Matrix" but light. Stops when hidden; with
+  // Falling 1s and 0s in blue on near-black (v1.50; white before), like "the Matrix". Stops when hidden; with
   // "reduce motion" in Windows it draws one still frame.
+  const BG = '#0e1116'; // a muted near-black; .privacy-screen in app.css matches it
   function matrixRain(canvas, win) {
     const ctx = canvas.getContext && canvas.getContext('2d');
     let raf = 0;
@@ -156,7 +157,7 @@
       size = win.innerWidth < 600 ? 14 : 18;
       const cols = Math.ceil(win.innerWidth / size);
       drops = Array.from({ length: cols }, () => Math.floor(Math.random() * -40));
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = BG;
       ctx.fillRect(0, 0, win.innerWidth, win.innerHeight);
     }
     function frame(t) {
@@ -166,14 +167,14 @@
       step();
     }
     function step() {
-      // A translucent white wash leaves fading trails behind each falling digit.
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+      // A translucent dark wash leaves fading trails behind each falling digit.
+      ctx.fillStyle = 'rgba(14, 17, 22, 0.14)';
       ctx.fillRect(0, 0, win.innerWidth, win.innerHeight);
       ctx.font = `${size}px ui-monospace, Consolas, "Courier New", monospace`;
       for (let i = 0; i < drops.length; i++) {
         const y = drops[i] * size;
         if (y > 0) {
-          ctx.fillStyle = Math.random() < 0.08 ? '#93c5fd' : '#1d4ed8';
+          ctx.fillStyle = Math.random() < 0.08 ? '#bfdbfe' : '#3b82f6';
           ctx.fillText(Math.random() < 0.5 ? '0' : '1', i * size, y);
         }
         if (y > win.innerHeight && Math.random() > 0.975) drops[i] = 0;
@@ -208,26 +209,25 @@
     const form = doc.createElement('form');
     form.className = 'privacy-unlock';
     const input = doc.createElement('input');
-    Object.assign(input, { type: 'password', inputMode: 'numeric', autocomplete: 'off', maxLength: 6, placeholder: 'PIN' });
-    input.setAttribute('aria-label', 'PIN');
+    Object.assign(input, { type: 'password', inputMode: 'numeric', autocomplete: 'off', maxLength: 6 });
+    input.setAttribute('aria-label', 'Authenticate');
     const msg = doc.createElement('p');
     msg.className = 'privacy-msg';
     const hint = doc.createElement('p');
     hint.className = 'privacy-hint';
-    // The PIN box looks like a terminal prompt: "PIN> ••••" and a blinking blue block cursor. The
-    // real input sits on top of it, invisible, so typing, pasting and screen readers still work.
+    // A thin box in the lower right (v1.50): "AUTHENTICATE" until something is typed, then one
+    // asterisk per digit and a blinking cursor. The real input sits on top of it, invisible, so
+    // typing, pasting and screen readers still work.
     const line = doc.createElement('div');
     line.className = 'privacy-prompt';
-    const prompt = doc.createElement('span');
-    prompt.className = 'privacy-ps1';
-    prompt.textContent = 'PIN>';
     const dots = doc.createElement('span');
     dots.className = 'privacy-dots';
+    dots.dataset.placeholder = 'AUTHENTICATE';
     const cursor = doc.createElement('span');
     cursor.className = 'privacy-cursor';
     cursor.setAttribute('aria-hidden', 'true');
-    line.append(prompt, dots, cursor, input);
-    const showDots = () => { dots.textContent = '•'.repeat(input.value.length); };
+    line.append(dots, cursor, input);
+    const showDots = () => { dots.textContent = '*'.repeat(input.value.length); };
     input.addEventListener('input', showDots);
     form.append(line, msg);
     const canvas = doc.createElement('canvas');

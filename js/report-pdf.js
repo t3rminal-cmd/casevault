@@ -141,6 +141,7 @@
         text(M, y - 14, title, 14, true);
         if (agency) text(M, y - 25, agency.toUpperCase(), 7.5, true);
         const bw = (INNER / 8) * 2;
+        fill(PAGE_W - M - bw, y - 10.5, bw, 10.5, 0.9);
         rect(PAGE_W - M - bw, y - 30, bw, 30, 0.9);
         text(PAGE_W - M - bw + 3, y - 8, 'R.D. Number', 7);
         if (on('numbers') && d.rdNumber) text(PAGE_W - M - bw + 6, y - 23, d.rdNumber, 11, true);
@@ -176,8 +177,9 @@
       ensure(h);
       let x = M;
       cells.forEach((c, i) => {
-        // v1.44: the value sits in a light grey box under its label (no dotted rule).
-        fill(x + 1.5, y - h + 1.5, sizes[i] - 3, h - lh - 2.5, 0.93);
+        // v1.50: the label sits on a light grey band across the top of the box and the value is on
+        // white under it (v1.44 to v1.49 shaded the value instead).
+        fill(x, y - lh - 1, sizes[i], lh + 1, 0.9);
         rect(x, y - h, sizes[i], h, 0.6);
         labs[i].forEach((l, j) => text(x + 2, y - 7.5 - j * 8, l, labSize[i]));
         lines[i].forEach((l, j) => text(x + 4, y - lh - 10 - j * 11.5, l, 10));
@@ -247,6 +249,7 @@
     // ---- update information, status, how cleared
     if (on('update')) {
       ensure(16 + 2 * 15 + 34);
+      fill(M, y - 14, INNER, 14, 0.9);
       rect(M, y - 14, INNER, 14, 0.6);
       center(M, INNER, y - 10, 'Update Information    *See Narrative For Updated Information', 8.5, true);
       y -= 14;
@@ -265,6 +268,8 @@
       const halves = [[M, split, 'Status', 'status'], [M + split, INNER - split, 'How Cleared', 'cleared']];
       rect(M, y - 34, split, 34, 0.6); rect(M + split, y - 34, INNER - split, 34, 0.6);
       for (const [x, w, head, k] of halves) {
+        fill(x, y - 13, w, 13, 0.9);
+        rect(x, y - 13, w, 13, 0.6);
         center(x, w, y - 9.5, head, 8.5, true);
         const list = opts(k); const cw = w / list.length;
         list.forEach((o, i) => {
@@ -351,6 +356,7 @@
       ensure(tH + 24);
       const top = y; const cw = INNER / 3;
       const cellT = (x, yy, w, label, value, sign) => {
+        fill(x, yy - 10.5, w, 10.5, 0.9); // v1.50: the label on a grey band, like the grid
         rect(x, yy - rowH, w, rowH, 0.6);
         text(x + 3, yy - 8, label, 7);
         if (value) text(x + 4, yy - 22, value, 10);

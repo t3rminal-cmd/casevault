@@ -88,12 +88,6 @@
     const hidden = doc.createElement('input');
     hidden.type = 'hidden';
     if (attrs.name) hidden.name = attrs.name;
-    // The browser's own calendar, opened from the button; never shown as a box.
-    const picker = doc.createElement('input');
-    picker.type = 'date';
-    picker.className = 'date-picker-native';
-    picker.tabIndex = -1;
-    picker.setAttribute('aria-hidden', 'true');
     const btn = doc.createElement('button');
     btn.type = 'button';
     btn.className = 'icon-btn date-btn';
@@ -103,10 +97,10 @@
     sr.className = 'sr-only';
     sr.textContent = 'Pick a date';
     btn.append(sr);
-    wrap.append(text, btn, picker, hidden);
+    wrap.append(text, btn, hidden);
 
     let iso = parseDate(attrs.value) || '';
-    const show = () => { text.value = dateText(iso); hidden.value = iso; picker.value = iso; };
+    const show = () => { text.value = dateText(iso); hidden.value = iso; };
     show();
     const fire = () => {
       wrap.dispatchEvent(new root.Event('input', { bubbles: true }));
@@ -131,7 +125,6 @@
         const changed = next !== iso;
         iso = next;
         hidden.value = iso;
-        picker.value = iso;
         text.setCustomValidity('');
         if (changed) fire();
       }
@@ -141,14 +134,105 @@
       if (next) { iso = next; show(); }
       text.setCustomValidity(text.value.trim() && !next ? 'Type a date as MM.DD.YYYY, for example 12.01.2026.' : '');
     });
-    btn.addEventListener('click', () => {
-      try { if (picker.showPicker) { picker.showPicker(); return; } } catch { /* not allowed here */ }
-      picker.focus();
-      picker.click();
-    });
-    picker.addEventListener('change', () => { iso = picker.value || ''; show(); text.setCustomValidity(''); fire(); text.focus(); });
-    picker.addEventListener('input', (e) => e.stopPropagation());
+    // v1.50: CaseVault's own square calendar (the browser's is rounded and can't be restyled).
+    btn.addEventListener('click', () => calendar(btn, iso, (v) => { iso = v; show(); text.setCustomValidity(''); fire(); text.focus(); }));
     return wrap;
+  }
+
+
+  /* ---------- the calendar (v1.50) ---------- */
+
+  const isoOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  /** The 42 days (six weeks, Sunday first) shown for a month; month is 0-11. */
+  function monthGrid(year, month) {
+    const first = new Date(year, month, 1);
+    const start = new Date(year, month, 1 - first.getDay());
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      return { iso: isoOf(d), day: d.getDate(), inMonth: d.getMonth() === month };
+    });
+  }
+
+  let openCal = null;
+  /** A square calendar under the button; onPick(iso or '') when a day, Today or Clear is chosen. */
+  function calendar(anchor, iso, onPick) {
+    const doc = root.document;
+    if (openCal) { const was = openCal.anchor; openCal.close(); if (was === anchor) return; }
+    const host = anchor.closest('dialog[open]') || doc.body;
+    const pop = doc.createElement('div');
+    pop.className = 'cal-pop';
+    pop.setAttribute('role', 'dialog');
+    pop.setAttribute('aria-label', 'Pick a date');
+    const today = isoOf(new Date());
+    const base = parseDate(iso) || today;
+    let year = Number(base.slice(0, 4)); let month = Number(base.slice(5, 7)) - 1; let focus = base;
+    const mk = (tag, cls, txt, attrs = {}) => { const el = doc.createElement(tag); if (cls) el.className = cls; if (txt != null) el.textContent = txt; for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v); return el; };
+    const head = mk('div', 'cal-head');
+    const title = mk('span', 'cal-title');
+    const nav = (txt, label, fn) => { const b = mk('button', 'cal-nav', txt, { type: 'button', title: label, 'aria-label': label }); b.addEventListener('click', () => { fn(); draw(); }); return b; };
+    const moveMonth = (n) => { const d = new Date(year, month + n, 1); year = d.getFullYear(); month = d.getMonth(); };
+    head.append(nav('«', 'Previous year', () => { year -= 1; }), nav('‹', 'Previous month', () => moveMonth(-1)), title, nav('›', 'Next month', () => moveMonth(1)), nav('»', 'Next year', () => { year += 1; }));
+    const grid = mk('div', 'cal-grid', null, { role: 'grid' });
+    const foot = mk('div', 'cal-foot');
+    const pick = (v) => { close(); onPick(v); };
+    const todayBtn = mk('button', 'cal-act', 'Today', { type: 'button' });
+    todayBtn.addEventListener('click', () => pick(today));
+    const clearBtn = mk('button', 'cal-act', 'Clear', { type: 'button' });
+    clearBtn.addEventListener('click', () => pick(''));
+    foot.append(clearBtn, todayBtn);
+    pop.append(head, grid, foot);
+    function draw() {
+      title.textContent = `${MONTHS[month]} ${year}`;
+      grid.replaceChildren(...['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((w) => mk('span', 'cal-wd', w)));
+      if (focus.slice(0, 7) !== `${year}-${pad(month + 1)}`) focus = `${year}-${pad(month + 1)}-01`;
+      for (const d of monthGrid(year, month)) {
+        const b = mk('button', `cal-day${d.inMonth ? '' : ' out'}${d.iso === today ? ' today' : ''}${d.iso === iso ? ' on' : ''}`, String(d.day),
+          { type: 'button', 'data-iso': d.iso, tabindex: d.iso === focus ? '0' : '-1', 'aria-label': dateText(d.iso) });
+        b.addEventListener('click', () => pick(d.iso));
+        grid.append(b);
+      }
+    }
+    const focusDay = () => { const b = grid.querySelector(`[data-iso="${focus}"]`); if (b) b.focus(); };
+    pop.addEventListener('keydown', (e) => {
+      const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key];
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); anchor.focus(); return; }
+      if (step && e.target.classList.contains('cal-day')) {
+        e.preventDefault();
+        const d = new Date(Number(focus.slice(0, 4)), Number(focus.slice(5, 7)) - 1, Number(focus.slice(8, 10)) + step);
+        focus = isoOf(d); year = d.getFullYear(); month = d.getMonth();
+        draw(); focusDay();
+      } else if (e.key === 'PageUp' || e.key === 'PageDown') { e.preventDefault(); moveMonth(e.key === 'PageUp' ? -1 : 1); draw(); focusDay(); }
+    });
+    // Placed under the button (above it when there's no room), inside the page's zoom.
+    const z = parseFloat(doc.documentElement.style.zoom) || 1;
+    const place = () => {
+      const r = anchor.getBoundingClientRect();
+      const W = root.innerWidth / z; const H = root.innerHeight / z;
+      const w = pop.offsetWidth; const hh = pop.offsetHeight;
+      const left = Math.max(4, Math.min(r.right / z - w, W - w - 4));
+      const below = r.bottom / z + 4;
+      pop.style.left = `${left}px`;
+      pop.style.top = `${below + hh > H - 4 ? Math.max(4, r.top / z - hh - 4) : below}px`;
+    };
+    const outside = (e) => { if (!pop.contains(e.target) && !anchor.contains(e.target)) close(); };
+    const scrolled = (e) => { if (!pop.contains(e.target)) close(); };
+    function close() {
+      if (!pop.isConnected) return;
+      pop.remove();
+      doc.removeEventListener('pointerdown', outside, true);
+      root.removeEventListener('resize', close);
+      root.removeEventListener('scroll', scrolled, true);
+      if (openCal && openCal.pop === pop) openCal = null;
+    }
+    draw();
+    host.append(pop);
+    place();
+    doc.addEventListener('pointerdown', outside, true);
+    root.addEventListener('resize', close);
+    root.addEventListener('scroll', scrolled, true);
+    openCal = { pop, anchor, close };
+    focusDay();
+    return { close, el: pop };
   }
 
   // Phone and SSN boxes format themselves. Only when the cursor is at the end, so fixing a digit
@@ -200,7 +284,7 @@
   /** A folder path as shown on screen (v1.22): "cases\\2026-B1\\files" -> "cases | 2026-B1 | files". */
   const pathText = (p) => String(p || '').split(/[\\/]+/).filter(Boolean).join(' | ');
 
-  const api = { phone, ssn, dateText, parseDate, dateField, install, titleCase, pathText };
+  const api = { phone, ssn, dateText, parseDate, dateField, monthGrid, calendar, install, titleCase, pathText };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else {
     root.CVFormat = api;

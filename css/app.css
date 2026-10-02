@@ -577,8 +577,8 @@ button.quote:hover { border-color: var(--accent); }
 /* ---------- privacy screen ---------- */
 
 .privacy-screen {
-  /* Blue 1s and 0s falling on white (a canvas), with a terminal-style PIN prompt. No text that
-   * names the app or a case. The same in light and dark theme. */
+  /* Blue 1s and 0s falling on a muted near-black (a canvas; v1.50), with a thin AUTHENTICATE box
+   * in the lower right. No text that names the app or a case. The same in light and dark theme. */
   position: fixed;
   inset: 0;
   width: calc(100vw / var(--z, 1));
@@ -588,28 +588,28 @@ button.quote:hover { border-color: var(--accent); }
   margin: 0;
   padding: 0;
   border: 0;
-  background: #ffffff;
-  color: #1d4ed8;
-  display: grid;
-  place-items: center;
+  background: #0e1116;
+  color: #60a5fa;
   outline: none;
-  font-family: ui-monospace, Consolas, "Courier New", monospace;
+  font-family: Consolas, ui-monospace, "Courier New", monospace;
   overflow: hidden;
 }
 .privacy-screen:not([open]) { display: none; }
-.privacy-screen::backdrop { background: #ffffff; }
+.privacy-screen::backdrop { background: #0e1116; }
 .privacy-rain { position: fixed; inset: 0; width: calc(100vw / var(--z, 1)); height: calc(100vh / var(--z, 1)); display: block; }
-.privacy-unlock { position: relative; z-index: 1; display: grid; justify-items: start; gap: .4rem; padding: 1rem 1.4rem; min-width: 16rem; background: rgba(255, 255, 255, .92); border: 1px solid #1d4ed8; border-radius: 4px; box-shadow: 0 0 0 4px rgba(29, 78, 216, .08); }
+.privacy-unlock { position: absolute; z-index: 1; right: 1.5rem; bottom: 1.5rem; display: grid; justify-items: end; gap: .3rem; margin: 0; }
 .privacy-unlock[hidden] { display: none; }
-.privacy-prompt { position: relative; display: flex; align-items: center; gap: .6rem; font-size: 1.25rem; color: #1d4ed8; min-height: 1.8rem; }
-.privacy-ps1 { font-weight: 700; }
-.privacy-dots { letter-spacing: .25em; }
-.privacy-cursor { display: inline-block; width: .65em; height: 1.2em; background: #1d4ed8; animation: cv-blink 1s steps(1) infinite; margin-left: -.35rem; }
+.privacy-prompt { position: relative; display: flex; align-items: center; width: 15rem; height: 1.9rem; padding: 0 .6rem; font-size: .95rem; color: #93c5fd; background: rgba(14, 17, 22, .88); border: 1px solid #3b82f6; }
+.privacy-prompt:focus-within { box-shadow: 0 0 0 1px #3b82f6; }
+.privacy-dots { letter-spacing: .3em; white-space: nowrap; overflow: hidden; }
+.privacy-dots:empty::before { content: attr(data-placeholder); letter-spacing: .2em; color: #64748b; }
+.privacy-cursor { display: inline-block; width: .55em; height: 1.05em; background: #3b82f6; animation: cv-blink 1s steps(1) infinite; margin-left: .15rem; }
+.privacy-dots:empty + .privacy-cursor { position: absolute; left: .6rem; opacity: .6; }
 @keyframes cv-blink { 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .privacy-cursor { animation: none; } }
 .privacy-unlock .privacy-prompt input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; border: 0; cursor: text; font-size: 16px; }
-.privacy-msg { min-height: 1.2em; margin: 0; font-size: .85rem; color: #b91c1c; }
-.privacy-hint { position: fixed; z-index: 1; bottom: 1.5rem; left: 50%; transform: translateX(-50%); margin: 0; padding: .3rem .8rem; font-size: .85rem; color: #1d4ed8; background: rgba(255, 255, 255, .9); border: 1px solid rgba(29, 78, 216, .35); border-radius: 4px; }
+.privacy-msg { min-height: 1.2em; margin: 0; font-size: .8rem; color: #f87171; }
+.privacy-hint { position: fixed; z-index: 1; right: 1.5rem; bottom: 1.5rem; margin: 0; padding: .3rem .8rem; font-size: .85rem; color: #93c5fd; background: rgba(14, 17, 22, .88); border: 1px solid #3b82f6; }
 .privacy-hint:empty { display: none; }
 .hint { font-size: .85rem; background: var(--accent-soft); border-radius: 6px; padding: .5rem .7rem; }
 kbd { font-family: var(--mono); font-size: .8em; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 .35em; background: var(--surface-2); }
@@ -1580,7 +1580,7 @@ html, body { overflow: hidden; }
 .date-field, .field > span.date-field { position: relative; display: flex; align-items: stretch; min-width: 0; font-size: inherit; font-weight: inherit; color: inherit; }
 .date-field .date-text { flex: 1; min-width: 0; width: 100%; padding-right: 2.4rem; font-variant-numeric: tabular-nums; }
 .date-field .date-btn { position: absolute; right: .15rem; top: 50%; transform: translateY(-50%); width: 1.9rem; height: 1.9rem; }
-.date-field .date-picker-native { position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+
 .details-save { display: flex; justify-content: flex-end; margin-top: 1.2rem; }
 
 /* v1.15: case list: [bell] [Open] Title, then "100 | JH123456 | State"; adjustable width. */
@@ -2894,3 +2894,74 @@ table.data-table .empty-cell { text-align: center; padding: 1.4rem; }
 .disc-hist-row { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .35rem .6rem; }
 .disc-done { max-width: 36rem; }
 @media (max-width: 900px) { .disc-panes, .disc-opts { grid-template-columns: minmax(0, 1fr); } .disc-opts .span-2 { grid-column: auto; } }
+
+/* v1.50: CaseVault's own calendar under a date box's button: square, like everything else. */
+.cal-pop { position: fixed; z-index: 1000; width: 16.5rem; padding: .5rem; background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow); font-size: .85rem; }
+.cal-head { display: grid; grid-template-columns: 1.7rem 1.7rem minmax(0, 1fr) 1.7rem 1.7rem; align-items: center; gap: .15rem; margin-bottom: .35rem; }
+.cal-title { text-align: center; font-weight: 600; white-space: nowrap; }
+.cal-nav, .cal-day, .cal-act { font: inherit; border: 1px solid transparent; background: transparent; color: var(--text); cursor: pointer; padding: 0; }
+.cal-nav { height: 1.7rem; color: var(--muted); font-size: 1rem; }
+.cal-nav:hover, .cal-day:hover, .cal-act:hover { background: var(--surface-2); border-color: var(--border); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.cal-wd { text-align: center; font-size: .72rem; font-weight: 600; color: var(--muted); padding: .15rem 0; }
+.cal-day { height: 1.9rem; font-variant-numeric: tabular-nums; }
+.cal-day.out { color: var(--muted); opacity: .6; }
+.cal-day.today { border-color: var(--accent); }
+.cal-day.on { background: var(--accent); color: #fff; font-weight: 700; }
+.cal-day:focus-visible, .cal-nav:focus-visible, .cal-act:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.cal-foot { display: flex; justify-content: space-between; margin-top: .4rem; padding-top: .4rem; border-top: 1px solid var(--border); }
+.cal-act { padding: .2rem .6rem; color: var(--accent); font-weight: 600; }
+
+/* v1.50: the Arrest details, Timeline, Contacts and Deconfliction forms look like the Draft tab:
+   each field is a grey box with its label small inside it at the top, section headers in capitals. */
+.cv-boxed { --rf-box: color-mix(in srgb, var(--surface-2) 70%, var(--surface)); }
+.cv-boxed .field { background: var(--rf-box); border: 1px solid transparent; padding: .28rem .55rem .3rem; gap: .05rem; min-width: 0; align-self: stretch; justify-content: flex-start; }
+.cv-boxed .field:focus-within { border-color: var(--accent); }
+.cv-boxed .field > span:first-child:not(.date-field):not(.time-field) { font-size: .68rem; line-height: 1.2; font-weight: 600; color: var(--muted); }
+.cv-boxed .field input:not([type=checkbox]):not([type=radio]):not([type=file]), .cv-boxed .field select, .cv-boxed .field textarea, .cv-boxed .field output, .cv-boxed .field .contact-fixed {
+  background: transparent; border: 0; box-shadow: none !important; padding: .12rem 0; min-height: 1.6rem; }
+.cv-boxed .field input:focus, .cv-boxed .field select:focus, .cv-boxed .field textarea:focus { outline: none; }
+.cv-boxed .field .date-field, .cv-boxed .field .time-field { background: transparent; border: 0; box-shadow: none; }
+.cv-boxed .field .date-field .date-text, .cv-boxed .field .time-field .time-text { padding-left: 0; }
+.cv-boxed .field .date-btn, .cv-boxed .field .time-btn, .cv-boxed .field .combo-toggle { background: transparent; border: 0; }
+.cv-boxed .field .contact-fixed { display: flex; align-items: center; }
+.cv-boxed h3, .cv-boxed .arrest-section > h3 { text-transform: uppercase; letter-spacing: .04em; }
+.cv-boxed table.files input, .cv-boxed table.files select { background: var(--rf-box); border-color: transparent; }
+.contacts.cv-boxed { border-left: 4px solid color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.contacts.cv-boxed .contact-row { align-items: stretch; }
+.contacts.cv-boxed .contact-remove { align-self: center; }
+.timeline-form.cv-boxed { align-items: stretch; }
+.decon-card .decon-grid { align-items: stretch; }
+
+/* v1.50: the case list's top row: hide-the-list, Search, Home and Hide on the left, the padlock on
+   the right. The search box shows only after Search is pressed (or while it has a search in it). */
+body:not(.sidebar-collapsed) .sidebar-head { justify-content: flex-start; gap: .15rem; }
+body:not(.sidebar-collapsed) .sidebar-head #btn-sidebar-lock { margin-left: auto; }
+.sidebar-head #btn-privacy { width: 2.1rem; height: 2.1rem; }
+.sidebar-head .icon-btn.on { color: var(--accent); background: var(--accent-soft); }
+.sidebar-tools:not(.search-open) .search-wrap { display: none; }
+.sidebar-tools:not(.search-open):has(> #btn-new-case[hidden]) { display: none; }
+body.sidebar-collapsed #btn-side-search, body.sidebar-collapsed #btn-side-home { display: inline-flex; }
+
+/* Move File (v1.50) */
+.move-file { display: grid; gap: .7rem; }
+.move-dests { display: grid; gap: .3rem; max-height: 50vh; overflow-y: auto; }
+.move-dest { display: flex; align-items: center; gap: .55rem; padding: .5rem .7rem; border: 1px solid var(--border); background: var(--surface); cursor: pointer; }
+.move-dest:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.move-dest .bi { color: var(--accent); }
+.move-dest.gf-link .bi { color: var(--gf); }
+.archived-cases > summary { list-style: none; }
+.archived-cases > summary::-webkit-details-marker { display: none; }
+.archived-cases > summary .sec-folder { display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem; background: var(--surface); border: 1px solid var(--border); color: var(--muted); flex: 0 0 auto; }
+.archived-cases > summary .sec-label { font-weight: 700; color: var(--text); }
+.archived-cases > summary .count-pill { margin-left: auto; }
+.archived-cases > summary .sec-chev { display: inline-grid; place-items: center; color: var(--muted); transition: transform .15s; }
+.archived-cases > summary .sec-chev svg { width: .8rem; height: .8rem; }
+.archived-cases:not([open]) > summary .sec-chev { transform: rotate(-90deg); }
+.disc-pane-head select { flex: 1 1 12rem; min-width: 8rem; }
+.disc-confirm { width: min(640px, calc(94vw / var(--z, 1))); }
+.disc-confirm-list { max-height: 45vh; overflow-y: auto; border: 1px solid var(--border); }
+.disc-confirm-list table { width: 100%; }
+.disc-confirm-list .disc-size { text-align: right; }
+.disc-confirm-list tfoot td { font-weight: 600; border-top: 1px solid var(--border); }
+.disc-confirm-list .disc-total td { font-weight: 700; }
