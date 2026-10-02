@@ -15,7 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.54)
+## Features (v1.55)
+
+- Discovery receipt: a printable PDF made with each production (option on by default). It lists who turned it over and to whom, every item with its Bates numbers and SHA-256, blank Date and Time of Receipt boxes, an acknowledgment that the items received are accurate and complete, and wet-signature lines for the recipient, the officer and a witness. It goes to this PC's Downloads folder, and a copy stays with the case
+- Discovery popups redesigned: header with icon, options in three boxes, summary tiles in Ready to Copy and Done, Receipt button on each earlier production
+- Closed folder: closed cases of an Operation that is still going are listed by case number under one "Operation Files" folder, not under the Operation's name
 
 - Draft tab: Court Branch and Court Date on one line; Search Warrant or Subpoena number, ASA or AUSA, Judge or Magistrate on one line, each label a switch (only the chosen one goes in the report); Pre-Recorded Funds as one line per denomination (quantity and serial numbers, added in a small box) with one Recovered / Not Recovered; evidence photo labels on one line; no Extra Copies box (the PDF's signature table is rearranged)
 - New Report types: Case Summary, Affidavits, Other; no sample text in the Title

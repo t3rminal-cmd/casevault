@@ -591,14 +591,15 @@
   /** A folder in the case list: { key, op (null for General Files), cases }. */
   function operationGroup(group) {
     const { key, op, cases } = group;
-    const label = op ? opLabel(op) : 'General Files';
+    const opFiles = !!group.opFiles;
+    const label = opFiles ? 'Operation Files' : op ? opLabel(op) : 'General Files';
     const open = folderOpen(group);
     const bell = cases.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date));
-    const meta = group.partial ? `${group.cases.length} closed case${group.cases.length === 1 ? '' : 's'} · ${op.status}`
+    const meta = opFiles ? `${cases.length} closed case${cases.length === 1 ? '' : 's'} of ongoing Operations`
       : op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : `${group.total} independent case${group.total === 1 ? '' : 's'}`;
-    const det = h('details', { class: `op-group${op ? '' : ' general-group'}`, open },
-      h('summary', { class: 'op-head', title: op ? `${label}: open the Operation` : 'General Files: every case; these are the ones not in an Operation' },
-        h('span', { class: `op-folder${op ? '' : ' gf-icon'}` }, I(op ? 'op-folder' : 'folder-fill')),
+    const det = h('details', { class: `op-group${op || opFiles ? '' : ' general-group'}${opFiles ? ' opfiles-group' : ''}`, open },
+      h('summary', { class: 'op-head', title: opFiles ? 'Closed cases whose Operation is still going on. Each is still in its Operation\'s folder above.' : op ? `${label}: open the Operation` : 'General Files: every case; these are the ones not in an Operation' },
+        h('span', { class: `op-folder${op || opFiles ? '' : ' gf-icon'}` }, I(op || opFiles ? 'op-folder' : 'folder-fill')),
         h('span', { class: 'op-text' },
           h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, label),
             bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
@@ -609,6 +610,7 @@
     // A click on the folder's name opens the Operation (or General Files); the arrow folds it.
     det.querySelector('summary').addEventListener('click', (e) => {
       if (e.target.closest('.op-chev')) return;
+      if (opFiles) return; // just folds
       e.preventDefault();
       location.hash = op ? `#/operation/${encodeURIComponent(op.id)}` : '#/general';
     });
@@ -630,6 +632,7 @@
   function opGroups(cases, { searching = false, all = (Vault.data?.cases || []).filter((c) => !isArchivedEntry(c)) } = {}) {
     const q = $('#case-search') ? $('#case-search').value.trim().toLowerCase() : '';
     const groups = [];
+    const opFilesClosed = [];
     for (const op of [...Vault.listOperations()].sort((a, b) => byFileNumber(a.number, b.number) || a.name.localeCompare(b.name))) {
       const total = all.filter((c) => c.operationId === op.id);
       // The Operation's own number or name matching the search shows all its cases.
@@ -639,10 +642,10 @@
       const closed = op.status === 'Closed' || (total.length > 0 && total.every((c) => c.status === 'Closed'));
       groups.push({ key: op.id, op, cases: mine, total: total.length, closed });
       // v1.50: a closed case of an Operation that is still open stays in its folder, and shows under
-      // Closed too, in a folder of the same Operation.
-      const shut = mine.filter((c) => c.status === 'Closed');
-      if (!closed && shut.length) groups.push({ key: `${op.id}:closed`, op, cases: shut, total: total.length, closed: true, partial: true });
+      // Closed too; v1.55: in one "Operation Files" folder, by case number, without the Operation's name.
+      if (!closed) opFilesClosed.push(...mine.filter((c) => c.status === 'Closed'));
     }
+    if (opFilesClosed.length) groups.push({ key: 'opfiles:closed', op: null, opFiles: true, cases: opFilesClosed.sort(byNumber), total: opFilesClosed.length, closed: true, partial: true });
     const loose = cases.filter((c) => !c.operationId || !Vault.getOperation(c.operationId)).sort(byNumber);
     const looseAll = all.filter((c) => !c.operationId || !Vault.getOperation(c.operationId));
     if (loose.length || !searching || !q) {

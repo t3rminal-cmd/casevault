@@ -2885,15 +2885,14 @@ table.data-table .empty-cell { text-align: center; padding: 1.4rem; }
 .disc-act { font-size: .8rem; color: var(--accent); white-space: nowrap; }
 .disc-btns { display: inline-flex; gap: .2rem; }
 .disc-empty { padding: 1rem; }
-.disc-opts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.disc-opts .span-2 { grid-column: span 2; }
+.disc-opts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; }
 .disc-progress { position: relative; height: 1.6rem; background: var(--surface-2); border: 1px solid var(--border); }
 .disc-progress-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent-soft); border-right: 2px solid var(--accent); transition: width .2s; }
 .disc-progress > span { position: relative; display: block; padding: .2rem .5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .disc-history summary { cursor: pointer; font-weight: 600; }
 .disc-hist-row { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .35rem .6rem; }
-.disc-done { max-width: 36rem; }
-@media (max-width: 900px) { .disc-panes, .disc-opts { grid-template-columns: minmax(0, 1fr); } .disc-opts .span-2 { grid-column: auto; } }
+.disc-done { min-width: 0; display: flex; flex-direction: column; gap: .7rem; }
+@media (max-width: 900px) { .disc-panes, .disc-opts { grid-template-columns: minmax(0, 1fr); } }
 
 /* v1.50: CaseVault's own calendar under a date box's button: square, like everything else. */
 .cal-pop { position: fixed; z-index: 1000; width: 16.5rem; padding: .5rem; background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow); font-size: .85rem; }
@@ -3097,3 +3096,29 @@ section.foldable.folded > .fold-head { margin-bottom: 0; }
 .vault-sec .fact { background: var(--rf-box); padding: .45rem .6rem; }
 /* Mail: grey boxes. */
 .mail-form.cv-boxed .field textarea { min-height: 12rem; }
+
+/* v1.55: Discovery popups. */
+.disc-head { display: flex; align-items: center; gap: .75rem; padding-bottom: .55rem; border-bottom: 1px solid var(--border); }
+.disc-head-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 2.6rem; height: 2.6rem; background: #fff; border: 1px solid var(--border); border-left: 3px solid var(--accent); }
+.disc-head-icon .bi { width: 1.6rem; height: 1.6rem; }
+.disc-head-text { min-width: 0; }
+.disc-head-text h2 { margin: 0; }
+.disc-head-text p { margin: .15rem 0 0; }
+.disc-card { margin: 0; min-width: 0; display: flex; flex-direction: column; gap: .45rem; padding: .55rem .7rem .7rem; border: 1px solid var(--border); background: var(--surface-2); }
+.disc-card legend { padding: 0 .35rem; font-weight: 700; font-size: .82rem; text-transform: uppercase; letter-spacing: .03em; display: inline-flex; align-items: center; gap: .35rem; background: var(--surface); border: 1px solid var(--border); }
+.disc-card .field { margin: 0; min-width: 0; }
+.disc-card .check-row { align-items: flex-start; }
+.disc-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .5rem; }
+.disc-pane { box-shadow: 0 1px 2px rgba(0, 0, 0, .04); }
+.disc-pane-head strong { text-transform: uppercase; font-size: .8rem; letter-spacing: .03em; }
+.disc-history { border: 1px solid var(--border); background: var(--surface-2); }
+.disc-history summary { padding: .4rem .6rem; }
+.disc-history .plain-list { margin: 0; border-top: 1px solid var(--border); background: var(--surface); max-height: 12rem; overflow-y: auto; }
+.disc-hist-row + .disc-hist-row { border-top: 1px solid var(--border); }
+.disc-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; }
+.disc-tile { display: flex; flex-direction: column; gap: .15rem; min-width: 0; padding: .45rem .6rem; background: var(--surface-2); border: 1px solid var(--border); border-top: 3px solid var(--accent); }
+.disc-tile-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.disc-tile-value { overflow-wrap: anywhere; font-size: .92rem; }
+.disc-steps { margin: 0; padding: .55rem .7rem .55rem 1.6rem; background: var(--surface-2); border: 1px solid var(--border); display: flex; flex-direction: column; gap: .35rem; font-size: .88rem; }
+.disc-confirm[open] { display: flex; flex-direction: column; gap: .6rem; }
+@media (max-width: 640px) { .disc-tiles { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .disc-pair { grid-template-columns: minmax(0, 1fr); } }
