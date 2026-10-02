@@ -15,6 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.52)
+
+- **Link Chart** tab on every case: subjects at the top, suppliers, couriers and associates under them, and monikers, webpages, dark-web names, phones, wallets and places hanging off whoever uses them. Square photos from the case files (the same size on every card), platform pictures for Webpage, Dark Web, Google, Snapchat, Facebook / Instagram and Telegram, dashed lines for other connections. A big crew goes in rows so the chart fits a portrait page. PDF View, and Save PDF to Case (Files → Link Charts). Kept in the case folder as `linkchart.json`
+
 ## Features (v1.51)
 
 - New colour icon set throughout the app (cut from CaseVault's own artwork, bundled in `icons/color`): folders (Operations blue, General Files yellow, Closed green, Archived dark), trash, calendar, phone, map, notebook, chat and more; a colour badge for each LEO partner agency (CaseVault's own drawings, not seals); one-colour versions stay on filled buttons and the Overview banner, which is unchanged

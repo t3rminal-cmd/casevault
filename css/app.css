@@ -2989,3 +2989,36 @@ svg.ci > image { transform: scale(1.12); transform-origin: 50% 50%; }
 .archived-cases > summary .sec-folder { width: 1.5rem; height: 1.5rem; margin-right: .2rem; }
 .archived-cases > summary .sec-folder svg { width: 1.25rem; height: 1.25rem; }
 #fab-dock #btn-chat.fab, #fab-dock #btn-chat.fab:hover { background: var(--surface); color: var(--accent); border: 1px solid var(--border); }
+
+/* v1.52: Link Chart tab: the cards and the form on the left, the chart (as it prints) on the right. */
+.lc { display: flex; flex-direction: column; gap: .8rem; }
+.lc-head { display: flex; align-items: flex-end; gap: .6rem; flex-wrap: wrap; }
+.lc-head .lc-title { flex: 0 1 26rem; min-width: 14rem; }
+.lc-body { display: grid; grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.lc-side { display: flex; flex-direction: column; gap: .7rem; min-width: 0; }
+.lc-add { display: flex; gap: .4rem; flex-wrap: wrap; }
+.lc-tree { list-style: none; margin: 0; padding: .3rem; border: 1px solid var(--border); background: var(--surface); max-height: 18rem; overflow-y: auto; }
+.lc-item { --depth: 0; --lc: var(--muted); display: grid; grid-template-columns: .5rem 1.1rem minmax(0, 1fr) auto; align-items: center; gap: .4rem; width: 100%; padding: .32rem .45rem .32rem calc(.45rem + var(--depth) * 1rem); border: 1px solid transparent; background: transparent; color: var(--text); font: inherit; font-size: .88rem; text-align: left; cursor: pointer; }
+.lc-item:hover { background: var(--surface-2); }
+.lc-item.on { background: var(--accent-soft); border-color: var(--accent); }
+.lc-dot { width: .5rem; height: .5rem; background: var(--lc); }
+.lc-item .bi { width: 1.05rem; height: 1.05rem; }
+.lc-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lc-item-sub { white-space: nowrap; }
+.lc-none { padding: .6rem; }
+.lc-form, .lc-links { border: 1px solid var(--border); background: var(--surface); padding: .7rem; display: grid; gap: .6rem; }
+.lc-form:empty, .lc-links:empty { display: none; }
+.lc-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45rem; }
+.lc-form-grid .span-2 { grid-column: span 2; }
+.lc-form-actions { display: flex; flex-wrap: wrap; gap: .35rem; }
+.lc-links h3 { margin: 0; font-size: .82rem; }
+.lc-link-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .4rem; align-items: stretch; padding-top: .4rem; border-top: 1px solid var(--border); }
+.lc-link-row > .field:nth-child(3) { grid-column: 1; }
+.lc-link-row > .icon-btn { align-self: center; justify-self: end; }
+.lc-view { border: 1px solid var(--border); background: #ffffff; min-height: 22rem; overflow: auto; padding: .6rem; display: grid; place-items: start center; }
+.lc-view svg { max-width: 100%; height: auto; display: block; }
+.lc-view .lc-card { cursor: pointer; }
+.lc-view .lc-card:hover > rect:first-child { stroke: #0d6efd; }
+.lc-empty { align-self: center; }
+@media (max-width: 1000px) { .lc-body { grid-template-columns: minmax(0, 1fr); } }
+.lc-item > * { order: 0 !important; }
