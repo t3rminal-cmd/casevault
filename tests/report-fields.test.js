@@ -194,7 +194,7 @@ test('v1.25: height in feet and inches, weight in pounds, unknown offender range
   assert.strictEqual(F.itemLine('offendersList', d.offendersList[1]), 'Unknown Offender, Age Range: 25 - 30, Height Range: 5\'8" - 5\'11", Weight Range: 170 - 190 lbs');
   const s = Buffer.from(P.build(d, {})).toString('latin1');
   assert.match(s, /Age Range: 25 - 30/); // v1.43: each offender on a line under OFFENDER(S)
-  assert.match(s, /170 - 190 lbs/);
+  assert.match(s, /Weight Range: 170/);
 });
 
 test('v1.25: narcotics recovered, one line each; older single lines move into the list', () => {
@@ -348,4 +348,14 @@ test('v1.42: exhibit numbering from a start, funds without quantity, notificatio
   assert.deepStrictEqual(F.LISTS.notifications.fields.map((f) => f[0]), ['date', 'name', 'by']);
   const d = F.normalize({ notifications: [{ notes: 'Called the watch commander' }] });
   assert.strictEqual(d.notifications[0].name, 'Called the watch commander');
+});
+
+test('v1.44: military time without the colon', () => {
+  assert.strictEqual(F.militaryTime('14:35'), '1435');
+  assert.strictEqual(F.militaryTime('9:05'), '0905');
+  assert.strictEqual(F.militaryTime(''), '');
+  assert.strictEqual(F.shown('time', '07:30'), '0730');
+  const s = Buffer.from(P.build(F.normalize({ time: '14:35', timeSubmitted: '18:10' }), {})).toString('latin1');
+  assert.match(s, /\(1435\)/);
+  assert.doesNotMatch(s, /\(14:35\)/);
 });

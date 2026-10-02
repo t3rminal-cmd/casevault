@@ -90,7 +90,6 @@
     return { text: `in ${n} days`, cls: n <= 7 ? 'soon' : '' };
   }
 
-  const parseTags = (s) => [...new Set(String(s).split(',').map((t) => t.trim()).filter(Boolean))];
   const STATUS_ICONS = { Open: 'folder2-open', Pending: 'hourglass-split', Closed: 'lock-fill', Archived: 'archive' };
   const statusPill = (status) => h('span', { class: `pill status-${String(status).toLowerCase()}`, icon: STATUS_ICONS[status] }, status);
   const I = (name, opts) => CVIcons.icon(name, opts);
@@ -801,8 +800,8 @@
    * its name under it. Click one to open it: its case numbers, each with its Reports, Field Notes,
    * Files (photos, documents) and Timeline. Which one is open is remembered for this visit. */
   const opFolderState = { open: '', close: null };
-  // v1.42: every tab of a case number, from the open operation on the Overview.
-  const OP_TABS = [['details', 'Details', 'info-circle'], ['timeline', 'Timeline', 'calendar-event'], ['draft', 'Draft', 'pencil-square'], ['reports', 'Reports', 'files'], ['files', 'Files', 'folder2-open'], ['mail', 'Mail', 'envelope'], ['checks', 'Checks', 'clipboard2-check']];
+  // v1.44: just Details, Reports and Files, as words.
+  const OP_TABS = [['details', 'Details'], ['reports', 'Reports'], ['files', 'Files']];
   // Empty space: anything that isn't a control, a link, a folder, the open folder's cases or the
   // timeline, and nothing inside a dialog or the sidebar.
   document.addEventListener('click', (e) => {
@@ -843,7 +842,7 @@
           return h('div', { class: 'op-case-card' },
             h('a', { class: 'op-case-top', href: to('details') }, h('span', { class: 'op-case-num' }, c.number || 'No case number yet'), statusPill(c.status)),
             h('nav', { class: 'op-case-links', 'aria-label': `${c.number || 'Case'} tabs` },
-              ...OP_TABS.map(([tab, label, icon]) => h('a', { class: 'op-tab-link', href: to(tab) }, I(icon), h('span', {}, label)))));
+              ...OP_TABS.map(([tab, label]) => h('a', { class: 'op-tab-link', href: to(tab) }, label))));
         }))) : null;
       box.replaceChildren(...[h('h2', { class: 'section-title' }, 'Operations'),
         list.length ? tiles : h('p', { class: 'muted' }, 'Create a case with New Case: Its operation appears here as a folder.'), opBox ? null : inside].filter(Boolean));
@@ -979,7 +978,7 @@
         const fd = new FormData(form);
         close({
           title: fd.get('title').trim(), fileNumber: fd.get('fileNumber').trim(), number: fd.get('number').trim(), agencyNumber: fd.get('agencyNumber').trim(), client: fd.get('client'),
-          status: fd.get('status'), opened: fd.get('opened'), tags: parseTags(fd.get('tags')),
+          status: fd.get('status'), opened: fd.get('opened'), tags: [],
         });
       } },
       h('h2', { class: 'span-2' }, 'New case'),
@@ -993,7 +992,6 @@
       field('Status', h('select', { name: 'status' }, Vault.STATUSES.map((s) => h('option', {}, s)))),
       field('Opened', openedIn),
       h('p', { class: 'muted small span-2' }, folderNote),
-      field('Tags', h('input', { name: 'tags', maxlength: 300 }), 'span-2', 'Separate tags with commas.'),
       h('div', { class: 'dialog-actions span-2' },
         h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
         h('button', { class: 'btn primary', type: 'submit' }, 'Create case')));
@@ -1205,20 +1203,20 @@
     panel.replaceChildren(
       // ---- the operation, the same on every one of its case numbers: name, status, dates
       h('section', { class: 'op-card' },
-        h('form', { class: 'form-grid details-grid op-top', onsubmit: (e) => e.preventDefault() },
-          field('Title or Operation Name', titleIn, 'span-2', 'The case title, or the operation\'s name. An operation holds several case numbers; renaming it here renames it on all of them.'),
+        h('form', { class: 'form-grid details-grid op-top details-row4 details-row-title', onsubmit: (e) => e.preventDefault() },
+          field('Title or Operation Name', titleIn, '', 'The case title, or the operation\'s name. An operation holds several case numbers; renaming it here renames it on all of them.'),
           h('label', { class: 'field' }, h('span', {}, 'Status'), statusSelect, statusNote),
           field('Opened', bind(h('input', { type: 'date', value: c.dates.opened || '' }), (v) => { c.dates.opened = v; })),
           field('Closed', bind(closedInput, (v) => { c.dates.closed = v; }))),
         caseTiles(c, members, archived)),
       miniTimeline(c, members),
       // ---- this case number
-      h('form', { class: 'form-grid details-grid', onsubmit: (e) => e.preventDefault() },
+      // v1.44: File Number, Original Case Number, Federal Jacket Number and Client in one row; no Tags.
+      h('form', { class: 'form-grid details-grid details-row4', onsubmit: (e) => e.preventDefault() },
         field('File Number', bind(h('input', { value: c.fileNumber || '', maxlength: 100, title: 'The investigation file. Several cases can share one file number.' }), (v) => { c.fileNumber = v; })),
         field('Original Case Number', bind(h('input', { value: c.number, maxlength: 100 }), (v) => { c.number = v; })),
         field('Federal Jacket Number', bind(h('input', { value: c.agencyNumber || '', maxlength: 100, title: 'The federal jacket number for this case.' }), (v) => { c.agencyNumber = v; })),
         field('Client', (() => { const sel = clientSelect(c.client); sel.addEventListener('change', () => { c.client = sel.value; save(); }); return sel; })()),
-        field('Tags', bind(h('input', { value: c.tags.join(', '), maxlength: 300 }), (v) => { c.tags = parseTags(v); }), 'span-2', 'Separate tags with commas.'),
         h('p', { class: 'muted span-2 small' },
           `Folder: ${CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}`)}`
           + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),
@@ -1414,7 +1412,7 @@
     DEA: { name: 'Drug Enforcement Administration', icon: 'capsule-pill', color: '#1f6f43' },
     FBI: { name: 'Federal Bureau of Investigation', icon: 'fingerprint', color: '#1f3a6b' },
     ATF: { name: 'Alcohol, Tobacco, Firearms and Explosives', icon: 'fire', color: '#8a2d1c' },
-    USMS: { name: 'U.S. Marshals Service', icon: 'award-fill', color: '#5a4a1a' },
+    USMS: { name: 'U.S. Marshals Service', icon: 'marshal-star', color: '#5a4a1a' },
     IRS: { name: 'IRS Criminal Investigation', icon: 'cash-coin', color: '#22636b' },
     CBP: { name: 'Customs and Border Protection', icon: 'globe-americas', color: '#1d4f91' },
     HSI: { name: 'Homeland Security Investigations', icon: 'shield-fill-check', color: '#2d4b73' },

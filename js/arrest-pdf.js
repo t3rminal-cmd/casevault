@@ -24,7 +24,9 @@
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   // The long date, as everywhere in CaseVault (v1.32): "September 30, 2026".
   const US = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(clean(iso)); return m ? `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}, ${m[1]}` : clean(iso); };
-  const when = (d, t) => [US(d), clean(t)].filter(Boolean).join(' ');
+  // v1.44: military time without the colon (1435), as on the form.
+  const MIL = (t) => { const m = /^(\d{1,2}):(\d{2})$/.exec(clean(t)); return m ? `${m[1].padStart(2, '0')}${m[2]}` : clean(t); };
+  const when = (d, t) => [US(d), MIL(t)].filter(Boolean).join(' ');
 
   /** The arrestee's name as on a report: LAST, First Middle. */
   function reportName(a) {
@@ -175,7 +177,7 @@
       kv(CX, iy, 'Arrest Date:', when(a.date, a.time), { max: half - 110 }); iy -= 12;
       if (clean(a.beat)) kv(CX + half - 60, iy, 'Beat:', a.beat, { max: 60 });
       iy -= kv(CX, iy, 'Location:', a.location, { max: half - 64 }) + 1;
-      for (const [l, v] of [['Holding Facility:', a.facility], ['Type of Arrest:', a.type], ['Resisted Arrest?', yn(a.resisted)], ['Declared CMA Incident?', yn(a.cma)], ['Miranda:', [clean(a.miranda), clean(a.mirandaTime)].filter(Boolean).join(', ')]]) iy -= kv(CX, iy, l, v, { max: half }) + 1;
+      for (const [l, v] of [['Holding Facility:', a.facility], ['Type of Arrest:', a.type], ['Resisted Arrest?', yn(a.resisted)], ['Declared CMA Incident?', yn(a.cma)], ['Miranda:', [clean(a.miranda), MIL(a.mirandaTime)].filter(Boolean).join(', ')]]) iy -= kv(CX, iy, l, v, { max: half }) + 1;
       let jy = y - 9;
       const rw = CX + CW - r0;
       kv(r0, jy, 'Total No Arrested:', a.totalArrested, { max: rw * 0.4 });
