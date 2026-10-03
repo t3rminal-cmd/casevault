@@ -367,25 +367,43 @@
           } }, 'Delete Card'))].filter(Boolean));
     }
 
+    const openLinks = new Set(); // connections opened on screen (they start folded)
     function drawLinks() {
       if (archived) { linksBox.replaceChildren(); return; }
       const opts = (val) => [h('option', { value: '' }, '—'), ...LC().ordered(chart).map(({ node }) => h('option', { value: node.id, selected: node.id === val }, nodeLabel(node)))];
       linksBox.replaceChildren(...[
         h('h3', { title: 'A dashed line between two cards that aren\'t one under the other: the same phone, money sent, met at…' }, 'Other Connections'),
-        chart.nodes.length > 1 ? h('p', { class: 'muted small lc-hint' }, 'Quickest: Link Cards above the chart, then click one card and another. Click two linked cards to unlink them.') : null,
+        chart.nodes.length > 1 ? h('p', { class: 'muted small lc-hint' }, 'Quickest: Link Cards above the chart, then click one card and another. Click the same two again (same order) to unlink; the other way round adds a line back, drawn beside the first (narcotics one way, money the other).') : null,
         ...chart.links.map((l, i) => {
           const from = h('select', { 'aria-label': `Connection ${i + 1} from` }, opts(l.from));
           const to = h('select', { 'aria-label': `Connection ${i + 1} to` }, opts(l.to));
           const dir = h('select', { 'aria-label': `Connection ${i + 1} arrow` }, LC().DIRS.map(([v, lab]) => h('option', { value: v, selected: v === l.dir }, lab)));
           const label = h('textarea', { rows: 2, maxlength: 80, placeholder: 'Same phone, sends money…', 'aria-label': `Connection ${i + 1} label` }, l.label);
           const flow = h('select', { 'aria-label': `Connection ${i + 1} carries` }, LC().FLOWS.map(([v, lab]) => h('option', { value: v, selected: v === (l.flow || '') }, lab)));
-          const upd = () => { l.from = from.value; l.to = to.value; l.dir = dir.value; l.flow = flow.value; l.label = label.value; save(); drawView(); };
-          for (const el of [from, to, dir, flow]) el.addEventListener('change', upd);
+          const route = h('select', { 'aria-label': `Connection ${i + 1} line` }, [['elbow', 'Right Angles'], ['straight', 'Straight']].map(([v, lab]) => h('option', { value: v, selected: v === (l.route || 'elbow') }, lab)));
+          // v1.59: each connection is a card that starts folded: its summary line, an eye that
+          // shows or hides the line on the chart (and the PDF), and the arrow to open it.
+          const nameOf = (id) => { const n = chart.nodes.find((x) => x.id === id); return n ? nodeLabel(n) : '—'; };
+          const summary = h('span', { class: 'lc-link-sum' });
+          const drawSum = () => {
+            const arrow = l.dir === 'from' ? '←' : l.dir === 'both' ? '↔' : l.dir === 'none' ? '—' : '→';
+            summary.replaceChildren(...[h('span', { class: 'lc-link-names' }, `${nameOf(l.from)} ${arrow} ${nameOf(l.to)}`),
+              l.flow ? h('span', { class: `lc-link-flow lc-link-flow-${l.flow}` }, l.flow === 'money' ? '$ Money' : 'Narcotics') : null,
+              l.hidden ? h('span', { class: 'muted small' }, 'Hidden') : null].filter(Boolean));
+          };
+          drawSum();
+          const upd = () => { l.from = from.value; l.to = to.value; l.dir = dir.value; l.flow = flow.value; l.route = route.value; l.label = label.value; save(); drawView(); drawSum(); };
+          for (const el of [from, to, dir, flow, route]) el.addEventListener('change', upd);
           label.addEventListener('input', upd);
-          return h('div', { class: 'lc-link-row' }, field('From', from), field('To', to), field('Arrow', dir), field('Carries', flow), field('Label', label, 'span-2'), h('button', { class: 'btn small ghost danger-text lc-link-del', type: 'button', icon: 'trash3', title: 'Remove this connection', onclick: () => { chart.links.splice(i, 1); save(); drawAll(); } }, 'Remove'));
+          const body = h('div', { class: 'lc-link-row', hidden: !openLinks.has(l.id) }, field('From', from), field('To', to), field('Arrow', dir), field('Carries', flow), field('Line', route), h('span'), field('Label', label, 'span-2'), h('button', { class: 'btn small ghost danger-text lc-link-del', type: 'button', icon: 'trash3', title: 'Remove this connection', onclick: () => { chart.links.splice(i, 1); save(); drawAll(); } }, 'Remove'));
+          const eye = h('button', { class: 'icon-btn', type: 'button', title: l.hidden ? 'Show this line on the chart' : 'Hide this line on the chart (and the PDF)', 'aria-pressed': String(!l.hidden), onclick: () => { l.hidden = !l.hidden; save(); drawLinks(); drawView(); } }, icon(l.hidden ? 'eye-slash' : 'eye'), h('span', { class: 'sr-only' }, l.hidden ? 'Show line' : 'Hide line'));
+          const foldBtn = h('button', { class: 'icon-btn', type: 'button', 'aria-expanded': String(openLinks.has(l.id)), title: openLinks.has(l.id) ? 'Fold this connection' : 'Open this connection', onclick: () => { if (openLinks.has(l.id)) openLinks.delete(l.id); else openLinks.add(l.id); drawLinks(); } }, icon(openLinks.has(l.id) ? 'chevron-down' : 'chevron-right'), h('span', { class: 'sr-only' }, 'Open or fold'));
+          return h('div', { class: `lc-link-card${l.hidden ? ' off' : ''}` }, h('div', { class: 'lc-link-head' }, summary, h('div', { class: 'spacer' }), eye, foldBtn), body);
         }),
         chart.nodes.length > 1 ? h('button', { class: 'btn small', type: 'button', icon: 'link-45deg', onclick: () => {
-          chart.links.push({ id: `l${Date.now().toString(36)}`, from: selected || '', to: '', label: '', dir: 'to', flow: '' });
+          const id = `l${Date.now().toString(36)}`;
+          chart.links.push({ id, from: selected || '', to: '', label: '', dir: 'to', flow: '', route: 'elbow', hidden: false });
+          openLinks.add(id);
           drawLinks();
         } }, 'Add Connection') : null].flat().filter(Boolean));
     }
@@ -426,7 +444,13 @@
       const file = new File([bytes], pdfName(), { type: 'application/pdf' });
       try {
         const path = await Save.track(`file:${c.id}`, () => Vault.addFile(c.id, file, { folder: 'Link Charts', description: chart.title || 'Link Chart', replace: true }));
-        toast(`Saved to Files → Link Charts: ${path.split('/').pop()}. Open it again here from Files any time.`, 'success', 5000);
+        // v1.59: and under Reports, with the chart in words; Send Back to Link Chart there (or
+        // Open in Link Chart in Files) puts it back here to change it, then Save PDF to Case again.
+        const slug = `link-chart-${CVDraft.slugify(chart.title || 'link chart')}`;
+        const prev = await Vault.readDraft(c.id, slug).catch(() => null);
+        const meta = { ...(prev ? prev.meta : { created: new Date().toISOString() }), title: chart.title || 'Link Chart', type: 'linkchart', ai: false, fromLinkChart: true, chartPath: path };
+        await Save.track(`draft:${c.id}:${slug}`, () => Vault.saveDraft(c.id, slug, meta, LC().summaryMarkdown(chart)));
+        toast(`Saved to Files → Link Charts and to Reports: ${path.split('/').pop()}. Send it back here from either to change it.`, 'success', 6000);
       } catch { /* reported by Save */ }
     };
     const clearChart = async () => {

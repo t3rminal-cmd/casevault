@@ -215,6 +215,29 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.59
+
+- **Link Chart:**
+  - **Right-angle lines.** Connections turn at right angles and leave a card from its side, top or bottom, so they don't run across the photos. Each connection has **Line: Right Angles / Straight**.
+  - **Two lines between the same two cards** sit side by side, one above the other, with their labels above and below. For example, *narcotics* from the subject to the police, and *money* tendered from the police back to the subject.
+  - **Link Cards:** click A then B for an arrow from A to B. Click B then A to add the line back (it's drawn beside the first). Click A then B again to take the A→B line away.
+  - **Connections** are folded cards: one line each (who → who, Money or Narcotics). The **eye** shows or hides that line on the chart and in the PDF. The arrow opens it to change it.
+  - **Save PDF to Case** now saves the chart in **Files → Link Charts** and under **Reports** (type *Link Chart*, with the chart in words). To change it, use **Send Back to Link Chart** in Reports (or **Open in Link Chart** in Files), make the changes, then **Save PDF to Case** again. Files and Reports are both updated.
+- **Every form starts minimized:** the Case Overview sections, every part of the Draft tab, Arrest details and the Vault's sections start folded. Open one with its arrow; CaseVault remembers the ones you open, on this PC. **Show All** on the Draft tab opens them all. Clicking a Vault section on the left opens it.
+- **Discovery → How to Burn a CD or DVD (Windows):** with **The SSD, for a DVD**, the box has the steps (also in the box shown when the package is made):
+  1. Put a blank CD-R or DVD-R in the drive.
+  2. In File Explorer, go to CaseVault-Data → exports.
+  3. Right-click the package folder → (Show more options) → Send to → the DVD RW drive.
+  4. Type a title, choose **With a CD/DVD player**, then Next.
+  5. Click **Finish burning** (Drive Tools tab).
+  6. Choose a speed, then Next, wait, and Finish.
+  7. Check the disc by opening "Open Discovery.html" on it.
+- **Checks tab:** a new look, with an icon header, the document to check and the AI choice on the left, the documents to compare against on the right, and past checks in their own box.
+- **Ask AI:** the four suggestions are boxes of the same size, without the blue line.
+- **Vault → Outbound Log:** shows how many months are on the SSD and their size. **Delete Older Months** keeps only this month; **Delete All** empties the log.
+  - Does deleting free space? Yes, but very little: each month is usually a few KB.
+  - The log is your record of what left this PC (online AI requests and mail hand-offs), so check your agency's rules before deleting it.
+
 ### What's new in v1.58
 
 - **Link Chart zoom and moving around:** the mouse wheel zooms in and out around the pointer; drag the empty background to move around a big chart. The − / + buttons and Fit still work.

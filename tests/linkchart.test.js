@@ -109,7 +109,12 @@ test('click to link and unlink, arrows drawn', () => {
   assert.ok(LC.toSvg(c).svg.includes('marker-end="url(#lc-arrow)"'));
   l.dir = 'from';
   assert.ok(LC.toSvg(c).svg.includes('marker-start="url(#lc-arrow)"'));
-  assert.strictEqual(LC.toggleLink(c, 'c', 'b'), 'unlinked', 'either way round');
+  l.dir = 'to';
+  // v1.59: the other way round adds a return line beside it; the same way again takes it away.
+  assert.strictEqual(LC.toggleLink(c, 'c', 'b'), 'linked', 'a line back');
+  assert.strictEqual(c.links.filter((x) => [x.from, x.to].sort().join() === 'b,c').length, 2);
+  assert.strictEqual(LC.toggleLink(c, 'c', 'b'), 'unlinked');
+  assert.strictEqual(LC.toggleLink(c, 'b', 'c'), 'unlinked');
   assert.strictEqual(LC.toggleLink(c, 'b', 'b'), '');
   LC.clear(c);
   assert.deepStrictEqual([c.nodes.length, c.links.length, c.title], [0, 0, 'Example Sweep']);
@@ -179,4 +184,27 @@ test('grid on screen only, snap kept', () => {
   assert.strictEqual(LC.normalize({ snap: false }).snap, false);
   assert.ok(LC.toSvg(c, { grid: true }).svg.includes('id="lc-grid"'));
   assert.ok(!LC.toSvg(c).svg.includes('id="lc-grid"'), 'no grid in the PDF');
+});
+
+// v1.59
+test('two lines between the same cards sit side by side; right angles leave from the side', () => {
+  const c = LC.normalize({ mode: 'free', nodes: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 400, y: 0 }] });
+  LC.toggleLink(c, 'a', 'b', 'narcotics'); LC.toggleLink(c, 'b', 'a', 'money');
+  const L = LC.layout(c);
+  assert.strictEqual(L.links.length, 2);
+  const [p, q] = L.links.map((e) => LC.linkPath(e.link, e.a, e.b, e.offset));
+  assert.notStrictEqual(p.points[0][1], q.points[0][1], 'one above the other');
+  const W = LC.CARD.W;
+  assert.ok(p.points[0][0] === W || p.points[0][0] === 400, 'from the side of the card, not its middle');
+  const svg = LC.toSvg(c).svg;
+  assert.ok(svg.includes('lc-flow-money') && svg.includes('lc-flow-narcotics'));
+  c.links[0].hidden = true;
+  assert.ok(!LC.toSvg(c).svg.includes('lc-flow-narcotics'), 'a hidden line is not drawn');
+  assert.strictEqual(LC.normalize(c).links[0].hidden, true);
+  assert.strictEqual(LC.normalize({ nodes: [{ id: 'a' }, { id: 'b' }], links: [{ from: 'a', to: 'b' }] }).links[0].route, 'elbow');
+  const d = LC.normalize({ mode: 'free', nodes: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 0, y: 500 }] });
+  LC.toggleLink(d, 'a', 'b');
+  const e = LC.layout(d).links[0];
+  const r = LC.linkPath(e.link, e.a, e.b, 0);
+  assert.ok(r.points[0][1] >= e.a.y + e.a.h - 0.5, 'below the card, not across the photo');
 });

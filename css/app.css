@@ -3226,3 +3226,41 @@ section.foldable.folded > .fold-head { margin-bottom: 0; }
 .lc-carries select { min-width: 8.5rem; }
 .lc-view .lc-flow { pointer-events: none; }
 .lc-link-del { grid-column: 1 / -1; justify-self: end; }
+
+/* v1.59: Ask AI suggestions: four boxes of the same size in a 2 x 2 grid, plain border, no blue line. */
+.chat-starters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: .45rem; width: 100%; max-width: 26rem; margin-top: .6rem; }
+.chat-starters .btn, .chat-starters .btn:hover { box-shadow: none; display: flex; align-items: center; justify-content: center; text-align: center; white-space: normal; min-height: 3.4rem; height: 100%; padding: .45rem .55rem; line-height: 1.3; font-size: .8rem; }
+.chat-starters .btn:hover { border-color: var(--accent); background: var(--surface-2); }
+
+/* v1.59: the Checks tab. */
+.chk-card { display: flex; flex-direction: column; gap: .8rem; margin-bottom: 1rem; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(15, 23, 42, .06); }
+.chk-head { display: flex; align-items: center; gap: .75rem; padding-bottom: .55rem; border-bottom: 1px solid var(--border); }
+.chk-head-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 2.6rem; height: 2.6rem; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); }
+.chk-head-icon .bi { width: 1.6rem; height: 1.6rem; }
+.chk-head h2 { margin: 0; }
+.chk-head p { margin: .15rem 0 0; }
+.chk-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: .9rem; }
+.chk-col { display: flex; flex-direction: column; gap: .7rem; min-width: 0; }
+.chk-col .field { margin: 0; }
+.check-reports { display: flex; flex-direction: column; max-height: 16rem; overflow-y: auto; border: 1px solid var(--box-edge); background: var(--surface-2); }
+.chk-doc { padding: .45rem .6rem; border-bottom: 1px solid var(--border); background: var(--surface); align-items: flex-start; }
+.chk-doc:last-child { border-bottom: 0; }
+.chk-doc span { overflow-wrap: anywhere; }
+.chk-ai { padding: .55rem .7rem; background: var(--surface-2); border: 1px solid var(--box-edge); }
+.chk-actions { display: flex; align-items: center; gap: .6rem; padding-top: .55rem; border-top: 1px solid var(--border); }
+.chk-past .checks-table { margin: 0; }
+.checks-table tbody tr.clickable:hover { background: var(--btn-primary-bg); }
+@media (max-width: 900px) { .chk-grid { grid-template-columns: minmax(0, 1fr); } }
+.disc-burn { border: 1px solid var(--border); background: var(--surface); }
+.disc-burn summary { cursor: pointer; padding: .4rem .6rem; font-weight: 700; font-size: .85rem; background: var(--surface-2); }
+.disc-burn-steps { margin: .5rem 0; padding-left: 1.6rem; padding-right: .7rem; display: flex; flex-direction: column; gap: .35rem; font-size: .85rem; }
+.disc-burn > p { margin: 0 .7rem .6rem; }
+/* v1.59: Link Chart connections: a card each, folded to one line with an eye (show or hide the line). */
+.lc-link-card { border: 1px solid var(--box-edge); background: var(--surface); }
+.lc-link-card.off { opacity: .7; }
+.lc-link-head { display: flex; align-items: center; gap: .3rem; padding: .3rem .4rem .3rem .6rem; background: var(--surface-2); }
+.lc-link-sum { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; min-width: 0; font-size: .85rem; }
+.lc-link-names { overflow-wrap: anywhere; font-weight: 600; }
+.lc-link-flow { font-size: .72rem; font-weight: 700; padding: .05rem .4rem; color: #fff; }
+.lc-link-flow-money { background: #1f9d55; } .lc-link-flow-narcotics { background: #c2410c; }
+.lc-link-card > .lc-link-row { padding: .5rem .6rem .6rem; border-top: 1px solid var(--border); }

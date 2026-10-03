@@ -253,6 +253,23 @@
     return pdf;
   }
 
+  /** v1.59: how to burn the package to a CD or DVD in Windows, step by step (a fold-out box). */
+  function burnHelp(h, open = false) {
+    const steps = [
+      'Put a blank CD-R or DVD-R in the PC\'s disc drive. A DVD holds about 4.3 GB, a CD about 700 MB. Close the AutoPlay window if one opens.',
+      'Open File Explorer (Windows key + E) and go to the SSD: CaseVault-Data → exports.',
+      'Right-click the package folder (Discovery … with the Bates numbers). On Windows 11 choose Show more options. Choose Send to → the DVD RW drive.',
+      'In the Burn a Disc box, type a title (for example the case number or the Bates range), choose "With a CD/DVD player" and click Next.',
+      'Windows opens the disc drive with the folder under "Files Ready to Be Written to the Disc". Click Finish burning (Drive Tools tab at the top, or right-click an empty spot → Burn to disc).',
+      'Keep the title, choose a recording speed (slower is safer), and click Next. Wait until Windows says the files were burned, then click Finish. The disc comes out.',
+      'Put the disc back in and open "Open Discovery.html" on it with the password to check it before you hand it over.',
+    ];
+    return h('details', { class: 'disc-burn', open },
+      h('summary', {}, 'How to Burn a CD or DVD (Windows)'),
+      h('ol', { class: 'disc-burn-steps' }, steps.map((t) => h('li', {}, t))),
+      h('p', { class: 'muted small' }, '"With a CD/DVD player" makes a finished disc that opens in any computer. CaseVault cannot burn discs itself: a web page is not allowed to; Windows does it. If Windows has no Burn option, the PC has no writable disc drive: use an external USB DVD writer.'));
+  }
+
   async function hashBlob(blob) {
     const sha = new CVDiscovery.Sha256();
     for (let i = 0; i < blob.size; i += CVDiscovery.CHUNK) sha.update(new Uint8Array(await blob.slice(i, i + CVDiscovery.CHUNK).arrayBuffer()));
@@ -362,7 +379,8 @@
         ssd: 'Saved in CaseVault-Data\\exports on the SSD. Burn it from there with File Explorer (Share → Burn to disc) for a DVD that plays in any computer.',
       };
       const destHint = h('p', { class: 'muted small disc-dest-hint' });
-      const showHint = () => { destHint.textContent = HINTS[dest.value] || ''; };
+      const burnBox = burnHelp(h);
+      const showHint = () => { destHint.textContent = HINTS[dest.value] || ''; burnBox.hidden = dest.value !== 'ssd'; };
       dest.addEventListener('change', showHint);
       showHint();
       const err = h('p', { class: 'error-text small', role: 'alert' });
@@ -484,7 +502,8 @@
               entry.receiptPdf ? h('li', {}, 'The receipt was saved to this computer\'s Downloads folder. Print it; the recipient, you and a witness sign it in ink at the hand-off. A copy is kept with the case.') : null,
               h('li', {}, 'The index PDF and the list of what was produced are kept with the case (Files → Discovery → Earlier productions).'),
               dest.value === 'disc' ? h('li', {}, 'Before you take the disc out, open it in File Explorer and choose Eject (or Close session), so Windows finishes writing it and other computers can read it.') : null,
-              dest.value === 'ssd' ? h('li', {}, 'For a DVD: put a blank disc in, open CaseVault-Data\\exports in File Explorer, select the package folder and choose Burn to disc (Share → Burn to disc). One DVD holds about 4.3 GB.') : null),
+              dest.value === 'ssd' ? h('li', {}, 'For a CD or DVD: follow the steps below. One DVD holds about 4.3 GB.') : null),
+            dest.value === 'ssd' ? burnHelp(h, true) : null,
             h('div', { class: 'dialog-actions' },
               entry.receiptPdf ? h('button', { class: 'btn', type: 'button', icon: 'download', onclick: () => downloadPdf(entry.receiptPdf, receiptName(entry)) }, 'Download Receipt') : null,
               entry.receiptPdf ? h('button', { class: 'btn', type: 'button', icon: 'printer', onclick: () => showReceipt(entry, () => done(true)) }, 'Print Receipt') : null,
@@ -508,7 +527,7 @@
             ui.field('Bates Prefix', prefixIn, '', 'Each page gets PREFIX-000001 and on. The next number continues from the last production with this prefix.'),
             ui.field('Start Number', startIn))),
         h('fieldset', { class: 'disc-card' }, h('legend', {}, icon('shield-lock-fill'), ' Where And Password'),
-          ui.field('Where To', dest), destHint,
+          ui.field('Where To', dest), destHint, burnBox,
           h('div', { class: 'disc-pair' },
             ui.field('Password', pw, '', 'At least 8 characters. CaseVault doesn\'t keep it: write it down for the recipient.'),
             ui.field('Password Again', pw2))),

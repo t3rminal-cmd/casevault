@@ -86,7 +86,8 @@
     const dirs = new Set(DIRS.map((d) => d[0]));
     for (const l of Array.isArray(raw.links) ? raw.links : []) {
       if (!l || !seen.has(l.from) || !seen.has(l.to) || l.from === l.to) continue;
-      c.links.push({ id: str(l.id || newId(), 60), from: l.from, to: l.to, label: str(l.label, 80), dir: dirs.has(l.dir) ? l.dir : 'none', flow: l.flow === 'money' || l.flow === 'narcotics' ? l.flow : '' });
+      c.links.push({ id: str(l.id || newId(), 60), from: l.from, to: l.to, label: str(l.label, 80), dir: dirs.has(l.dir) ? l.dir : 'none', flow: l.flow === 'money' || l.flow === 'narcotics' ? l.flow : '',
+        route: l.route === 'straight' ? 'straight' : 'elbow', hidden: l.hidden === true });
     }
     return c;
   }
@@ -133,12 +134,14 @@
   }
   /** The extra line between two cards (either way round), or null. */
   const linkBetween = (chart, a, b) => chart.links.find((l) => (l.from === a && l.to === b) || (l.from === b && l.to === a)) || null;
-  /** Click-to-link: adds an arrow from a to b, or takes the line away when there is one. -> 'linked' | 'unlinked' | '' */
+  /** Click-to-link: adds an arrow from a to b, or takes it away when there is one from a to b. -> 'linked' | 'unlinked' | '' */
   function toggleLink(chart, a, b, flow = '') {
     if (!a || !b || a === b || !chart.nodes.some((n) => n.id === a) || !chart.nodes.some((n) => n.id === b)) return '';
-    const l = linkBetween(chart, a, b);
+    // v1.59: the same way again takes the line away; the other way adds a line back (narcotics one
+    // way, money the other), drawn beside the first.
+    const l = chart.links.find((x) => x.from === a && x.to === b && x.dir !== 'from') || chart.links.find((x) => x.from === b && x.to === a && x.dir === 'from');
     if (l) { chart.links = chart.links.filter((x) => x !== l); return 'unlinked'; }
-    chart.links.push({ id: newId(), from: a, to: b, label: '', dir: 'to', flow: flow === 'money' || flow === 'narcotics' ? flow : '' });
+    chart.links.push({ id: newId(), from: a, to: b, label: '', dir: 'to', flow: flow === 'money' || flow === 'narcotics' ? flow : '', route: 'elbow', hidden: false });
     return 'linked';
   }
 
@@ -263,6 +266,57 @@
     return { boxes, edges, width: maxX, height: maxY, offset: { x: minX, y: minY }, cardH: H };
   }
 
+  /**
+   * v1.59: the path of an extra line. Lines between the same two cards sit side by side (`offset`
+   * apart), so money one way and narcotics the other don't cover each other. Right angles
+   * (the default) leave and enter a card from its side, top or bottom, never across its photo.
+   * -> { points: [[x, y]…], mid: [x, y], side: 'h' | 'v' }
+   */
+  function linkPath(link, a, b, offset = 0) {
+    const ca = [a.x + a.w / 2, a.y + a.h / 2]; const cb = [b.x + b.w / 2, b.y + b.h / 2];
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    if (link.route === 'straight') {
+      const dx = cb[0] - ca[0]; const dy = cb[1] - ca[1]; const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len * offset; const ny = dx / len * offset;
+      const [p1, p2] = edgeBetween({ ...a, x: a.x + nx, y: a.y + ny }, { ...b, x: b.x + nx, y: b.y + ny });
+      return { points: [p1, p2], mid: [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2], side: Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v' };
+    }
+    const gapX = Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w));
+    const gapY = Math.max(b.y - (a.y + a.h), a.y - (b.y + b.h));
+    if (gapX >= gapY) {
+      const right = cb[0] >= ca[0];
+      const sx = right ? a.x + a.w : a.x; const ex = right ? b.x : b.x + b.w;
+      const sy = clamp(ca[1] + offset, a.y + 10, a.y + a.h - 10); const ey = clamp(cb[1] + offset, b.y + 10, b.y + b.h - 10);
+      // Not level with the other card: across, then into its top or bottom (an L), so it doesn't
+      // arrive between lines already at its side.
+      if (gapY > 0) {
+        const tx = clamp(cb[0] + offset, b.x + 10, b.x + b.w - 10); const ty = cb[1] > ca[1] ? b.y : b.y + b.h;
+        return { points: [[sx, sy], [tx, sy], [tx, ty]], mid: [(sx + tx) / 2, sy], side: 'h' };
+      }
+      if (Math.abs(sy - ey) < 1) return { points: [[sx, sy], [ex, sy]], mid: [(sx + ex) / 2, sy], side: 'h' };
+      const mx = (sx + ex) / 2 + offset;
+      return { points: [[sx, sy], [mx, sy], [mx, ey], [ex, ey]], mid: [mx, (sy + ey) / 2], side: 'v' };
+    }
+    const down = cb[1] >= ca[1];
+    const sy = down ? a.y + a.h : a.y; const ey = down ? b.y : b.y + b.h;
+    const sx = clamp(ca[0] + offset, a.x + 10, a.x + a.w - 10); const ex = clamp(cb[0] + offset, b.x + 10, b.x + b.w - 10);
+    if (gapX > 0) {
+      const ty = clamp(cb[1] + offset, b.y + 10, b.y + b.h - 10); const tx = cb[0] > ca[0] ? b.x : b.x + b.w;
+      return { points: [[sx, sy], [sx, ty], [tx, ty]], mid: [sx, (sy + ty) / 2], side: 'v' };
+    }
+    if (Math.abs(sx - ex) < 1) return { points: [[sx, sy], [sx, ey]], mid: [sx, (sy + ey) / 2], side: 'v' };
+    const my = (sy + ey) / 2 + offset;
+    return { points: [[sx, sy], [sx, my], [ex, my], [ex, ey]], mid: [(sx + ex) / 2, my], side: 'h' };
+  }
+  /** How far each extra line sits from the middle when two cards have more than one. */
+  function linkOffsets(links) {
+    const groups = new Map();
+    for (const l of links) { const k = [l.from, l.to].sort().join('|'); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(l); }
+    const out = new Map();
+    for (const g of groups.values()) g.forEach((l, i) => out.set(l, (i - (g.length - 1) / 2) * 26));
+    return out;
+  }
+
   /** The two points where the line between two cards' centres leaves each card. */
   function edgeBetween(a, b) {
     const ca = [a.x + a.w / 2, a.y + a.h / 2]; const cb = [b.x + b.w / 2, b.y + b.h / 2];
@@ -277,7 +331,9 @@
 
   function layout(chart) {
     const L = chart.mode === 'free' ? freeLayout(chart) : { ...treeLayout(chart), offset: { x: 0, y: 0 } };
-    const links = chart.links.map((l) => ({ link: l, a: L.boxes.get(l.from), b: L.boxes.get(l.to) })).filter((e) => e.a && e.b);
+    const shown = chart.links.filter((l) => !l.hidden);
+    const offs = linkOffsets(shown);
+    const links = shown.map((l) => ({ link: l, a: L.boxes.get(l.from), b: L.boxes.get(l.to), offset: offs.get(l) || 0 })).filter((e) => e.a && e.b);
     return { ...L, links };
   }
 
@@ -356,18 +412,20 @@
     out.push(`<g transform="translate(${pad} ${pad})">`);
     for (const e of L.edges) out.push(`<polyline points="${e.map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="#7a8794" stroke-width="1.6"/>`);
     const labels = [];
-    for (const { link, a, b } of L.links) {
-      const [[x1, y1], [x2, y2]] = edgeBetween(a, b);
+    for (const { link, a, b, offset } of L.links) {
+      const P = linkPath(link, a, b, offset);
       const flow = link.flow || ''; const lc = FLOW_COLOR[flow] || FLOW_COLOR['']; const mk = flow ? `lc-arrow-${flow}` : 'lc-arrow';
       const ends = `${link.dir === 'to' || link.dir === 'both' ? ` marker-end="url(#${mk})"` : ''}${link.dir === 'from' || link.dir === 'both' ? ` marker-start="url(#${mk})"` : ''}`;
-      out.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${lc}" stroke-width="${flow ? 2 : 1.6}" stroke-dasharray="6 4"${ends}/>`);
-      const mx = (x1 + x2) / 2; const my = (y1 + y2) / 2;
+      out.push(`<polyline points="${P.points.map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ')}" fill="none" stroke="${lc}" stroke-width="${flow ? 2 : 1.6}" stroke-dasharray="6 4" stroke-linejoin="round"${ends}/>`);
+      const [mx, my] = P.mid;
       // v1.58: money or narcotics: a small round badge in the middle of the line (the arrow says who sends).
       if (flow) labels.push(flowBadge(flow, mx, my));
       if (link.label) {
         const ls = wrapLines(link.label, 150, 9, 2);
         const tw = Math.max(...ls.map((t) => t.length)) * 9 * 0.6 + 10; const th = ls.length * 11 + 5;
-        const ly = flow ? my + 14 + th / 2 : my;
+        // v1.59: beside its badge; of two side-by-side lines, one label above and one below.
+        const gap = (flow ? 14 : 4) + th / 2;
+        const ly = offset < 0 ? my - gap : flow || offset > 0 ? my + gap : my;
         labels.push(`<rect x="${(mx - tw / 2).toFixed(1)}" y="${(ly - th / 2).toFixed(1)}" width="${tw.toFixed(1)}" height="${th}" fill="#fff8e6" stroke="${lc}" stroke-width=".8"/>${ls.map((t, i) => `<text x="${mx.toFixed(1)}" y="${(ly - th / 2 + 12 + i * 11).toFixed(1)}" font-size="9" text-anchor="middle" fill="#3f3320">${esc(t)}</text>`).join('')}`);
       }
     }
@@ -439,9 +497,28 @@
     try { return normalize(JSON.parse(fromB64(s.slice(i + MARK.length, end < 0 ? undefined : end).trim()))); } catch { return null; }
   }
 
+  /** v1.59: the chart in words, kept under Reports with its PDF: who is under whom, and the connections. */
+  function summaryMarkdown(chart) {
+    const name = (n) => (n ? n.name || n.handle || subLine(n) || 'Unnamed' : '?');
+    const byId = new Map(chart.nodes.map((n) => [n.id, n]));
+    const lines = [`# ${chart.title || 'Link Chart'}`, '', '## People and Accounts', ''];
+    for (const { node: n, depth } of ordered(chart)) lines.push(`${'  '.repeat(depth)}- **${name(n)}**${subLine(n) ? ` (${subLine(n)})` : ''}${n.handle && n.name ? `: ${n.handle}` : ''}`);
+    const shown = chart.links.filter((l) => !l.hidden);
+    if (shown.length) {
+      lines.push('', '## Connections', '');
+      for (const l of shown) {
+        const a = name(byId.get(l.from)); const b = name(byId.get(l.to));
+        const what = l.flow === 'money' ? 'money' : l.flow === 'narcotics' ? 'narcotics' : '';
+        const arrow = l.dir === 'from' ? `${b} → ${a}` : l.dir === 'both' ? `${a} ↔ ${b}` : l.dir === 'none' ? `${a} — ${b}` : `${a} → ${b}`;
+        lines.push(`- ${arrow}${what ? `: ${what}` : ''}${l.label ? ` (${l.label})` : ''}`);
+      }
+    }
+    return lines.join('\n');
+  }
+
   const api = {
     KINDS, ROLES, DIRS, FLOWS, PLATFORMS, PER_ROW, CARD: { W, H: H_MAX, PHOTO }, cardHeight, emptyChart, normalize, newNode, childrenOf, subtree, removeNode, clear, ordered,
-    moveSibling, linkBetween, toggleLink, iconOf, colorOf, subLine, layout, freeze, printScale, toSvg, fit, wrapLines, twoLines, embed, extract,
+    moveSibling, linkBetween, toggleLink, linkPath, linkOffsets, summaryMarkdown, iconOf, colorOf, subLine, layout, freeze, printScale, toSvg, fit, wrapLines, twoLines, embed, extract,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVLinkChart = api;
