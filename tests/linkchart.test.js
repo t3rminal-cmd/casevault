@@ -149,3 +149,34 @@ test('the chart rides inside its PDF and comes back', () => {
   assert.deepStrictEqual(back.nodes.map((n) => n.id), c.nodes.map((n) => n.id));
   assert.strictEqual(LC.extract(pdf), null);
 });
+
+// v1.58
+test('platforms: Facebook and Instagram apart (old Facebook / Instagram cards become Facebook), payment apps', () => {
+  const c = LC.normalize({ nodes: [{ id: 'm', kind: 'online', platform: 'meta' }, { id: 'v', kind: 'online', platform: 'venmo' }] });
+  assert.strictEqual(c.nodes[0].platform, 'facebook');
+  for (const p of ['facebook', 'instagram', 'grindr', 'cashapp', 'venmo', 'zelle', 'coinbase', 'moonpay', 'applepay', 'darkweb']) assert.ok(LC.PLATFORMS.some((x) => x[0] === p), p);
+  assert.strictEqual(LC.iconOf(c.nodes[1]), 'venmo');
+  assert.strictEqual(LC.subLine(c.nodes[1]), 'Venmo');
+});
+
+test('links carry money or narcotics: a badge on the line, coloured arrows', () => {
+  const c = chart();
+  assert.strictEqual(c.links[0].flow, '');
+  assert.strictEqual(LC.toggleLink(c, 'b', 'c', 'money'), 'linked');
+  const l = c.links.find((x) => x.from === 'b');
+  assert.strictEqual(l.flow, 'money');
+  let svg = LC.toSvg(c).svg;
+  assert.ok(svg.includes('lc-flow-money') && svg.includes('url(#lc-arrow-money)'));
+  l.flow = 'narcotics';
+  svg = LC.toSvg(c).svg;
+  assert.ok(svg.includes('lc-flow-narcotics') && svg.includes('url(#lc-arrow-narcotics)'));
+  assert.strictEqual(LC.normalize({ nodes: [{ id: 'a' }, { id: 'b' }], links: [{ from: 'a', to: 'b', flow: 'bogus' }] }).links[0].flow, '');
+});
+
+test('grid on screen only, snap kept', () => {
+  const c = chart();
+  assert.strictEqual(c.snap, true);
+  assert.strictEqual(LC.normalize({ snap: false }).snap, false);
+  assert.ok(LC.toSvg(c, { grid: true }).svg.includes('id="lc-grid"'));
+  assert.ok(!LC.toSvg(c).svg.includes('id="lc-grid"'), 'no grid in the PDF');
+});

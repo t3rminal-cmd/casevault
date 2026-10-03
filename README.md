@@ -15,7 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.57)
+## Features (v1.58)
+
+- Link Chart: the mouse wheel zooms around the pointer and dragging the background moves around; the chart sits on small faint olive-green grid squares, with a Snap switch for Free layout
+- Link Chart platforms: Facebook and Instagram separately, plus Grindr, Cash App, Venmo, Zelle, Apple Pay, Coinbase and MoonPay, each with its own picture (Dark Web as before)
+- Link Chart connections can carry Money or Narcotics: a small round $ or capsule badge on the line, green or orange, and the arrow shows who sends it
 
 - Colour icons everywhere (Ask AI window, Options, the Overview banner, Suspects, Case Actions, quick links, arrows, plus/minus, close, warnings and more); the blue and red buttons are tinted with a coloured border, so their icons sit on them cleanly
 - Options and the Ask AI window redesigned; grey field boxes have a thin border so they don't run together

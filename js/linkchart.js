@@ -25,9 +25,16 @@
   // Platforms of an online name, each with its picture (icons/color) and colour.
   const PLATFORMS = [
     ['web', 'Webpage', 'globe', '#1d6fd8'], ['darkweb', 'Dark Web', 'skull', '#b02a37'], ['google', 'Google', 'google', '#4285f4'],
-    ['snapchat', 'Snapchat', 'snapchat', '#e6c200'], ['meta', 'Facebook / Instagram', 'meta', '#0866ff'], ['telegram', 'Telegram', 'telegram', '#229ed9'],
+    ['snapchat', 'Snapchat', 'snapchat', '#e6c200'], ['facebook', 'Facebook', 'facebook', '#1877f2'], ['instagram', 'Instagram', 'instagram', '#d62976'],
+    ['telegram', 'Telegram', 'telegram', '#229ed9'], ['grindr', 'Grindr', 'grindr', '#c9a400'],
+    // v1.58: payment apps and exchanges
+    ['cashapp', 'Cash App', 'cashapp', '#00a92a'], ['venmo', 'Venmo', 'venmo', '#3d95ce'], ['zelle', 'Zelle', 'zelle', '#6d1ed4'],
+    ['applepay', 'Apple Pay', 'applepay', '#111111'], ['coinbase', 'Coinbase', 'coinbase', '#0052ff'], ['moonpay', 'MoonPay', 'moonpay', '#7d00ff'],
     ['other', 'Other', 'chain', '#5c6670'],
   ];
+  // v1.58: what goes along an extra line: nothing said, money or narcotics (a small round badge on it).
+  const FLOWS = [['', 'Nothing Shown'], ['money', 'Money'], ['narcotics', 'Narcotics']];
+  const FLOW_COLOR = { '': '#c98a12', money: '#1f9d55', narcotics: '#c2410c' };
   const KIND_ICON = { phone: 'phone', crypto: 'crypto', location: 'pin', other: 'target' };
   const ROLE_COLOR = { Primary: '#b02a37', Supplier: '#6f42c1', Courier: '#0d6efd', Associate: '#5c6670', Customer: '#198754', Source: '#c98a12', Other: '#5c6670' };
   const KIND_COLOR = { phone: '#0b7285', crypto: '#c98a12', location: '#1d6fd8', other: '#5c6670' };
@@ -45,7 +52,7 @@
   const str = (v, n = 300) => String(v == null ? '' : v).slice(0, n);
   const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : null);
 
-  function emptyChart() { return { version: 2, title: '', mode: 'tree', perRow: PER_ROW.default, nodes: [], links: [], updated: '' }; }
+  function emptyChart() { return { version: 2, title: '', mode: 'tree', perRow: PER_ROW.default, snap: true, nodes: [], links: [], updated: '' }; }
 
   /** A clean chart from whatever was saved: unknown fields dropped, broken parents and loops cut. */
   function normalize(raw) {
@@ -54,6 +61,7 @@
     c.title = str(raw.title, 200);
     c.updated = str(raw.updated, 40);
     c.mode = raw.mode === 'free' ? 'free' : 'tree';
+    c.snap = raw.snap !== false;
     const pr = Number(raw.perRow);
     c.perRow = Number.isInteger(pr) && pr >= PER_ROW.min && pr <= PER_ROW.max ? pr : PER_ROW.default;
     const kinds = new Set(KINDS.map((k) => k[0]));
@@ -64,7 +72,7 @@
       seen.add(String(n.id));
       c.nodes.push({
         id: str(n.id, 60), parent: str(n.parent, 60), kind: kinds.has(n.kind) ? n.kind : 'person',
-        name: str(n.name, 120), role: n.role === 'Subject' ? 'Primary' : str(n.role, 60), platform: plats.has(n.platform) ? n.platform : '',
+        name: str(n.name, 120), role: n.role === 'Subject' ? 'Primary' : str(n.role, 60), platform: n.platform === 'meta' ? 'facebook' : plats.has(n.platform) ? n.platform : '',
         handle: str(n.handle, 300), photo: str(n.photo, 400), note: str(n.note, 500), x: num(n.x), y: num(n.y),
       });
     }
@@ -78,7 +86,7 @@
     const dirs = new Set(DIRS.map((d) => d[0]));
     for (const l of Array.isArray(raw.links) ? raw.links : []) {
       if (!l || !seen.has(l.from) || !seen.has(l.to) || l.from === l.to) continue;
-      c.links.push({ id: str(l.id || newId(), 60), from: l.from, to: l.to, label: str(l.label, 80), dir: dirs.has(l.dir) ? l.dir : 'none' });
+      c.links.push({ id: str(l.id || newId(), 60), from: l.from, to: l.to, label: str(l.label, 80), dir: dirs.has(l.dir) ? l.dir : 'none', flow: l.flow === 'money' || l.flow === 'narcotics' ? l.flow : '' });
     }
     return c;
   }
@@ -126,11 +134,11 @@
   /** The extra line between two cards (either way round), or null. */
   const linkBetween = (chart, a, b) => chart.links.find((l) => (l.from === a && l.to === b) || (l.from === b && l.to === a)) || null;
   /** Click-to-link: adds an arrow from a to b, or takes the line away when there is one. -> 'linked' | 'unlinked' | '' */
-  function toggleLink(chart, a, b) {
+  function toggleLink(chart, a, b, flow = '') {
     if (!a || !b || a === b || !chart.nodes.some((n) => n.id === a) || !chart.nodes.some((n) => n.id === b)) return '';
     const l = linkBetween(chart, a, b);
     if (l) { chart.links = chart.links.filter((x) => x !== l); return 'unlinked'; }
-    chart.links.push({ id: newId(), from: a, to: b, label: '', dir: 'to' });
+    chart.links.push({ id: newId(), from: a, to: b, label: '', dir: 'to', flow: flow === 'money' || flow === 'narcotics' ? flow : '' });
     return 'linked';
   }
 
@@ -320,6 +328,14 @@
   }
   const twoLines = (text, px, size) => wrapLines(text, px, size, 2);
 
+  /** The round badge on a money or narcotics line: a dollar sign, or a capsule. */
+  function flowBadge(flow, x, y) {
+    const c = FLOW_COLOR[flow];
+    const ring = `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="10.5" fill="${c}" stroke="#ffffff" stroke-width="2"/>`;
+    if (flow === 'money') return `<g class="lc-flow lc-flow-money">${ring}<text x="${x.toFixed(1)}" y="${(y + 4.6).toFixed(1)}" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#ffffff">$</text></g>`;
+    return `<g class="lc-flow lc-flow-narcotics">${ring}<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(-35)"><rect x="-7" y="-3.4" width="14" height="6.8" rx="3.4" fill="#ffffff"/><rect x="0" y="-3.4" width="7" height="6.8" rx="3.4" fill="#fde2d4"/><path d="M0 -3.4 V3.4" stroke="${c}" stroke-width="1"/></g></g>`;
+  }
+
   /**
    * The chart as SVG text. opts: { photoUrl(node) -> url|'' , iconUrl(name) -> url, selected, linkFrom, pad, font }.
    * -> { svg, width, height, offset, pad }
@@ -331,20 +347,28 @@
     const width = Math.max(W, L.width) + pad * 2; const height = Math.max(H, L.height) + pad * 2;
     const out = [];
     out.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" font-family='${font}'>`);
-    out.push('<defs><marker id="lc-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#c98a12"/></marker></defs>');
-    out.push(`<rect x="0" y="0" width="${width}" height="${height}" fill="#ffffff"/>`);
+    const marker = (id, c) => `<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="${c}"/></marker>`;
+    // v1.58: on screen, small faint olive-green squares (opts.grid); the PDF stays white.
+    const grid = opts.grid ? '<pattern id="lc-grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M10 0 H0 V10" fill="none" stroke="#c7d3ad" stroke-width=".6"/></pattern><pattern id="lc-grid5" width="50" height="50" patternUnits="userSpaceOnUse"><rect width="50" height="50" fill="url(#lc-grid)"/><path d="M50 0 H0 V50" fill="none" stroke="#a9ba86" stroke-width=".9"/></pattern>' : '';
+    out.push(`<defs>${marker('lc-arrow', FLOW_COLOR[''])}${marker('lc-arrow-money', FLOW_COLOR.money)}${marker('lc-arrow-narcotics', FLOW_COLOR.narcotics)}${grid}</defs>`);
+    out.push(`<rect x="0" y="0" width="${width}" height="${height}" fill="${opts.grid ? '#f3f6ec' : '#ffffff'}"/>`);
+    if (opts.grid) out.push(`<rect x="${pad % 10}" y="${pad % 10}" width="${width}" height="${height}" fill="url(#lc-grid5)"/>`);
     out.push(`<g transform="translate(${pad} ${pad})">`);
     for (const e of L.edges) out.push(`<polyline points="${e.map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="#7a8794" stroke-width="1.6"/>`);
     const labels = [];
     for (const { link, a, b } of L.links) {
       const [[x1, y1], [x2, y2]] = edgeBetween(a, b);
-      const ends = `${link.dir === 'to' || link.dir === 'both' ? ' marker-end="url(#lc-arrow)"' : ''}${link.dir === 'from' || link.dir === 'both' ? ' marker-start="url(#lc-arrow)"' : ''}`;
-      out.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#c98a12" stroke-width="1.6" stroke-dasharray="6 4"${ends}/>`);
+      const flow = link.flow || ''; const lc = FLOW_COLOR[flow] || FLOW_COLOR['']; const mk = flow ? `lc-arrow-${flow}` : 'lc-arrow';
+      const ends = `${link.dir === 'to' || link.dir === 'both' ? ` marker-end="url(#${mk})"` : ''}${link.dir === 'from' || link.dir === 'both' ? ` marker-start="url(#${mk})"` : ''}`;
+      out.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${lc}" stroke-width="${flow ? 2 : 1.6}" stroke-dasharray="6 4"${ends}/>`);
+      const mx = (x1 + x2) / 2; const my = (y1 + y2) / 2;
+      // v1.58: money or narcotics: a small round badge in the middle of the line (the arrow says who sends).
+      if (flow) labels.push(flowBadge(flow, mx, my));
       if (link.label) {
         const ls = wrapLines(link.label, 150, 9, 2);
         const tw = Math.max(...ls.map((t) => t.length)) * 9 * 0.6 + 10; const th = ls.length * 11 + 5;
-        const mx = (x1 + x2) / 2; const my = (y1 + y2) / 2;
-        labels.push(`<rect x="${(mx - tw / 2).toFixed(1)}" y="${(my - th / 2).toFixed(1)}" width="${tw.toFixed(1)}" height="${th}" fill="#fff8e6" stroke="#c98a12" stroke-width=".8"/>${ls.map((t, i) => `<text x="${mx.toFixed(1)}" y="${(my - th / 2 + 12 + i * 11).toFixed(1)}" font-size="9" text-anchor="middle" fill="#6b4f1d">${esc(t)}</text>`).join('')}`);
+        const ly = flow ? my + 14 + th / 2 : my;
+        labels.push(`<rect x="${(mx - tw / 2).toFixed(1)}" y="${(ly - th / 2).toFixed(1)}" width="${tw.toFixed(1)}" height="${th}" fill="#fff8e6" stroke="${lc}" stroke-width=".8"/>${ls.map((t, i) => `<text x="${mx.toFixed(1)}" y="${(ly - th / 2 + 12 + i * 11).toFixed(1)}" font-size="9" text-anchor="middle" fill="#3f3320">${esc(t)}</text>`).join('')}`);
       }
     }
     for (const n of chart.nodes) {
@@ -416,7 +440,7 @@
   }
 
   const api = {
-    KINDS, ROLES, DIRS, PLATFORMS, PER_ROW, CARD: { W, H: H_MAX, PHOTO }, cardHeight, emptyChart, normalize, newNode, childrenOf, subtree, removeNode, clear, ordered,
+    KINDS, ROLES, DIRS, FLOWS, PLATFORMS, PER_ROW, CARD: { W, H: H_MAX, PHOTO }, cardHeight, emptyChart, normalize, newNode, childrenOf, subtree, removeNode, clear, ordered,
     moveSibling, linkBetween, toggleLink, iconOf, colorOf, subLine, layout, freeze, printScale, toSvg, fit, wrapLines, twoLines, embed, extract,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

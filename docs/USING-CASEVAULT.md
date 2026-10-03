@@ -215,6 +215,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.58
+
+- **Link Chart zoom and moving around:** the mouse wheel zooms in and out around the pointer; drag the empty background to move around a big chart. The − / + buttons and Fit still work.
+- **Grid:** the chart sits on small, faint olive-green squares (on screen only; the PDF is white). In **Free** layout the **Snap** button makes dragged cards land on the squares so they line up; turn it off to place cards exactly.
+- **Platforms:** **Facebook** and **Instagram** are now separate (cards saved as "Facebook / Instagram" become Facebook; change the ones that are Instagram). New: **Grindr**, **Cash App**, **Venmo**, **Zelle**, **Apple Pay**, **Coinbase** and **MoonPay**, each with its own picture. **Dark Web** is still there.
+- **Money and narcotics on a connection:** each connection has **Carries**: Nothing Shown, **Money** or **Narcotics**. Money draws a green line with a small round **$** badge; narcotics an orange line with a small round **capsule** badge. The arrow says who sends and who receives. With **Link Cards** on, pick what new links carry in the **Carries** list next to it.
+
 ### What's new in v1.57
 
 - **Icons and buttons.** Every icon is now in the colour style: the Ask AI window's buttons, Options, the Overview banner (its buttons are white now), Suspects, Case Actions, the arrows, plus and minus, close, warnings and info, file types, and the theme switch. Only small arrows that open lists and the text-formatting buttons stay plain.
@@ -581,7 +588,7 @@ The **Link Chart** tab (after Files) draws who is under whom in the case, for a 
 - **Each card:**
   - **Kind**: Person, Moniker or Webpage, Phone, Crypto Wallet, Location or Other.
   - **Role** for a person: Primary, Supplier, Courier, Associate, Customer, Source or Other. Each role has its own colour on the card. (Charts made before v1.56 with *Subject* show *Primary*.)
-  - **Platform** for an online name: Webpage, Dark Web, Google, Snapchat, Facebook / Instagram, Telegram or Other. Each has its own picture.
+  - **Platform** for an online name: Webpage, Dark Web, Google, Snapchat, Facebook, Instagram, Telegram, Grindr, Cash App, Venmo, Zelle, Apple Pay, Coinbase, MoonPay or Other. Each has its own picture.
   - **Name**, and an **Alias / Moniker**, **Handle or URL**, **Phone Number**, wallet or address. A phone number formats itself as you type (123.456.7890), like every phone box in CaseVault.
   - **Under**: move the card somewhere else in the chart.
   - **Move Left / Move Right** (Tree layout): change the order of cards under the same person.
@@ -592,9 +599,10 @@ The **Link Chart** tab (after Files) draws who is under whom in the case, for a 
   - **Tree** (the default): the chart lays itself out top down. **Per Row** sets how many people or pages sit side by side under one person before they go into rows (4 to start).
   - **Free**: drag any card where you want it (it snaps to a small grid). Cards start where the tree put them; switching back to Tree lays them out again.
   - **Link Cards**: click one card, then another, and a dashed arrow is drawn from the first to the second. Click two cards that are already linked and the line goes. Press **Esc** or click **Link Cards** again to stop.
-  - **Zoom**: **−** and **+** (or Ctrl + mouse wheel), and **Fit** to see the whole chart. Zoom is only for the screen; the PDF always fits the page.
+  - **Zoom**: the mouse wheel (around the pointer), **−** and **+**, and **Fit** to see the whole chart. Drag the empty background to move around. Zoom is only for the screen; the PDF always fits the page.
+  - **Snap** (Free layout): dragged cards land on the small grid squares. The grid shows on screen only.
 - **How many fit:** the line under the chart says how big the names will print. On the portrait page, up to **4 cards in a row** print full size and up to **6** stay readable; at 7 or 8 the names print under 6 pt and the line turns orange. For a big organization, use fewer per row or split it into one chart per crew (change the title and save each as its own PDF).
-- **Other Connections** lists every dashed line: **From**, **To**, **Arrow** (Arrow To →, ← Arrow From, ↔ Both Ways or No Arrow) and a short **Label** (the same phone, money sent, met at…). **Add Connection** adds one by hand.
+- **Other Connections** lists every dashed line: **From**, **To**, **Arrow** (Arrow To →, ← Arrow From, ↔ Both Ways or No Arrow), **Carries** (Nothing Shown, Money with a $ badge, or Narcotics with a capsule badge) and a short **Label** (the same phone, money sent, met at…). **Add Connection** adds one by hand.
 - **Clear Chart** takes every card off (after asking). Photos stay in the case files, and a saved PDF stays in Files.
 - **PDF View** shows the chart on a letter-size portrait page with its title, the case number and subject, and the date printed; from there you can print or download it. **Save PDF to Case** saves it as `Link Charts\<case>-<title>.pdf`; saving again with the same title replaces it, a new title makes a new PDF. No agency name, seal or badge goes on the page.
 - **Back from Files:** a Link Chart PDF saved with v1.56 or later carries the chart inside it. In **Files → Link Charts**, the **Open in Link Chart** button on its row puts that chart back on the Link Chart tab to change it (CaseVault asks first if the tab already has cards).

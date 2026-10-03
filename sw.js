@@ -9,7 +9,7 @@
 
 // VERSION is bumped with each release; BUILD is replaced with the commit SHA by the GitHub Pages
 // workflow. Either change gives a new cache, so the installed app picks up the update.
-const VERSION = '1.57.0';
+const VERSION = '1.58.0';
 const BUILD = 'dev';
 const CACHE = `casevault-${VERSION}-${BUILD}`;
 
@@ -139,6 +139,16 @@ const APP_FILES = [
   './icons/color/verified.png',
   './icons/color/warning.png',
   './icons/color/zoom-in.png',
+  './icons/color/applepay.png',
+  './icons/color/cashapp.png',
+  './icons/color/coinbase.png',
+  './icons/color/facebook.png',
+  './icons/color/grindr.png',
+  './icons/color/instagram.png',
+  './icons/color/moonpay.png',
+  './icons/color/venmo.png',
+  './icons/color/zelle.png',
+  './icons/color/grid.png',
   './icons/color/archive-box.png',
   './icons/color/badge-atf.png',
   './icons/color/badge-cbp.png',
