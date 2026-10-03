@@ -15,7 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.60)
+## Features (v1.61)
+
+- Overview: a smaller banner with the Open, Pending, Closed and Archived counts in it; one row of same-size quick actions (New Case, Draft, Discovery, Link Chart, Ask AI, Reference, Library, Vault), where Draft, Discovery and Link Chart ask which case; a Needs Attention list of deadlines overdue or due within a week, soonest first, each opening that case's Timeline
 
 - Sidebar: Operations show the Operation Number on top and the name below (also on the Overview folders); a case with a deadline coming up, and its Operation, get a thin red border; the hide button is now an incognito icon and the top icons are all the same size
 - A full sidebar scrolls inside its own list (thin scrollbar); the top icons stay put and Closed and Archived stay at the bottom

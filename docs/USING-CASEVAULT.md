@@ -215,6 +215,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.61
+
+- **A smaller banner** on the Overview. The Open, Pending, Closed and Archived counts are now in the banner, so the separate row of boxes is gone.
+- **Quick actions:** one row of same-size buttons under the banner: **New Case**, **Draft**, **Discovery**, **Link Chart**, **Ask AI**, **Reference**, **Library** and **Vault**. Draft, Discovery and Link Chart ask which case first. Type part of a case number, subject or Operation number to find it, then click it or press Enter. Discovery opens the case's Files with the Discovery window on top.
+- **Needs Attention:** deadlines that are overdue or due within the next 7 days, soonest first. Each row shows the case, what is due, the date and how long is left. Overdue ones have a red edge and a pink background, today's and tomorrow's a red edge, the rest an amber edge. Click a row to open that case's Timeline. When nothing is due, it says so in one line.
+
 ### What's new in v1.60
 
 - **Operation names on two lines:** the Operation Number on top, the name below, in the case list and in the Overview's Operations folders.
