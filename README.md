@@ -15,7 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.61)
+## Features (v1.62)
+
+- Quick Links pinned at the bottom of the Overview; street value chart with its own Form column and the same columns for every category; popups redesigned (title bar, sections, hints, buttons that stay in view)
+- Link Chart: one line per direction, never two arrow heads on one line; two lines between the same cards run side by side without crossing (narcotics one way, money back); Turn Around and Add Return Line; old two-way arrows become two lines
 
 - Overview: a smaller banner with the Open, Pending, Closed and Archived counts in it; one row of same-size quick actions (New Case, Draft, Discovery, Link Chart, Ask AI, Reference, Library, Vault), where Draft, Discovery and Link Chart ask which case; a Needs Attention list of deadlines overdue or due within a week, soonest first, each opening that case's Timeline
 

@@ -373,7 +373,7 @@
       const opts = (val) => [h('option', { value: '' }, '—'), ...LC().ordered(chart).map(({ node }) => h('option', { value: node.id, selected: node.id === val }, nodeLabel(node)))];
       linksBox.replaceChildren(...[
         h('h3', { title: 'A dashed line between two cards that aren\'t one under the other: the same phone, money sent, met at…' }, 'Other Connections'),
-        chart.nodes.length > 1 ? h('p', { class: 'muted small lc-hint' }, 'Quickest: Link Cards above the chart, then click one card and another. Click the same two again (same order) to unlink; the other way round adds a line back, drawn beside the first (narcotics one way, money the other).') : null,
+        chart.nodes.length > 1 ? h('p', { class: 'muted small lc-hint' }, 'Quickest: Link Cards above the chart, then click one card and another. Click the same two again (same order) to unlink; the other way round adds a second line back beside the first, with its own arrow (narcotics one way, money the other). Or open a connection and click Add Return Line.') : null,
         ...chart.links.map((l, i) => {
           const from = h('select', { 'aria-label': `Connection ${i + 1} from` }, opts(l.from));
           const to = h('select', { 'aria-label': `Connection ${i + 1} to` }, opts(l.to));
@@ -386,7 +386,7 @@
           const nameOf = (id) => { const n = chart.nodes.find((x) => x.id === id); return n ? nodeLabel(n) : '—'; };
           const summary = h('span', { class: 'lc-link-sum' });
           const drawSum = () => {
-            const arrow = l.dir === 'from' ? '←' : l.dir === 'both' ? '↔' : l.dir === 'none' ? '—' : '→';
+            const arrow = l.dir === 'none' ? '—' : '→';
             summary.replaceChildren(...[h('span', { class: 'lc-link-names' }, `${nameOf(l.from)} ${arrow} ${nameOf(l.to)}`),
               l.flow ? h('span', { class: `lc-link-flow lc-link-flow-${l.flow}` }, l.flow === 'money' ? '$ Money' : 'Narcotics') : null,
               l.hidden ? h('span', { class: 'muted small' }, 'Hidden') : null].filter(Boolean));
@@ -395,7 +395,16 @@
           const upd = () => { l.from = from.value; l.to = to.value; l.dir = dir.value; l.flow = flow.value; l.route = route.value; l.label = label.value; save(); drawView(); drawSum(); };
           for (const el of [from, to, dir, flow, route]) el.addEventListener('change', upd);
           label.addEventListener('input', upd);
-          const body = h('div', { class: 'lc-link-row', hidden: !openLinks.has(l.id) }, field('From', from), field('To', to), field('Arrow', dir), field('Carries', flow), field('Line', route), h('span'), field('Label', label, 'span-2'), h('button', { class: 'btn small ghost danger-text lc-link-del', type: 'button', icon: 'trash3', title: 'Remove this connection', onclick: () => { chart.links.splice(i, 1); save(); drawAll(); } }, 'Remove'));
+          const body = h('div', { class: 'lc-link-row', hidden: !openLinks.has(l.id) }, field('From', from), field('To', to), field('Arrow', dir), field('Carries', flow), field('Line', route), h('span'), field('Label', label, 'span-2'),
+            // v1.62: one line per direction: turn this one round, or add the line coming back.
+            h('div', { class: 'lc-link-acts span-2' },
+              h('button', { class: 'btn small', type: 'button', icon: 'arrow-left-right', title: 'Point this line the other way', onclick: () => { [l.from, l.to] = [l.to, l.from]; save(); drawAll(); } }, 'Turn Around'),
+              chart.links.some((x) => x.from === l.to && x.to === l.from) ? null : h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', title: 'A second line back the other way, beside this one (money back for narcotics, and so on)', disabled: !l.from || !l.to, onclick: () => {
+                const id = `l${Date.now().toString(36)}`;
+                chart.links.push({ id, from: l.to, to: l.from, label: '', dir: 'to', flow: LC().otherFlow(l.flow), route: l.route || 'elbow', hidden: false });
+                openLinks.add(id); save(); drawAll();
+              } }, 'Add Return Line')),
+            h('button', { class: 'btn small ghost danger-text lc-link-del', type: 'button', icon: 'trash3', title: 'Remove this connection', onclick: () => { chart.links.splice(i, 1); save(); drawAll(); } }, 'Remove'));
           const eye = h('button', { class: 'icon-btn', type: 'button', title: l.hidden ? 'Show this line on the chart' : 'Hide this line on the chart (and the PDF)', 'aria-pressed': String(!l.hidden), onclick: () => { l.hidden = !l.hidden; save(); drawLinks(); drawView(); } }, icon(l.hidden ? 'eye-slash' : 'eye'), h('span', { class: 'sr-only' }, l.hidden ? 'Show line' : 'Hide line'));
           const foldBtn = h('button', { class: 'icon-btn', type: 'button', 'aria-expanded': String(openLinks.has(l.id)), title: openLinks.has(l.id) ? 'Fold this connection' : 'Open this connection', onclick: () => { if (openLinks.has(l.id)) openLinks.delete(l.id); else openLinks.add(l.id); drawLinks(); } }, icon(openLinks.has(l.id) ? 'chevron-down' : 'chevron-right'), h('span', { class: 'sr-only' }, 'Open or fold'));
           return h('div', { class: `lc-link-card${l.hidden ? ' off' : ''}` }, h('div', { class: 'lc-link-head' }, summary, h('div', { class: 'spacer' }), eye, foldBtn), body);

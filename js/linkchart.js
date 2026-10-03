@@ -14,14 +14,17 @@
  *   chart = { version: 2, title, mode, perRow, nodes: [node], links: [link], updated }
  *   node  = { id, parent, kind, name, role, platform, handle, photo, note, x, y }
  *   link  = { id, from, to, label, dir }   an extra line between two cards (not part of the tree);
- *                                         dir: 'to' (arrow at "to"), 'from', 'both' or 'none'
+ *                                         dir: 'to' (arrow at "to") or 'none' (v1.62: one line
+ *                                         per direction; old 'from' is turned round, old 'both' becomes two lines)
  */
 'use strict';
 
 (function (root) {
   const KINDS = [['person', 'Person'], ['online', 'Moniker or Webpage'], ['phone', 'Phone'], ['crypto', 'Crypto Wallet'], ['location', 'Location'], ['other', 'Other']];
   const ROLES = ['Primary', 'Supplier', 'Courier', 'Associate', 'Customer', 'Source', 'Other'];
-  const DIRS = [['to', 'Arrow To →'], ['from', '← Arrow From'], ['both', '↔ Both Ways'], ['none', 'No Arrow']];
+  const DIRS = [['to', 'Arrow →'], ['none', 'No Arrow']];
+  /** v1.62: the other flow for a return line (narcotics one way, money back). */
+  const otherFlow = (f) => (f === 'narcotics' ? 'money' : f === 'money' ? 'narcotics' : '');
   // Platforms of an online name, each with its picture (icons/color) and colour.
   const PLATFORMS = [
     ['web', 'Webpage', 'globe', '#1d6fd8'], ['darkweb', 'Dark Web', 'skull', '#b02a37'], ['google', 'Google', 'google', '#4285f4'],
@@ -33,7 +36,7 @@
     ['other', 'Other', 'chain', '#5c6670'],
   ];
   // v1.58: what goes along an extra line: nothing said, money or narcotics (a small round badge on it).
-  const FLOWS = [['', 'Nothing Shown'], ['money', 'Money'], ['narcotics', 'Narcotics']];
+  const FLOWS = [['', 'Nothing'], ['money', 'Money'], ['narcotics', 'Narcotics']];
   const FLOW_COLOR = { '': '#c98a12', money: '#1f9d55', narcotics: '#c2410c' };
   const KIND_ICON = { phone: 'phone', crypto: 'crypto', location: 'pin', other: 'target' };
   const ROLE_COLOR = { Primary: '#b02a37', Supplier: '#6f42c1', Courier: '#0d6efd', Associate: '#5c6670', Customer: '#198754', Source: '#c98a12', Other: '#5c6670' };
@@ -83,11 +86,15 @@
       let p = c.nodes.find((x) => x.id === n.parent);
       while (p) { if (path.has(p.id)) { n.parent = ''; break; } path.add(p.id); p = c.nodes.find((x) => x.id === p.parent); }
     }
-    const dirs = new Set(DIRS.map((d) => d[0]));
     for (const l of Array.isArray(raw.links) ? raw.links : []) {
       if (!l || !seen.has(l.from) || !seen.has(l.to) || l.from === l.to) continue;
-      c.links.push({ id: str(l.id || newId(), 60), from: l.from, to: l.to, label: str(l.label, 80), dir: dirs.has(l.dir) ? l.dir : 'none', flow: l.flow === 'money' || l.flow === 'narcotics' ? l.flow : '',
-        route: l.route === 'straight' ? 'straight' : 'elbow', hidden: l.hidden === true });
+      const flow = l.flow === 'money' || l.flow === 'narcotics' ? l.flow : '';
+      const one = { id: str(l.id || newId(), 60), from: l.from, to: l.to, label: str(l.label, 80), dir: ['to', 'from', 'both'].includes(l.dir) ? 'to' : 'none', flow,
+        route: l.route === 'straight' ? 'straight' : 'elbow', hidden: l.hidden === true };
+      // v1.62: an arrow pointing back is the same line turned round; both ways is two lines.
+      if (l.dir === 'from') { one.from = l.to; one.to = l.from; }
+      c.links.push(one);
+      if (l.dir === 'both') c.links.push({ ...one, id: `${one.id}r`.slice(0, 60), from: one.to, to: one.from, label: '', flow: otherFlow(flow) });
     }
     return c;
   }
@@ -139,9 +146,12 @@
     if (!a || !b || a === b || !chart.nodes.some((n) => n.id === a) || !chart.nodes.some((n) => n.id === b)) return '';
     // v1.59: the same way again takes the line away; the other way adds a line back (narcotics one
     // way, money the other), drawn beside the first.
-    const l = chart.links.find((x) => x.from === a && x.to === b && x.dir !== 'from') || chart.links.find((x) => x.from === b && x.to === a && x.dir === 'from');
+    const l = chart.links.find((x) => x.from === a && x.to === b);
     if (l) { chart.links = chart.links.filter((x) => x !== l); return 'unlinked'; }
-    chart.links.push({ id: newId(), from: a, to: b, label: '', dir: 'to', flow: flow === 'money' || flow === 'narcotics' ? flow : '', route: 'elbow', hidden: false });
+    // v1.62: a return line (B then A) carries the other flow when none is picked: narcotics one way, money back.
+    const back = chart.links.find((x) => x.from === b && x.to === a);
+    const f = flow === 'money' || flow === 'narcotics' ? flow : back ? otherFlow(back.flow) : '';
+    chart.links.push({ id: newId(), from: a, to: b, label: '', dir: 'to', flow: f, route: back ? back.route : 'elbow', hidden: false });
     return 'linked';
   }
 
@@ -273,6 +283,12 @@
    * -> { points: [[x, y]…], mid: [x, y], side: 'h' | 'v' }
    */
   function linkPath(link, a, b, offset = 0) {
+    // v1.62: two lines between the same cards are worked out the same way round (then the
+    // second is reversed), so they run side by side and never cross at a corner.
+    if (link.from > link.to) {
+      const r = linkPath({ ...link, from: link.to, to: link.from }, b, a, offset);
+      return { ...r, points: r.points.slice().reverse() };
+    }
     const ca = [a.x + a.w / 2, a.y + a.h / 2]; const cb = [b.x + b.w / 2, b.y + b.h / 2];
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
     if (link.route === 'straight') {
@@ -289,23 +305,26 @@
       const sy = clamp(ca[1] + offset, a.y + 10, a.y + a.h - 10); const ey = clamp(cb[1] + offset, b.y + 10, b.y + b.h - 10);
       // Not level with the other card: across, then into its top or bottom (an L), so it doesn't
       // arrive between lines already at its side.
+      // Of two lines side by side, the outer one turns outside the inner one (k), so they don't cross.
+      const k = right === (cb[1] > ca[1]) ? -1 : 1;
       if (gapY > 0) {
-        const tx = clamp(cb[0] + offset, b.x + 10, b.x + b.w - 10); const ty = cb[1] > ca[1] ? b.y : b.y + b.h;
+        const tx = clamp(cb[0] + offset * k, b.x + 10, b.x + b.w - 10); const ty = cb[1] > ca[1] ? b.y : b.y + b.h;
         return { points: [[sx, sy], [tx, sy], [tx, ty]], mid: [(sx + tx) / 2, sy], side: 'h' };
       }
       if (Math.abs(sy - ey) < 1) return { points: [[sx, sy], [ex, sy]], mid: [(sx + ex) / 2, sy], side: 'h' };
-      const mx = (sx + ex) / 2 + offset;
+      const mx = (sx + ex) / 2 + offset * k;
       return { points: [[sx, sy], [mx, sy], [mx, ey], [ex, ey]], mid: [mx, (sy + ey) / 2], side: 'v' };
     }
     const down = cb[1] >= ca[1];
     const sy = down ? a.y + a.h : a.y; const ey = down ? b.y : b.y + b.h;
     const sx = clamp(ca[0] + offset, a.x + 10, a.x + a.w - 10); const ex = clamp(cb[0] + offset, b.x + 10, b.x + b.w - 10);
+    const k = down === (cb[0] > ca[0]) ? -1 : 1;
     if (gapX > 0) {
-      const ty = clamp(cb[1] + offset, b.y + 10, b.y + b.h - 10); const tx = cb[0] > ca[0] ? b.x : b.x + b.w;
+      const ty = clamp(cb[1] + offset * k, b.y + 10, b.y + b.h - 10); const tx = cb[0] > ca[0] ? b.x : b.x + b.w;
       return { points: [[sx, sy], [sx, ty], [tx, ty]], mid: [sx, (sy + ty) / 2], side: 'v' };
     }
     if (Math.abs(sx - ex) < 1) return { points: [[sx, sy], [sx, ey]], mid: [sx, (sy + ey) / 2], side: 'v' };
-    const my = (sy + ey) / 2 + offset;
+    const my = (sy + ey) / 2 + offset * k;
     return { points: [[sx, sy], [sx, my], [ex, my], [ex, ey]], mid: [(sx + ex) / 2, my], side: 'h' };
   }
   /** How far each extra line sits from the middle when two cards have more than one. */
@@ -385,11 +404,19 @@
   const twoLines = (text, px, size) => wrapLines(text, px, size, 2);
 
   /** The round badge on a money or narcotics line: a dollar sign, or a capsule. */
+  function longestMid(points) {
+    let best = null; let len = -1;
+    for (let i = 1; i < points.length; i++) {
+      const [a, b] = [points[i - 1], points[i]]; const d = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (d > len) { len = d; best = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; }
+    }
+    return best;
+  }
   function flowBadge(flow, x, y) {
     const c = FLOW_COLOR[flow];
     const ring = `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="10.5" fill="${c}" stroke="#ffffff" stroke-width="2"/>`;
-    if (flow === 'money') return `<g class="lc-flow lc-flow-money">${ring}<text x="${x.toFixed(1)}" y="${(y + 4.6).toFixed(1)}" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#ffffff">$</text></g>`;
-    return `<g class="lc-flow lc-flow-narcotics">${ring}<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(-35)"><rect x="-7" y="-3.4" width="14" height="6.8" rx="3.4" fill="#ffffff"/><rect x="0" y="-3.4" width="7" height="6.8" rx="3.4" fill="#fde2d4"/><path d="M0 -3.4 V3.4" stroke="${c}" stroke-width="1"/></g></g>`;
+    if (flow === 'money') return `<g class="lc-flow lc-flow-money" pointer-events="none">${ring}<text x="${x.toFixed(1)}" y="${(y + 4.6).toFixed(1)}" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#ffffff">$</text></g>`;
+    return `<g class="lc-flow lc-flow-narcotics" pointer-events="none">${ring}<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(-35)"><rect x="-7" y="-3.4" width="14" height="6.8" rx="3.4" fill="#ffffff"/><rect x="0" y="-3.4" width="7" height="6.8" rx="3.4" fill="#fde2d4"/><path d="M0 -3.4 V3.4" stroke="${c}" stroke-width="1"/></g></g>`;
   }
 
   /**
@@ -415,9 +442,10 @@
     for (const { link, a, b, offset } of L.links) {
       const P = linkPath(link, a, b, offset);
       const flow = link.flow || ''; const lc = FLOW_COLOR[flow] || FLOW_COLOR['']; const mk = flow ? `lc-arrow-${flow}` : 'lc-arrow';
-      const ends = `${link.dir === 'to' || link.dir === 'both' ? ` marker-end="url(#${mk})"` : ''}${link.dir === 'from' || link.dir === 'both' ? ` marker-start="url(#${mk})"` : ''}`;
+      const ends = link.dir === 'to' ? ` marker-end="url(#${mk})"` : '';
       out.push(`<polyline points="${P.points.map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ')}" fill="none" stroke="${lc}" stroke-width="${flow ? 2 : 1.6}" stroke-dasharray="6 4" stroke-linejoin="round"${ends}/>`);
-      const [mx, my] = P.mid;
+      // v1.62: the badge and label sit in the middle of the longest leg, clear of the cards.
+      const [mx, my] = longestMid(P.points) || P.mid;
       // v1.58: money or narcotics: a small round badge in the middle of the line (the arrow says who sends).
       if (flow) labels.push(flowBadge(flow, mx, my));
       if (link.label) {
@@ -426,7 +454,7 @@
         // v1.59: beside its badge; of two side-by-side lines, one label above and one below.
         const gap = (flow ? 14 : 4) + th / 2;
         const ly = offset < 0 ? my - gap : flow || offset > 0 ? my + gap : my;
-        labels.push(`<rect x="${(mx - tw / 2).toFixed(1)}" y="${(ly - th / 2).toFixed(1)}" width="${tw.toFixed(1)}" height="${th}" fill="#fff8e6" stroke="${lc}" stroke-width=".8"/>${ls.map((t, i) => `<text x="${mx.toFixed(1)}" y="${(ly - th / 2 + 12 + i * 11).toFixed(1)}" font-size="9" text-anchor="middle" fill="#3f3320">${esc(t)}</text>`).join('')}`);
+        labels.push(`<g class="lc-label" pointer-events="none"><rect x="${(mx - tw / 2).toFixed(1)}" y="${(ly - th / 2).toFixed(1)}" width="${tw.toFixed(1)}" height="${th}" fill="#fff8e6" stroke="${lc}" stroke-width=".8"/>${ls.map((t, i) => `<text x="${mx.toFixed(1)}" y="${(ly - th / 2 + 12 + i * 11).toFixed(1)}" font-size="9" text-anchor="middle" fill="#3f3320">${esc(t)}</text>`).join('')}</g>`);
       }
     }
     for (const n of chart.nodes) {
@@ -509,7 +537,7 @@
       for (const l of shown) {
         const a = name(byId.get(l.from)); const b = name(byId.get(l.to));
         const what = l.flow === 'money' ? 'money' : l.flow === 'narcotics' ? 'narcotics' : '';
-        const arrow = l.dir === 'from' ? `${b} → ${a}` : l.dir === 'both' ? `${a} ↔ ${b}` : l.dir === 'none' ? `${a} — ${b}` : `${a} → ${b}`;
+        const arrow = l.dir === 'none' ? `${a} — ${b}` : `${a} → ${b}`;
         lines.push(`- ${arrow}${what ? `: ${what}` : ''}${l.label ? ` (${l.label})` : ''}`);
       }
     }
@@ -517,7 +545,7 @@
   }
 
   const api = {
-    KINDS, ROLES, DIRS, FLOWS, PLATFORMS, PER_ROW, CARD: { W, H: H_MAX, PHOTO }, cardHeight, emptyChart, normalize, newNode, childrenOf, subtree, removeNode, clear, ordered,
+    KINDS, ROLES, DIRS, FLOWS, otherFlow, PLATFORMS, PER_ROW, CARD: { W, H: H_MAX, PHOTO }, cardHeight, emptyChart, normalize, newNode, childrenOf, subtree, removeNode, clear, ordered,
     moveSibling, linkBetween, toggleLink, linkPath, linkOffsets, summaryMarkdown, iconOf, colorOf, subLine, layout, freeze, printScale, toSvg, fit, wrapLines, twoLines, embed, extract,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
