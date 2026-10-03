@@ -149,12 +149,17 @@
     perRow.addEventListener('change', () => { chart.perRow = Number(perRow.value); save(); drawView(); });
     const perRowWrap = h('label', { class: 'lc-perrow' }, h('span', { class: 'small' }, 'Per Row'), perRow);
     const linkBtn = h('button', { type: 'button', class: 'btn small', icon: 'link-45deg', 'aria-pressed': 'false', disabled: archived, title: 'Click one card, then another: an arrow from the first to the second. Click two linked cards: the line goes. Esc or this button stops.', onclick: () => setLinking(!linking) }, 'Link Cards');
+    // v1.58: Snap (cards land on the grid squares when dragged) and what a new link carries.
+    const snapBtn = h('button', { type: 'button', class: 'btn small', icon: 'grid-3x3', 'aria-pressed': String(chart.snap !== false), disabled: archived, title: 'Free layout: dragged cards land on the small grid squares, so they line up. Off: they go exactly where you let go.', onclick: () => { chart.snap = !(chart.snap !== false); save(); drawToolbar(); } }, 'Snap');
+    const carries = h('select', { 'aria-label': 'New links carry', title: 'What a link made with Link Cards shows: nothing, money ($) or narcotics (a capsule). The arrow shows who sends it.' },
+      LC().FLOWS.map(([v, l]) => h('option', { value: v }, l)));
+    const carriesWrap = h('label', { class: 'lc-perrow lc-carries', hidden: true }, h('span', { class: 'small' }, 'Carries'), carries);
     const zoomPct = h('span', { class: 'lc-zoom-pct small', 'aria-live': 'polite' }, '100%');
     const zoomBy = (dir) => { const i = ZOOMS.findIndex((z) => z >= zoom - 0.001); const j = Math.max(0, Math.min(ZOOMS.length - 1, (i < 0 ? ZOOMS.length - 1 : i) + dir)); setZoom(ZOOMS[j]); };
     const fitBtn = h('button', { type: 'button', class: 'btn small ghost', title: 'Show the whole chart', onclick: () => fitZoom() }, 'Fit');
     const toolbar = h('div', { class: 'lc-toolbar' },
       h('div', { class: 'lc-segs', role: 'group', 'aria-label': 'Layout' }, treeBtn, freeBtn),
-      perRowWrap, linkBtn,
+      perRowWrap, snapBtn, linkBtn, carriesWrap,
       h('div', { class: 'spacer' }),
       h('div', { class: 'lc-zoom', role: 'group', 'aria-label': 'Zoom' },
         h('button', { type: 'button', class: 'icon-btn', title: 'Zoom out', onclick: () => zoomBy(-1) }, icon('dash-lg'), h('span', { class: 'sr-only' }, 'Zoom out')),
@@ -173,6 +178,7 @@
       linkBtn.setAttribute('aria-pressed', String(on));
       linkBtn.classList.toggle('on', on);
       view.classList.toggle('linking', on);
+      carriesWrap.hidden = !on;
       drawView();
     }
     function setZoom(z) {
@@ -195,6 +201,9 @@
     function drawToolbar() {
       for (const b of [treeBtn, freeBtn]) { const on = b.dataset.mode === chart.mode; b.setAttribute('aria-pressed', String(on)); b.classList.toggle('on', on); }
       perRowWrap.hidden = chart.mode !== 'tree';
+      snapBtn.hidden = chart.mode !== 'free';
+      snapBtn.setAttribute('aria-pressed', String(chart.snap !== false));
+      snapBtn.classList.toggle('on', chart.snap !== false);
     }
     function drawNote() {
       if (!chart.nodes.length) { note.replaceChildren(); return; }
@@ -209,7 +218,7 @@
 
     let lastSvg = null;
     function drawView() {
-      const { svg } = LC().toSvg(chart, { photoUrl, iconUrl: (k) => `icons/color/${k}.png`, selected, linkFrom });
+      const { svg } = LC().toSvg(chart, { photoUrl, iconUrl: (k) => `icons/color/${k}.png`, selected, linkFrom, grid: true });
       view.innerHTML = chart.nodes.length ? svg : '';
       if (!chart.nodes.length) view.append(h('p', { class: 'muted lc-empty' }, archived ? 'No link chart for this case.' : 'Add the first person: Add Primary at the top left.'));
       view.classList.toggle('free', chart.mode === 'free');
@@ -221,15 +230,22 @@
     /* --- clicking and dragging on the chart --- */
     let drag = null;
     const unitScale = () => (lastSvg ? lastSvg.getBoundingClientRect().width / Number(lastSvg.getAttribute('width')) : 1) || 1;
+    // v1.58: drag the empty background to move around a big chart.
+    let pan = null;
     view.addEventListener('pointerdown', (e) => {
       const g = e.target.closest && e.target.closest('[data-node]');
+      if (!g && e.button === 0 && view.querySelector('svg')) {
+        pan = { x: e.clientX, y: e.clientY, l: view.scrollLeft, t: view.scrollTop };
+        view.setPointerCapture(e.pointerId); view.classList.add('panning');
+        return;
+      }
       if (!g || e.button !== 0) return;
       const id = g.getAttribute('data-node');
       e.preventDefault();
       if (linking && !archived) {
         if (!linkFrom) { linkFrom = id; drawView(); return; }
         if (linkFrom === id) { linkFrom = ''; drawView(); return; }
-        const r = LC().toggleLink(chart, linkFrom, id);
+        const r = LC().toggleLink(chart, linkFrom, id, carries.value);
         const a = chart.nodes.find((n) => n.id === linkFrom); const b = chart.nodes.find((n) => n.id === id);
         toast(r === 'linked' ? `Linked: ${nodeLabel(a)} → ${nodeLabel(b)}` : `Unlinked: ${nodeLabel(a)} and ${nodeLabel(b)}`, 'info', 2500);
         linkFrom = '';
@@ -244,15 +260,18 @@
       } else { selected = id; drawAll(); }
     });
     view.addEventListener('pointermove', (e) => {
+      if (pan) { view.scrollLeft = pan.l - (e.clientX - pan.x); view.scrollTop = pan.t - (e.clientY - pan.y); return; }
       if (!drag) return;
       const dx = (e.clientX - drag.sx) / drag.k; const dy = (e.clientY - drag.sy) / drag.k;
       if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
       drag.moved = true;
-      drag.n.x = Math.max(0, Math.round((drag.x0 + dx) / SNAP) * SNAP);
-      drag.n.y = Math.max(0, Math.round((drag.y0 + dy) / SNAP) * SNAP);
+      const step = chart.snap !== false ? SNAP : 1;
+      drag.n.x = Math.max(0, Math.round((drag.x0 + dx) / step) * step);
+      drag.n.y = Math.max(0, Math.round((drag.y0 + dy) / step) * step);
       drawView();
     });
     const endDrag = () => {
+      if (pan) { pan = null; view.classList.remove('panning'); return; }
       if (!drag) return;
       const { id, moved } = drag;
       drag = null;
@@ -261,7 +280,17 @@
     };
     view.addEventListener('pointerup', endDrag);
     view.addEventListener('pointercancel', endDrag);
-    view.addEventListener('wheel', (e) => { if (!e.ctrlKey) return; e.preventDefault(); zoomBy(e.deltaY < 0 ? 1 : -1); }, { passive: false });
+    // v1.58: the mouse wheel zooms in and out around the pointer (drag the background to move).
+    view.addEventListener('wheel', (e) => {
+      if (!view.querySelector('svg')) return;
+      e.preventDefault();
+      const r = view.getBoundingClientRect();
+      const mx = e.clientX - r.left; const my = e.clientY - r.top;
+      const before = zoom;
+      const ux = (view.scrollLeft + mx) / before; const uy = (view.scrollTop + my) / before;
+      setZoom(zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12));
+      view.scrollLeft = ux * zoom - mx; view.scrollTop = uy * zoom - my;
+    }, { passive: false });
     panel.addEventListener('keydown', (e) => { if (e.key === 'Escape' && linking) { e.stopPropagation(); setLinking(false); } });
 
     function drawTree() {
@@ -349,13 +378,14 @@
           const to = h('select', { 'aria-label': `Connection ${i + 1} to` }, opts(l.to));
           const dir = h('select', { 'aria-label': `Connection ${i + 1} arrow` }, LC().DIRS.map(([v, lab]) => h('option', { value: v, selected: v === l.dir }, lab)));
           const label = h('textarea', { rows: 2, maxlength: 80, placeholder: 'Same phone, sends money…', 'aria-label': `Connection ${i + 1} label` }, l.label);
-          const upd = () => { l.from = from.value; l.to = to.value; l.dir = dir.value; l.label = label.value; save(); drawView(); };
-          for (const el of [from, to, dir]) el.addEventListener('change', upd);
+          const flow = h('select', { 'aria-label': `Connection ${i + 1} carries` }, LC().FLOWS.map(([v, lab]) => h('option', { value: v, selected: v === (l.flow || '') }, lab)));
+          const upd = () => { l.from = from.value; l.to = to.value; l.dir = dir.value; l.flow = flow.value; l.label = label.value; save(); drawView(); };
+          for (const el of [from, to, dir, flow]) el.addEventListener('change', upd);
           label.addEventListener('input', upd);
-          return h('div', { class: 'lc-link-row' }, field('From', from), field('To', to), field('Arrow', dir), h('button', { class: 'btn small ghost danger-text lc-link-del', type: 'button', icon: 'trash3', title: 'Remove this connection', onclick: () => { chart.links.splice(i, 1); save(); drawAll(); } }, 'Remove'), field('Label', label, 'span-2'));
+          return h('div', { class: 'lc-link-row' }, field('From', from), field('To', to), field('Arrow', dir), field('Carries', flow), field('Label', label, 'span-2'), h('button', { class: 'btn small ghost danger-text lc-link-del', type: 'button', icon: 'trash3', title: 'Remove this connection', onclick: () => { chart.links.splice(i, 1); save(); drawAll(); } }, 'Remove'));
         }),
         chart.nodes.length > 1 ? h('button', { class: 'btn small', type: 'button', icon: 'link-45deg', onclick: () => {
-          chart.links.push({ id: `l${Date.now().toString(36)}`, from: selected || '', to: '', label: '', dir: 'to' });
+          chart.links.push({ id: `l${Date.now().toString(36)}`, from: selected || '', to: '', label: '', dir: 'to', flow: '' });
           drawLinks();
         } }, 'Add Connection') : null].flat().filter(Boolean));
     }

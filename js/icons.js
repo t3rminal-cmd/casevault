@@ -31,6 +31,9 @@
     'capsule-pill': 'cannabis', 'cash-coin': 'money', 'bank2': 'scales', 'diagram-3-fill': 'link-nodes', 'sliders2': 'wrench',
     'shield-check': 'shield-person', 'bullseye': 'target',
     // v1.53: drawn in the same style for what the artwork didn't have
+    // v1.58: link chart platforms and payment apps (colour only)
+    'facebook': 'facebook', 'instagram': 'instagram', 'grindr': 'grindr', 'cashapp': 'cashapp', 'venmo': 'venmo', 'zelle': 'zelle',
+    'coinbase': 'coinbase', 'moonpay': 'moonpay', 'applepay': 'applepay', 'grid-3x3': 'grid',
     // v1.57: every other icon the program uses, drawn in the same style
     'plus-lg': 'plus', 'dash-lg': 'minus', 'x-lg': 'close', 'check2': 'check', 'arrow-up': 'arrow-up', 'arrow-down': 'arrow-down',
     'arrow-left': 'arrow-left', 'arrow-right': 'arrow-right', 'arrow-left-right': 'swap', 'arrow-repeat': 'refresh',

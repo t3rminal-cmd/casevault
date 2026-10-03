@@ -3217,3 +3217,12 @@ section.foldable.folded > .fold-head { margin-bottom: 0; }
 .vault-badge { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); color: var(--accent); }
 .purge-skull { background: var(--btn-danger-bg); border: 1px solid var(--danger); color: var(--danger); }
 .purge-btn .bi { color: inherit; }
+
+/* v1.58: Link Chart: the chart sits on small faint olive-green squares; drag the background to move
+   around, the mouse wheel zooms. */
+.lc-view { background: #f3f6ec; cursor: grab; }
+.lc-view.panning { cursor: grabbing; }
+:root[data-theme="dark"] .lc-view { background: #f3f6ec; }
+.lc-carries select { min-width: 8.5rem; }
+.lc-view .lc-flow { pointer-events: none; }
+.lc-link-del { grid-column: 1 / -1; justify-self: end; }
