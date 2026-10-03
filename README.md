@@ -15,6 +15,14 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.71)
+
+- Back to Top always shown (an up caret ^) beside Ask AI
+- Every page starts left, next to the case list, at the same width: nothing jumps going from a folder to a case
+- OTHER FILES folders: USPIS Files, DEA Files, INET Files, Training, Other, plus New Folder (and Remove Folder when empty); each tab shows what the folder is for
+- Overview sections (Operations, General Files, Other Files, Recently Updated) in matching panels with the same header; Recently Updated as even columns in smaller, regular type
+- Draft: the green bar against the checkbox of a finished part is gone (the green check on the right stays)
+
 ## Features (v1.70)
 
 - Overview headings OPERATIONS, GENERAL FILES and OTHER FILES without folder icons

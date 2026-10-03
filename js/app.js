@@ -806,10 +806,30 @@
    * folder (key 'op-<id>', with Subpoenas, Affidavits, Operation Plans, Maps, Subject Data and
    * Running Vehicle List). Files are kept as they are named, in CaseVault-Data\\shared. */
   const sharedOpen = {};
-  const SHARED_ICONS = { Subpoenas: 'file-earmark-ruled', Affidavits: 'pencil-square', 'Operation Plans': 'card-checklist', Maps: 'map', 'Subject Data': 'person-vcard', 'Running Vehicle List': 'car-front' };
-  function sharedFilesBox(key, { folders = [], empty = 'No files yet.' } = {}) {
+  const SHARED_ICONS = { 'USPIS Files': 'badge-uspis', 'DEA Files': 'badge-dea', 'INET Files': 'globe2', Training: 'book', Other: 'folder2-open', Subpoenas: 'file-earmark-ruled', Affidavits: 'pencil-square', 'Operation Plans': 'card-checklist', Maps: 'map', 'Subject Data': 'person-vcard', 'Running Vehicle List': 'car-front' };
+  // v1.71: folders are names, or { name, label, desc, custom }; getFolders() reads them each time
+  // (Other Files: the built-in folders and the ones you make; New Folder adds one).
+  function sharedFilesBox(key, { folders: fixed = [], getFolders = null, allowNew = false, empty = 'No files yet.' } = {}) {
     const box = h('div', { class: 'shared-files', 'data-key': key });
-    let folder = folders.length ? (sharedOpen[key] || folders[0]) : '';
+    const norm = (f) => (typeof f === 'string' ? { name: f, label: f } : { ...f, label: f.label || f.name });
+    let folders = fixed.map(norm);
+    let folder = sharedOpen[key] != null ? sharedOpen[key] : (folders.length ? folders[0].name : (getFolders ? null : ''));
+    const newFolder = async () => {
+      const inp = h('input', { maxlength: 60, autocomplete: 'off', 'aria-label': 'Folder name', placeholder: 'ATF Files' });
+      setTimeout(() => inp.focus(), 60);
+      const name = await openDialog((close) => h('form', { class: 'dialog-form', onsubmit: (e) => { e.preventDefault(); close(inp.value.trim()); } },
+        h('h2', { icon: 'folder-plus' }, 'New Folder in Other Files'),
+        field('Folder Name', inp),
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Create Folder'))));
+      if (!name) return;
+      try { folder = await Vault.addOtherFolder(name); sharedOpen[key] = folder; toast(`Folder ${folder} made.`, 'success'); } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); toast(err.message, 'error'); }
+      draw();
+    };
+    const removeFolder = async (f) => {
+      if (!(await confirmDialog({ title: `Remove the folder ${f.label}?`, message: 'Only an empty folder can be removed.', confirmText: 'Remove Folder', danger: true }))) return;
+      try { await Vault.removeOtherFolder(f.name); folder = folders[0].name; sharedOpen[key] = folder; } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); toast(err.message, 'error'); }
+      draw();
+    };
     const pick = h('input', { type: 'file', multiple: true, hidden: true });
     const add = async (files) => {
       if (!files || !files.length) return;
@@ -824,14 +844,20 @@
       let list = [];
       let counts = {};
       try {
+        if (getFolders) folders = (await getFolders()).map(norm);
+        if (folders.length && !folders.some((f) => f.name === folder)) folder = folders[0].name;
         list = await Vault.listShared(key, folder);
-        if (folders.length) for (const f of folders) counts[f] = f === folder ? list.length : (await Vault.listShared(key, f)).length;
+        if (folders.length) for (const f of folders) counts[f.name] = f.name === folder ? list.length : (await Vault.listShared(key, f.name)).length;
       } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
+      const cur = folders.find((f) => f.name === folder);
+      const folderLabel = cur ? cur.label : '';
       // v1.69: the folders are tabs, like a case's Details / Timeline / Draft tabs.
-      const chips = folders.length ? h('nav', { class: 'tabs shared-tabs', role: 'tablist' }, folders.map((f) => h('button', {
-        type: 'button', role: 'tab', class: `tab${f === folder ? ' active' : ''}`, 'aria-selected': String(f === folder), icon: SHARED_ICONS[f] || 'folder',
-        onclick: () => { folder = f; sharedOpen[key] = f; draw(); },
-      }, f, h('span', { class: 'tab-count' }, String(counts[f] || 0))))) : null;
+      const chips = folders.length ? h('nav', { class: `tabs shared-tabs${folders.some((f) => f.desc) ? ' has-desc' : ''}`, role: 'tablist' }, ...folders.map((f) => h('button', {
+        type: 'button', role: 'tab', class: `tab${f.name === folder ? ' active' : ''}`, 'aria-selected': String(f.name === folder), title: f.desc || null,
+        onclick: () => { folder = f.name; sharedOpen[key] = f.name; draw(); },
+      }, h('span', { class: 'tab-main' }, I(SHARED_ICONS[f.label] || (f.custom ? 'folder' : 'folder2-open')), h('span', { class: 'tab-name' }, f.label), h('span', { class: 'tab-count' }, String(counts[f.name] || 0))),
+      f.desc ? h('span', { class: 'tab-desc' }, f.desc) : '')),
+      allowNew ? h('button', { type: 'button', class: 'tab tab-new', title: 'Make a new folder in Other Files', onclick: newFolder }, h('span', { class: 'tab-main' }, I('folder-plus'), h('span', { class: 'tab-name' }, 'New Folder')), folders.some((f) => f.desc) ? h('span', { class: 'tab-desc' }, 'Your own folder') : '') : '') : null;
       const reader = { readFile: (name) => Vault.readShared(key, folder, name.split('/').pop()), where: `${key}${folder ? `\\${folder}` : ''}` };
       const rows = list.length ? h('table', { class: 'files shared-table' },
         h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', { class: 'num' }, 'Size'), h('th', {}, 'Updated'), h('th', { class: 'col-actions' }, ''))),
@@ -843,9 +869,10 @@
             if (!(await confirmDialog({ title: `Delete ${f.base}?`, message: 'The file is deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
             try { await Vault.deleteShared(key, folder, f.base); } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); toast(`Not deleted: ${err.message}`, 'error'); }
             draw();
-          } }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${f.base}`))))))) : h('p', { class: 'muted small shared-empty' }, folder ? `No files in ${folder} yet.` : empty);
+          } }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${f.base}`))))))) : h('p', { class: 'muted small shared-empty' }, folderLabel ? `No files in ${folderLabel} yet.` : empty);
       box.replaceChildren(...[chips, h('div', { class: 'shared-drop', title: 'Drop files here, or click Add Files' }, rows,
-        h('div', { class: 'shared-foot' }, h('button', { type: 'button', class: 'btn small', icon: 'plus-lg', onclick: () => pick.click() }, folder ? `Add Files to ${folder}` : 'Add Files'), h('span', { class: 'muted small' }, 'or drop files here')), pick)].filter(Boolean));
+        h('div', { class: 'shared-foot' }, h('button', { type: 'button', class: 'btn small', icon: 'plus-lg', onclick: () => pick.click() }, folderLabel ? `Add Files to ${folderLabel}` : 'Add Files'), h('span', { class: 'muted small' }, 'or drop files here'),
+          cur && cur.custom ? h('span', { class: 'spacer' }) : '', cur && cur.custom ? h('button', { type: 'button', class: 'btn small ghost danger', icon: 'trash3', title: 'Remove this folder (only when it is empty)', onclick: () => removeFolder(cur) }, 'Remove Folder') : ''), pick)].filter(Boolean));
     };
     box.addEventListener('dragover', (e) => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); box.classList.add('drop-on'); } });
     box.addEventListener('dragleave', () => box.classList.remove('drop-on'));
@@ -880,18 +907,24 @@
       opBox,
       generalYearFolders(cases),
       // v1.68: OTHER FILES: anything not tied to a case number or an Operation.
-      h('div', { class: 'dash-section other-files-section' },
-        h('div', { class: 'section-head' }, h('h2', { class: 'section-title caps' }, 'Other Files'), h('div', { class: 'spacer' })),
-        h('p', { class: 'muted small' }, 'Files not tied to a case number or an Operation: forms, training, reference sheets… Kept on the SSD in CaseVault-Data\\shared\\other.'),
-        sharedFilesBox('other', { empty: 'No files yet. Add forms, training or reference sheets here.' })),
-      h('div', { class: 'dash-section' }, h('div', { class: 'section-head' }, h('h2', { class: 'section-title' }, 'Recently updated'), h('div', { class: 'spacer' }),
-        recent.length ? h('button', { class: 'btn small ghost', type: 'button', title: 'Empties this list. Cases you change after this show here again.', onclick: async () => {
+      h('div', { class: 'dash-section ov-panel other-files-section' },
+        panelHead('Other Files', 'Not tied to a case number or an Operation. Kept on the SSD in CaseVault-Data\\shared\\other.'),
+        sharedFilesBox('other', { allowNew: true, empty: 'No files yet. Add forms, training or reference sheets here.',
+          getFolders: async () => [...Vault.OTHER_FOLDERS, ...(await Vault.otherCustomFolders()).map((n) => ({ name: n, custom: true }))] })),
+      // v1.71: Recently Updated as even columns, in the Quick Links' size, not bold.
+      h('div', { class: 'dash-section ov-panel recent-section' }, panelHead('Recently Updated', 'The cases changed most recently. Clear empties the list.',
+        recent.length ? h('button', { class: 'btn small', type: 'button', icon: 'x-circle', title: 'Empties this list. Cases you change after this show here again.', onclick: async () => {
           try { await Save.track('settings', () => Vault.updateSettings({ recentClearedAt: new Date().toISOString() })); showDashboard(); } catch { /* reported */ }
-        } }, 'Clear') : null),
+        } }, 'Clear') : ''),
       recent.length
-        ? h('ul', { class: 'plain-list' }, recent.map((c) => h('li', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}`, class: 'row-link recent-row' },
-          h('span', { class: 'recent-title' }, h('span', {}, c.title || 'Untitled case'), h('span', { class: 'muted' }, [c.fileNumber && ` · File ${c.fileNumber}`, c.number && ` · Case ${c.number}`].filter(Boolean).join(''))),
-          statusPill(c.status)))))
+        ? h('div', { class: 'recent-grid', role: 'table' },
+          h('div', { class: 'recent-row recent-headrow', role: 'row' }, ...['Subject', 'Case Number', 'File Number', 'Status', 'Updated'].map((t) => h('span', { role: 'columnheader' }, t))),
+          ...recent.map((c) => h('a', { href: `#/case/${encodeURIComponent(c.id)}`, class: 'recent-row', role: 'row' },
+            h('span', { class: 'recent-cell' }, c.title || c.subject || 'Untitled case'),
+            h('span', { class: 'recent-cell' }, c.number || '—'),
+            h('span', { class: 'recent-cell' }, c.fileNumber || '—'),
+            h('span', { class: 'recent-cell' }, statusPill(c.status)),
+            h('span', { class: 'recent-cell muted' }, c.updated ? fmtDate(Vault.localDay(new Date(c.updated))) : '—'))))
         : h('p', { class: 'muted' }, cases.length ? 'Nothing changed since you cleared this list.' : 'Create your first case with "New case".')),
     ));
     // v1.63: Quick Links in the footer bar under the page, from the case list to the right edge.
@@ -1163,12 +1196,19 @@
   /* General Files on the Overview (v1.47): the cases that aren't in an Operation, a folder for each
    * year they were opened (newest first), between Operations and Recently Updated. Click a year to
    * see its cases under the folders. */
+  /** v1.71: the Overview's section header, the same for every section: the title in capitals with
+   * a one-line description under it, and its button on the right. */
+  function panelHead(title, desc, action = '') {
+    return h('div', { class: 'section-head ov-head' },
+      h('div', { class: 'ov-head-text' }, h('h2', { class: 'section-title caps' }, title), h('span', { class: 'ov-desc muted small' }, desc)),
+      h('div', { class: 'spacer' }), action || h('span', { class: 'ov-action-space' }));
+  }
   function generalYearFolders(cases) {
     const loose = cases.filter((c) => !isArchivedEntry(c) && (!c.operationId || !Vault.getOperation(c.operationId)));
     const yearOf = (c) => (/^\d{4}/.exec(String(c.opened || '')) || [''])[0];
     const years = [...new Set(loose.map(yearOf))].sort((a, b) => (!a) - (!b) || b.localeCompare(a));
     const list = years.map((y) => ({ k: y || 'none', name: y || 'No Date', group: loose.filter((c) => yearOf(c) === y).sort(byNumber) }));
-    const box = h('div', { class: 'dash-section op-folders-section general-years-section' });
+    const box = h('div', { class: 'dash-section ov-panel op-folders-section general-years-section' });
     const draw = () => {
       const open = list.find((o) => o.k === yearFolderState.open);
       const tiles = h('div', { class: 'op-folders', role: 'list' }, list.map((o) => {
@@ -1185,8 +1225,7 @@
         h('div', { class: 'op-open-cases' }, open.op ? h('a', { class: 'op-folder-card', href: `#/operation/${encodeURIComponent(open.op.id)}`, title: 'Subpoenas, Affidavits, Operation Plans, Maps, Subject Data and the Running Vehicle List, for the whole Operation' },
           I('op-folder'), h('span', { class: 'op-folder-card-text' }, h('strong', {}, 'Operation Folder'), h('span', { class: 'muted small' }, Vault.OP_FOLDERS.join(' · ')))) : null,
         ...open.group.map((c) => overviewCard(c)))) : null;
-      box.replaceChildren(...[h('div', { class: 'section-head' }, h('h2', { class: 'section-title caps' }, 'General Files'), h('div', { class: 'spacer' }),
-        h('a', { class: 'btn small ghost', href: '#/general' }, 'All Cases')),
+      box.replaceChildren(...[panelHead('General Files', 'Cases not in an Operation, by the year they were opened.', h('a', { class: 'btn small', href: '#/general', icon: 'folder2-open' }, 'All Cases')),
         list.length ? tiles : h('p', { class: 'muted' }, 'Every case is in an Operation. Cases that aren\'t show here by the year they were opened.'), inside].filter(Boolean));
     };
     yearFolderState.close = () => { if (yearFolderState.open && box.isConnected) { yearFolderState.open = ''; draw(); } };
@@ -1200,7 +1239,7 @@
     const list = Vault.listOperations().map((op) => ({ k: op.id, op, name: opLabel(op), group: active.filter((c) => c.operationId === op.id).sort(byNumber) }))
       .sort((a, b) => byFileNumber(a.op.number, b.op.number) || a.op.name.localeCompare(b.op.name));
     // v1.47: General Files has its own section below, by year.
-    const box = h('div', { class: 'dash-section op-folders-section' });
+    const box = h('div', { class: 'dash-section ov-panel op-folders-section' });
     const draw = () => {
       const open = list.find((o) => o.k === opFolderState.open);
       const tiles = h('div', { class: 'op-folders', role: 'list' }, list.map((o) => {
@@ -1218,8 +1257,7 @@
           h('div', { class: 'spacer' }),
           h('button', { type: 'button', class: 'btn small', onclick: () => newCase(open.op ? { operationId: open.op.id } : {}) }, open.op ? 'Add Case Number' : 'New Case')),
         h('div', { class: 'op-open-cases' }, open.group.length ? open.group.map((c) => overviewCard(c)) : [h('p', { class: 'muted' }, open.op ? 'No cases in this Operation yet. Add Case Number creates one here.' : 'No independent cases.')])) : null;
-      box.replaceChildren(...[h('div', { class: 'section-head' }, h('h2', { class: 'section-title caps' }, 'Operations'), h('div', { class: 'spacer' }),
-        h('a', { class: 'btn small ghost', href: '#/operations' }, 'All Operations')),
+      box.replaceChildren(...[panelHead('Operations', 'Case numbers worked together. Click a folder to open it.', h('a', { class: 'btn small', href: '#/operations', icon: 'op-folder' }, 'All Operations')),
         list.length ? tiles : h('p', { class: 'muted' }, 'No Operations yet. All Operations → New Operation makes one.'), opBox ? null : inside].filter(Boolean));
       if (opBox) { opBox.hidden = !inside; opBox.replaceChildren(...(inside ? [inside] : [])); }
       if (tlBox) drawTimeline(open);
