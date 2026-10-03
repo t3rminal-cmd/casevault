@@ -24,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.66.0';
+  const APP_VERSION = '1.67.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -208,7 +208,19 @@ const Vault = (() => {
       updated: [c.dates?.updated, prev?.updated].filter(Boolean).sort().pop() || '',
       nextDeadline: nextDeadline(timeline),
       pending: c.status === 'Pending' && c.pending ? { reason: c.pending.reason || '', followUp: c.pending.followUp || '' } : null,
+      // v1.67: the statute of limitations (narcotic charges, 3 years) and the archive sub-folder.
+      sol: prev?.sol || null,
+      archiveFolder: c.archiveFolder || '',
     };
+  }
+
+  /** v1.67: { occurred, expires } for a case folder, from its Draft and Arrest details. */
+  async function solOfDir(dir, override = {}) {
+    const L = globalThis.CVLimits;
+    if (!L) return null;
+    const fields = 'fields' in override ? override.fields : await FS.readJSON(dir, 'report-fields.json').catch(() => null);
+    const arrest = 'arrest' in override ? override.arrest : await FS.readJSON(dir, 'arrest.json').catch(() => null);
+    return L.compute(fields, arrest);
   }
 
   // Rebuild the index from the case folders (cases/ and archive/) so vault.json can never drift
@@ -241,7 +253,9 @@ const Vault = (() => {
         if (!c) return null;
         c.id = name; // the folder name is the id
         const tl = await FS.readJSON(handle, 'timeline.json').catch(() => null);
-        return indexEntry(c, tl, prevById.get(name), location);
+        const entry = indexEntry(c, tl, prevById.get(name), location);
+        entry.sol = await solOfDir(handle).catch(() => null);
+        return entry;
       } catch (err) {
         if (FS.isDisconnectError(err)) throw err;
         console.warn('Skipping unreadable case folder', name, err);
@@ -545,11 +559,12 @@ const Vault = (() => {
    * Archive a case: status Archived, closed date filled in if empty, folder moved to archive/.
    * Returns the updated case.
    */
-  function archiveCase(id, onFile) {
+  function archiveCase(id, onFile, folder = '') {
     return serial(`case:${id}`, async () => {
       if (isArchived(id)) return getCase(id);
       const c = await getCase(id);
       const before = structuredClone(c);
+      c.archiveFolder = ARCHIVE_FOLDERS.some(([k]) => k === folder) ? folder : '';
       if (c.status !== 'Archived') c.statusBeforeArchive = c.status;
       c.status = 'Archived';
       if (!c.dates.closed) c.dates.closed = localDay();
@@ -587,6 +602,7 @@ const Vault = (() => {
       c.status = c.statusBeforeArchive && c.statusBeforeArchive !== 'Archived' ? c.statusBeforeArchive : (c.dates.closed ? 'Closed' : 'Open');
       delete c.statusBeforeArchive;
       delete c.dates.archived;
+      delete c.archiveFolder;
       // v1.46: its Operation was deleted while it was archived: it comes back as an independent case.
       if (c.operationId && !getOperation(c.operationId)) { c.operationId = ''; c.operation = null; c.title = CVOperation.caseTitle(c, null); }
       c.dates.updated = nowISO();
@@ -1021,7 +1037,31 @@ const Vault = (() => {
   function writeCaseJSON(id, name, data) {
     return serial(`casejson:${id}:${name}`, async () => {
       assertWritable(id);
-      await FS.writeJSON(await caseDir(id), name, data);
+      const dir = await caseDir(id);
+      await FS.writeJSON(dir, name, data);
+      // v1.67: a change to the Draft or the Arrest details can change the statute of limitations.
+      if (name === 'report-fields.json' || name === 'arrest.json') {
+        const sol = await solOfDir(dir, name === 'arrest.json' ? { arrest: data } : { fields: data }).catch(() => null);
+        const entry = vault.cases.find((c) => c.id === id);
+        if (entry && JSON.stringify(entry.sol || null) !== JSON.stringify(sol)) { entry.sol = sol; await saveVault(); }
+      }
+    });
+  }
+
+  /** v1.67: the archive sub-folder of an archived case: 'expired', 'nolle', 'prosecution' or ''. */
+  const ARCHIVE_FOLDERS = [['expired', 'EXPIRED'], ['nolle', 'NOLLE PROSEQUI'], ['prosecution', 'PROSECUTION']];
+  function setArchiveFolder(id, folder) {
+    return serial(`case:${id}`, async () => {
+      const f = ARCHIVE_FOLDERS.some(([k]) => k === folder) ? folder : '';
+      const dir = await caseDir(id);
+      const c = await FS.readJSON(dir, 'case.json');
+      if (!c) throw new Error('The case was not found.');
+      c.archiveFolder = f;
+      await FS.writeJSON(dir, 'case.json', c);
+      const entry = vault.cases.find((e) => e.id === id);
+      if (entry) entry.archiveFolder = f;
+      await saveVault();
+      return c;
     });
   }
 
@@ -1440,7 +1480,7 @@ const Vault = (() => {
     backupNow, listBackups, rebuildIndex, updateSettings,
     createCase, getCase, saveCase, deleteCase,
     listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
-    archiveCase, restoreCase, isArchived, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
+    archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
     getNotes, saveNotes, listChats, readChat, saveChat, deleteChat,
     getTimeline, saveTimeline, sortEvents,
     listFiles, addFile, readFile, deleteFile, moveFile, ensureFolders, renameCaseFolder, conventionalId, RENAME_MARKER,

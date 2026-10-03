@@ -215,6 +215,26 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.67
+
+- **Statute of limitations (narcotic charges):** a narcotic charge has to be brought within **3 years of the Date of Occurrence**.
+  - CaseVault reads the **Date of Occurrence** on the Draft tab. Without one, it uses the earliest **arrest date** in Arrest details.
+  - It counts a charge as narcotic when it's under the Illinois Controlled Substances, Cannabis or Methamphetamine Acts (720 ILCS 570, 550, 646), or federal Title 21 (21 U.S.C.), or when its description names a drug.
+  - **5 days before** the 3 years run out, **Needs Attention** shows *CASE NUMBER — Warning: Statute of Limitations Expiring* with a live count-down (days, hours, minutes and seconds). The last day counts.
+  - The case gets the red border in the case list, and a reminder pops up once when you open the Overview.
+  - Once the time has passed, the row says *Statute of Limitations Expired* until the case is closed or archived.
+  - It doesn't apply to Closed or Archived cases.
+- **Archived sub-folders: EXPIRED, NOLLE PROSEQUI and PROSECUTION.**
+  - **Archive Case** asks which folder (or none). **EXPIRED** is picked already when the statute of limitations has passed.
+  - In the case list, **Archived** shows each folder with its count; click a folder to open it.
+  - An archived case can be moved between folders with **Archive Folder** at the top of the case.
+- **Suspects → Not Identified:** tick it beside **Name** when the suspect isn't identified yet. The name box is set aside, and templates and the Draft's Add From Suspects say "Not Identified".
+- **Draft:** a green check appears in a part's header once every field in it is filled in. You can see it with the part minimized.
+- **Search Warrant Number** (and Subpoena GJ Number) now has twice the room of ASA and Judge, so long warrant numbers aren't cut off. Below 1400 pixels wide, the three lines stack.
+- **Quick Links footer** stays the same height on every tab: the Outside Sites sign keeps its place, hidden on Reference.
+- **Overview banner:** more space between the greeting and the Open / Pending / Closed / Archived boxes.
+- Fixed: an archived case showed the word "null" under Deconfliction.
+
 ### What's new in v1.66
 
 - **Quick Links footer:** on the left, the **Quick Links** name with the **Reference**, **OSINT** and **LEO** buttons stacked under it, then the Outside Sites sign and **Arrange**. The links fill the rest of the footer.

@@ -179,7 +179,9 @@
     }
     ctx['case.prosecutor.title'] = String((k.prosecutor && k.prosecutor.title) || '').trim();
     // Suspects from the Details tab: {{suspect.*}} is the main suspect (or the first one).
-    const sus = (Array.isArray(c.suspects) ? c.suspects : []).filter((x) => x && String(x.name || '').trim());
+    // v1.67: a suspect ticked Not Identified is named "Not Identified".
+    const sus = (Array.isArray(c.suspects) ? c.suspects : []).filter(Boolean)
+      .map((x) => (x.notIdentified ? { ...x, name: 'Not Identified' } : x)).filter((x) => String(x.name || '').trim());
     const main = sus.find((x) => isPrimary(x.role)) || sus[0] || {};
     const age = ageOn(main.dob, now);
     Object.assign(ctx, {
