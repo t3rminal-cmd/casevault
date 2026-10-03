@@ -720,6 +720,7 @@
 
   function route() {
     if (!state.connected) return;
+    quickFooter(false);
     if (/^#\/online\b/.test(location.hash)) return showOnline();
     // Old #/chat links open the floating Ask AI box over the overview.
     if (/^#\/chat\b/.test(location.hash)) { history.replaceState(null, '', '#/'); CVChatUI.toggle(true); }
@@ -814,22 +815,26 @@
           h('span', { class: 'recent-title' }, h('span', {}, c.title || 'Untitled case'), h('span', { class: 'muted' }, [c.fileNumber && ` · File ${c.fileNumber}`, c.number && ` · Case ${c.number}`].filter(Boolean).join(''))),
           statusPill(c.status)))))
         : h('p', { class: 'muted' }, cases.length ? 'Nothing changed since you cleared this list.' : 'Create your first case with "New case".')),
-      // v1.62: Quick Links stay at the bottom of the screen; the round buttons sit above them.
-      quickDock()));
+    ));
+    // v1.63: Quick Links in the footer bar under the page, from the case list to the right edge.
+    quickFooter(true);
   }
 
-  function quickDock() {
-    const dock = h('div', { class: 'dash-section dash-quick dash-quick-dock' }, h('h2', { class: 'section-title' }, 'Quick links'), CVReferenceUI.quickLinks());
-    const setH = () => {
-      if (!dock.isConnected) { document.body.style.removeProperty('--ql-dock-h'); if (ro) ro.disconnect(); return; }
-      const fixed = getComputedStyle(dock).position === 'sticky';
-      document.body.style.setProperty('--ql-dock-h', fixed ? `${Math.ceil(dock.getBoundingClientRect().height)}px` : '0px');
-    };
-    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(setH) : null;
-    if (ro) ro.observe(dock);
-    requestAnimationFrame(setH);
-    return dock;
+  /** v1.63: the Quick Links footer: shown on the Overview, empty and hidden everywhere else.
+   * The round Ask AI / Notes buttons sit just above it (--ql-dock-h). */
+  let footerRO = null;
+  function quickFooter(on) {
+    const foot = $('#ql-footer');
+    if (!foot) return;
+    if (footerRO) { footerRO.disconnect(); footerRO = null; }
+    if (!on) { foot.hidden = true; foot.replaceChildren(); document.body.style.removeProperty('--ql-dock-h'); return; }
+    foot.replaceChildren(h('span', { class: 'ql-foot-title' }, I('link-45deg'), h('span', {}, 'Quick Links')), CVReferenceUI.quickLinks({ footer: true }));
+    foot.hidden = false;
+    const setH = () => document.body.style.setProperty('--ql-dock-h', foot.hidden ? '0px' : `${Math.ceil(foot.getBoundingClientRect().height)}px`);
+    if (typeof ResizeObserver === 'function') { footerRO = new ResizeObserver(setH); footerRO.observe(foot); }
+    setH();
   }
+
 
   /* =====================================================================
    * Operations (#/operations, #/operation/<id>) and General Files (#/general), v1.46

@@ -31,12 +31,16 @@
 
   /* ---------- Quick links (bottom of the Overview) ---------- */
 
-  function linkTile(l, { editing, redraw }) {
+  function linkTile(l, { editing, redraw, footer }) {
     const { h } = ui;
     const inner = [h('span', { class: `ql-icon ql-${l.tab}` }, ui.icon(l.icon)), h('span', { class: 'ql-name' }, l.name)];
     const tip = `${l.note || l.name}${l.url ? `\n${l.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}` : ''}${l.url ? '\nOpens in a new browser tab.' : ''}`;
     let tile;
     // Charges asks which (v1.28): Federal Statute or State Statute.
+    // v1.63: in the footer, the choices sit inside the button (no menu to be cut off).
+    if (l.choices && !editing && footer) {
+      return h('span', { class: 'quick-link ql-split', title: tip }, ...inner, h('span', { class: 'ql-split-opts' }, l.choices.map(([label, hash]) => h('a', { class: 'ql-split-opt', href: hash }, label.replace(/\s*Statutes?$/i, '')))));
+    }
     if (l.choices && !editing) {
       const menu = h('div', { class: 'ql-choices', role: 'menu', hidden: true }, l.choices.map(([label, hash]) => h('a', { class: 'ql-choice', role: 'menuitem', href: hash }, label)));
       const btn = h('button', { type: 'button', class: 'quick-link', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title: tip }, ...inner);
@@ -80,9 +84,9 @@
     return wrap;
   }
 
-  function quickLinks() {
+  function quickLinks(opts = {}) {
     const { h } = ui;
-    const wrap = h('div', { class: 'quick-links-box' });
+    const wrap = h('div', { class: `quick-links-box${opts.footer ? ' in-footer' : ''}` });
     const draw = () => {
       const all = LK().linksOf(savedLinks());
       const tab = savedLinks().tab && LK().TABS.some((t) => t.key === savedLinks().tab) ? savedLinks().tab : 'reference';
@@ -91,6 +95,7 @@
       const shown = editing ? inTab : inTab.filter((l) => !l.hidden);
       const hiddenCount = inTab.filter((l) => l.hidden).length;
       // (replaceChildren would write a null out as the text "null", so empty parts are dropped.)
+      wrap.classList.toggle('editing', !!editing);
       wrap.replaceChildren(...[
         h('div', { class: 'ql-head' },
           h('div', { class: 'segmented ql-tabs', role: 'tablist', 'aria-label': 'Quick links' }, LK().TABS.map((t) => h('button', {
@@ -100,8 +105,11 @@
           h('div', { class: 'spacer' }),
           !editing && hiddenCount ? h('span', { class: 'small muted' }, `${hiddenCount} hidden`) : null,
           h('button', { type: 'button', class: `btn small ${editing ? 'primary' : 'ghost'}`, icon: editing ? 'check2' : 'arrow-left-right', title: editing ? 'Finish' : 'Move the buttons (arrows or drag) and choose which to show. Addresses and your own links: Vault → Quick links.', onclick: () => { mem.editLinks = !mem.editLinks; draw(); } }, editing ? 'Done' : 'Arrange')),
-        tab !== 'reference' ? h('p', { class: 'muted small ql-note' }, 'These open outside CaseVault, in a new browser tab. Never paste case details into outside websites unless your policy allows it.') : null,
-        shown.length ? h('div', { class: 'quick-links' }, shown.map((l) => linkTile(l, { editing, redraw: draw })))
+        // v1.63: in the footer the warning is a small sign (hover or focus for the words).
+        tab !== 'reference' ? (opts.footer
+          ? h('span', { class: 'ql-note-sign', tabindex: '0', role: 'note', title: 'These open outside CaseVault, in a new browser tab. Never paste case details into outside websites unless your policy allows it.' }, ui.icon('exclamation-triangle-fill'), h('span', {}, 'Outside Sites'))
+          : h('p', { class: 'muted small ql-note' }, 'These open outside CaseVault, in a new browser tab. Never paste case details into outside websites unless your policy allows it.')) : null,
+        shown.length ? h('div', { class: 'quick-links' }, shown.map((l) => linkTile(l, { editing, redraw: draw, footer: !!opts.footer })))
           : h('p', { class: 'muted small' }, inTab.length ? 'All the links here are hidden. Click Arrange to bring them back.' : 'No links here yet. Add one in Vault → Quick links.')].filter(Boolean));
     };
     draw();

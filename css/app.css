@@ -3342,18 +3342,6 @@ section.foldable.folded > .fold-head { margin-bottom: 0; }
 .value-table td.num { white-space: normal; }
 .value-table .vc-price-text { white-space: nowrap; }
 @media (max-width: 700px) { .ref-narc .calc-form { grid-template-columns: 1fr; } }
-/* v1.62: Overview Quick Links pinned at the bottom of the screen (not on a phone). */
-@media (min-width: 641px) {
-  .main:has(> .dashboard) { padding-bottom: 0; }
-  .dashboard { display: flex; flex-direction: column; min-height: 100%; }
-  .dashboard > * { flex-shrink: 0; }
-  .dash-quick-dock { position: sticky; bottom: 0; z-index: 6; margin-top: auto; padding: .6rem 0 .7rem; border-top: 1px solid var(--box-edge, var(--border)); background: var(--bg); box-shadow: 0 -8px 14px -10px rgba(0, 0, 0, .25);
-    display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 1rem; align-items: start; }
-  .dash-quick-dock > .section-title { margin: .2rem 0 0; font-size: 1rem; white-space: nowrap; }
-  .dash-quick-dock .quick-links { max-height: 5.9rem; overflow-y: auto; scrollbar-width: thin; }
-  .dash-quick-dock .quick-link { min-height: 2.7rem; padding: .3rem .6rem; }
-  .dash-quick-dock .ql-icon { width: 1.9rem; height: 1.9rem; font-size: 1rem; }
-  body .fab-dock { bottom: calc(var(--ql-dock-h, 0px) + 1.2rem); }
 }
 
 /* v1.62: popups (New Case, New Operation, confirm boxes…): a tinted title bar with a coloured
@@ -3379,3 +3367,53 @@ section.foldable.folded > .fold-head { margin-bottom: 0; }
 .dialog.dialog-form { width: min(720px, calc(94vw / var(--z, 1))); }
 .dialog:not(.dialog-panel):not(.dialog-full) > .form-grid > h2:first-child { margin-bottom: .1rem; }
 .dialog:not(.dialog-panel):not(.dialog-full) > :is(form, div):first-child { width: auto; max-width: none; }
+
+/* v1.63: Quick Links footer: a bar under the page, from the case list to the right edge of the
+   screen (Overview only). A top row (title, tabs, Arrange), then the links in five equal columns. */
+.main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+.main-col > .main { flex: 1; min-height: 0; }
+.ql-footer { flex-shrink: 0; padding: .5rem clamp(1rem, calc(2vw / var(--z, 1)), 2rem) .55rem;
+  background: var(--surface); border-top: 1px solid var(--box-edge, var(--border)); box-shadow: inset 0 2px 0 var(--accent), 0 -6px 14px -10px rgba(0, 0, 0, .3); }
+.ql-footer[hidden] { display: none; }
+.ql-foot-title { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-strong, var(--accent)); white-space: nowrap; }
+.ql-foot-title .bi { width: 1.1rem; height: 1.1rem; }
+.ql-footer { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; }
+.ql-footer > .ql-foot-title { order: 0; margin-right: .3rem; }
+.quick-links-box.in-footer { display: contents; }
+.quick-links-box.in-footer > .ql-head { display: contents; }
+.quick-links-box.in-footer .ql-head > .spacer { display: none; }
+.quick-links-box.in-footer .ql-tabs { order: 1; }
+.quick-links-box.in-footer .ql-tabs .btn { min-width: 0; padding: .2rem .6rem; font-size: .78rem; }
+.quick-links-box.in-footer > .ql-note-sign { order: 2; }
+.quick-links-box.in-footer .ql-head > .small { order: 3; margin-left: auto; white-space: nowrap; }
+.quick-links-box.in-footer .ql-head > .btn { order: 4; margin-left: auto; font-size: .78rem; }
+.quick-links-box.in-footer .ql-head > .small + .btn { margin-left: 0; }
+.quick-links-box.in-footer > .quick-links, .quick-links-box.in-footer > p { order: 5; flex-basis: 100%; margin: 0; }
+.quick-links-box.in-footer > .quick-links { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .35rem; max-height: calc(2 * 2.35rem + .35rem); overflow-y: auto; scrollbar-width: thin; }
+.quick-links-box.in-footer .quick-link { min-height: 2.35rem; height: 100%; padding: .2rem .5rem .2rem .3rem; gap: .4rem; box-shadow: none; }
+.quick-links-box.in-footer .quick-link:hover { transform: none; }
+.quick-links-box.in-footer .ql-icon { width: 1.55rem; height: 1.55rem; font-size: .85rem; border-radius: 0; flex-shrink: 0; }
+.quick-links-box.in-footer .ql-name { font-size: .8rem; line-height: 1.2; white-space: normal; overflow: visible; overflow-wrap: normal; }
+.quick-links-box.in-footer .ql-ext { margin-left: auto; flex-shrink: 0; }
+.quick-links-box.in-footer .ql-ext .bi { width: .75rem; height: .75rem; }
+.quick-links-box.in-footer .ql-split { cursor: default; flex-wrap: wrap; }
+.quick-links-box.in-footer .ql-split-opt { padding: .05rem .35rem; border: 1px solid var(--box-edge, var(--border)); background: var(--surface-2); color: var(--accent-strong, var(--accent)); font-size: .7rem; font-weight: 700; text-decoration: none; }
+.quick-links-box.in-footer .ql-split-opts { margin-left: auto; display: grid; gap: .15rem; flex-shrink: 0; }
+.quick-links-box.in-footer .ql-split-opt { text-align: center; line-height: 1.25; }
+.quick-links-box.in-footer .ql-split-opt:hover, .quick-links-box.in-footer .ql-split-opt:focus-visible { background: var(--accent-soft); border-color: var(--accent); }
+.quick-links-box.in-footer.editing > .quick-links { max-height: 40vh; }
+.quick-links-box.in-footer.editing .ql-edit-wrap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .2rem; }
+.quick-links-box.in-footer.editing .ql-edit-wrap > .quick-link { grid-column: 1 / -1; grid-row: 1; height: auto; }
+.quick-links-box.in-footer.editing .ql-edit-wrap > .ql-move { grid-row: 2; width: auto; height: 1.5rem; }
+.quick-links-box.in-footer.editing .ql-edit-wrap > .ql-move:first-child { grid-column: 1; }
+.quick-links-box.in-footer.editing .ql-edit-wrap > .ql-move:nth-of-type(2) { grid-column: 3; }
+.quick-links-box.in-footer.editing .ql-edit-wrap > .ql-toggle { position: static; grid-column: 2; grid-row: 2; width: auto; height: 1.5rem; border-radius: 0; box-shadow: none; }
+.quick-links-box.in-footer.editing .ql-edit-wrap > span.ql-toggle { visibility: hidden; }
+.ql-note-sign { display: inline-flex; align-items: center; gap: .3rem; padding: .15rem .45rem; background: var(--warn-soft); color: var(--warn); font-size: .72rem; font-weight: 700; white-space: nowrap; cursor: help; }
+.ql-note-sign .bi { width: .9rem; height: .9rem; }
+body .fab-dock { bottom: calc(var(--ql-dock-h, 0px) + 1.2rem); }
+@media (max-width: 1000px) { .quick-links-box.in-footer > .quick-links { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+  .ql-footer > .ql-foot-title { display: none; }
+  .quick-links-box.in-footer > .quick-links { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
