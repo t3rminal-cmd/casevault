@@ -15,7 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.59)
+## Features (v1.60)
+
+- Sidebar: Operations show the Operation Number on top and the name below (also on the Overview folders); a case with a deadline coming up, and its Operation, get a thin red border; the hide button is now an incognito icon and the top icons are all the same size
+- A full sidebar scrolls inside its own list (thin scrollbar); the top icons stay put and Closed and Archived stay at the bottom
+- Sharper screen: no blur behind the header, and the big Ask AI window sits on whole pixels
 
 - Link Chart: lines turn at right angles and leave from a card's side, top or bottom (not across photos); two lines between the same two cards sit one above the other (narcotics one way, money back); Link Cards the other way round adds the return line; each connection is a folded card with an eye to show or hide its line; Save PDF to Case puts the chart in Files and under Reports, and Send Back to Link Chart (from Reports or Files) brings it back to change
 - Every form starts minimized (Case Overview, Draft, Arrest details, Vault); the parts you open are remembered

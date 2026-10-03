@@ -546,7 +546,8 @@
     return h('li', {},
       h('a', {
         href: `#/case/${encodeURIComponent(c.id)}`,
-        class: `case-item ${c.id === state.caseId ? 'active' : ''}`,
+        // v1.60: a case with a reminder (a deadline overdue or within a week) has a thin red border.
+        class: `case-item ${c.id === state.caseId ? 'active' : ''}${due ? ` has-reminder reminder-${due.cls}` : ''}`,
         'aria-current': c.id === state.caseId ? 'page' : null,
         title: tip,
       },
@@ -601,11 +602,14 @@
     const bell = cases.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date));
     const meta = opFiles ? `${cases.length} closed case${cases.length === 1 ? '' : 's'} of ongoing Operations`
       : op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : `${group.total} independent case${group.total === 1 ? '' : 's'}`;
-    const det = h('details', { class: `op-group${op || opFiles ? '' : ' general-group'}${opFiles ? ' opfiles-group' : ''}`, open },
+    const det = h('details', { class: `op-group${op || opFiles ? '' : ' general-group'}${opFiles ? ' opfiles-group' : ''}${bell ? ' has-reminder' : ''}`, open },
       h('summary', { class: 'op-head', title: opFiles ? 'Closed cases whose Operation is still going on. Each is still in its Operation\'s folder above.' : op ? `${label}: open the Operation` : 'General Files: every case; these are the ones not in an Operation' },
         h('span', { class: `op-folder${op || opFiles ? '' : ' gf-icon'}` }, I(op || opFiles ? 'op-folder' : 'folder-fill')),
         h('span', { class: 'op-text' },
-          h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, label),
+          // v1.60: an Operation's number on top, its name under it.
+          h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, ...(op && !opFiles
+            ? [h('span', { class: 'op-num' }, op.number || 'No number'), op.name ? h('span', { class: 'op-title' }, op.name) : null].filter(Boolean)
+            : [label])),
             bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
           h('span', { class: 'op-meta muted' }, meta)),
         cases.length > 1 ? h('span', { class: 'op-count' }, String(cases.length)) : null,
@@ -1099,7 +1103,9 @@
           title: `${o.name}: ${o.group.length} case number${o.group.length === 1 ? '' : 's'}`,
           onclick: () => { opFolderState.open = open === o ? '' : o.k; draw(); } },
         h('span', { class: 'op-folder-art' }, I(o.op ? 'op-folder' : 'folder-fill'), o.group.length > 1 ? h('span', { class: 'op-folder-count' }, String(o.group.length)) : null),
-        h('span', { class: 'op-folder-name' }, o.name, bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null));
+        // v1.60: Operation Number on top, name below (as in the sidebar).
+        h('span', { class: 'op-folder-name op-two-line' }, ...[h('span', { class: 'op-num' }, o.op.number || 'No number', bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
+          o.op.name ? h('span', { class: 'op-title' }, o.op.name) : null].filter(Boolean)));
       }));
       const inside = open ? h('div', { class: 'op-open' },
         h('div', { class: 'op-open-head' }, h('a', { href: open.op ? `#/operation/${encodeURIComponent(open.op.id)}` : '#/general', class: 'op-open-name' }, h('strong', {}, open.name)), h('span', { class: 'muted small' }, `${open.group.length} case number${open.group.length === 1 ? '' : 's'}`),

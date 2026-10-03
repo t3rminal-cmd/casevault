@@ -3264,3 +3264,25 @@ section.foldable.folded > .fold-head { margin-bottom: 0; }
 .lc-link-flow { font-size: .72rem; font-weight: 700; padding: .05rem .4rem; color: #fff; }
 .lc-link-flow-money { background: #1f9d55; } .lc-link-flow-narcotics { background: #c2410c; }
 .lc-link-card > .lc-link-row { padding: .5rem .6rem .6rem; border-top: 1px solid var(--border); }
+
+/* v1.60: the sidebar's top icons are all the same size (same box, same picture size). */
+.sidebar-head > .icon-btn, .sidebar-head > a.icon-btn { width: 2.1rem; height: 2.1rem; padding: 0; align-items: center; justify-content: center; }
+.sidebar-head > .icon-btn > svg, .sidebar-head > a.icon-btn > svg { width: 1.2rem; height: 1.2rem; }
+/* An Operation in the case list: its number on top, its name under it. */
+.op-name { display: flex; flex-direction: column; min-width: 0; }
+.op-name .op-num { font-weight: 800; letter-spacing: .02em; overflow-wrap: anywhere; }
+.op-name .op-title { font-weight: 600; font-size: .82rem; color: var(--text); opacity: .85; overflow-wrap: anywhere; }
+/* A case (or Operation folder) with a reminder: a thin red line around it. */
+.case-item.has-reminder { box-shadow: inset 0 0 0 1px var(--danger); }
+.op-cases .case-item.has-reminder.active { box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 1px var(--danger); }
+.op-group.has-reminder { border-color: var(--danger); border-left-color: var(--danger); }
+/* A long case list scrolls in its own box with a thin, steady scroll bar. */
+#case-list { scrollbar-width: thin; scrollbar-gutter: stable; }
+/* Crisp text: no blurred glass behind the header (a solid colour instead), and a big Ask AI window
+   placed on whole pixels (no half-pixel shift from centring). */
+.topbar { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--surface); }
+@media (min-width: 641px) { .chat-float.big { transform: none; left: 0 !important; right: 0 !important; top: 0 !important; bottom: 0 !important; margin: auto; } }
+/* v1.60: landing Operation tiles, number on top and name below. */
+.op-folder-name.op-two-line { flex-direction: column; gap: .1rem; text-align: center; }
+.op-folder-name.op-two-line .op-num { display: inline-flex; align-items: center; gap: .3rem; font-weight: 800; }
+.op-folder-name.op-two-line .op-title { font-size: .8rem; color: var(--muted); }
