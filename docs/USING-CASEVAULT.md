@@ -215,6 +215,21 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.68
+
+- **Additional Exhibits** (Draft → Evidence Inventoried): photographs or screenshots that aren't tied to an inventory number.
+  - Click **Add Additional Exhibit**, pick **Photographs** or **Text Messages**, give it a title and a description, and add the pictures. Each picture can be labelled like the exhibit photos.
+  - They're numbered on their own: **Additional Exhibit 1, 2…**, the pictures **1a, 1b…**. **Next Additional No.** starts the numbers anywhere; **Reset to 1** and **Automatic** work like the exhibit numbers.
+  - The pictures are saved in the case's **Other Exhibits** folder. They're listed in the report's Evidence Inventoried and printed on its Exhibit Attachments pages.
+- **Text Message PDF:** on a Text Messages exhibit, **Text Message PDF** makes a portrait PDF of the screenshots, two side by side on each page, each with its label (*Additional Exhibit 1a - Text Messages: …*). It's saved under **Files → Other Exhibits** and opens to view or print.
+- **Power Off** (the red button next to the SSD icon at the top): saves everything, then closes CaseVault and its browser window, stops the CaseVault helper and the AI engine, and locks and ejects the **V:** and **W:** drives. Wait for Windows to say it's safe, then unplug the SSD. It needs the new helper (1.10.0, see *SSD update* below); without the helper it just saves and closes.
+- **Overview:** the headings are **OPERATIONS**, **GENERAL FILES** and the new **OTHER FILES**: a place for files that don't belong to any case (forms, training, reference sheets). Add, open and delete them there.
+- **Operation Folder:** every Operation has its own folder, not tied to a case number, with **Subpoenas**, **Affidavits**, **Operation Plans**, **Maps**, **Subject Data** and **Running Vehicle List**. Open it from the Operation's page or the first card under the Operation on the Overview. These files are kept on the SSD in `CaseVault-Data\shared`.
+- **Draft green checks:** a part or a line you've unticked counts as done; an empty phone number box you didn't add a number to doesn't count against it; photo labels and Additional Exhibits are optional. The checks sit in one column next to the fold arrows.
+- **How Cleared:** new choice **6 - On Going**.
+- **Files:** the **Added** column is now **Updated**: the last time the file changed.
+- **Street value chart:** each drug category has its own colour icon. Every page and popup was checked for the theme (colour icons, Consolas, square corners).
+
 ### What's new in v1.67
 
 - **Statute of limitations (narcotic charges):** a narcotic charge has to be brought within **3 years of the Date of Occurrence**.

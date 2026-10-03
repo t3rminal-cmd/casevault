@@ -313,7 +313,7 @@
       list1('personnel', 'Police Personnel on Scene');
       if (people) list1('victimsList', 'Victim(s)');
       groupGap();
-      if (on('evidence')) labelled('Evidence Inventoried', d.evidence.map((e) => RF.exhibitLine(e)));
+      if (on('evidence')) labelled('Evidence Inventoried', [...d.evidence.map((e) => RF.exhibitLine(e)), ...(d.extraExhibits || []).map((x) => RF.extraLine(x))]);
       list1('narcotics', 'Narcotics Recovered (Total Weight & Street Value)');
       line1('buyFunds');
       // v1.54: one line per denomination, then Recovered or Not Recovered once.
@@ -440,6 +440,54 @@
     return assemble(layout(data, { ...opts, photos }), { photos, title: opts.title || F().titleFor(data), face: 'times' });
   }
 
+  /**
+   * v1.68: a Text Message report: screenshots of text-message correspondence, portrait, two side by
+   * side on each page, each with its exhibit caption under it. photos: [{ jpeg, w, h, caption }].
+   * opts: { heading, title, caseLabel, description }
+   */
+  function textsReport(photosIn, { heading = 'Text Message Correspondence', title = 'Text Messages', caseLabel = '', description = '' } = {}) {
+    const photos = (photosIn || []).map((p, index) => ({ ...p, index }));
+    const pages = [];
+    const t = (ops, x, y, s, size, bold = false) => ops.push(`BT /F${bold ? 2 : 1} ${size} Tf ${x.toFixed(2)} ${y.toFixed(2)} Td ${pdfString(s)} Tj ET`);
+    const per = 2;
+    const count = Math.max(1, Math.ceil(photos.length / per));
+    for (let p = 0; p < count; p++) {
+      const ops = []; const imgs = [];
+      let y = PAGE_H - M;
+      ops.push(`0.88 g ${M} ${(y - 15).toFixed(2)} ${INNER} 15 re f 0 g`);
+      ops.push(`0.8 w ${M} ${(y - 15).toFixed(2)} ${INNER} 15 re S`);
+      t(ops, M + 4, y - 11, heading.toUpperCase(), 9, true);
+      y -= 15;
+      if (p === 0 && description) {
+        const lines = wrap(description, 9.5, INNER - 8, false, 'times').slice(0, 4);
+        lines.forEach((l, n) => t(ops, M + 4, y - 13 - n * 11.5, l, 9.5));
+        y -= 8 + lines.length * 11.5;
+      }
+      y -= 8;
+      const gap = 14;
+      const colW = (INNER - gap) / per;
+      photos.slice(p * per, p * per + per).forEach((ph, j) => {
+        const x0 = M + j * (colW + gap);
+        const cap = wrap(ph.caption || '', 8.5, colW - 6, false, 'times').slice(0, 4);
+        const boxH = y - (M + 18) - (cap.length * 10 + 10);
+        const k = Math.min((colW - 10) / ph.w, (boxH - 10) / ph.h);
+        const w = ph.w * k; const hgt = ph.h * k;
+        ops.push(`0.8 w ${x0.toFixed(2)} ${(y - boxH).toFixed(2)} ${colW.toFixed(2)} ${boxH.toFixed(2)} re S`);
+        ops.push(`q ${w.toFixed(2)} 0 0 ${hgt.toFixed(2)} ${(x0 + (colW - w) / 2).toFixed(2)} ${(y - boxH + (boxH - hgt) / 2).toFixed(2)} cm /Im${ph.index} Do Q`);
+        imgs.push(ph.index);
+        cap.forEach((l, n) => t(ops, x0 + 3, y - boxH - 11 - n * 10, l, 8.5));
+      });
+      if (!photos.length) t(ops, M + 4, y - 14, 'No screenshots added.', 9.5);
+      pages.push({ ops, sigs: [], imgs, signed: true });
+    }
+    pages.forEach((pg, i) => {
+      const s = `Page ${i + 1} of ${pages.length}`;
+      t(pg.ops, PAGE_W / 2 - width(s, 8, false, 'times') / 2, M - 12, s, 8);
+      if (caseLabel) t(pg.ops, M, M - 12, caseLabel, 7.5);
+    });
+    return assemble(pages, { photos, title, face: 'times' });
+  }
+
   /** Pages ([{ ops, sigs, imgs }]) and their photos -> the PDF file's bytes. Shared with the
    * Arrest Report (js/arrest-pdf.js). */
   function assemble(pages, { photos = [], title = 'Report', face = 'helvetica' } = {}) {
@@ -479,7 +527,7 @@
     return bytes;
   }
 
-  const api = { build, layout, assemble, wrap, width, pdfString, plain, PAGE_W, PAGE_H, M };
+  const api = { build, layout, assemble, textsReport, wrap, width, pdfString, plain, PAGE_W, PAGE_H, M };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportPdf = api;
 })(this);

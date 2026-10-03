@@ -212,7 +212,7 @@
       h('nav', { class: 'ref-nav', 'aria-label': 'Reference' },
         SECTIONS.map((s) => h('a', { href: `#/reference/${s.key}`, class: `ref-pill ${sec.key === s.key ? 'active' : ''}`, 'aria-current': sec.key === s.key ? 'page' : null, icon: s.icon, title: s.blurb }, s.title))),
       body));
-    if (sec.key === 'narcotics') return body.replaceChildren(h('div', { class: 'ref-grid ref-narc' }, calculator(), card(`Street value chart (${RD().NARCOTIC_SOURCE})`, 'table', valueChartEl())));
+    if (sec.key === 'narcotics') return body.replaceChildren(h('div', { class: 'ref-grid ref-narc' }, calculator(), card(`Street Value Chart, ${RD().NARCOTIC_SOURCE}`, 'table', valueChartEl())));
     if (sec.key === 'incident') return body.replaceChildren(codeBrowser(RD().LOCATION_CODES, 'Search location codes', 'location code'));
     if (sec.key === 'ucr') return body.replaceChildren(codeBrowser(RD().UCR_CODES, 'Search UCR codes or offenses', 'UCR code'));
     if (sec.key === 'charges') {
@@ -256,7 +256,7 @@
     copyBtn.addEventListener('click', () => copy(line, 'Copied the value line.'));
     syncUnits();
     calc();
-    return card('Value calculator', 'calculator-fill',
+    return card('Value Calculator', 'calculator-fill',
       h('div', { class: 'calc-form' }, ui.field('Drug', drug), ui.field('Amount', amount), ui.field('Unit', unit)),
       result,
       h('div', { class: 'row' }, h('span', { class: 'muted small' }, `${RD().NARCOTIC_SOURCE} street values. ≈ Estimates (gram price × 454).`), h('div', { class: 'spacer' }), copyBtn));
@@ -268,6 +268,9 @@
     return [ui.h('th', { scope: 'row' }, m ? m[1] : name), ui.h('td', { class: 'vc-form-cell' }, m ? m[2] : '—')];
   }
 
+  // v1.68: a colour picture for each category of the value chart.
+  const CATEGORY_ICONS = { Cocaine: 'drug-powder', Heroin: 'drug-syringe', Fentanyl: 'drug-vial', Methamphetamine: 'drug-crystal', 'Marijuana & THC': 'drug-cannabis', 'Pills (per pill)': 'drug-pills', 'Hallucinogens & Club Drugs': 'drug-mushroom', Steroids: 'drug-steroid' };
+
   function valueChartEl() {
     const { h } = ui;
     // v1.62: every category has the same columns, the same widths, so the whole chart lines up.
@@ -276,7 +279,7 @@
     const order = ['gram', 'pill', 'ounce', 'pound', 'kilogram'];
     units.sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
     return h('div', { class: 'value-chart' }, groups.map((g) => h('div', { class: 'value-group' },
-      h('h3', {}, g.category),
+      h('h3', { class: 'value-group-head' }, ui.icon(CATEGORY_ICONS[g.category] || 'drug-powder'), h('span', {}, g.category)),
       h('div', { class: 'table-wrap' }, h('table', { class: 'value-table' },
         // The form in brackets, e.g. (Powder), has its own column so the names line up.
         h('colgroup', {}, h('col', { class: 'vc-drug' }), h('col', { class: 'vc-form' }), units.map(() => h('col', { class: 'vc-price' }))),

@@ -30,22 +30,36 @@
     return nums;
   }
 
+  // A photo in the case files as a JPEG (at most 1600 px, readable in print) -> { jpeg, w, h }.
+  async function toJpeg(c, path) {
+    const bmp = await createImageBitmap(await Vault.readFile(c.id, path));
+    const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const cv = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
+    const g = cv.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+    g.drawImage(bmp, 0, 0, cv.width, cv.height);
+    const blob = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.88));
+    return { jpeg: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height };
+  }
+
   async function photoJpegs(c, data) {
     const out = [];
     if (F().isHidden(data, 'evidence')) return out;
     for (const e of data.evidence) {
       for (const [j, path] of (e.photos || []).entries()) {
         try {
-          const bmp = await createImageBitmap(await Vault.readFile(c.id, path));
-          const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
-          const cv = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
-          const g = cv.getContext('2d');
-          g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
-          g.drawImage(bmp, 0, 0, cv.width, cv.height);
-          const blob = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.88));
-          out.push({ jpeg: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height, caption: `${F().exhibitLine(e).replace(/^Exhibit \S+?(?=[,:])/, `Exhibit ${F().photoLabel(e.number, j)}`)}${String((e.photoLabels || [])[j] || '').trim() ? ` - Photo: ${String(e.photoLabels[j]).trim()}` : ''}` });
+          out.push({ ...(await toJpeg(c, path)), caption: `${F().exhibitLine(e).replace(/^Exhibit \S+?(?=[,:])/, `Exhibit ${F().photoLabel(e.number, j)}`)}${String((e.photoLabels || [])[j] || '').trim() ? ` - Photo: ${String(e.photoLabels[j]).trim()}` : ''}` });
         } catch { /* a photo that can't be read is left out */ }
       }
+    }
+    // v1.68: the Additional Exhibits after the inventoried ones.
+    for (const x of data.extraExhibits || []) out.push(...await extraJpegs(c, x));
+    return out;
+  }
+  async function extraJpegs(c, x) {
+    const out = [];
+    for (const [j, path] of (x.photos || []).entries()) {
+      try { out.push({ ...(await toJpeg(c, path)), caption: F().extraCaption(x, j) }); } catch { /* left out */ }
     }
     return out;
   }
@@ -471,17 +485,27 @@
       const cb = h('input', { type: 'checkbox', checked: on, 'aria-label': `Include ${title}` });
       const fold = h('button', { class: 'icon-btn rf-fold', type: 'button' });
       // v1.67: a green check in the header once every field in the part is filled (seen folded too).
-      const done = h('span', { class: 'rf-done', title: 'Every field in this part is filled in', hidden: true }, ui.icon('check-circle-fill'), h('span', { class: 'sr-only' }, `${title}: complete`));
+      // v1.68: it sits in its own column beside the fold arrow, so the checks line up down the page.
+      const done = h('span', { class: 'rf-done', title: 'Every field in this part is filled in (or ticked off)' }, ui.icon('check-circle-fill'), h('span', { class: 'sr-only' }, `${title}: complete`));
       const sec = h('section', { class: `rf-section rf-${id}` },
-        h('div', { class: 'rf-head' }, h('label', { class: 'rf-include', title: 'Untick if this part doesn\'t apply: it is left out of the PDF' }, cb), h('h3', { icon }, title), done, h('div', { class: 'spacer' }), fold),
+        h('div', { class: 'rf-head' }, h('label', { class: 'rf-include', title: 'Untick if this part doesn\'t apply: it is left out of the PDF' }, cb), h('h3', { icon }, title), h('div', { class: 'spacer' }), done, fold),
         inner);
       let pending = 0;
+      // v1.68: a line or list that is ticked off counts as filled, and so does a whole part that is
+      // ticked off; phone numbers and monikers (added with their own Add button) are extras.
       const checkDone = () => {
         pending = 0;
-        const boxes = [...inner.querySelectorAll('input, select, textarea')].filter((el) => !el.disabled && !['checkbox', 'radio', 'file', 'button', 'hidden', 'submit'].includes(el.type)
-          && !el.closest('.combo-list, datalist') && (() => { const hid = el.parentElement && el.parentElement.closest('[hidden]'); return !hid || hid === inner; })());
-        done.hidden = !(boxes.length && boxes.every((el) => String(el.value || '').trim()));
-        sec.classList.toggle('rf-complete', !done.hidden);
+        let complete;
+        if (!cb.checked) complete = true;
+        else {
+          const boxes = [...inner.querySelectorAll('input, select, textarea')].filter((el) => !el.disabled && !['checkbox', 'radio', 'file', 'button', 'hidden', 'submit'].includes(el.type)
+            && !el.closest('.combo-list, datalist, .rf-multi, .rf-line-off, .rf-extras, .rf-photo-label, .rf-start-at') && (() => { const hid = el.parentElement && el.parentElement.closest('[hidden]'); return !hid || hid === inner; })());
+          const offLines = inner.querySelectorAll('.rf-line-off').length;
+          complete = (boxes.length || offLines) ? boxes.every((el) => String(el.value || '').trim()) : false;
+        }
+        done.classList.toggle('on', complete);
+        done.setAttribute('aria-hidden', String(!complete));
+        sec.classList.toggle('rf-complete', complete);
       };
       const later = () => { if (!pending) pending = requestAnimationFrame(checkDone); };
       inner.addEventListener('input', later);
@@ -505,6 +529,7 @@
         if (!cb.checked) data.hidden.push(id);
         show();
         save();
+        later();
       });
       show();
       return sec;
@@ -703,6 +728,104 @@
     const numbering = archived ? null : h('div', { class: 'rf-numbering' }, h('label', { class: 'rf-numbering-label' }, h('span', {}, 'Next Exhibit No.'), startAt), resetBtn, autoBtn);
     drawNext();
 
+    // ---- v1.68: Additional Exhibits: photographs or text-message screenshots not tied to an
+    // inventory number, numbered on their own (Additional Exhibit 1; photos 1a, 1b…).
+    const exRows = h('div', { class: 'rf-exhibits rf-extra-exhibits' });
+    async function textsPdf(x) {
+      save(0);
+      await Save.flushAll();
+      const name = `Additional Exhibit ${x.number} - Text Messages`;
+      const bytes = CVReportPdf.textsReport(await extraJpegs(c, x), {
+        heading: `Text Message Correspondence - Additional Exhibit ${x.number}${x.title ? `: ${x.title}` : ''}`,
+        title: name, description: x.description || '',
+        caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' · '),
+      });
+      if (!archived) {
+        try {
+          await Save.track(`texts-pdf:${c.id}`, () => Vault.addFile(c.id, new File([bytes], `${name}.pdf`, { type: 'application/pdf' }), { folder: 'Other Exhibits', description: name, replace: true }));
+          toast(`${name}.pdf saved to Files (Other Exhibits).`, 'success', 3000);
+        } catch { /* reported by Save */ }
+      }
+      const viewer = CVPdfViewer.create(bytes, { h, icon: ui.icon, title: name, fileName: `${name}.pdf` });
+      await ui.openDialog((close) => h('div', { class: 'pdf-view' },
+        h('h2', { icon: 'chat-square-text' }, 'Text Message Report'),
+        viewer,
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
+      viewer.destroy();
+    }
+    const drawExtras = () => {
+      exRows.replaceChildren(...(data.extraExhibits.length ? data.extraExhibits.map((x, i) => {
+        const n = x.number;
+        const kind = h('select', { 'aria-label': `Additional exhibit ${n} kind` }, F().EXTRA_KINDS.map(([k, l]) => h('option', { value: k, selected: k === x.kind }, l)));
+        const title = h('input', { value: x.title || '', autocomplete: 'off', placeholder: x.kind === 'texts' ? 'Between UC and Target' : 'What the photos show', 'aria-label': `Additional exhibit ${n} title` });
+        title.addEventListener('input', () => { x.title = title.value; save(); });
+        const desc = h('textarea', { rows: 2, 'aria-label': `Additional exhibit ${n} description`, placeholder: 'Where they came from, when and by whom.' });
+        desc.value = x.description || '';
+        desc.addEventListener('input', () => { x.description = desc.value; save(); });
+        const strip = h('div', { class: `rf-photos${x.kind === 'texts' ? ' rf-photos-texts' : ''}` });
+        const drawPhotos = () => {
+          strip.replaceChildren(...x.photos.map((path, j) => {
+            const tag = F().photoLabel(n, j);
+            const img = h('img', { alt: `Additional Exhibit ${tag}` });
+            Vault.readFile(c.id, path).then((f) => { img.src = URL.createObjectURL(f); img.addEventListener('load', () => URL.revokeObjectURL(img.src), { once: true }); }).catch(() => { img.alt = 'Photo not found'; });
+            const label = h('input', { class: 'rf-photo-label', maxlength: 120, placeholder: 'Label this photo', 'aria-label': `Label for additional photo ${tag}`, readonly: archived || null });
+            label.value = x.photoLabels[j] || '';
+            label.addEventListener('input', () => { x.photoLabels[j] = label.value; save(); });
+            return h('figure', { class: 'rf-photo-card' },
+              h('div', { class: 'rf-photo' },
+                h('span', { class: 'rf-photo-tag' }, tag),
+                h('button', { 'data-ro-ok': 'true', class: 'rf-photo-open', type: 'button', title: 'View', onclick: () => ui.previewFile(c, path) }, img),
+                archived ? '' : h('button', { class: 'rf-photo-x', type: 'button', title: 'Take off this exhibit (the photo stays in the case files)', onclick: () => { x.photos.splice(j, 1); x.photoLabels.splice(j, 1); drawPhotos(); save(); } }, ui.icon('x-lg'), h('span', { class: 'sr-only' }, 'Remove photo'))),
+              label);
+          }));
+        };
+        drawPhotos();
+        const picker = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true });
+        picker.addEventListener('change', async () => {
+          const files = [...picker.files];
+          picker.value = '';
+          for (const f of files) {
+            try {
+              const path = await Save.track(`photo:${c.id}`, () => Vault.addFile(c.id, f, { folder: 'Other Exhibits', description: `Additional Exhibit ${F().photoLabel(n, x.photos.length)}` }));
+              x.photos.push(path);
+              x.photoLabels.push('');
+            } catch { /* reported by Save */ }
+          }
+          drawPhotos();
+          save(0);
+        });
+        const addPhoto = archived ? '' : h('button', { class: 'rf-photo-add', type: 'button', title: x.kind === 'texts' ? 'Add screenshots of the text messages' : 'Add photographs', onclick: () => picker.click() }, ui.icon(x.kind === 'texts' ? 'chat-square-text' : 'camera-fill'), h('span', {}, x.kind === 'texts' ? 'Add Screenshots' : 'Add Photos'));
+        const pdfBtn = x.kind === 'texts' ? h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button', icon: 'file-earmark-pdf', title: 'A portrait PDF of the screenshots, two to a page, each labelled. Saved under Files (Other Exhibits).', onclick: async (ev) => { const b = ev.currentTarget; b.disabled = true; b.classList.add('busy'); try { await textsPdf(x); } finally { b.disabled = false; b.classList.remove('busy'); } } }, 'Text Message PDF') : '';
+        kind.addEventListener('change', () => { x.kind = kind.value; save(0); drawExtras(); });
+        return h('div', { class: 'rf-exhibit-card rf-extra-card' },
+          h('div', { class: 'rf-exhibit-no', title: 'Additional Exhibit: not tied to an inventory number' }, h('span', { class: 'small muted' }, 'Additional'), h('strong', { class: 'rf-exhibit' }, String(n))),
+          h('div', { class: 'rf-exhibit-body' },
+            h('div', { class: 'rf-exhibit-row' }, ui.field('Kind', kind), ui.field('Title', title), pdfBtn ? h('div', { class: 'rf-extra-pdf' }, pdfBtn) : ''),
+            ui.field('Description', desc, 'span-all'),
+            h('div', { class: 'rf-photo-row' }, strip, addPhoto, picker)),
+          archived ? '' : h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Remove additional exhibit', onclick: () => { data.extraExhibits.splice(i, 1); drawExtras(); drawExtraNext(); save(); } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, `Remove additional exhibit ${n}`)));
+      }) : [h('p', { class: 'muted small' }, 'No additional exhibits.')]));
+    };
+    drawExtras();
+    const extraAt = h('input', { type: 'number', min: 1, step: 1, inputmode: 'numeric', class: 'rf-num rf-start-at rf-extra-start', 'aria-label': 'Next additional exhibit number', value: data.extraStart > 0 ? data.extraStart : '' });
+    const drawExtraNext = () => { const n = F().nextExtra(data); extraAt.placeholder = String(n); if (data.extraStart > 0) extraAt.value = String(n); };
+    extraAt.addEventListener('change', () => { const v = parseInt(extraAt.value, 10); data.extraStart = v > 0 ? v : 0; save(0); drawExtraNext(); });
+    const addExtra = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', title: 'Photographs or text-message screenshots not tied to an inventory number', onclick: () => {
+      const n = F().nextExtra(data);
+      data.extraExhibits.push({ number: n, kind: 'photos', title: '', description: '', photos: [], photoLabels: [] });
+      if (data.extraStart > 0) data.extraStart = n + 1;
+      drawExtras(); drawExtraNext(); save(0);
+    } }, 'Add Additional Exhibit');
+    const extraNumbering = h('div', { class: 'rf-numbering' },
+      h('label', { class: 'rf-numbering-label' }, h('span', {}, 'Next Additional No.'), extraAt),
+      h('button', { class: 'btn small ghost', type: 'button', onclick: () => { data.extraStart = 1; save(0); drawExtraNext(); } }, 'Reset to 1'),
+      h('button', { class: 'btn small ghost', type: 'button', onclick: () => { data.extraStart = 0; extraAt.value = ''; save(0); drawExtraNext(); } }, 'Automatic'));
+    drawExtraNext();
+    const extrasBox = h('div', { class: 'rf-extras span-all' },
+      h('h4', { class: 'rf-extras-head', icon: 'images' }, 'Additional Exhibits'),
+      exRows,
+      archived ? '' : h('div', { class: 'contact-add rf-evidence-add' }, addExtra, extraNumbering));
+
     const narrative = h('textarea', { class: 'rf-narrative', rows: 24, placeholder: 'What happened, in order. Tab indents.', 'aria-label': 'Summary of Investigation' });
     narrative.value = data.narrative || '';
     narrative.addEventListener('input', () => { data.narrative = narrative.value; save(); });
@@ -814,7 +937,7 @@
       h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case: fill it in, then Send Draft to Reports puts it under Reports and its PDF under Files. Clear All starts another one. Saved as report-fields.json.'),
       h('div', { class: 'rf-actions' }, archived ? null : sendBtn, printBtn, archived ? null : clearBtn, h('div', { class: 'spacer' }), archived ? null : saveBtn),
       ...sections.slice(0, -1),
-      part('evidence', 'Evidence Inventoried', 'box-seam', evRows, archived ? null : h('div', { class: 'contact-add rf-evidence-add' }, addExhibit, numbering)),
+      part('evidence', 'Evidence Inventoried', 'box-seam', evRows, archived ? null : h('div', { class: 'contact-add rf-evidence-add' }, addExhibit, numbering), extrasBox),
       part('summary', 'Summary of Investigation', 'journal-text', fmt, rich.el, narrative),
       sections[sections.length - 1]); // Submission and Approval comes last, as on the printed report
     // v1.48: every field is one grey box with its label inside; an empty box shows the label as its

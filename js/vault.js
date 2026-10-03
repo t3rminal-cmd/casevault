@@ -24,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.67.0';
+  const APP_VERSION = '1.68.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -993,6 +993,44 @@ const Vault = (() => {
     return CVCaseFiles.joinPath(folder, name);
   }
 
+  /* ---------- v1.68: folders not tied to a case number ----------
+   * CaseVault-Data/shared/other/                 OTHER FILES on the Overview (no sub-folders)
+   * CaseVault-Data/shared/op-<id>/<Folder>/      an Operation's own folder: Subpoenas, Affidavits,
+   *                                              Operation Plans, Maps, Subject Data, Running Vehicle List
+   */
+  const OP_FOLDERS = ['Subpoenas', 'Affidavits', 'Operation Plans', 'Maps', 'Subject Data', 'Running Vehicle List'];
+  const sharedKeyOk = (key) => key === 'other' || /^op-[A-Za-z0-9_-]{1,80}$/.test(key);
+  const sharedFolderOk = (key, folder) => (key === 'other' ? !folder : OP_FOLDERS.includes(folder));
+  async function sharedDir(key, folder = '', create = false) {
+    if (!sharedKeyOk(key) || !sharedFolderOk(key, folder)) throw Object.assign(new Error('Unknown folder.'), { name: 'TypeError' });
+    let dir = await FS.getDir(root, 'shared', create);
+    if (dir) dir = await FS.getDir(dir, key, create);
+    if (dir && folder) dir = await FS.getDir(dir, folder, create);
+    return dir;
+  }
+  /** [{ folder, base, size, modified }] in that folder (or every Operation folder with folder '*'). */
+  async function listShared(key, folder = '') {
+    const folders = folder === '*' ? OP_FOLDERS : [folder];
+    const out = [];
+    for (const f of folders) {
+      const dir = await sharedDir(key, f).catch(() => null);
+      if (!dir) continue;
+      for (const e of await FS.list(dir)) {
+        if (e.kind !== 'file' || e.name.startsWith('.')) continue;
+        out.push(await fileInfo(e, f));
+      }
+    }
+    return out.sort((a, b) => a.base.localeCompare(b.base, undefined, { numeric: true }));
+  }
+  async function addShared(key, folder, file) {
+    const dir = await sharedDir(key, folder, true);
+    const name = await FS.uniqueName(dir, file.name);
+    await FS.writeData(dir, name, file);
+    return name;
+  }
+  async function readShared(key, folder, base) { return FS.getFile(await sharedDir(key, folder), base); }
+  async function deleteShared(key, folder, base) { await FS.remove(await sharedDir(key, folder), base); }
+
   async function readFile(id, path) {
     const { folder, base } = CVCaseFiles.splitPath(path);
     return FS.getFile(await folderDir(id, folder), base);
@@ -1480,7 +1518,8 @@ const Vault = (() => {
     backupNow, listBackups, rebuildIndex, updateSettings,
     createCase, getCase, saveCase, deleteCase,
     listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
-    archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
+    archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS,
+    OP_FOLDERS, listShared, addShared, readShared, deleteShared, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
     getNotes, saveNotes, listChats, readChat, saveChat, deleteChat,
     getTimeline, saveTimeline, sortEvents,
     listFiles, addFile, readFile, deleteFile, moveFile, ensureFolders, renameCaseFolder, conventionalId, RENAME_MARKER,
