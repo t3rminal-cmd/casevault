@@ -3556,3 +3556,7 @@ body .fab-dock { bottom: calc(var(--ql-dock-h, 0px) + 1.2rem); }
 .op-info .op-info-item { background: var(--rf-box); border: 1px solid var(--box-edge, transparent); padding: .28rem .55rem .3rem; display: flex; flex-direction: column; gap: .05rem; min-width: 0; }
 .op-info .op-info-label { font-size: .68rem; line-height: 1.2; font-weight: 600; color: var(--muted); text-transform: none; }
 .op-info .op-info-value { font-size: .9rem; background: transparent; padding: .12rem 0; min-height: 1.6rem; overflow-wrap: anywhere; }
+
+/* v1.70: Back to Top, left of Ask AI; its place is kept while hidden so the others don't move. */
+.fab-dock .top-fab { visibility: hidden; opacity: 0; transition: opacity .15s; }
+.fab-dock .top-fab.on { visibility: visible; opacity: 1; }
