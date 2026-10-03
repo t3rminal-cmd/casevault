@@ -59,6 +59,9 @@
     'badge-dea': 'badge-dea', 'badge-fbi': 'badge-fbi', 'badge-atf': 'badge-atf', 'badge-usms': 'badge-usms', 'badge-irs': 'badge-irs',
     'badge-cbp': 'badge-cbp', 'badge-hsi': 'badge-hsi', 'badge-ice': 'badge-ice', 'badge-usss': 'badge-usss', 'badge-uspis': 'badge-uspis',
     'badge-state-pd': 'badge-state-pd', 'badge-local-pd': 'badge-local-pd', 'badge-sheriff': 'badge-sheriff',
+    // v1.68
+    'power': 'power', 'chat-square-text': 'sms', 'images': 'photo-stack', 'table': 'bar-chart',
+    'drug-powder': 'drug-powder', 'drug-syringe': 'drug-syringe', 'drug-vial': 'drug-vial', 'drug-crystal': 'drug-crystal', 'drug-pills': 'drug-pills', 'drug-mushroom': 'drug-mushroom', 'drug-steroid': 'drug-steroid', 'drug-cannabis': 'cannabis',
   };
   const colorUrl = (name) => (COLOR[name] ? `icons/color/${COLOR[name]}.png` : '');
 

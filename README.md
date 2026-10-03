@@ -15,7 +15,14 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.67)
+## Features (v1.68)
+
+- Draft → Evidence: Additional Exhibits (photographs or text-message screenshots not tied to an inventory number), numbered on their own (Additional Exhibit 1; photos 1a, 1b) with Next Additional No., Reset to 1 and Automatic; they appear in the report, its exhibit list and the photo pages
+- Text Message PDF: a portrait PDF of an Additional Exhibit's screenshots, two to a page, each labelled with its exhibit number, saved under Files (Other Exhibits)
+- Power Off button next to the SSD icon: saves, then closes CaseVault, the browser window, the helper and the AI engine, and locks and ejects V: and W: (helper 1.10.0)
+- Overview: OPERATIONS, GENERAL FILES and a new OTHER FILES box (files not tied to any case); each Operation has an Operation Folder (Subpoenas, Affidavits, Operation Plans, Maps, Subject Data, Running Vehicle List)
+- Draft green checks: an unticked part or line counts as done, phone numbers you didn't add don't count against it, and the checks line up in one column beside the fold arrows; How Cleared has 6 - On Going
+- Files: the date column is Updated (the last time the file changed); street value chart with a colour icon per drug category; theme check of every page and popup
 
 - Statute of limitations for narcotic charges: 3 years from the Date of Occurrence (Draft; else the arrest date); 5 days before, Needs Attention shows "Warning: Statute of Limitations Expiring" with a live count-down, the case gets a red border and a reminder pops up once
 - Archived sub-folders EXPIRED, NOLLE PROSEQUI and PROSECUTION: picked when archiving (EXPIRED is preselected once the statute has passed) and changeable on the archived case

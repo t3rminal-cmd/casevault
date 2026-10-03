@@ -163,5 +163,13 @@ const HelperFS = (() => {
     try { return await (await call('GET', 'sysinfo', '')).json(); } catch { return null; }
   }
 
-  return { servedByHelper, DEFAULT_URL, info, root, openFile, sysinfo };
+  // v1.68: Power Off. The helper answers, then stops; its clean-up closes the browser window,
+  // Ollama, and locks and ejects the drives. -> { ok, drives }
+  async function shutdown() {
+    const res = await fetch(new URL('/api/shutdown', location.href), { method: 'POST', headers: { 'X-CaseVault': '1' }, cache: 'no-store' });
+    if (!res.ok) throw domError('NotReadableError', 'The CaseVault helper did not answer.');
+    return res.json();
+  }
+
+  return { servedByHelper, DEFAULT_URL, info, root, openFile, sysinfo, shutdown };
 })();

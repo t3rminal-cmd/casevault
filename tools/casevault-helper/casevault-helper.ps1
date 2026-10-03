@@ -34,7 +34,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 
-$HelperVersion = '1.9.0'
+$HelperVersion = '1.10.0'
 $VolumeLabel   = 'CASEVAULT'
 $DataDirName   = 'CaseVault-Data'
 $AppDirName    = 'CaseVault-App'
@@ -273,6 +273,40 @@ function Test-SameOrigin($req) {
   return $true
 }
 
+# The clean-up run by Power Off (written to %TEMP% and started hidden; see /api/shutdown).
+$ShutdownScript = @'
+param([int]$HelperPid = 0, [int]$ParentPid = 0, [string]$Drives = '', [string]$OllamaDir = '')
+Set-Location -LiteralPath $env:TEMP
+# 1. Wait (at most 15 s) for the helper and its window to close: they hold the drives open.
+foreach ($id in @($HelperPid, $ParentPid)) {
+  if ($id -gt 0) { try { Wait-Process -Id $id -Timeout 15 -ErrorAction Stop } catch { } }
+}
+foreach ($id in @($HelperPid, $ParentPid)) {
+  if ($id -gt 0) { try { Stop-Process -Id $id -Force -ErrorAction Stop } catch { } }
+}
+# 2. The CaseVault browser window (its title has CaseVault in it): asked to close, like clicking X.
+foreach ($name in @('msedge', 'chrome', 'firefox', 'brave')) {
+  foreach ($p in @(Get-Process -Name $name -ErrorAction SilentlyContinue)) {
+    if ($p.MainWindowTitle -match 'CaseVault') { try { [void]$p.CloseMainWindow() } catch { } }
+  }
+}
+# 3. Ollama, when it runs from the AI drive.
+foreach ($p in @(Get-Process -Name 'ollama', 'ollama app', 'ollama_llama_server' -ErrorAction SilentlyContinue)) {
+  try { if (-not $OllamaDir -or ($p.Path -and $p.Path.StartsWith($OllamaDir, [StringComparison]::OrdinalIgnoreCase))) { $p.Kill() } } catch { }
+}
+Start-Sleep -Seconds 3
+# 4. Lock (BitLocker) and eject each drive. Locking may need admin rights; ejecting does not.
+$shell = New-Object -ComObject Shell.Application
+foreach ($d in ($Drives -split ',' | Where-Object { $_ })) {
+  try { & manage-bde.exe -lock $d -ForceDismount 2>&1 | Out-Null } catch { }
+  try { $item = $shell.Namespace(17).ParseName($d); if ($item) { $item.InvokeVerb('Eject') } } catch { }
+}
+Start-Sleep -Seconds 2
+Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
+'@
+
+$script:StopRequested = $false
+
 function Invoke-Api($stream, $req) {
   $op = $req.Path.Substring(5)   # after "/api/"
   $m = $req.Method
@@ -283,6 +317,32 @@ function Invoke-Api($stream, $req) {
     $rootName = if ($root) { Split-Path -Leaf $root } else { '' }
     $drive = if ($root) { [System.IO.Path]::GetPathRoot($root) } else { '' }
     Send-Json $stream 200 ('{"app":"CaseVault helper","version":' + (ConvertTo-JsonString $HelperVersion) + ',"ready":' + $ready + ',"root":' + (ConvertTo-JsonString $rootName) + ',"drive":' + (ConvertTo-JsonString $drive) + '}')
+    return
+  }
+
+  if ($op -eq 'shutdown' -and $m -eq 'POST') {
+    # v1.10 (app 1.68): the Power Off button. Answers first, then stops this helper; a small
+    # clean-up script (in %TEMP%, so it holds nothing open on the SSD) waits for it to exit, closes
+    # the CaseVault browser window, stops Ollama, and locks and ejects the vault and AI drives.
+    $drives = @()
+    $root = Get-DataRoot
+    if ($root) { $drives += [System.IO.Path]::GetPathRoot($root).TrimEnd('\') }
+    $ai = [System.IO.Path]::GetPathRoot($AIRoot).TrimEnd('\')
+    if ($ai -and ($drives -notcontains $ai) -and $ai -ne $env:SystemDrive) { $drives += $ai }
+    $parent = 0
+    # Only the launcher's own console (Start-CaseVault.bat runs in cmd.exe) is closed with it.
+    try {
+      $pp = [int](Get-CimInstance Win32_Process -Filter "ProcessId=$PID" -ErrorAction Stop).ParentProcessId
+      $pn = (Get-CimInstance Win32_Process -Filter "ProcessId=$pp" -ErrorAction Stop).Name
+      if ($pn -ieq 'cmd.exe') { $parent = $pp }
+    } catch { }
+    $cleanup = Join-Path $env:TEMP 'casevault-poweroff.ps1'
+    Set-Content -LiteralPath $cleanup -Encoding UTF8 -Value $ShutdownScript
+    $argList = @('-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', "`"$cleanup`"",
+              '-HelperPid', $PID, '-ParentPid', $parent, '-Drives', "`"$($drives -join ',')`"", '-OllamaDir', "`"$(Join-Path $AIRoot 'ollama')`"")
+    Start-Process -FilePath 'powershell.exe' -ArgumentList $argList -WindowStyle Hidden -WorkingDirectory $env:TEMP | Out-Null
+    Send-Json $stream 200 ('{"ok":true,"drives":' + (ConvertTo-JsonString ($drives -join ',')) + '}')
+    $script:StopRequested = $true
     return
   }
 
@@ -536,7 +596,7 @@ Write-Host ''
 if (-not $NoBrowser) { Start-Process "http://127.0.0.1:$Port/" }
 
 try {
-  while ($true) {
+  while (-not $script:StopRequested) {
     $task = $listener.AcceptTcpClientAsync()
     while (-not $task.Wait(250)) { }   # short waits keep Ctrl+C responsive
     Invoke-Client $task.Result

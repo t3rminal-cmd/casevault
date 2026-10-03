@@ -74,7 +74,7 @@
       ['circumstancesUpdated', 'Circumstances Updated', 'check'],
       // v1.48: spelled out (the codes saved before still read, see SPELLED).
       ['status', 'Status', 'select', ['', '0 - In Progress', '1 - Suspended', '2 - Unfounded', '3 - Cleared Closed', '4 - Cleared Open', '5 - Cleared Closed Exceptionally', '6 - Cleared Open Exceptionally', '7 - Closed, Non-Criminal']],
-      ['cleared', 'How Cleared', 'select', ['', '1 - Arrest', '2 - Juvenile Court', '3 - Referred for Prosecution', '4 - Community Adjustment', '5 - Other']],
+      ['cleared', 'How Cleared', 'select', ['', '1 - Arrest', '2 - Juvenile Court', '3 - Referred for Prosecution', '4 - Community Adjustment', '5 - Other', '6 - On Going']],
     ] },
     { id: 'report', title: "Officer's Report", icon: 'card-checklist', fields: [
       // v1.31: in this order; AUSA, IR and CB numbers added.
@@ -229,6 +229,14 @@
     for (const o of d.offendersList) { o.unknown = !!o.unknown; if (o.unknown && !String(o.name || '').trim()) o.name = UNKNOWN; }
     for (const k of ['victimName', 'victimRelation', 'victimDetails', 'offenderName', 'offenderRelation', 'offenderDetails', 'gangAffiliation', 'vehicle', 'impound', 'lieutenant', 'lieutenantStar', 'totalWeight', 'streetValue', 'purchasePrice']) delete d[k];
     d.hidden = Array.isArray(d.hidden) ? d.hidden.filter((x) => typeof x === 'string') : [];
+    // v1.68: Additional Exhibits: photographs or text-message screenshots that are not tied to an
+    // inventory number, numbered on their own (Additional Exhibit 1, photos 1a, 1b…).
+    d.extraExhibits = (Array.isArray(src.extraExhibits) ? src.extraExhibits : []).filter((x) => x && typeof x === 'object').map((x) => {
+      const photos = Array.isArray(x.photos) ? x.photos.filter((y) => typeof y === 'string') : [];
+      const ls = Array.isArray(x.photoLabels) ? x.photoLabels : [];
+      return { number: Number(x.number) > 0 ? Number(x.number) : 1, kind: x.kind === 'texts' ? 'texts' : 'photos', title: String(x.title || ''), description: String(x.description || ''), photos, photoLabels: photos.map((_, j) => String(ls[j] || '')) };
+    });
+    d.extraStart = Number(src.extraStart) > 0 ? Math.floor(Number(src.extraStart)) : 0;
     // v1.48: Status and How Cleared spelled out.
     if (SPELLED[d.status]) d.status = SPELLED[d.status];
     if (SPELLED[d.cleared]) d.cleared = SPELLED[d.cleared];
@@ -412,6 +420,25 @@
   const militaryTime = (v) => { const t = String(v == null ? '' : v).trim(); const m = /^(\d{1,2}):(\d{2})$/.exec(t); return m ? `${m[1].padStart(2, '0')}${m[2]}` : t; };
 
   /** One exhibit as a line: "Exhibit 3, Inventory 123456: Narcotics, Cocaine, 12.4 g. Three bags…" */
+  /** v1.68: the next Additional Exhibit number: from the chosen start, else one past the highest. */
+  function nextExtra(d) {
+    const used = new Set((d.extraExhibits || []).map((x) => Number(x.number)));
+    let n = Number(d.extraStart) > 0 ? Number(d.extraStart) : Math.max(0, ...used) + 1;
+    while (used.has(n)) n += 1;
+    return n;
+  }
+  const EXTRA_KINDS = [['photos', 'Photographs'], ['texts', 'Text Messages']];
+  /** "Additional Exhibit 2a - Text Messages: <title>. <label>" for a photo's caption. */
+  function extraCaption(x, j) {
+    const kind = (EXTRA_KINDS.find(([k]) => k === x.kind) || EXTRA_KINDS[0])[1];
+    const label = String((x.photoLabels || [])[j] || '').trim();
+    return `Additional Exhibit ${photoLabel(x.number, j)} - ${kind}${x.title ? `: ${x.title}` : ''}${label ? `. ${label}` : ''}`;
+  }
+  function extraLine(x) {
+    const kind = (EXTRA_KINDS.find(([k]) => k === x.kind) || EXTRA_KINDS[0])[1];
+    return `Additional Exhibit ${x.number}: ${kind}${x.title ? `, ${x.title}` : ''}${x.description ? `. ${x.description}` : ''} (${x.photos.length} ${x.photos.length === 1 ? 'image' : 'images'})`;
+  }
+
   function exhibitLine(e) {
     const what = [e.type, e.type === 'Narcotics' ? e.drug : '', e.type === 'Narcotics' ? e.weight : ''].filter(Boolean).join(', ');
     return `Exhibit ${e.number}${e.inventory ? `, Inventory ${e.inventory}` : ''}: ${[what, e.description].filter(Boolean).join('. ') || 'no description'}`;
@@ -423,7 +450,7 @@
     const ctx = {};
     for (const [k] of FIELDS) ctx[`report.${k}`] = shown(k, d[k]);
     for (const k of Object.keys(LISTS)) ctx[`report.${k}`] = d[k].filter(filled).map((it) => itemLine(k, it)).join('\n');
-    ctx['report.evidence'] = d.evidence.map(exhibitLine).join('\n');
+    ctx['report.evidence'] = [...d.evidence.map(exhibitLine), ...d.extraExhibits.map(extraLine)].join('\n');
     // Templates written for the single lines before v1.25 still fill in.
     const nar = d.narcotics.filter(filled);
     ctx['report.totalWeight'] = nar.map((n) => [n.drug, valueText('narcotics', n, 'amount')].filter(Boolean).join(' ')).filter(Boolean).join('; ');
@@ -453,6 +480,7 @@
       for (const k of s.lists || []) if (!isHidden(d, k)) for (const it of d[k].filter(filled)) lines.push(`${LISTS[k].item}: ${itemLine(k, it)}`);
     }
     if (!isHidden(d, 'evidence')) for (const e of d.evidence) lines.push(`Evidence ${exhibitLine(e)}`);
+    if (!isHidden(d, 'evidence')) for (const x of d.extraExhibits) lines.push(`Evidence ${extraLine(x)}`);
     if (!isHidden(d, 'summary') && String(d.narrative || '').trim()) lines.push(`Summary of investigation (the investigator's own words): ${String(d.narrative).trim()}`);
     return lines.join('\n');
   }
@@ -537,6 +565,11 @@
       table(['Exhibit', 'Inventory No.', 'Type', 'Narcotic Type', 'Weight', 'Description'],
         d.evidence.map((e) => [String(e.number), e.inventory, e.type, e.type === 'Narcotics' ? e.drug : '', e.type === 'Narcotics' ? e.weight : '', e.description]));
     }
+    if (on('evidence') && d.extraExhibits.length) {
+      if (!d.evidence.length) band('Evidence Inventoried');
+      table(['Additional Exhibit', 'Kind', 'Title', 'Images', 'Description'],
+        d.extraExhibits.map((x) => [String(x.number), (EXTRA_KINDS.find(([k]) => k === x.kind) || EXTRA_KINDS[0])[1], x.title, String(x.photos.length), x.description]));
+    }
     if (on('summary')) { band('Summary of Investigation'); out.push(String(d.narrative || '').trim() || '[CONFIRM: summary of investigation]', ''); }
     if (on('approval')) {
       band('Submission and Approval');
@@ -551,7 +584,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);
