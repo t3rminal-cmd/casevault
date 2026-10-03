@@ -215,6 +215,10 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.72
+
+- **OTHER FILES** shows its folders as folder icons, like Operations and General Files: **USPIS Files**, **DEA Files**, **INET Files**, **Training** and **Other**, each with what it's for under its name and its file count on the icon. Click a folder to open it: its files show below, with Add Files (or drop files on it). Click the folder again, or **Close**, to close it. **New Folder** makes your own; one you made can be removed with **Remove Folder** once it's empty.
+
 ### What's new in v1.71
 
 - **Back to Top** is always there, bottom right beside Ask AI: an up caret (**^**). Click it from anywhere in a long form.

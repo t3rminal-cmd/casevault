@@ -15,6 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.72)
+
+- OTHER FILES shows its five folders (USPIS Files, DEA Files, INET Files, Training, Other) as folder icons like Operations and General Files, plus New Folder; click one to open its files below, click again (or Close) to close it
+
 ## Features (v1.71)
 
 - Back to Top always shown (an up caret ^) beside Ask AI

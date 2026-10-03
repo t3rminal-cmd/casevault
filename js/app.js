@@ -809,11 +809,13 @@
   const SHARED_ICONS = { 'USPIS Files': 'badge-uspis', 'DEA Files': 'badge-dea', 'INET Files': 'globe2', Training: 'book', Other: 'folder2-open', Subpoenas: 'file-earmark-ruled', Affidavits: 'pencil-square', 'Operation Plans': 'card-checklist', Maps: 'map', 'Subject Data': 'person-vcard', 'Running Vehicle List': 'car-front' };
   // v1.71: folders are names, or { name, label, desc, custom }; getFolders() reads them each time
   // (Other Files: the built-in folders and the ones you make; New Folder adds one).
-  function sharedFilesBox(key, { folders: fixed = [], getFolders = null, allowNew = false, empty = 'No files yet.' } = {}) {
-    const box = h('div', { class: 'shared-files', 'data-key': key });
+  // v1.72: tiles: the folders as folder icons, like Operations and General Files; a click opens
+  // one (its files show under the icons), another click closes it.
+  function sharedFilesBox(key, { folders: fixed = [], getFolders = null, allowNew = false, tiles = false, empty = 'No files yet.' } = {}) {
+    const box = h('div', { class: `shared-files${tiles ? ' shared-tiles' : ''}`, 'data-key': key });
     const norm = (f) => (typeof f === 'string' ? { name: f, label: f } : { ...f, label: f.label || f.name });
     let folders = fixed.map(norm);
-    let folder = sharedOpen[key] != null ? sharedOpen[key] : (folders.length ? folders[0].name : (getFolders ? null : ''));
+    let folder = sharedOpen[key] != null ? sharedOpen[key] : (tiles ? null : folders.length ? folders[0].name : (getFolders ? null : ''));
     const newFolder = async () => {
       const inp = h('input', { maxlength: 60, autocomplete: 'off', 'aria-label': 'Folder name', placeholder: 'ATF Files' });
       setTimeout(() => inp.focus(), 60);
@@ -827,12 +829,12 @@
     };
     const removeFolder = async (f) => {
       if (!(await confirmDialog({ title: `Remove the folder ${f.label}?`, message: 'Only an empty folder can be removed.', confirmText: 'Remove Folder', danger: true }))) return;
-      try { await Vault.removeOtherFolder(f.name); folder = folders[0].name; sharedOpen[key] = folder; } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); toast(err.message, 'error'); }
+      try { await Vault.removeOtherFolder(f.name); folder = tiles ? null : folders[0].name; sharedOpen[key] = folder; } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); toast(err.message, 'error'); }
       draw();
     };
     const pick = h('input', { type: 'file', multiple: true, hidden: true });
     const add = async (files) => {
-      if (!files || !files.length) return;
+      if (!files || !files.length || folder == null) return;
       try {
         for (const f of files) await Save.track(`shared:${key}`, () => Vault.addShared(key, folder, f));
         toast(`${files.length} file${files.length === 1 ? '' : 's'} added${folder ? ` to ${folder}` : ''}.`, 'success');
@@ -845,14 +847,23 @@
       let counts = {};
       try {
         if (getFolders) folders = (await getFolders()).map(norm);
-        if (folders.length && !folders.some((f) => f.name === folder)) folder = folders[0].name;
-        list = await Vault.listShared(key, folder);
+        if (folders.length && folder != null && !folders.some((f) => f.name === folder)) folder = tiles ? null : folders[0].name;
+        list = folder == null ? [] : await Vault.listShared(key, folder);
         if (folders.length) for (const f of folders) counts[f.name] = f.name === folder ? list.length : (await Vault.listShared(key, f.name)).length;
       } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
       const cur = folders.find((f) => f.name === folder);
       const folderLabel = cur ? cur.label : '';
       // v1.69: the folders are tabs, like a case's Details / Timeline / Draft tabs.
-      const chips = folders.length ? h('nav', { class: `tabs shared-tabs${folders.some((f) => f.desc) ? ' has-desc' : ''}`, role: 'tablist' }, ...folders.map((f) => h('button', {
+      const tileRow = tiles ? h('div', { class: 'op-folders shared-folder-tiles', role: 'list' }, ...folders.map((f) => h('button', {
+        type: 'button', role: 'listitem', class: `op-folder-tile shared-tile ${f.name === folder ? 'open' : ''}`, 'aria-expanded': String(f.name === folder),
+        title: `${f.label}${f.desc ? `: ${f.desc}` : ''} (${counts[f.name] || 0} file${counts[f.name] === 1 ? '' : 's'})`,
+        onclick: () => { folder = f.name === folder ? null : f.name; sharedOpen[key] = folder; draw(); },
+      }, h('span', { class: 'op-folder-art' }, I('folder2-open'), counts[f.name] ? h('span', { class: 'op-folder-count' }, String(counts[f.name])) : null),
+      h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, f.label), h('span', { class: 'op-title' }, f.desc || 'Your own folder')))),
+      allowNew ? h('button', { type: 'button', role: 'listitem', class: 'op-folder-tile shared-tile shared-tile-new', title: 'Make a new folder in Other Files', onclick: newFolder },
+        h('span', { class: 'op-folder-art' }, I('folder-plus')), h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, 'New Folder'), h('span', { class: 'op-title' }, 'Make your own'))) : '') : null;
+      if (tiles && folder == null) { box.replaceChildren(tileRow); return; }
+      const chips = tiles ? tileRow : folders.length ? h('nav', { class: `tabs shared-tabs${folders.some((f) => f.desc) ? ' has-desc' : ''}`, role: 'tablist' }, ...folders.map((f) => h('button', {
         type: 'button', role: 'tab', class: `tab${f.name === folder ? ' active' : ''}`, 'aria-selected': String(f.name === folder), title: f.desc || null,
         onclick: () => { folder = f.name; sharedOpen[key] = f.name; draw(); },
       }, h('span', { class: 'tab-main' }, I(SHARED_ICONS[f.label] || (f.custom ? 'folder' : 'folder2-open')), h('span', { class: 'tab-name' }, f.label), h('span', { class: 'tab-count' }, String(counts[f.name] || 0))),
@@ -870,7 +881,8 @@
             try { await Vault.deleteShared(key, folder, f.base); } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); toast(`Not deleted: ${err.message}`, 'error'); }
             draw();
           } }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${f.base}`))))))) : h('p', { class: 'muted small shared-empty' }, folderLabel ? `No files in ${folderLabel} yet.` : empty);
-      box.replaceChildren(...[chips, h('div', { class: 'shared-drop', title: 'Drop files here, or click Add Files' }, rows,
+      box.replaceChildren(...[chips, tiles ? h('div', { class: 'op-open-head shared-open-head' }, h('strong', {}, folderLabel), h('span', { class: 'muted small' }, (cur && cur.desc) || ''), h('div', { class: 'spacer' }),
+        h('button', { type: 'button', class: 'btn small ghost', title: 'Close this folder', onclick: () => { folder = null; sharedOpen[key] = null; draw(); } }, 'Close')) : '', h('div', { class: 'shared-drop', title: 'Drop files here, or click Add Files' }, rows,
         h('div', { class: 'shared-foot' }, h('button', { type: 'button', class: 'btn small', icon: 'plus-lg', onclick: () => pick.click() }, folderLabel ? `Add Files to ${folderLabel}` : 'Add Files'), h('span', { class: 'muted small' }, 'or drop files here'),
           cur && cur.custom ? h('span', { class: 'spacer' }) : '', cur && cur.custom ? h('button', { type: 'button', class: 'btn small ghost danger', icon: 'trash3', title: 'Remove this folder (only when it is empty)', onclick: () => removeFolder(cur) }, 'Remove Folder') : ''), pick)].filter(Boolean));
     };
@@ -909,7 +921,7 @@
       // v1.68: OTHER FILES: anything not tied to a case number or an Operation.
       h('div', { class: 'dash-section ov-panel other-files-section' },
         panelHead('Other Files', 'Not tied to a case number or an Operation. Kept on the SSD in CaseVault-Data\\shared\\other.'),
-        sharedFilesBox('other', { allowNew: true, empty: 'No files yet. Add forms, training or reference sheets here.',
+        sharedFilesBox('other', { allowNew: true, tiles: true, empty: 'No files yet. Add forms, training or reference sheets here.',
           getFolders: async () => [...Vault.OTHER_FOLDERS, ...(await Vault.otherCustomFolders()).map((n) => ({ name: n, custom: true }))] })),
       // v1.71: Recently Updated as even columns, in the Quick Links' size, not bold.
       h('div', { class: 'dash-section ov-panel recent-section' }, panelHead('Recently Updated', 'The cases changed most recently. Clear empties the list.',
