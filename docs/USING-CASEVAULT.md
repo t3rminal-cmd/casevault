@@ -215,6 +215,10 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.65
+
+- **Quick Links footer, taller:** four rows of links instead of two, so all the OSINT links show without scrolling (five columns). The footer keeps the same height when you switch between Reference, OSINT and LEO, so the page doesn't jump. If a tab ever holds more than 20 links, scroll inside the footer.
+
 ### What's new in v1.64
 
 - **Case tabs look like the Options tabs:** square boxes side by side, each with its own icon (Details, Arrest, Timeline, Draft, Reports, Files, Link Chart, Mail, Checks). The open tab is white with a blue line along its top. **Arrest details** is now just **Arrest**. All nine fit on one row at 1280 pixels wide and up; on a narrow window they wrap.
