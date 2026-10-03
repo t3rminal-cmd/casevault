@@ -31,6 +31,18 @@
     'capsule-pill': 'cannabis', 'cash-coin': 'money', 'bank2': 'scales', 'diagram-3-fill': 'link-nodes', 'sliders2': 'wrench',
     'shield-check': 'shield-person', 'bullseye': 'target',
     // v1.53: drawn in the same style for what the artwork didn't have
+    // v1.57: every other icon the program uses, drawn in the same style
+    'plus-lg': 'plus', 'dash-lg': 'minus', 'x-lg': 'close', 'check2': 'check', 'arrow-up': 'arrow-up', 'arrow-down': 'arrow-down',
+    'arrow-left': 'arrow-left', 'arrow-right': 'arrow-right', 'arrow-left-right': 'swap', 'arrow-repeat': 'refresh',
+    'arrows-angle-expand': 'expand', 'arrows-angle-contract': 'contract', 'box-arrow-in-down-left': 'dock', 'arrows-move': 'move',
+    'box-arrow-left': 'logout', 'building': 'building', 'person-lines-fill': 'person-search', 'person-exclamation': 'person-alert',
+    'person-circle': 'person-circle', 'clipboard2-pulse': 'clipboard-pulse', 'exclamation-triangle-fill': 'warning', 'info-circle': 'info',
+    'file-earmark': 'file-blank', 'file-earmark-music': 'file-music', 'file-earmark-play': 'file-play', 'file-earmark-spreadsheet': 'file-sheet',
+    'file-earmark-zip': 'file-zip', 'fire': 'fire', 'folder-symlink': 'folder-link', 'incognito': 'incognito', 'key': 'key',
+    'moon-stars-fill': 'moon', 'sun-fill': 'sun', 'patch-check-fill': 'verified', 'plug': 'plug', 'shield-fill': 'shield',
+    'shield-fill-check': 'shield-ok', 'shield-shaded': 'shield', 'star-fill': 'star', 'terminal': 'terminal', 'zoom-in': 'zoom-in',
+    'clock-history': 'clock', 'copy': 'files', 'card-checklist': 'list-check', 'sliders': 'wrench',
+    'police-star': 'police-star', 'laptop-shield': 'laptop-shield', 'phone-voip': 'phone-voip', 'antenna': 'antenna', 'chain-search': 'chain-search',
     'search': 'search', 'eye': 'eye', 'eye-slash': 'eye-slash', 'shield-lock-fill': 'shield-lock', 'robot': 'robot',
     'file-earmark-pdf': 'file-pdf', 'file-earmark-pdf-fill': 'file-pdf', 'file-earmark-word': 'file-word', 'file-earmark-word-fill': 'file-word',
     'clipboard2-check': 'clipboard-check', 'download': 'download', 'pencil-square': 'pencil-square', 'pencil': 'pencil', 'pencil-fill': 'pencil',

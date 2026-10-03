@@ -29,7 +29,13 @@
     { id: 'osint-blockchair', tab: 'osint', name: 'Blockchair', url: 'https://blockchair.com/', icon: 'currency-bitcoin', note: 'Blockchain explorer: look up crypto addresses and transactions.' },
     { id: 'osint-mempool', tab: 'osint', name: 'Mempool', url: 'https://mempool.space/', icon: 'currency-bitcoin', note: 'Bitcoin explorer: addresses, transactions and fees.' },
     { id: 'leo-chainalysis', tab: 'osint', name: 'Chainalysis', url: 'https://reactor.chainalysis.com/', icon: 'currency-bitcoin', note: 'Chainalysis Reactor for crypto investigations, with your account.' },
-    { id: 'osint-geotime', tab: 'osint', name: 'Geotime LIVE', url: '', icon: 'map', note: 'Add your agency\'s Geotime LIVE web address in Vault → Quick links.' }, // v1.54
+    { id: 'osint-geotime', tab: 'osint', name: 'Geotime LIVE', url: 'https://live.geotime.com/#/login', icon: 'map', note: 'Geotime LIVE: map and analyse call records and location data, with your account.' }, // v1.54, v1.57
+    // v1.57
+    { id: 'osint-zetx', tab: 'osint', name: 'ZetX', url: 'https://zetx.com/', icon: 'antenna', note: 'ZetX (TransUnion): phone carrier lookup and call-record mapping for law enforcement.' },
+    { id: 'osint-bandwidth', tab: 'osint', name: 'Bandwidth', url: 'https://www.bandwidth.com/', icon: 'phone-voip', note: 'Bandwidth: the carrier behind many app and VoIP numbers; where to send legal process for them.' },
+    { id: 'osint-textnow', tab: 'osint', name: 'TextNow', url: 'https://www.textnow.com/', icon: 'phone-voip', note: 'TextNow: free app phone numbers; check its law enforcement page for legal requests.' },
+    { id: 'osint-blockchainexplorer', tab: 'osint', name: 'Blockchain Explorer', url: 'https://www.blockchainexplorer.com/', icon: 'chain-search', note: 'Look up crypto addresses and transactions.' },
+    { id: 'osint-trm', tab: 'osint', name: 'TRM Labs', url: 'https://www.trmlabs.com/', icon: 'chain-search', note: 'TRM Labs: blockchain intelligence for crypto investigations, with your account.' },
     { id: 'osint-tineye', tab: 'osint', name: 'TinEye', url: 'https://tineye.com/', icon: 'image', note: 'Reverse image search: where else a picture appears.' },
     { id: 'osint-google', tab: 'osint', name: 'Google', url: 'https://www.google.com/', icon: 'google', note: 'Google search.' },
     { id: 'osint-google-maps', tab: 'osint', name: 'Google Maps', url: 'https://www.google.com/maps', icon: 'map', note: 'Maps, addresses and Street View.' },
@@ -40,6 +46,10 @@
     { id: 'leo-chicago-hidta', tab: 'leo', name: 'Chicago HIDTA', url: 'https://www.chicago-hidta.org/submission-form-2', icon: 'building', note: 'Chicago HIDTA submission form.', fixed: true },
     { id: 'leo-snapchat', tab: 'leo', name: 'Snapchat LE Portal', url: 'https://lawenforcement.snapchat.com/', icon: 'snapchat', note: 'Snap\'s Law Enforcement Service Portal: legal process and emergency requests, with your account.' },
     { id: 'leo-meta', tab: 'leo', name: 'Meta LE Portal', url: 'https://www.facebook.com/records/', icon: 'meta', note: 'Meta\'s Law Enforcement Online Request System (Facebook, Instagram, WhatsApp), with your account.' },
+    // v1.57
+    { id: 'leo-ilcs', tab: 'leo', name: 'Illinois Compiled Statutes', url: 'https://www.ilga.gov/Legislation/ILCS/Chapters', icon: 'bank2', note: 'The Illinois Compiled Statutes (ILCS), by chapter.' },
+    { id: 'leo-chicagocop', tab: 'leo', name: 'Chicago Cop', url: 'https://chicagocop.com/', icon: 'police-star', note: 'ChicagoCop.com: news and information for Chicago police officers.' },
+    { id: 'leo-nw3c', tab: 'leo', name: 'NW3C', url: 'https://www.nw3c.org/UI/Login.html', icon: 'laptop-shield', note: 'National White Collar Crime Center: training and investigative support, with your account.' },
     { id: 'leo-cpd-directives', tab: 'leo', name: 'Chicago Police Directives', url: 'https://directives.chicagopolice.org/', icon: 'journal-bookmark', note: 'CPD directives: general and special orders.' },
   ];
 

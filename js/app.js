@@ -136,9 +136,13 @@
       // Every box has an X at the top right that closes it without doing anything, like Esc.
       // A box with its own header row (the Vault, Options, a file) gets the X in that row, after
       // Done, as a button of the same size (v1.20); any other box has it in the corner.
-      const xBtn = h('button', { class: 'icon-btn dialog-x', type: 'button', title: 'Close', 'aria-label': 'Close (Esc)', onclick: () => close(undefined) }, I('x-lg'));
-      const head = dialogEl.querySelector('.vault-panel-head, .opt-head, .preview-head');
-      if (head) { xBtn.classList.add('in-head'); head.append(xBtn); } else dialogEl.append(xBtn);
+      // v1.57: no X when the box already has a button that closes it (Done, Close, Cancel, OK…).
+      const closer = [...dialogEl.querySelectorAll('button')].some((b) => /^(done|close|cancel|ok|back|not now|save and close|save & close)$/i.test(b.textContent.trim()));
+      if (!closer) {
+        const xBtn = h('button', { class: 'icon-btn dialog-x', type: 'button', title: 'Close', 'aria-label': 'Close (Esc)', onclick: () => close(undefined) }, I('x-lg'));
+        const head = dialogEl.querySelector('.vault-panel-head, .opt-head, .preview-head');
+        if (head) { xBtn.classList.add('in-head'); head.append(xBtn); } else dialogEl.append(xBtn);
+      }
       // The dialog's size comes from what it shows (set here, not with CSS :has(), which older
       // Firefox versions don't know and would leave file previews 620px wide and clipped).
       const kind = DIALOG_SIZES.find(([, sel]) => dialogEl.querySelector(sel));

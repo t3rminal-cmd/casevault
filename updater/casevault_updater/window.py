@@ -47,8 +47,7 @@ def hero_color(x: float, width: float) -> str:
 
 class HeroHeader:
     """v1.51: a blue band like the Overview banner in CaseVault: the title and the version in white on
-    the left, a faint shield with a padlock and rings on the right. No CaseVault logo (it's on the
-    window's title bar already)."""
+    the left. v1.57 (updater 1.2.1): nothing on the right (the shield and rings are gone)."""
 
     def __init__(self, parent: tk.Misc, title: str, sub: str, height: int = 92):
         self.c = tk.Canvas(parent, height=height, highlightthickness=0, bd=0, bg=HERO[0])
@@ -68,19 +67,8 @@ class HeroHeader:
         c.delete("all")
         for x in range(0, w, 2):
             c.create_rectangle(x, 0, x + 2, h, fill=hero_color(x, w), outline="")
-        # Rings and the shield, drawn in a lighter shade of the blue under them (Tk has no transparency).
-        cx, cy = w - 70, h - 18
-        for r in (78, 56, 34):
-            c.create_oval(cx - r, cy - r, cx + r, cy + r, outline=_mix(hero_color(cx, w), "#ffffff", 0.16), width=2)
-        face = _mix(hero_color(cx, w), "#ffffff", 0.2)
-        s = 0.62  # the shield: 64 x 76 at s = 1
-        pts = [(0, -38), (32, -26), (30, 6), (16, 28), (0, 38), (-16, 28), (-30, 6), (-32, -26)]
-        c.create_polygon([v for x, y in pts for v in (cx + x * s, cy - 18 + y * s)], fill=face, outline="", smooth=True)
-        lock = _mix(hero_color(cx, w), "#ffffff", 0.06)
-        c.create_arc(cx - 7, cy - 32, cx + 7, cy - 18, start=0, extent=180, style="arc", outline=lock, width=3)
-        c.create_rectangle(cx - 10, cy - 25, cx + 10, cy - 10, fill=lock, outline="")
         c.create_text(22, 26, text=self.title, anchor="w", fill="#ffffff", font=(FONT, 16, "bold"))
-        c.create_text(22, 56, text=self.sub, anchor="nw", fill="#dbe8ff", font=(FONT, 9), width=max(200, w - 190))
+        c.create_text(22, 56, text=self.sub, anchor="nw", fill="#dbe8ff", font=(FONT, 9), width=max(200, w - 44))
 
 class UpdaterWindow:
     def __init__(self, root: tk.Tk, settings: config.Settings, controller: Optional[Controller] = None):
