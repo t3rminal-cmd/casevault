@@ -1513,6 +1513,8 @@
 
   // Reports (v1.17) holds the case notes and every draft in one list.
   // v1.52: Link Chart, after Files.
+  // v1.64: each case tab has an icon, like the Options tabs.
+  const TAB_ICONS = { details: 'person-vcard', arrest: 'shield-exclamation', timeline: 'calendar-event', draft: 'pencil-square', reports: 'journal-bookmark', files: 'folder2-open', linkchart: 'diagram-3-fill', mail: 'envelope', checks: 'list-check' };
   const TABS = [['details', 'Details'], ['timeline', 'Timeline'], ['draft', 'Draft'], ['reports', 'Reports'], ['files', 'Files'], ['linkchart', 'Link Chart'], ['mail', 'Mail'], ['checks', 'Checks']];
   // The Arrest details tab appears once a case has arrest details, or is closed "by arrest".
   const FOLDER_ICONS = {
@@ -1546,7 +1548,7 @@
   }
   // The case notes' place in Reports (a draft's name never starts with a dot).
   const NOTES_SUB = '.notes';
-  const tabsFor = (c) => (CVClosingUI.hasArrestTab(c) ? [TABS[0], ['arrest', 'Arrest details'], ...TABS.slice(1)] : TABS);
+  const tabsFor = (c) => (CVClosingUI.hasArrestTab(c) ? [TABS[0], ['arrest', 'Arrest'], ...TABS.slice(1)] : TABS);
 
   async function showCase(id, tab, sub = null) {
     const token = ++state.renderToken;
@@ -1591,7 +1593,7 @@
         h('div', { class: 'case-subject', id: 'case-subject' }, c.subject || 'No subject yet'),
         h('div', { class: 'case-sub muted', id: 'case-sub' }, caseSubtitle(c))),
       h('nav', { class: 'tabs', role: 'tablist' }, tabs.map(([t, label]) =>
-        h('a', { href: `#/case/${encodeURIComponent(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab) }, label))),
+        h('a', { href: `#/case/${encodeURIComponent(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab), icon: TAB_ICONS[t] }, label))),
       panel));
     // Read-only: everything in the tab that could change the case is switched off, now and as
     // the tab redraws. (vault.js refuses the writes too.)

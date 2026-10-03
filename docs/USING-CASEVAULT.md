@@ -215,6 +215,10 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.64
+
+- **Case tabs look like the Options tabs:** square boxes side by side, each with its own icon (Details, Arrest, Timeline, Draft, Reports, Files, Link Chart, Mail, Checks). The open tab is white with a blue line along its top. **Arrest details** is now just **Arrest**. All nine fit on one row at 1280 pixels wide and up; on a narrow window they wrap.
+
 ### What's new in v1.63
 
 - **Quick Links footer.** On the Overview, Quick Links sit in a footer bar under the page, running from the case list to the right edge of the screen. The bar has a blue top line.
