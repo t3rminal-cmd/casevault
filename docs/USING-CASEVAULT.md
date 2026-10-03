@@ -215,6 +215,14 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.60
+
+- **Operation names on two lines:** the Operation Number on top, the name below, in the case list and in the Overview's Operations folders.
+- **Reminder border:** a case with a deadline coming up gets a thin red border in the case list, and so does its Operation, so you can find it while the Operation is folded. The bell is still there too.
+- **Incognito icon:** the privacy screen button at the top of the case list is now an incognito icon. All the icons there are the same size.
+- **A full case list** scrolls inside its own box with a thin scrollbar. The icons at the top don't move, and Closed and Archived stay at the bottom. Fold Operations you're not working on to keep it short.
+- **Sharper text:** the header no longer blurs what's behind it, and the big Ask AI window sits on whole pixels. If text still looks soft, set Options → Zoom and Brightness to 100%, the browser zoom to 100% (`Ctrl + 0`), and check Windows display scaling (Settings → System → Display).
+
 ### What's new in v1.59
 
 - **Link Chart:**
