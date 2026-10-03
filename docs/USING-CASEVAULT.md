@@ -215,6 +215,18 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.71
+
+- **Back to Top** is always there, bottom right beside Ask AI: an up caret (**^**). Click it from anywhere in a long form.
+- **Pages line up:** every page (Overview, Operations, General Files, a case, Reference) starts at the left, next to the case list, at the same width. Going from a folder to a case no longer shifts everything to the middle.
+- **OTHER FILES folders:**
+  - **USPIS Files** (US Postal Inspection Service), **DEA Files** (Drug Enforcement Administration), **INET Files** (Internet Narcotics Enforcement Team), **Training** and **Other**. Each tab shows what the folder is for.
+  - Files added to Other Files before v1.71 are under **Other**.
+  - **New Folder** makes your own folder. A folder you made can be removed with **Remove Folder** once it is empty.
+- **Overview:** Operations, General Files, Other Files and Recently Updated are matching panels. Each header has the title, a one-line description and its button in the same place.
+- **Recently Updated** is an even table (Subject, Case Number, File Number, Status, Updated) in the Quick Links' smaller, regular type.
+- **Draft:** a finished part no longer has a green bar against its checkbox. The green check on the right still shows it's complete.
+
 ### What's new in v1.70
 
 - **Overview:** the **OPERATIONS**, **GENERAL FILES** and **OTHER FILES** headings no longer have folder icons.

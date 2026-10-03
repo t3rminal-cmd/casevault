@@ -24,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.70.0';
+  const APP_VERSION = '1.71.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -1000,7 +1000,38 @@ const Vault = (() => {
    */
   const OP_FOLDERS = ['Subpoenas', 'Affidavits', 'Operation Plans', 'Maps', 'Subject Data', 'Running Vehicle List'];
   const sharedKeyOk = (key) => key === 'other' || /^op-[A-Za-z0-9_-]{1,80}$/.test(key);
-  const sharedFolderOk = (key, folder) => (key === 'other' ? !folder : OP_FOLDERS.includes(folder));
+  // v1.71: Other Files has folders: USPIS, DEA, INET, Training, and any you make; "Other" is the
+  // top of Other Files itself (where files added before v1.71 are).
+  const OTHER_FOLDERS = [
+    { name: 'USPIS Files', desc: 'US Postal Inspection Service' },
+    { name: 'DEA Files', desc: 'Drug Enforcement Administration' },
+    { name: 'INET Files', desc: 'Internet Narcotics Enforcement Team' },
+    { name: 'Training', desc: 'Training material and certificates' },
+    { name: '', label: 'Other', desc: 'Anything else' },
+  ];
+  const folderNameOk = (f) => typeof f === 'string' && f.length <= 60 && f === FS.safeName(f) && !/[\\/]/.test(f) && !f.startsWith('.');
+  const sharedFolderOk = (key, folder) => (key === 'other' ? (!folder || folderNameOk(folder)) : OP_FOLDERS.includes(folder));
+  /** The folders made in Other Files besides the built-in ones. */
+  async function otherCustomFolders() {
+    const dir = await sharedDir('other', '').catch(() => null);
+    if (!dir) return [];
+    const builtIn = new Set(OTHER_FOLDERS.map((f) => f.name.toLowerCase()));
+    return (await FS.list(dir)).filter((e) => e.kind === 'directory' && !e.name.startsWith('.') && !builtIn.has(e.name.toLowerCase())).map((e) => e.name).sort((a, b) => a.localeCompare(b));
+  }
+  /** A new folder in Other Files -> its name (cleaned). */
+  async function addOtherFolder(name) {
+    const n = FS.safeName(String(name || '').trim()).slice(0, 60).trim();
+    if (!n || !folderNameOk(n)) throw Object.assign(new Error('Give the folder a name.'), { name: 'TypeError' });
+    if (OTHER_FOLDERS.some((f) => f.name.toLowerCase() === n.toLowerCase()) || (await otherCustomFolders()).some((f) => f.toLowerCase() === n.toLowerCase())) throw Object.assign(new Error(`There is already a folder named ${n}.`), { name: 'TypeError' });
+    await sharedDir('other', n, true);
+    return n;
+  }
+  /** Removes a folder you made in Other Files; only when it is empty. */
+  async function removeOtherFolder(name) {
+    if (!folderNameOk(name) || OTHER_FOLDERS.some((f) => f.name === name)) throw Object.assign(new Error('That folder can\'t be removed.'), { name: 'TypeError' });
+    if ((await listShared('other', name)).length) throw Object.assign(new Error('Move or delete its files first.'), { name: 'TypeError' });
+    await FS.remove(await sharedDir('other', ''), name, true);
+  }
   async function sharedDir(key, folder = '', create = false) {
     if (!sharedKeyOk(key) || !sharedFolderOk(key, folder)) throw Object.assign(new Error('Unknown folder.'), { name: 'TypeError' });
     let dir = await FS.getDir(root, 'shared', create);
@@ -1519,7 +1550,7 @@ const Vault = (() => {
     createCase, getCase, saveCase, deleteCase,
     listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
     archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS,
-    OP_FOLDERS, listShared, addShared, readShared, deleteShared, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
+    OP_FOLDERS, OTHER_FOLDERS, otherCustomFolders, addOtherFolder, removeOtherFolder, listShared, addShared, readShared, deleteShared, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
     getNotes, saveNotes, listChats, readChat, saveChat, deleteChat,
     getTimeline, saveTimeline, sortEvents,
     listFiles, addFile, readFile, deleteFile, moveFile, ensureFolders, renameCaseFolder, conventionalId, RENAME_MARKER,

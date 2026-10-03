@@ -3479,7 +3479,6 @@ body .fab-dock { bottom: calc(var(--ql-dock-h, 0px) + 1.2rem); }
 .rf-done { display: inline-flex; align-items: center; justify-content: center; width: 2rem; flex-shrink: 0; visibility: hidden; }
 .rf-done.on { visibility: visible; }
 .rf-done .bi { width: 1.2rem; height: 1.2rem; color: var(--ok); }
-.rf-section.rf-complete > .rf-head { box-shadow: inset 3px 0 0 var(--ok); }
 /* v1.67: the Search Warrant / Subpoena number gets twice the room of ASA and Judge (long warrant
    numbers were cut off); the three stack one under another below 1400 px. */
 .rf-line-row.rf-row-3 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); }
@@ -3558,5 +3557,42 @@ body .fab-dock { bottom: calc(var(--ql-dock-h, 0px) + 1.2rem); }
 .op-info .op-info-value { font-size: .9rem; background: transparent; padding: .12rem 0; min-height: 1.6rem; overflow-wrap: anywhere; }
 
 /* v1.70: Back to Top, left of Ask AI; its place is kept while hidden so the others don't move. */
-.fab-dock .top-fab { visibility: hidden; opacity: 0; transition: opacity .15s; }
-.fab-dock .top-fab.on { visibility: visible; opacity: 1; }
+.fab-dock .top-fab svg.bi { width: 1.6rem; height: 1.6rem; color: var(--accent); stroke: currentColor; stroke-width: 1.2px; }
+.fab-dock .top-fab:hover svg.bi { color: var(--accent-strong, var(--accent)); }
+
+/* v1.71: every page starts at the same place, next to the case list, and has the same width:
+   nothing moves sideways when going from a folder to a case. */
+#main > section { margin-left: 0 !important; margin-right: auto !important; max-width: 1360px; }
+
+/* v1.71: Other Files / Operation Folder tabs: icon, name and count on a line, the description
+   under it; every tab the same size. */
+.shared-tabs { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(min(12.5rem, 100%), 1fr)); }
+.shared-tabs .tab { flex-direction: column; align-items: stretch; justify-content: center; gap: .15rem; min-width: 0; text-align: left; }
+.shared-tabs .tab-main { display: flex; align-items: center; gap: .4rem; min-width: 0; }
+.shared-tabs .tab-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.shared-tabs .tab-desc { font-size: .7rem; font-weight: 400; color: var(--muted); line-height: 1.25; }
+.shared-tabs .tab-new { border-style: dashed; color: var(--accent); }
+.shared-foot { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+
+/* v1.71: the Overview's sections in matching panels with matching headers. */
+.dashboard .ov-panel { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent); padding: .9rem 1.1rem 1rem; margin-top: 1rem; }
+.dashboard .ov-panel + .ov-panel, .dashboard .ov-panel ~ .dash-section { border-top-width: 1px; }
+.dashboard .ov-head { display: flex; align-items: center; gap: .8rem; min-height: 3rem; margin: 0 0 .8rem; padding-bottom: .6rem; border-bottom: 1px solid var(--border); }
+.dashboard .ov-head-text { display: grid; gap: .15rem; min-width: 0; }
+.dashboard .ov-head .section-title { margin: 0; font-size: 1.05rem; }
+.dashboard .ov-desc { font-size: .78rem; }
+.dashboard .ov-head .btn { flex: none; min-width: 9.5rem; justify-content: center; }
+.dashboard .ov-action-space { width: 9.5rem; flex: none; }
+
+/* Recently Updated: five even columns, Quick Links' size, regular weight. */
+.recent-grid { display: grid; border: 1px solid var(--border); }
+.recent-grid .recent-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1.3fr); gap: .8rem; align-items: center; padding: .45rem .8rem; font-size: .82rem; font-weight: 400; color: var(--text); text-decoration: none; border-top: 1px solid var(--border); }
+.recent-grid .recent-row:first-child { border-top: 0; }
+.recent-grid .recent-headrow { background: var(--surface-2); font-size: .7rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.recent-grid a.recent-row:hover { background: var(--accent-soft); }
+.recent-grid .recent-cell { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-grid .recent-row > :last-child { text-align: left; }
+@media (max-width: 720px) { .recent-grid .recent-row { grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr) minmax(0, 1fr); } .recent-grid .recent-row > :nth-child(3), .recent-grid .recent-row > :nth-child(5) { display: none; } }
+.shared-tabs .tab-desc { white-space: normal; overflow-wrap: anywhere; }
+.shared-tabs .tab-name { white-space: normal; }
+.dashboard .ov-head a.btn { text-decoration: none; }
