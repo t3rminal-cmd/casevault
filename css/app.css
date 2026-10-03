@@ -3596,3 +3596,9 @@ body .fab-dock { bottom: calc(var(--ql-dock-h, 0px) + 1.2rem); }
 .shared-tabs .tab-desc { white-space: normal; overflow-wrap: anywhere; }
 .shared-tabs .tab-name { white-space: normal; }
 .dashboard .ov-head a.btn { text-decoration: none; }
+
+/* v1.72: OTHER FILES as five folders (and New Folder), like Operations and General Files. */
+.shared-tiles .shared-folder-tiles { margin-bottom: .6rem; }
+.shared-tiles .shared-tile .op-title { font-size: .7rem; line-height: 1.25; white-space: normal; overflow-wrap: anywhere; }
+.shared-tiles .shared-tile-new .op-num { color: var(--accent); }
+.shared-tiles .shared-open-head { display: flex; align-items: center; gap: .6rem; margin: .2rem 0 .5rem; }
