@@ -107,9 +107,8 @@ test('click to link and unlink, arrows drawn', () => {
   const l = c.links.find((x) => x.from === 'b');
   assert.strictEqual(l.dir, 'to');
   assert.ok(LC.toSvg(c).svg.includes('marker-end="url(#lc-arrow)"'));
-  l.dir = 'from';
-  assert.ok(LC.toSvg(c).svg.includes('marker-start="url(#lc-arrow)"'));
-  l.dir = 'to';
+  // v1.62: never an arrow head at the start: a line back is its own line.
+  assert.ok(!LC.toSvg(c).svg.includes('marker-start'));
   // v1.59: the other way round adds a return line beside it; the same way again takes it away.
   assert.strictEqual(LC.toggleLink(c, 'c', 'b'), 'linked', 'a line back');
   assert.strictEqual(c.links.filter((x) => [x.from, x.to].sort().join() === 'b,c').length, 2);
@@ -207,4 +206,36 @@ test('two lines between the same cards sit side by side; right angles leave from
   const e = LC.layout(d).links[0];
   const r = LC.linkPath(e.link, e.a, e.b, 0);
   assert.ok(r.points[0][1] >= e.a.y + e.a.h - 0.5, 'below the card, not across the photo');
+});
+
+// v1.62
+test('one line per direction: old two-way arrows become two lines, old back arrows are turned round', () => {
+  const c = LC.normalize({ nodes: [{ id: 'a' }, { id: 'b' }], links: [{ id: 'x', from: 'a', to: 'b', dir: 'both', flow: 'narcotics' }, { id: 'y', from: 'a', to: 'b', dir: 'from' }] });
+  assert.deepStrictEqual(c.links.map((l) => [l.from, l.to, l.dir, l.flow]), [['a', 'b', 'to', 'narcotics'], ['b', 'a', 'to', 'money'], ['b', 'a', 'to', '']]);
+  assert.ok(!LC.DIRS.some((d) => d[0] === 'both' || d[0] === 'from'));
+  assert.ok(!LC.toSvg(c).svg.includes('marker-start'), 'never two arrow heads on one line');
+  const d = LC.normalize({ nodes: [{ id: 'a' }, { id: 'b' }] });
+  LC.toggleLink(d, 'a', 'b', 'narcotics');
+  LC.toggleLink(d, 'b', 'a');
+  assert.strictEqual(d.links[1].flow, 'money', 'the line back carries the other flow');
+});
+
+test('two lines between cards that are not level never cross', () => {
+  const cross = (p, q) => {
+    const segs = (pts) => pts.slice(1).map((pt, i) => [pts[i], pt]);
+    const hit = ([a, b], [c, d]) => {
+      const o = (p1, p2, p3) => Math.sign((p2[0] - p1[0]) * (p3[1] - p1[1]) - (p2[1] - p1[1]) * (p3[0] - p1[0]));
+      return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0;
+    };
+    return segs(p).some((s) => segs(q).some((t) => hit(s, t)));
+  };
+  for (const [bx, by] of [[400, 260], [400, -260], [-400, 260], [-400, -260], [120, 400], [-120, -400], [400, 60], [60, 400]]) {
+    const c = LC.normalize({ mode: 'free', nodes: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: bx, y: by }] });
+    LC.toggleLink(c, 'a', 'b', 'narcotics'); LC.toggleLink(c, 'b', 'a');
+    const L = LC.layout(c);
+    const [p, q] = L.links.map((e) => LC.linkPath(e.link, e.a, e.b, e.offset).points);
+    assert.ok(!cross(p, q), `cross at ${bx},${by}`);
+    const end = (pts, box) => { const [x, y] = pts[pts.length - 1]; return x >= box.x - 0.5 && x <= box.x + box.w + 0.5 && y >= box.y - 0.5 && y <= box.y + box.h + 0.5; };
+    assert.ok(end(p, L.boxes.get('b')) && end(q, L.boxes.get('a')), 'each arrow ends on its own card');
+  }
 });

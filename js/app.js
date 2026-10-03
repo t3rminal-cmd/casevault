@@ -90,6 +90,9 @@
     return { text: `in ${n} days`, cls: n <= 7 ? 'soon' : '' };
   }
 
+  // v1.62: a heading inside a popup form (a thin line with its name) and a hint box.
+  const formSect = (label, icon) => h('div', { class: 'form-sect span-2' }, icon ? I(icon) : null, h('span', {}, label));
+  const formHint = (...kids) => h('p', { class: 'form-hint span-2' }, I('info-circle'), h('span', {}, ...kids));
   const STATUS_ICONS = { Open: 'folder2-open', Pending: 'hourglass-split', Closed: 'lock-fill', Archived: 'archive' };
   const statusPill = (status) => h('span', { class: `pill status-${String(status).toLowerCase()}`, icon: STATUS_ICONS[status] }, status);
   const I = (name, opts) => CVIcons.icon(name, opts);
@@ -114,6 +117,7 @@
 
   const DIALOG_SIZES = [
     ['panel', '.vault-panel'],
+    ['form', '.op-form, .new-case-form'],
     ['full', '.preview, .doc-view, .lib-preview, .pdf-view, .word-view, .disc'],
     ['wide', '.type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
   ];
@@ -810,7 +814,21 @@
           h('span', { class: 'recent-title' }, h('span', {}, c.title || 'Untitled case'), h('span', { class: 'muted' }, [c.fileNumber && ` · File ${c.fileNumber}`, c.number && ` · Case ${c.number}`].filter(Boolean).join(''))),
           statusPill(c.status)))))
         : h('p', { class: 'muted' }, cases.length ? 'Nothing changed since you cleared this list.' : 'Create your first case with "New case".')),
-      h('div', { class: 'dash-section dash-quick' }, h('h2', { class: 'section-title' }, 'Quick links'), CVReferenceUI.quickLinks())));
+      // v1.62: Quick Links stay at the bottom of the screen; the round buttons sit above them.
+      quickDock()));
+  }
+
+  function quickDock() {
+    const dock = h('div', { class: 'dash-section dash-quick dash-quick-dock' }, h('h2', { class: 'section-title' }, 'Quick links'), CVReferenceUI.quickLinks());
+    const setH = () => {
+      if (!dock.isConnected) { document.body.style.removeProperty('--ql-dock-h'); if (ro) ro.disconnect(); return; }
+      const fixed = getComputedStyle(dock).position === 'sticky';
+      document.body.style.setProperty('--ql-dock-h', fixed ? `${Math.ceil(dock.getBoundingClientRect().height)}px` : '0px');
+    };
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(setH) : null;
+    if (ro) ro.observe(dock);
+    requestAnimationFrame(setH);
+    return dock;
   }
 
   /* =====================================================================
@@ -834,7 +852,7 @@
       const statusIn = h('select', { name: 'status' }, CVOperation.OP_STATUSES.map((x) => h('option', { selected: x === v.status }, x)));
       const startIn = h('input', { name: 'start', type: 'date', value: v.start || '' });
       const endIn = h('input', { name: 'end', type: 'date', value: v.end || '' });
-      const notesIn = h('textarea', { name: 'notes', rows: 4, maxlength: 20000 }, v.notes || '');
+      const notesIn = h('textarea', { name: 'notes', rows: 4, maxlength: 20000, 'aria-label': 'Notes' }, v.notes || '');
       const err = h('p', { class: 'error-text small span-2', role: 'alert', hidden: true });
       const form = h('form', { class: 'form-grid op-form', onsubmit: async (e) => {
         e.preventDefault();
@@ -847,13 +865,14 @@
           close(await Save.track(op ? `op:${op.id}` : 'new-op', () => (op ? Vault.updateOperation(op.id, fields) : Vault.createOperation(fields))));
         } catch (ex) { err.hidden = false; err.textContent = ex.message; }
       } },
-      h('h2', { class: 'span-2' }, op ? 'Edit Operation' : 'New Operation'),
+      h('h2', { class: 'span-2', icon: 'op-folder' }, op ? 'Edit Operation' : 'New Operation'),
+      formSect('Operation', 'op-folder'),
       field('Operation Number', numberIn, '', 'Unique: no two Operations share a number.'),
       field('Operation Name', nameIn),
-      field('Status', statusIn, 'span-2'),
-      field('Start Date', startIn),
-      field('End Date', endIn),
-      field('Notes', notesIn, 'span-2'),
+      formSect('Status and Dates', 'calendar-event'),
+      h('div', { class: 'span-2 form-row3' }, field('Status', statusIn), field('Start Date', startIn), field('End Date', endIn)),
+      formSect('Notes', 'journal-text'),
+      h('div', { class: 'span-2 field' }, notesIn),
       err,
       h('div', { class: 'dialog-actions span-2' },
         h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
@@ -1193,9 +1212,9 @@
    * which case first. */
   function quickActions() {
     const tile = (label, icon, onclick, tip) => h('button', { type: 'button', class: 'qa-tile', title: tip, onclick }, h('span', { class: 'qa-icon' }, I(icon)), h('span', { class: 'qa-label' }, label));
-    const toTab = (tab) => async () => { const c = await pickCase(tab === 'draft' ? 'Draft: Which Case?' : 'Link Chart: Which Case?'); if (c) location.hash = caseLink(c, tab); };
+    const toTab = (tab) => async () => { const c = await pickCase(tab === 'draft' ? 'Draft: Which Case?' : 'Link Chart: Which Case?', tab === 'draft' ? 'pencil-square' : 'diagram-3-fill'); if (c) location.hash = caseLink(c, tab); };
     const discovery = async () => {
-      const c = await pickCase('Discovery: Which Case?');
+      const c = await pickCase('Discovery: Which Case?', 'shield-lock-fill');
       if (!c) return;
       location.hash = caseLink(c, 'files');
       try { await CVDiscoveryUI.open(await Vault.getCase(c.id)); } catch (err) { if (FS.isDisconnectError(err)) onDriveLost(); else toast(`Could not open Discovery: ${err.message}`, 'error'); }
@@ -1212,7 +1231,7 @@
   }
 
   /** v1.61: pick a case (newest change first; type to filter). Resolves to an index entry or null. */
-  function pickCase(title) {
+  function pickCase(title, icon = 'search') {
     const list = Vault.data.cases.filter((c) => !isArchivedEntry(c)).sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
     if (!list.length) { toast('Make a case first with New Case.', 'info'); return Promise.resolve(null); }
     return openDialog((close) => {
@@ -1229,7 +1248,7 @@
       q.addEventListener('input', draw);
       q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const b = box.querySelector('button'); if (b) b.click(); } });
       draw();
-      return h('div', { class: 'pick-case' }, h('h2', {}, title), q, box,
+      return h('div', { class: 'pick-case' }, h('h2', { icon }, title), q, box,
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel')));
     });
   }
@@ -1315,7 +1334,7 @@
       const fileIn = h('input', { name: 'fileNumber', maxlength: 100, list: 'file-numbers', title: 'The investigation file. Several cases can share one file number.' });
       const agencyIn = h('input', { name: 'agencyNumber', maxlength: 100, title: 'The federal jacket number for this case.' });
       const clientIn = clientSelect('', { name: 'client' });
-      const opNote = h('p', { class: 'muted small span-2 op-note' });
+      const opNote = h('p', { class: 'form-hint span-2 op-note' });
       // Picking an Operation fills the file number, jacket number and client from its cases.
       const fillFrom = () => {
         const op = Vault.getOperation(opIn.value);
@@ -1329,7 +1348,7 @@
       };
       opIn.addEventListener('change', fillFrom);
       fillFrom();
-      const form = h('form', { class: 'form-grid', onsubmit: (e) => {
+      const form = h('form', { class: 'form-grid new-case-form', onsubmit: (e) => {
         e.preventDefault();
         if (!checkNumber()) { numberIn.focus(); return; }
         const fd = new FormData(form);
@@ -1339,19 +1358,21 @@
           status: fd.get('status'), opened: fd.get('opened'), tags: [],
         });
       } },
-      h('h2', { class: 'span-2' }, 'New case'),
+      h('h2', { class: 'span-2', icon: 'folder-plus' }, 'New case'),
+      formSect('Case', 'person-vcard'),
       field('Case Number', numberIn, '', 'Unique: no two cases, archived ones included, can share a Case Number.'),
       field('Subject Name', subjectIn, '', 'The person the case is about. Several cases can have the same subject.'),
       numberErr,
       field('Operation', opIn, 'span-2', 'Optional. The case is always kept in General Files; an Operation only links it.'),
       opNote,
+      formSect('File Details', 'folder2-open'),
       field('File Number', fileIn),
       field('Federal Jacket Number', agencyIn),
       fileList,
-      field('Client', clientIn),
-      field('Status', h('select', { name: 'status' }, Vault.STATUSES.filter((x) => x !== 'Archived').map((x) => h('option', {}, x)))),
-      field('Opened', openedIn, 'span-2'),
-      h('p', { class: 'muted small span-2' }, folderNote),
+      h('div', { class: 'span-2 form-row3' }, field('Client', clientIn),
+        field('Status', h('select', { name: 'status' }, Vault.STATUSES.filter((x) => x !== 'Archived').map((x) => h('option', {}, x)))),
+        field('Opened', openedIn)),
+      formHint(folderNote),
       h('div', { class: 'dialog-actions span-2' },
         h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
         h('button', { class: 'btn primary', type: 'submit' }, 'Create case')));

@@ -196,7 +196,7 @@
       h('nav', { class: 'ref-nav', 'aria-label': 'Reference' },
         SECTIONS.map((s) => h('a', { href: `#/reference/${s.key}`, class: `ref-pill ${sec.key === s.key ? 'active' : ''}`, 'aria-current': sec.key === s.key ? 'page' : null, icon: s.icon, title: s.blurb }, s.title))),
       body));
-    if (sec.key === 'narcotics') return body.replaceChildren(h('div', { class: 'ref-grid' }, calculator(), card(`Street value chart (${RD().NARCOTIC_SOURCE})`, 'table', valueChartEl())));
+    if (sec.key === 'narcotics') return body.replaceChildren(h('div', { class: 'ref-grid ref-narc' }, calculator(), card(`Street value chart (${RD().NARCOTIC_SOURCE})`, 'table', valueChartEl())));
     if (sec.key === 'incident') return body.replaceChildren(codeBrowser(RD().LOCATION_CODES, 'Search location codes', 'location code'));
     if (sec.key === 'ucr') return body.replaceChildren(codeBrowser(RD().UCR_CODES, 'Search UCR codes or offenses', 'UCR code'));
     if (sec.key === 'charges') {
@@ -243,21 +243,34 @@
     return card('Value calculator', 'calculator-fill',
       h('div', { class: 'calc-form' }, ui.field('Drug', drug), ui.field('Amount', amount), ui.field('Unit', unit)),
       result,
-      h('div', { class: 'row' }, h('span', { class: 'muted small' }, `${RD().NARCOTIC_SOURCE} street values. ≈ marks an estimate (gram price × 454).`), h('div', { class: 'spacer' }), copyBtn));
+      h('div', { class: 'row' }, h('span', { class: 'muted small' }, `${RD().NARCOTIC_SOURCE} street values. ≈ Estimates (gram price × 454).`), h('div', { class: 'spacer' }), copyBtn));
+  }
+
+  /** v1.62: "Cocaine (Powder)" -> Drug "Cocaine", Form "Powder". */
+  function drugCells(name) {
+    const m = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(name);
+    return [ui.h('th', { scope: 'row' }, m ? m[1] : name), ui.h('td', { class: 'vc-form-cell' }, m ? m[2] : '—')];
   }
 
   function valueChartEl() {
     const { h } = ui;
-    return h('div', { class: 'value-chart' }, K().valueChart().map((g) => h('div', { class: 'value-group' },
+    // v1.62: every category has the same columns, the same widths, so the whole chart lines up.
+    const groups = K().valueChart();
+    const units = [...new Set(groups.flatMap((g) => g.units))].sort((a, b) => groups.findIndex((g) => g.units.includes(a)) - groups.findIndex((g) => g.units.includes(b)));
+    const order = ['gram', 'pill', 'ounce', 'pound', 'kilogram'];
+    units.sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
+    return h('div', { class: 'value-chart' }, groups.map((g) => h('div', { class: 'value-group' },
       h('h3', {}, g.category),
       h('div', { class: 'table-wrap' }, h('table', { class: 'value-table' },
-        h('thead', {}, h('tr', {}, h('th', {}, 'Drug'), g.units.map((u) => h('th', { class: 'num' }, `per ${u}`)))),
-        h('tbody', {}, g.rows.map((r) => h('tr', {}, h('th', { scope: 'row' }, r.drug),
-          g.units.map((u) => {
+        // The form in brackets, e.g. (Powder), has its own column so the names line up.
+        h('colgroup', {}, h('col', { class: 'vc-drug' }), h('col', { class: 'vc-form' }), units.map(() => h('col', { class: 'vc-price' }))),
+        h('thead', {}, h('tr', {}, h('th', {}, 'Drug'), h('th', {}, 'Form'), units.map((u) => h('th', { class: 'num' }, `per ${u}`)))),
+        h('tbody', {}, g.rows.map((r) => h('tr', {}, ...drugCells(r.drug),
+          units.map((u) => {
             const cell = r.cells[u];
             if (!cell) return h('td', { class: 'num muted' }, '—');
             return h('td', { class: `num ${cell.verify ? 'verify' : ''}`, title: cell.estimate ? 'Estimate: the gram price × 454' : cell.verify ? 'This price needs verification' : null },
-              cell.estimate ? '≈ ' : '', K().money(cell.price), cell.verify ? h('span', { class: 'pill warn-pill' }, 'verify') : null);
+              h('span', { class: 'vc-price-text' }, `${cell.estimate ? '≈ ' : ''}${K().money(cell.price)}`), cell.verify ? h('span', { class: 'pill warn-pill' }, 'verify') : null);
           })))))))));
   }
 

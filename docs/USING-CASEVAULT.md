@@ -215,6 +215,17 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.62
+
+- **Quick Links stay at the bottom** of the Overview screen while you scroll. The tabs and links are on one compact bar, and the round Ask AI and Notes buttons sit just above it. If you have more links than fit in two rows, the bar scrolls. On a phone-sized window the links stay at the end of the page.
+- **Street value chart:** the form in brackets has its own **Form** column (Cocaine | Powder, Heroin | Black Tar…). Every category has the same columns at the same widths, so prices line up down the whole chart. The calculator sits above the chart.
+- The note under the calculator now reads "HIDTA 2022 street values. ≈ Estimates (gram price × 454)."
+- **Popups redesigned** (New Case, New Operation, the case picker, confirm boxes and others): a tinted title bar with an icon and a blue line, sections with a small heading (Case, File Details…), blue hint boxes, and the buttons on a bar at the bottom that stays in view while you scroll. New Case puts Client, Status and Opened on one row. The New Operation window was cut off on the right; it now fits.
+- **Link Chart: one line per direction.** Each line has one arrow. For narcotics one way and money back, use two lines: they run side by side and never cross, even when the cards aren't level. Badges and labels sit on the longest part of the line, clear of the cards.
+  - **Link Cards:** click A then B, then B then A. The line back gets the other badge on its own (Narcotics → Money).
+  - Each connection card has **Turn Around** and **Add Return Line**.
+  - Charts saved with an old **Both Ways** arrow open as two lines, and an old **Arrow From** is turned round.
+
 ### What's new in v1.61
 
 - **A smaller banner** on the Overview. The Open, Pending, Closed and Archived counts are now in the banner, so the separate row of boxes is gone.
@@ -257,7 +268,7 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Link Chart zoom and moving around:** the mouse wheel zooms in and out around the pointer; drag the empty background to move around a big chart. The − / + buttons and Fit still work.
 - **Grid:** the chart sits on small, faint olive-green squares (on screen only; the PDF is white). In **Free** layout the **Snap** button makes dragged cards land on the squares so they line up; turn it off to place cards exactly.
 - **Platforms:** **Facebook** and **Instagram** are now separate (cards saved as "Facebook / Instagram" become Facebook; change the ones that are Instagram). New: **Grindr**, **Cash App**, **Venmo**, **Zelle**, **Apple Pay**, **Coinbase** and **MoonPay**, each with its own picture. **Dark Web** is still there.
-- **Money and narcotics on a connection:** each connection has **Carries**: Nothing Shown, **Money** or **Narcotics**. Money draws a green line with a small round **$** badge; narcotics an orange line with a small round **capsule** badge. The arrow says who sends and who receives. With **Link Cards** on, pick what new links carry in the **Carries** list next to it.
+- **Money and narcotics on a connection:** each connection has **Carries**: Nothing, **Money** or **Narcotics**. Money draws a green line with a small round **$** badge; narcotics an orange line with a small round **capsule** badge. The arrow says who sends and who receives. With **Link Cards** on, pick what new links carry in the **Carries** list next to it.
 
 ### What's new in v1.57
 
@@ -282,7 +293,7 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Link Chart overhaul** (see *Link Chart* under *Files* for the details):
   - **Subject** is now **Primary** (Add Primary).
   - **Tree** or **Free** layout. In Free, drag cards anywhere. In Tree, **Move Left / Move Right** set the order and **Per Row** sets how many cards sit side by side.
-  - **Link Cards**: click a card, then another, to draw an arrow; click two linked cards to unlink them. Each connection's arrow can point either way, both ways or not at all.
+  - **Link Cards**: click a card, then another, to draw an arrow; click two linked cards to unlink them. Each connection is one line with one arrow (or none); for both ways, draw a second line back (it sits beside the first).
   - **Zoom** in and out, and **Fit**, for big organization charts. A line under the chart says how big the names will print, and when the chart is too crowded to read (up to 4 in a row print full size, up to 6 stay readable).
   - **Clear Chart** button. The Chart Title has no sample text.
   - No more cut-off words: names, aliases, web addresses and labels wrap. The form boxes and connection labels show the whole text.
@@ -639,7 +650,7 @@ The **Link Chart** tab (after Files) draws who is under whom in the case, for a 
   - **Zoom**: the mouse wheel (around the pointer), **−** and **+**, and **Fit** to see the whole chart. Drag the empty background to move around. Zoom is only for the screen; the PDF always fits the page.
   - **Snap** (Free layout): dragged cards land on the small grid squares. The grid shows on screen only.
 - **How many fit:** the line under the chart says how big the names will print. On the portrait page, up to **4 cards in a row** print full size and up to **6** stay readable; at 7 or 8 the names print under 6 pt and the line turns orange. For a big organization, use fewer per row or split it into one chart per crew (change the title and save each as its own PDF).
-- **Other Connections** lists every dashed line: **From**, **To**, **Arrow** (Arrow To →, ← Arrow From, ↔ Both Ways or No Arrow), **Carries** (Nothing Shown, Money with a $ badge, or Narcotics with a capsule badge) and a short **Label** (the same phone, money sent, met at…). **Add Connection** adds one by hand.
+- **Other Connections** lists every dashed line: **From**, **To**, **Arrow** (Arrow → or No Arrow; a line back the other way is its own line), **Carries** (Nothing, Money with a $ badge, or Narcotics with a capsule badge) and a short **Label** (the same phone, money sent, met at…). **Add Connection** adds one by hand. **Turn Around** points a line the other way; **Add Return Line** adds a second line back beside it, with the other of Money and Narcotics.
 - **Clear Chart** takes every card off (after asking). Photos stay in the case files, and a saved PDF stays in Files.
 - **PDF View** shows the chart on a letter-size portrait page with its title, the case number and subject, and the date printed; from there you can print or download it. **Save PDF to Case** saves it as `Link Charts\<case>-<title>.pdf`; saving again with the same title replaces it, a new title makes a new PDF. No agency name, seal or badge goes on the page.
 - **Back from Files:** a Link Chart PDF saved with v1.56 or later carries the chart inside it. In **Files → Link Charts**, the **Open in Link Chart** button on its row puts that chart back on the Link Chart tab to change it (CaseVault asks first if the tab already has cards).
@@ -700,7 +711,7 @@ Some agency forms are *XFA* PDFs, made with Adobe LiveCycle Designer. In Chrome,
 ### Narcotic calculator
 
 - **Value calculator:** pick the drug, type the amount and the unit (only units with a price are offered), and the street value appears. **Copy for a report** copies one line such as *Cocaine (Powder), 28 grams: approximate street value $3,500.00 (HIDTA 2022, $125.00 per gram).*
-- **Street value chart:** every drug by category, per gram, pill, ounce, pound and kilogram (HIDTA 2022). **≈** marks an estimate (the gram price × 454); **verify** marks a price that needs a current figure.
+- **Street value chart:** every drug by category, per gram, pill, ounce, pound and kilogram (HIDTA 2022). **≈** Estimates (the gram price × 454). The drug and its form (Powder, Crack, Tan…) are in separate columns, and every category has the same columns, so the whole chart lines up; **verify** marks a price that needs a current figure.
 
 ### Incident location codes and Commonly used UCR
 
