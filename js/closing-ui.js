@@ -111,7 +111,8 @@
       return el;
     };
     const fieldset = (obj, fields, onChange, cls = '') => h('div', { class: `form-grid arrest-grid${cls ? ` ${cls}` : ''}` }, fields.map((f) => ui.field(f.label, input(obj, f, onChange), f.type === 'textarea' ? 'span-2' : '')));
-    const section = (title, ...kids) => h('section', { class: 'arrest-section' }, h('h3', {}, title), ...kids);
+    // v1.59: each part starts folded, like every form (open one with its arrow; remembered).
+    const section = (title, ...kids) => { const sec = h('section', { class: 'arrest-section' }, h('h3', {}, title), ...kids); return ui.makeFoldable ? ui.makeFoldable(sec, `arrest-${title}`) : sec; };
 
     // A list of entries (narcotics, warrants, victims and complainants): a box per entry.
     const listEditor = (a, listKey, noneText, addLabel) => {

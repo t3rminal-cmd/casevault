@@ -24,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.58.0';
+  const APP_VERSION = '1.59.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -1064,6 +1064,32 @@ const Vault = (() => {
     return out.sort((a, b) => (b.at || '').localeCompare(a.at || ''));
   }
 
+  /** v1.59: the log files for a name: [{ name, month, size }], newest first. */
+  async function logFiles(name) {
+    const dir = await FS.getDir(root, 'logs');
+    if (!dir) return [];
+    const out = [];
+    for (const e of await FS.list(dir)) {
+      if (e.kind !== 'file' || !e.name.startsWith(`${name}-`) || !e.name.endsWith('.json')) continue;
+      let size = 0;
+      try { size = e.handle.meta ? e.handle.meta.size : (await e.handle.getFile()).size; } catch { /* unknown */ }
+      out.push({ name: e.name, month: e.name.slice(name.length + 1, -5), size });
+    }
+    return out.sort((x, y) => y.month.localeCompare(x.month));
+  }
+  /** v1.59: deletes a log's monthly files: all of them, or only months before `keepFrom` (YYYY-MM). -> count deleted */
+  async function deleteLogs(name, keepFrom = '') {
+    const dir = await FS.getDir(root, 'logs');
+    if (!dir) return 0;
+    let n = 0;
+    for (const f of await logFiles(name)) {
+      if (keepFrom && f.month >= keepFrom) continue;
+      await serial(`log:${f.name}`, () => FS.remove(dir, f.name));
+      n += 1;
+    }
+    return n;
+  }
+
   async function readSecret(name) {
     const dir = await FS.getDir(root, 'secrets');
     if (!dir) return null;
@@ -1197,7 +1223,7 @@ const Vault = (() => {
       const slug = e.name.replace(/\.md$/i, '');
       const f = await e.handle.getFile();
       const { meta } = CVDraft.parseDraft(await f.text());
-      out.push({ slug, title: meta.title || slug, type: meta.type || 'other', ai: !!meta.ai, fromFields: !!meta.fromFields, created: meta.created || '', updated: meta.updated || new Date(f.lastModified).toISOString(), size: f.size });
+      out.push({ slug, title: meta.title || slug, type: meta.type || 'other', ai: !!meta.ai, fromFields: !!meta.fromFields, fromLinkChart: !!meta.fromLinkChart, chartPath: meta.chartPath || '', created: meta.created || '', updated: meta.updated || new Date(f.lastModified).toISOString(), size: f.size });
     }
     return out.sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
   }
@@ -1418,7 +1444,7 @@ const Vault = (() => {
     getNotes, saveNotes, listChats, readChat, saveChat, deleteChat,
     getTimeline, saveTimeline, sortEvents,
     listFiles, addFile, readFile, deleteFile, moveFile, ensureFolders, renameCaseFolder, conventionalId, RENAME_MARKER,
-    readCaseJSON, writeCaseJSON, saveDiscoveryFile, readDiscoveryFile, appendLog, readLogs, readSecret, writeSecret,
+    readCaseJSON, writeCaseJSON, saveDiscoveryFile, readDiscoveryFile, appendLog, readLogs, logFiles, deleteLogs, readSecret, writeSecret,
     listChecks, newCheckName, readCheck, saveCheck, deleteCheck, readTextCache, writeTextCache,
     listDrafts, readDraft, newDraftSlug, saveDraft, deleteDraft,
     listTemplates, readTemplate, saveTemplate, deleteTemplate, addStarterTemplates, purgeAll,

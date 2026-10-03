@@ -15,7 +15,13 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.58)
+## Features (v1.59)
+
+- Link Chart: lines turn at right angles and leave from a card's side, top or bottom (not across photos); two lines between the same two cards sit one above the other (narcotics one way, money back); Link Cards the other way round adds the return line; each connection is a folded card with an eye to show or hide its line; Save PDF to Case puts the chart in Files and under Reports, and Send Back to Link Chart (from Reports or Files) brings it back to change
+- Every form starts minimized (Case Overview, Draft, Arrest details, Vault); the parts you open are remembered
+- Discovery: step-by-step directions to burn a CD or DVD in Windows
+- Checks tab redesigned; Ask AI suggestions in four same-size boxes
+- Vault → Outbound Log: see its size and delete older months or all of it
 
 - Link Chart: the mouse wheel zooms around the pointer and dragging the background moves around; the chart sits on small faint olive-green grid squares, with a Snap switch for Free layout
 - Link Chart platforms: Facebook and Instagram separately, plus Grindr, Cash App, Venmo, Zelle, Apple Pay, Coinbase and MoonPay, each with its own picture (Dark Web as before)

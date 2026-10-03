@@ -120,7 +120,7 @@
         const tr = h('tr', { 'data-slug': d.slug, draggable: archived ? null : 'true' },
           archived ? null : h('td', { class: 'grip-cell' }, grip),
           h('td', { class: 'report-name' }, h('button', { 'data-ro-ok': 'true', class: 'linkish report-open', type: 'button', onclick: () => viewReport(c, d) },
-            h('span', { class: 'report-icon', 'aria-hidden': 'true' }, I(d.fromFields ? 'clipboard2-check' : 'file-earmark-text')), h('span', { class: 'report-title' }, shortTitle(d)))),
+            h('span', { class: 'report-icon', 'aria-hidden': 'true' }, I(d.fromLinkChart ? 'diagram-3-fill' : d.fromFields ? 'clipboard2-check' : 'file-earmark-text')), h('span', { class: 'report-title' }, shortTitle(d)))),
           h('td', {}, h('span', { class: 'type-tag' }, (CVDraft.DOC_TYPES[d.type] || CVDraft.DOC_TYPES.other).label)),
           h('td', { class: 'ai-col' }, d.ai ? h('span', { class: 'layer-badge ai-badge' }, I('robot'), 'AI') : h('span', { class: 'muted', 'aria-label': 'No' }, '—')),
           h('td', { class: 'actions' },
@@ -128,7 +128,10 @@
             archived ? null : h('button', { class: 'icon-btn', type: 'button', title: 'Send to Files', onclick: async () => {
               try { const path = await saveReportToFiles(c, d); toast(`Saved to Files: ${path.split('/').pop()}`, 'success', 5000); } catch (err) { if (!FS.isDisconnectError(err) && err.name === 'NotFoundError') toast(`Could not save ${d.title}: ${err.message}`, 'error'); }
             } }, I('folder-plus'), h('span', { class: 'sr-only' }, `Send ${d.title} to Files`)),
-            archived ? null : fromDraft(d) ? sendBackBtn(d)
+            archived ? null : d.fromLinkChart ? h('button', { class: 'icon-btn', type: 'button', title: 'Send Back to Link Chart to change it', onclick: async () => {
+              if (await root.CVLinkChartUI.openFromFile(c, d.chartPath)) go(c.id, 'linkchart');
+            } }, I('diagram-3-fill'), h('span', { class: 'sr-only' }, `Send ${d.title} back to the Link Chart tab`))
+              : fromDraft(d) ? sendBackBtn(d)
               : h('a', { class: 'icon-btn', href: `#/case/${encodeURIComponent(c.id)}/reports/${encodeURIComponent(d.slug)}`, title: 'Edit (a report made with New Report)' }, I('pencil-square'), h('span', { class: 'sr-only' }, `Edit ${d.title}`)),
             archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: `Delete ${d.title}`, onclick: async () => {
               if (!(await confirmDialog({ title: `Delete "${d.title}"?`, message: 'The report is permanently deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
@@ -209,6 +212,11 @@
   async function reportPdfBytes(c, d) {
     const RFU = root.CVReportFieldsUI;
     let bytes = d.fromFields && RFU ? await RFU.sentPdf(c, d.slug) : null;
+    // v1.59: a Link Chart's report shows the chart's own PDF from Files.
+    if (!bytes && d.fromLinkChart && d.chartPath) {
+      const f = await Vault.readFile(c.id, d.chartPath).catch(() => null);
+      if (f) bytes = new Uint8Array(await f.arrayBuffer());
+    }
     if (!bytes) {
       const r = await Vault.readDraft(c.id, d.slug);
       if (!r) throw Object.assign(new Error('the report is not on the SSD'), { name: 'NotFoundError' });
@@ -222,6 +230,7 @@
     const b = bytes || await reportPdfBytes(c, d);
     const RFU = root.CVReportFieldsUI;
     if (d.fromFields && RFU) return (await RFU.savePdfToCase(c, null, b, d.title)).path;
+    if (d.fromLinkChart) return ui.Save.track(`draft-pdf:${c.id}`, () => Vault.addFile(c.id, new File([b], (d.chartPath || '').split('/').pop() || `${FS.safeName(d.title || 'Link Chart')}.pdf`, { type: 'application/pdf' }), { folder: 'Link Charts', description: d.title, replace: true }));
     const what = `${d.type} ${d.title}`;
     const folder = /supplement/i.test(what) ? 'Supplementary Report' : /arrest/i.test(what) ? 'Arrest Report' : 'Case Report';
     const name = `${FS.safeName(d.title || 'Report')}.pdf`;
@@ -251,7 +260,10 @@
         h('h2', {}, d.title),
         h('span', { class: 'muted small', title: 'Reports are view only' }, I('lock-fill'), ' View only'),
         h('div', { class: 'spacer' }),
-        archived ? null : d.fromFields && RFU
+        archived ? null : d.fromLinkChart ? h('button', { class: 'btn primary', type: 'button', icon: 'diagram-3-fill', title: 'Put this chart back on the Link Chart tab to change it. Save PDF to Case there updates it here and in Files.', onclick: async () => {
+          if (await root.CVLinkChartUI.openFromFile(c, d.chartPath)) { close(); go(c.id, 'linkchart'); }
+        } }, 'Send Back to Link Chart')
+          : d.fromFields && RFU
           ? h('button', { class: 'btn primary', type: 'button', icon: 'arrow-counterclockwise', title: 'Put this report back on the Draft tab to correct it. Send Draft to Reports then updates it.', onclick: async () => {
             try { if (await RFU.sendBack(c, d.slug)) { close(); go(c.id, 'draft'); } } catch { /* reported */ }
           } }, 'Send Back to Draft')

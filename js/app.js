@@ -1378,7 +1378,7 @@
    * screen preference of this PC (localStorage), never case data. */
   const FOLD_STORE = 'casevault-folded-sections';
   const foldedSet = () => { try { return new Set(JSON.parse(localStorage.getItem(FOLD_STORE) || '[]')); } catch { return new Set(); } };
-  function makeFoldable(section, key, { open: startOpen = true } = {}) {
+  function makeFoldable(section, key, { open: startOpen = false } = {}) { // v1.59: every form starts folded
     const head = section.querySelector(':scope > h3');
     if (!head || section.querySelector(':scope > .fold-body')) return section;
     const body = h('div', { class: 'fold-body' });
@@ -1398,6 +1398,8 @@
       btn.title = label; btn.setAttribute('aria-expanded', String(!folded));
       btn.replaceChildren(I(folded ? 'chevron-right' : 'chevron-down'), h('span', { class: 'sr-only' }, label));
     };
+    // Open it from outside (the Vault's list on the left).
+    section.cvUnfold = () => { if (folded) btn.click(); };
     btn.addEventListener('click', () => {
       folded = !folded;
       const st = foldedSet();
@@ -2895,7 +2897,7 @@
       const scroller = h('div', { class: 'vault-content' });
       // Scroll only the sections' own box. scrollIntoView would also scroll the panel itself,
       // which pushed the Done button off the top.
-      const scrollToSection = (sec, smooth = false) => scroller.scrollTo({ top: sec.offsetTop - 8, behavior: smooth ? 'smooth' : 'auto' });
+      const scrollToSection = (sec, smooth = false) => (sec.cvUnfold && sec.cvUnfold(), scroller.scrollTo({ top: sec.offsetTop - 8, behavior: smooth ? 'smooth' : 'auto' }));
       const nav = h('nav', { class: 'vault-nav', 'aria-label': 'Vault settings' });
       sections.forEach((sec, i) => {
         const key = sec.dataset.section || `s${i}`;
@@ -3254,7 +3256,7 @@
   }
 
   // Small toolkit shared with the consistency checker screen (js/checker/checks-ui.js).
-  window.CaseVaultUI = { h, icon: I, $, toast, openDialog, confirmDialog, field, fmtDate, fmtDateTime, fmtSize, Save, state, go, refresh: () => route(), previewFile, onDriveLost, showVaultPanel };
+  window.CaseVaultUI = { h, icon: I, $, toast, openDialog, confirmDialog, field, fmtDate, fmtDateTime, fmtSize, Save, state, go, refresh: () => route(), previewFile, onDriveLost, showVaultPanel, makeFoldable };
   CVChecks.init(window.CaseVaultUI);
   CVOutbound.init(window.CaseVaultUI);
   CVOutbound.onChange(renderNetStatus);

@@ -340,15 +340,18 @@
     const reportList = h('div', { class: 'check-reports' });
     const aiToggle = h('input', { type: 'checkbox' });
     const aiLine = h('span', { class: 'muted small' });
-    const runBtn = h('button', { class: 'btn primary', type: 'button' }, 'Run check');
+    const runBtn = h('button', { class: 'btn primary', type: 'button', icon: 'clipboard2-check' }, 'Run check');
+    // v1.59: a header like the other boxes: an icon tile, the title and a line under it.
+    const head = (ic, title, sub) => h('div', { class: 'chk-head' }, h('span', { class: 'chk-head-icon', 'aria-hidden': 'true' }, ui.icon(ic)),
+      h('div', {}, h('h2', {}, title), sub ? h('p', { class: 'muted small' }, sub) : null));
 
     function drawReports() {
       const aff = affSelect.value;
       const prev = new Map([...reportList.querySelectorAll('input')].map((i) => [i.value, i.checked]));
       reportList.replaceChildren(...files.filter((f) => f.name !== aff).map((f) =>
-        h('label', { class: 'check-row' },
+        h('label', { class: 'check-row chk-doc', title: f.name },
           h('input', { type: 'checkbox', value: f.name, checked: prev.has(f.name) ? prev.get(f.name) : true }),
-          h('span', {}, f.name))));
+          h('span', {}, f.name.split('/').pop(), f.name.includes('/') ? h('span', { class: 'muted small block' }, f.name.split('/').slice(0, -1).join(' › ')) : null))));
       if (!reportList.children.length) reportList.append(h('p', { class: 'muted small' }, 'No other documents are attached.'));
       updateAiLine();
     }
@@ -381,14 +384,15 @@
     });
 
     const form = files.length
-      ? h('div', { class: 'card' },
-        h('h2', {}, 'New check'),
-        h('label', { class: 'field', title: 'An affidavit or a draft.' }, h('span', {}, 'Document to check'), affSelect),
-        h('div', { class: 'field' }, h('span', {}, 'Compare against'), reportList),
-        h('label', { class: 'check-row' }, aiToggle, h('span', {}, 'Include AI review', aiLine)),
-        h('p', { class: 'muted small explain' }, 'The rule-based checks (dates, times, names, numbers, addresses, plates, phone numbers, amounts, counts) always run. Reports are also cross-checked against each other.'),
-        h('div', { class: 'form-actions' }, runBtn))
-      : h('div', { class: 'card' }, h('h2', {}, 'New check'),
+      ? h('div', { class: 'card chk-card' },
+        head('clipboard2-check', 'New Check', 'Compares an affidavit or draft with the reports: dates, times, names, numbers, addresses, plates, phones, amounts and counts. Reports are cross-checked too.'),
+        h('div', { class: 'chk-grid' },
+          h('div', { class: 'chk-col' },
+            h('label', { class: 'field', title: 'An affidavit or a draft.' }, h('span', {}, 'Document to check'), affSelect),
+            h('label', { class: 'check-row chk-ai' }, aiToggle, h('span', {}, h('strong', {}, 'Include AI review'), aiLine))),
+          h('div', { class: 'chk-col' }, h('div', { class: 'field' }, h('span', {}, 'Compare against'), reportList))),
+        h('div', { class: 'chk-actions' }, h('span', { class: 'muted small' }, 'Nothing leaves this PC.'), h('div', { class: 'spacer' }), runBtn))
+      : h('div', { class: 'card chk-card' }, head('clipboard2-check', 'New Check', ''),
         h('p', { class: 'muted' }, 'Attach the affidavit and the reports on the Files tab first. PDF, DOCX, TXT and photos (PNG/JPG) can be checked.'));
 
     // ---- past checks
@@ -406,7 +410,7 @@
     // An archived case is read-only: its past checks can be opened, but no new ones run.
     const archived = Vault.isArchived(c.id);
     panel.replaceChildren(banner(), archived ? h('p', { class: 'muted' }, 'This case is archived. Past checks can be opened and read; restore the case to run a new one.') : form,
-      h('h2', { class: 'section-title' }, 'Past checks'), past);
+      h('div', { class: 'card chk-card chk-past' }, head('clock-history', 'Past Checks', checks.length ? `${checks.length} check${checks.length === 1 ? '' : 's'} on this case. Click one to open it.` : ''), past));
   }
 
   /* =====================================================================

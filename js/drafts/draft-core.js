@@ -15,6 +15,10 @@
   const CONFIRM_RE = /\[CONFIRM:\s*([^\]\n]*)\]/g;
 
   const DOC_TYPES = {
+    linkchart: { // v1.59: a Link Chart saved to the case (its PDF is in Files → Link Charts)
+      label: 'Link Chart',
+      guide: 'A link chart of the people in the case and how they connect.',
+    },
     summary: {
       label: 'Case Summary',
       guide: 'A case summary: an overview paragraph, the parties involved, a dated chronology of key events, the evidence and documents, and open questions.',

@@ -111,6 +111,28 @@
   function logSection() {
     const { h, fmtDateTime } = ui;
     const box = h('div', {}, h('p', { class: 'muted small' }, 'Loading…'));
+    // v1.59: how much the log takes on the SSD, and deleting it.
+    const sizeLine = h('p', { class: 'small log-size' });
+    const del = async (keepFrom) => {
+      const files = await V().logFiles('outbound');
+      const doomed = files.filter((f) => !keepFrom || f.month < keepFrom);
+      if (!doomed.length) { ui.toast('Nothing to delete.', 'info'); return; }
+      const ok = await ui.confirmDialog({ title: keepFrom ? 'Delete Older Outbound Logs?' : 'Delete the Whole Outbound Log?', danger: true, confirmText: 'Delete',
+        message: `${doomed.length} month${doomed.length === 1 ? '' : 's'} of the log (${ui.fmtSize(doomed.reduce((n, f) => n + f.size, 0))}) will be deleted from the SSD. The log is your record of what left this computer; check your agency's rules before deleting it. There is no undo.` });
+      if (!ok) { ui.showVaultPanel('log'); return; }
+      try { const n = await V().deleteLogs('outbound', keepFrom); ui.toast(`${n} month${n === 1 ? '' : 's'} of the outbound log deleted.`, 'success'); } catch (err) { ui.toast(`Could not delete: ${err.message}`, 'error'); }
+      ui.showVaultPanel('log');
+    };
+    V().logFiles('outbound').then((files) => {
+      const bytes = files.reduce((n, f) => n + f.size, 0);
+      sizeLine.replaceChildren(files.length
+        ? `${files.length} month${files.length === 1 ? '' : 's'} on the SSD, ${ui.fmtSize(bytes)} in all (oldest ${files[files.length - 1].month}). Each month is usually only a few KB, so deleting frees very little space.`
+        : 'The log is empty.');
+    }).catch(() => sizeLine.replaceChildren(''));
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    const actions = h('div', { class: 'row log-actions' }, h('div', { class: 'spacer' }),
+      h('button', { class: 'btn small', type: 'button', icon: 'trash3', title: 'Delete every month before this one; keep this month.', onclick: () => del(thisMonth) }, 'Delete Older Months'),
+      h('button', { class: 'btn small danger', type: 'button', icon: 'trash3', title: 'Delete the whole outbound log from the SSD.', onclick: () => del('') }, 'Delete All'));
     V().readLogs('outbound', 2).then((entries) => {
       const rows = entries.filter((e) => e.channel !== 'session').slice(0, 40);
       box.replaceChildren(rows.length
@@ -127,7 +149,7 @@
     return h('section', { 'data-section': 'log' },
       h('h3', {}, 'Outbound log'),
       h('p', { class: 'muted small explain' }, 'Every online AI request and mail hand-off, saved in CaseVault-Data\\logs on the SSD. It records where, when and what kind of details were found, never the text itself.'),
-      box);
+      box, sizeLine, actions);
   }
 
   function init(kit) { ui = kit; }

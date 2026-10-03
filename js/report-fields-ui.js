@@ -459,9 +459,11 @@
     // then folded away and left out of the PDF and the report.
     // v1.25: a fold button on the right (▾/▸) only folds the part away on screen, to keep the page
     // short; it stays in the PDF. Remembered in this browser for every case.
-    const FOLD_KEY = 'casevault-rf-folded';
-    const folded = new Set((() => { try { return JSON.parse(localStorage.getItem(FOLD_KEY) || '[]'); } catch { return []; } })());
-    const keepFolds = () => { try { localStorage.setItem(FOLD_KEY, JSON.stringify([...folded])); } catch { /* this session only */ } };
+    // v1.59: every part starts folded; the parts you open are remembered (in this browser).
+    const OPEN_KEY = 'casevault-rf-open';
+    const opened = new Set((() => { try { return JSON.parse(localStorage.getItem(OPEN_KEY) || '[]'); } catch { return []; } })());
+    const keepFolds = () => { try { localStorage.setItem(OPEN_KEY, JSON.stringify([...opened])); } catch { /* this session only */ } };
+    const folded = { has: (id) => !opened.has(id), add: (id) => opened.delete(id), delete: (id) => opened.add(id) };
     const foldButtons = [];
     function part(id, title, icon, ...body) {
       const on = !F().isHidden(data, id);
