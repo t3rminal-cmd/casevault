@@ -791,11 +791,10 @@
     const opBox = h('div', { class: 'dash-section op-open-section', hidden: true });
 
     $('#main').replaceChildren(h('section', { class: 'dashboard' },
-      welcomeHero(cases, deadlines),
-      h('div', { class: 'stats' },
-        ...Vault.STATUSES.map((s) => h('div', { class: `stat stat-${s.toLowerCase()}` },
-          h('span', { class: 'stat-icon' }, I(STATUS_ICONS[s])),
-          h('div', {}, h('div', { class: 'stat-num' }, count(s)), h('div', { class: 'stat-label' }, s))))),
+      // v1.61: a smaller banner with the status counts in it, then quick actions and what needs you.
+      welcomeHero(cases, deadlines, count),
+      quickActions(),
+      needsAttention(deadlines),
       operationFolders(cases, tlBox, opBox),
       tlBox,
       // v1.42: no Upcoming Deadlines (the banner shows what's due); the open operation's case
@@ -1161,14 +1160,13 @@
 
   /* The landing page's welcome banner (v1.21): a greeting, the date and time, what needs you
    * today, and one-click actions. */
-  function welcomeHero(cases, deadlines) {
+  function welcomeHero(cases, deadlines, count) {
     const who = ((Vault.data.settings.affiant || {}).name || '').trim();
     const hour = new Date().getHours();
     const greet = hour < 5 ? 'Working Late' : hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
-    const open = cases.filter((c) => c.status === 'Open').length;
-    const soon = deadlines.filter((c) => ['overdue', 'soon', 'today'].includes(dueLabel(c.nextDeadline.date).cls)).length;
+    const soon = deadlines.filter((c) => ['overdue', 'soon'].includes(dueLabel(c.nextDeadline.date).cls)).length;
     const clock = h('div', { class: 'hero-clock', 'aria-hidden': 'true' });
-    const dateLine = h('div', { class: 'hero-date' });
+    const dateLine = h('span', { class: 'hero-date' });
     const tick = () => {
       if (!clock.isConnected && clock.dataset.started) return false;
       const d = new Date();
@@ -1179,24 +1177,81 @@
     tick();
     clock.dataset.started = '1';
     const timer = setInterval(() => { if (!tick()) clearInterval(timer); }, 15000);
-    const summary = [
-      `${open} open case${open === 1 ? '' : 's'}`,
-      soon ? `${soon} deadline${soon === 1 ? '' : 's'} due soon` : 'No deadlines due this week',
-    ].join(' · ');
-    const action = (label, icon, onclick, primary) => h('button', { class: `btn ${primary ? 'primary' : 'hero-btn'}`, type: 'button', icon, onclick }, label);
-    return h('div', { class: 'hero' },
+    // v1.61: the status counts sit in the banner (no separate row of boxes).
+    const counts = h('div', { class: 'hero-counts' }, Vault.STATUSES.map((st) => h('span', { class: `hero-count hc-${st.toLowerCase()}`, title: `${count(st)} ${st} case${count(st) === 1 ? '' : 's'}` },
+      I(STATUS_ICONS[st]), h('strong', {}, String(count(st))), h('span', {}, st))));
+    return h('div', { class: 'hero hero-compact' },
       h('div', { class: 'hero-art', 'aria-hidden': 'true' }, h('span', { class: 'hero-ring r1' }), h('span', { class: 'hero-ring r2' }), h('span', { class: 'hero-ring r3' }), I('shield-lock-fill')),
       h('div', { class: 'hero-text' },
-        dateLine,
-        h('h1', { class: 'hero-title' }, `${greet}${who ? `, ${who.split(/\s+/)[0]}` : ''}`),
-        h('p', { class: 'hero-sub' }, summary),
-        h('div', { class: 'hero-actions' },
-          action('New Case', 'plus-lg', () => newCase(), true),
-          action('Ask AI', 'chat-dots-fill', () => { const b = document.getElementById('btn-chat'); if (b) b.click(); }),
-          action('Reference', 'book', () => { location.hash = '#/reference'; }),
-          action('Library', 'bookshelf', () => showVaultPanel('library')),
-          action('Vault', 'safe2', () => showVaultPanel()))),
+        h('div', { class: 'hero-line' }, h('h1', { class: 'hero-title' }, `${greet}${who ? `, ${who.split(/\s+/)[0]}` : ''}`), dateLine),
+        h('p', { class: 'hero-sub' }, soon ? `${soon} deadline${soon === 1 ? '' : 's'} due within a week` : 'No deadlines due this week'),
+        counts),
       clock);
+  }
+
+  /* v1.61: one row of same-size actions under the banner. Draft, Discovery and Link Chart ask
+   * which case first. */
+  function quickActions() {
+    const tile = (label, icon, onclick, tip) => h('button', { type: 'button', class: 'qa-tile', title: tip, onclick }, h('span', { class: 'qa-icon' }, I(icon)), h('span', { class: 'qa-label' }, label));
+    const toTab = (tab) => async () => { const c = await pickCase(tab === 'draft' ? 'Draft: Which Case?' : 'Link Chart: Which Case?'); if (c) location.hash = caseLink(c, tab); };
+    const discovery = async () => {
+      const c = await pickCase('Discovery: Which Case?');
+      if (!c) return;
+      location.hash = caseLink(c, 'files');
+      try { await CVDiscoveryUI.open(await Vault.getCase(c.id)); } catch (err) { if (FS.isDisconnectError(err)) onDriveLost(); else toast(`Could not open Discovery: ${err.message}`, 'error'); }
+    };
+    return h('div', { class: 'quick-actions', role: 'toolbar', 'aria-label': 'Quick actions' },
+      tile('New Case', 'plus-lg', () => newCase(), 'Make a new case'),
+      tile('Draft', 'pencil-square', toTab('draft'), 'Open the Draft tab of a case'),
+      tile('Discovery', 'shield-lock-fill', discovery, 'Make a discovery package for a case'),
+      tile('Link Chart', 'diagram-3-fill', toTab('linkchart'), 'Open the Link Chart of a case'),
+      tile('Ask AI', 'chat-dots-fill', () => { const b = document.getElementById('btn-chat'); if (b) b.click(); }, 'Open the Ask AI window'),
+      tile('Reference', 'book', () => { location.hash = '#/reference'; }, 'Charts, codes and calculators'),
+      tile('Library', 'bookshelf', () => showVaultPanel('library'), 'Examples and directives for the AI'),
+      tile('Vault', 'safe2', () => showVaultPanel(), 'Vault settings, profile and logs'));
+  }
+
+  /** v1.61: pick a case (newest change first; type to filter). Resolves to an index entry or null. */
+  function pickCase(title) {
+    const list = Vault.data.cases.filter((c) => !isArchivedEntry(c)).sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
+    if (!list.length) { toast('Make a case first with New Case.', 'info'); return Promise.resolve(null); }
+    return openDialog((close) => {
+      const q = h('input', { type: 'search', placeholder: 'Case number, subject or Operation', 'aria-label': 'Find a case', autofocus: true, autocomplete: 'off' });
+      const box = h('div', { class: 'pick-case-list', role: 'list' });
+      const draw = () => {
+        const t = q.value.trim().toLowerCase();
+        const hits = list.filter((c) => !t || [c.number, c.subject, c.title, opOf(c) ? opLabel(opOf(c)) : 'General Files'].join(' ').toLowerCase().includes(t)).slice(0, 60);
+        box.replaceChildren(...(hits.length ? hits.map((c) => h('button', { type: 'button', role: 'listitem', class: 'pick-case-row', onclick: () => close(c) },
+          h('strong', {}, c.number || 'No case number'), h('span', { class: 'pick-case-sub' }, c.subject || c.title || ''),
+          h('span', { class: 'muted small pick-case-op' }, opOf(c) ? (opOf(c).number || opOf(c).name) : 'General Files'), statusPill(c.status)))
+          : [h('p', { class: 'muted' }, 'No case matches.')]));
+      };
+      q.addEventListener('input', draw);
+      q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const b = box.querySelector('button'); if (b) b.click(); } });
+      draw();
+      return h('div', { class: 'pick-case' }, h('h2', {}, title), q, box,
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel')));
+    });
+  }
+
+  /** v1.61: Needs Attention: deadlines overdue or due within a week, soonest first. */
+  function needsAttention(deadlines) {
+    const due = deadlines.filter((c) => daysUntil(c.nextDeadline.date) <= 7);
+    const head = h('div', { class: 'section-head' }, h('h2', { class: 'section-title' }, I('bell-fill'), ' Needs Attention'), h('div', { class: 'spacer' }),
+      h('span', { class: 'muted small' }, due.length ? `${due.length} deadline${due.length === 1 ? '' : 's'} within a week` : ''));
+    if (!due.length) return h('div', { class: 'dash-section attention-section' }, head, h('p', { class: 'muted attention-none' }, 'Nothing due in the next 7 days.'));
+    return h('div', { class: 'dash-section attention-section' }, head,
+      h('div', { class: 'attention-list', role: 'list' }, due.slice(0, 8).map((c) => {
+        const d = c.nextDeadline;
+        const n = daysUntil(d.date);
+        const lab = dueLabel(d.date);
+        return h('a', { role: 'listitem', class: `attention-row ${n < 0 ? 'att-overdue' : n <= 1 ? 'att-now' : 'att-soon'}`, href: caseLink(c, 'timeline'), title: 'Open the Timeline of this case' },
+          h('span', { class: 'att-case' }, h('strong', {}, c.number || 'No case number'), h('span', { class: 'muted small' }, c.subject || '')),
+          h('span', { class: 'att-what' }, d.title || 'Deadline'),
+          h('span', { class: 'att-when' }, fmtDate(d.date), d.time ? ` ${d.time}` : ''),
+          h('span', { class: 'att-due' }, lab.text));
+      })),
+      due.length > 8 ? h('p', { class: 'muted small' }, `And ${due.length - 8} more. Each case shows a red border in the case list.`) : null);
   }
 
   /* =====================================================================
