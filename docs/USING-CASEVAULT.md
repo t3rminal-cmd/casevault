@@ -215,6 +215,16 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.63
+
+- **Quick Links footer.** On the Overview, Quick Links sit in a footer bar under the page, running from the case list to the right edge of the screen. The bar has a blue top line.
+  - The top row holds **Quick Links**, the Reference / OSINT / LEO tabs and **Arrange**. On the OSINT and LEO tabs, a small **Outside Sites** sign carries the warning about outside websites (point at it to read it).
+  - The links are in **five equal columns**. Two rows show at a time; if a tab has more links, scroll inside the footer.
+  - **Charges** has its **Federal** and **State** buttons inside it.
+  - **Arrange** opens the footer up. Each link gets ‹ (move left), the eye (show or hide) and › (move right) underneath it, and you can still drag links.
+  - The round Ask AI and Notes buttons sit just above the footer.
+  - The footer shows only on the Overview. On a narrow window the links use three columns, and on a phone two.
+
 ### What's new in v1.62
 
 - **Quick Links stay at the bottom** of the Overview screen while you scroll. The tabs and links are on one compact bar, and the round Ask AI and Notes buttons sit just above it. If you have more links than fit in two rows, the bar scrolls. On a phone-sized window the links stay at the end of the page.

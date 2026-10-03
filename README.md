@@ -15,7 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.62)
+## Features (v1.63)
+
+- Quick Links are a footer on the Overview: a bar under the page from the case list to the right edge of the screen, with the tabs on top and the links in five equal columns (two rows show; more scroll); Charges shows its Federal and State choices in the button
 
 - Quick Links pinned at the bottom of the Overview; street value chart with its own Form column and the same columns for every category; popups redesigned (title bar, sections, hints, buttons that stay in view)
 - Link Chart: one line per direction, never two arrow heads on one line; two lines between the same cards run side by side without crossing (narcotics one way, money back); Turn Around and Add Return Line; old two-way arrows become two lines
