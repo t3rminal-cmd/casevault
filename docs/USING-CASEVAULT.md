@@ -215,6 +215,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.66
+
+- **Quick Links footer:** on the left, the **Quick Links** name with the **Reference**, **OSINT** and **LEO** buttons stacked under it, then the Outside Sites sign and **Arrange**. The links fill the rest of the footer.
+- **Charges** in the footer is one button again. Click it and it turns into **Federal** and **State**; click one to open those statutes. Click anywhere else or press Esc to put it back.
+- **One place for reminders:** the "deadlines due" line is gone from the blue banner, and so is the count beside **Needs Attention**. The Needs Attention list shows them all.
+- The due labels in Needs Attention are in Title Case: **Due Today**, **Due Tomorrow**, **In 3 Days**, **2 Days Overdue**.
+
 ### What's new in v1.65
 
 - **Quick Links footer, taller:** four rows of links instead of two, so all the OSINT links show without scrolling (five columns). The footer keeps the same height when you switch between Reference, OSINT and LEO, so the page doesn't jump. If a tab ever holds more than 20 links, scroll inside the footer.

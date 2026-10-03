@@ -15,7 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.65)
+## Features (v1.66)
+
+- Quick Links footer: Reference / OSINT / LEO stacked under the Quick Links name on the left; Charges is one button that shows Federal and State when clicked
+- Overview: the deadline reminder is gone from the banner and from beside Needs Attention; due labels in Title Case (Due Today, Due Tomorrow, In 3 Days, 2 Days Overdue)
 
 - Quick Links footer is a little taller: four rows of links, so every OSINT link shows at once; the same height on every tab
 

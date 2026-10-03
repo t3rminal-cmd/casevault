@@ -1188,7 +1188,6 @@
     const who = ((Vault.data.settings.affiant || {}).name || '').trim();
     const hour = new Date().getHours();
     const greet = hour < 5 ? 'Working Late' : hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
-    const soon = deadlines.filter((c) => ['overdue', 'soon'].includes(dueLabel(c.nextDeadline.date).cls)).length;
     const clock = h('div', { class: 'hero-clock', 'aria-hidden': 'true' });
     const dateLine = h('span', { class: 'hero-date' });
     const tick = () => {
@@ -1208,7 +1207,6 @@
       h('div', { class: 'hero-art', 'aria-hidden': 'true' }, h('span', { class: 'hero-ring r1' }), h('span', { class: 'hero-ring r2' }), h('span', { class: 'hero-ring r3' }), I('shield-lock-fill')),
       h('div', { class: 'hero-text' },
         h('div', { class: 'hero-line' }, h('h1', { class: 'hero-title' }, `${greet}${who ? `, ${who.split(/\s+/)[0]}` : ''}`), dateLine),
-        h('p', { class: 'hero-sub' }, soon ? `${soon} deadline${soon === 1 ? '' : 's'} due within a week` : 'No deadlines due this week'),
         counts),
       clock);
   }
@@ -1261,8 +1259,8 @@
   /** v1.61: Needs Attention: deadlines overdue or due within a week, soonest first. */
   function needsAttention(deadlines) {
     const due = deadlines.filter((c) => daysUntil(c.nextDeadline.date) <= 7);
-    const head = h('div', { class: 'section-head' }, h('h2', { class: 'section-title' }, I('bell-fill'), ' Needs Attention'), h('div', { class: 'spacer' }),
-      h('span', { class: 'muted small' }, due.length ? `${due.length} deadline${due.length === 1 ? '' : 's'} within a week` : ''));
+    // v1.66: no count beside the heading; the list says it all.
+    const head = h('div', { class: 'section-head' }, h('h2', { class: 'section-title' }, I('bell-fill'), ' Needs Attention'));
     if (!due.length) return h('div', { class: 'dash-section attention-section' }, head, h('p', { class: 'muted attention-none' }, 'Nothing due in the next 7 days.'));
     return h('div', { class: 'dash-section attention-section' }, head,
       h('div', { class: 'attention-list', role: 'list' }, due.slice(0, 8).map((c) => {
@@ -1273,7 +1271,7 @@
           h('span', { class: 'att-case' }, h('strong', {}, c.number || 'No case number'), h('span', { class: 'muted small' }, c.subject || '')),
           h('span', { class: 'att-what' }, d.title || 'Deadline'),
           h('span', { class: 'att-when' }, fmtDate(d.date), d.time ? ` ${d.time}` : ''),
-          h('span', { class: 'att-due' }, lab.text));
+          h('span', { class: 'att-due' }, lab.text.replace(/\b\w/g, (ch) => ch.toUpperCase())));
       })),
       due.length > 8 ? h('p', { class: 'muted small' }, `And ${due.length - 8} more. Each case shows a red border in the case list.`) : null);
   }

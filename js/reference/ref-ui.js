@@ -39,7 +39,14 @@
     // Charges asks which (v1.28): Federal Statute or State Statute.
     // v1.63: in the footer, the choices sit inside the button (no menu to be cut off).
     if (l.choices && !editing && footer) {
-      return h('span', { class: 'quick-link ql-split', title: tip }, ...inner, h('span', { class: 'ql-split-opts' }, l.choices.map(([label, hash]) => h('a', { class: 'ql-split-opt', href: hash }, label.replace(/\s*Statutes?$/i, '')))));
+      // v1.66: a click on Charges turns the button into its two choices; a click elsewhere or Esc turns it back.
+      const opts = h('span', { class: 'ql-split-opts', hidden: true }, l.choices.map(([label, hash]) => h('a', { class: 'ql-split-opt', href: hash }, label.replace(/\s*Statutes?$/i, ''))));
+      const btn = h('button', { type: 'button', class: 'quick-link ql-split', title: tip, 'aria-expanded': 'false' }, ...inner);
+      const cell = h('div', { class: 'ql-split-cell' }, btn, opts);
+      const shut = (e) => { if (e && cell.contains(e.target)) return; opts.hidden = true; btn.hidden = false; btn.setAttribute('aria-expanded', 'false'); document.removeEventListener('pointerdown', shut, true); };
+      btn.addEventListener('click', () => { btn.hidden = true; opts.hidden = false; btn.setAttribute('aria-expanded', 'true'); opts.querySelector('a').focus(); document.addEventListener('pointerdown', shut, true); });
+      opts.addEventListener('keydown', (e) => { if (e.key === 'Escape') { shut(); btn.focus(); } });
+      return cell;
     }
     if (l.choices && !editing) {
       const menu = h('div', { class: 'ql-choices', role: 'menu', hidden: true }, l.choices.map(([label, hash]) => h('a', { class: 'ql-choice', role: 'menuitem', href: hash }, label)));
