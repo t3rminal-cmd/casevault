@@ -113,9 +113,10 @@
           !editing && hiddenCount ? h('span', { class: 'small muted' }, `${hiddenCount} hidden`) : null,
           h('button', { type: 'button', class: `btn small ${editing ? 'primary' : 'ghost'}`, icon: editing ? 'check2' : 'arrow-left-right', title: editing ? 'Finish' : 'Move the buttons (arrows or drag) and choose which to show. Addresses and your own links: Vault → Quick links.', onclick: () => { mem.editLinks = !mem.editLinks; draw(); } }, editing ? 'Done' : 'Arrange')),
         // v1.63: in the footer the warning is a small sign (hover or focus for the words).
-        tab !== 'reference' ? (opts.footer
-          ? h('span', { class: 'ql-note-sign', tabindex: '0', role: 'note', title: 'These open outside CaseVault, in a new browser tab. Never paste case details into outside websites unless your policy allows it.' }, ui.icon('exclamation-triangle-fill'), h('span', {}, 'Outside Sites'))
-          : h('p', { class: 'muted small ql-note' }, 'These open outside CaseVault, in a new browser tab. Never paste case details into outside websites unless your policy allows it.')) : null,
+        // v1.67: the sign keeps its place on every tab (hidden on Reference), so the footer never changes height.
+        opts.footer
+          ? h('span', { class: `ql-note-sign${tab === 'reference' ? ' ql-note-off' : ''}`, tabindex: tab === 'reference' ? null : '0', role: 'note', 'aria-hidden': tab === 'reference' ? 'true' : null, title: 'These open outside CaseVault, in a new browser tab. Never paste case details into outside websites unless your policy allows it.' }, ui.icon('exclamation-triangle-fill'), h('span', {}, 'Outside Sites'))
+          : tab !== 'reference' ? h('p', { class: 'muted small ql-note' }, 'These open outside CaseVault, in a new browser tab. Never paste case details into outside websites unless your policy allows it.') : null,
         shown.length ? h('div', { class: 'quick-links' }, shown.map((l) => linkTile(l, { editing, redraw: draw, footer: !!opts.footer })))
           : h('p', { class: 'muted small' }, inTab.length ? 'All the links here are hidden. Click Arrange to bring them back.' : 'No links here yet. Add one in Vault → Quick links.')].filter(Boolean));
     };

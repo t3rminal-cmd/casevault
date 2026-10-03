@@ -15,7 +15,12 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.66)
+## Features (v1.67)
+
+- Statute of limitations for narcotic charges: 3 years from the Date of Occurrence (Draft; else the arrest date); 5 days before, Needs Attention shows "Warning: Statute of Limitations Expiring" with a live count-down, the case gets a red border and a reminder pops up once
+- Archived sub-folders EXPIRED, NOLLE PROSEQUI and PROSECUTION: picked when archiving (EXPIRED is preselected once the statute has passed) and changeable on the archived case
+- Suspects: a Not Identified box; Draft parts show a green check once every field is filled (seen folded too)
+- Search Warrant Number has twice the room (long numbers were cut off); the footer keeps its height on every tab; more space under the greeting
 
 - Quick Links footer: Reference / OSINT / LEO stacked under the Quick Links name on the left; Charges is one button that shows Federal and State when clicked
 - Overview: the deadline reminder is gone from the banner and from beside Needs Attention; due labels in Title Case (Due Today, Due Tomorrow, In 3 Days, 2 Days Overdue)

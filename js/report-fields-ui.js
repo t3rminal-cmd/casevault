@@ -430,7 +430,7 @@
       } }, `Add ${L.item}`);
       // Offenders can be filled from Details → Suspects (name, date of birth, age); the description is entered here.
       const fromSuspects = key === 'offendersList' && !archived ? h('button', { class: 'btn small', type: 'button', icon: 'person-exclamation', title: 'Adds each suspect from Details (or updates the offender with the same name). The description of the day is entered here.', onclick: () => {
-        const list = (c.suspects || []).filter((s) => String(s.name || '').trim());
+        const list = (c.suspects || []).map((s) => (s && s.notIdentified ? { ...s, name: 'Not Identified' } : s)).filter((s) => s && String(s.name || '').trim());
         if (!list.length) { toast('No named suspects on the Details tab yet.'); return; }
         for (const s of list) F().suspectToOffender(data, s, Vault.localDay());
         draw(); save();
@@ -470,9 +470,24 @@
       const inner = h('div', { class: 'rf-body' }, ...body);
       const cb = h('input', { type: 'checkbox', checked: on, 'aria-label': `Include ${title}` });
       const fold = h('button', { class: 'icon-btn rf-fold', type: 'button' });
+      // v1.67: a green check in the header once every field in the part is filled (seen folded too).
+      const done = h('span', { class: 'rf-done', title: 'Every field in this part is filled in', hidden: true }, ui.icon('check-circle-fill'), h('span', { class: 'sr-only' }, `${title}: complete`));
       const sec = h('section', { class: `rf-section rf-${id}` },
-        h('div', { class: 'rf-head' }, h('label', { class: 'rf-include', title: 'Untick if this part doesn\'t apply: it is left out of the PDF' }, cb), h('h3', { icon }, title), h('div', { class: 'spacer' }), fold),
+        h('div', { class: 'rf-head' }, h('label', { class: 'rf-include', title: 'Untick if this part doesn\'t apply: it is left out of the PDF' }, cb), h('h3', { icon }, title), done, h('div', { class: 'spacer' }), fold),
         inner);
+      let pending = 0;
+      const checkDone = () => {
+        pending = 0;
+        const boxes = [...inner.querySelectorAll('input, select, textarea')].filter((el) => !el.disabled && !['checkbox', 'radio', 'file', 'button', 'hidden', 'submit'].includes(el.type)
+          && !el.closest('.combo-list, datalist') && (() => { const hid = el.parentElement && el.parentElement.closest('[hidden]'); return !hid || hid === inner; })());
+        done.hidden = !(boxes.length && boxes.every((el) => String(el.value || '').trim()));
+        sec.classList.toggle('rf-complete', !done.hidden);
+      };
+      const later = () => { if (!pending) pending = requestAnimationFrame(checkDone); };
+      inner.addEventListener('input', later);
+      inner.addEventListener('change', later);
+      new MutationObserver(later).observe(inner, { childList: true, subtree: true });
+      later();
       const show = () => {
         const isOn = cb.checked; const isFolded = folded.has(id);
         inner.hidden = !isOn || isFolded;

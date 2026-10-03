@@ -90,6 +90,8 @@
     return { text: `in ${n} days`, cls: n <= 7 ? 'soon' : '' };
   }
 
+  // v1.67: the statute of limitations of a case in the index: 'warn' (5 days or less), 'expired' or ''.
+  const solState = (c) => (c && c.sol && !isArchivedEntry(c) && c.status !== 'Closed' && globalThis.CVLimits ? CVLimits.state(c.sol, today()) : '');
   // v1.62: a heading inside a popup form (a thin line with its name) and a hint box.
   const formSect = (label, icon) => h('div', { class: 'form-sect span-2' }, icon ? I(icon) : null, h('span', {}, label));
   const formHint = (...kids) => h('p', { class: 'form-hint span-2' }, I('info-circle'), h('span', {}, ...kids));
@@ -282,6 +284,7 @@
     connected: false,
     vaultId: null,
     caseId: null,
+    archOpen: new Set(), // v1.67: open Archived sub-folders
     tab: 'details',
     caseObj: null,
     renderToken: 0,
@@ -537,7 +540,9 @@
   // A case in the left list: [Open] Title [bell], then file | case | client. A red bell means a
   // deadline is overdue or due within a week; the details are in the hover box.
   function caseItem(c, inGroup = false) {
-    const due = c.nextDeadline && !isArchivedEntry(c) ? dueLabel(c.nextDeadline.date) : null;
+    const sol = solState(c);
+    const due = sol ? { cls: 'overdue', text: sol === 'expired' ? 'statute of limitations expired' : 'statute of limitations expiring' }
+      : c.nextDeadline && !isArchivedEntry(c) ? dueLabel(c.nextDeadline.date) : null;
     // Any open deadline on the case's Timeline rings the red bell (right of the title).
     // v1.28: the bell sits right after the title; a case number inside an operation leaves it to
     // the operation's name.
@@ -545,7 +550,8 @@
     const tip = [
       `${c.number || 'No case number'}${c.subject ? `, ${c.subject}` : ''} · ${c.status}`,
       c.status === 'Pending' && c.pending ? `Waiting on ${c.pending.reason}${c.pending.followUp ? `, follow up ${fmtDate(c.pending.followUp)}` : ''}` : null,
-      due ? `${due.cls === 'overdue' || due.cls === 'soon' ? 'Alarm: ' : 'Next deadline: '}${c.nextDeadline.title || 'Deadline'}, ${fmtDate(c.nextDeadline.date)}${c.nextDeadline.time ? ` ${c.nextDeadline.time}` : ''} (${due.text})` : null,
+      sol ? `Statute of limitations ${sol === 'expired' ? 'expired' : 'expires'} ${fmtDate(c.sol.expires)}` : null,
+      due && !sol ? `${due.cls === 'overdue' || due.cls === 'soon' ? 'Alarm: ' : 'Next deadline: '}${c.nextDeadline.title || 'Deadline'}, ${fmtDate(c.nextDeadline.date)}${c.nextDeadline.time ? ` ${c.nextDeadline.time}` : ''} (${due.text})` : null,
     ].filter(Boolean).join('\n');
     return h('li', {},
       h('a', {
@@ -697,7 +703,20 @@
     const shown = archived.filter((c) => matchesSearch(c, q));
     section.hidden = !archived.length;
     $('#archived-count').textContent = q ? `${shown.length} of ${archived.length}` : String(archived.length);
-    $('#archived-list').replaceChildren(...(shown.length ? shown.map(caseItem) : [h('li', { class: 'empty muted' }, 'No archived cases match.')]));
+    // v1.67: EXPIRED, NOLLE PROSEQUI and PROSECUTION sub-folders; cases without one below them.
+    const subs = Vault.ARCHIVE_FOLDERS.map(([k, label]) => {
+      const inIt = shown.filter((c) => c.archiveFolder === k);
+      if (!inIt.length) return null;
+      const open = state.archOpen.has(k) || !!q || inIt.some((c) => c.id === state.caseId);
+      const list = h('ul', { class: 'case-list arch-sub-list', hidden: !open }, inIt.map(caseItem));
+      const head = h('button', { type: 'button', class: 'arch-sub-head', 'aria-expanded': String(open), onclick: () => {
+        if (state.archOpen.has(k)) state.archOpen.delete(k); else state.archOpen.add(k);
+        renderCaseList();
+      } }, h('span', { class: 'sec-folder' }, I('folder-archived')), h('span', { class: 'arch-sub-name' }, label), h('span', { class: 'count' }, String(inIt.length)), I(open ? 'chevron-down' : 'chevron-right'));
+      return h('li', { class: `arch-sub arch-${k}` }, head, list);
+    }).filter(Boolean);
+    const loose = shown.filter((c) => !Vault.ARCHIVE_FOLDERS.some(([k]) => k === c.archiveFolder));
+    $('#archived-list').replaceChildren(...(shown.length ? [...subs, ...loose.map(caseItem)] : [h('li', { class: 'empty muted' }, 'No archived cases match.')]));
     // Open the section when the case on screen is archived, or a search finds archived cases.
     if ((state.caseId && archived.some((c) => c.id === state.caseId)) || (q && shown.length)) section.open = true;
   }
@@ -799,7 +818,7 @@
       // v1.61: a smaller banner with the status counts in it, then quick actions and what needs you.
       welcomeHero(cases, deadlines, count),
       quickActions(),
-      needsAttention(deadlines),
+      needsAttention(deadlines, cases),
       operationFolders(cases, tlBox, opBox),
       tlBox,
       // v1.42: no Upcoming Deadlines (the banner shows what's due); the open operation's case
@@ -1257,13 +1276,33 @@
   }
 
   /** v1.61: Needs Attention: deadlines overdue or due within a week, soonest first. */
-  function needsAttention(deadlines) {
+  function needsAttention(deadlines, cases = []) {
     const due = deadlines.filter((c) => daysUntil(c.nextDeadline.date) <= 7);
+    // v1.67: narcotic charges: 3 years from the Date of Occurrence; a warning 5 days before.
+    const sols = cases.filter((c) => solState(c)).sort((a, b) => a.sol.expires.localeCompare(b.sol.expires));
+    const solRows = sols.map((c) => {
+      // The 3 years run to the end of the expiry day.
+      const end = new Date(new Date(`${c.sol.expires}T00:00:00`).getTime() + 86400000);
+      const left = h('span', { class: 'att-due att-count' });
+      const tick = () => { if (!left.isConnected && left.dataset.on) return false; left.dataset.on = '1'; left.textContent = CVLimits.countdown(end - Date.now()); return true; };
+      tick();
+      const timer = setInterval(() => { if (!tick()) clearInterval(timer); }, 1000);
+      const expired = end - Date.now() <= 0;
+      return h('a', { role: 'listitem', class: 'attention-row att-overdue att-sol', href: caseLink(c, 'draft'), title: `Narcotic charges must be brought within 3 years of the Date of Occurrence (${fmtDate(c.sol.occurred)}).` },
+        h('span', { class: 'att-case' }, h('strong', {}, c.number || 'No case number'), h('span', { class: 'muted small' }, c.subject || '')),
+        h('span', { class: 'att-what' }, I('exclamation-triangle-fill'), expired ? ' Statute of Limitations Expired' : ' Warning: Statute of Limitations Expiring'),
+        h('span', { class: 'att-when' }, `${expired ? 'Expired' : 'Expires'} ${fmtDate(c.sol.expires)}`),
+        left);
+    });
+    if (sols.length && !state.solToastShown) {
+      state.solToastShown = true;
+      toast(`Statute of limitations: ${sols.map((c) => c.number || 'No case number').join(', ')}. See Needs Attention.`, 'error', 9000);
+    }
     // v1.66: no count beside the heading; the list says it all.
     const head = h('div', { class: 'section-head' }, h('h2', { class: 'section-title' }, I('bell-fill'), ' Needs Attention'));
-    if (!due.length) return h('div', { class: 'dash-section attention-section' }, head, h('p', { class: 'muted attention-none' }, 'Nothing due in the next 7 days.'));
+    if (!due.length && !solRows.length) return h('div', { class: 'dash-section attention-section' }, head, h('p', { class: 'muted attention-none' }, 'Nothing due in the next 7 days.'));
     return h('div', { class: 'dash-section attention-section' }, head,
-      h('div', { class: 'attention-list', role: 'list' }, due.slice(0, 8).map((c) => {
+      h('div', { class: 'attention-list', role: 'list' }, ...solRows, ...due.slice(0, 8).map((c) => {
         const d = c.nextDeadline;
         const n = daysUntil(d.date);
         const lab = dueLabel(d.date);
@@ -1584,6 +1623,11 @@
         h('div', {}, h('strong', {}, 'Archived case'),
           h('span', { class: 'small block' }, 'Read-only. Notes, files, drafts and checks can be opened and searched, but not changed.')),
         h('div', { class: 'spacer' }),
+        // v1.67: which Archived sub-folder it is in.
+        h('label', { class: 'arch-folder-pick' }, h('span', { class: 'small' }, 'Archive Folder'),
+          h('select', { 'aria-label': 'Archive folder', onchange: async (e) => {
+            try { await Save.track(`archfolder:${c.id}`, () => Vault.setArchiveFolder(c.id, e.target.value)); c.archiveFolder = e.target.value; renderCaseList(); toast('Moved to the archive folder.', 'success'); } catch (err) { toast(`Not moved: ${err.message}`, 'error'); }
+          } }, [['', 'No Sub-folder'], ...Vault.ARCHIVE_FOLDERS].map(([k, label]) => h('option', { value: k, selected: (c.archiveFolder || '') === k }, label)))),
         h('button', { class: 'btn', type: 'button', icon: 'arrow-counterclockwise', onclick: () => restoreCase(c) }, 'Restore to active cases')) : null,
       // v1.46: the Case Number first, the Subject Name under it, and the Operation it's in.
       h('div', { class: 'case-head' },
@@ -1740,7 +1784,8 @@
       makeFoldable(contactsSection(c, save), 'overview-contacts'),
       makeFoldable(deconflictionSection(c, save), 'overview-deconfliction'),
       // Everything saves by itself as you type; the button saves now and says so.
-      archived ? null : h('div', { class: 'details-save' },
+      // (An archived case gets an empty string here: a null would show as the word "null".)
+      archived ? '' : h('div', { class: 'details-save' },
         h('button', { class: 'btn primary', type: 'button', icon: 'save', title: 'Save this case to the SSD now. Changes also save by themselves a moment after you type.', onclick: async () => {
           save();
           await Save.flushAll();
@@ -1826,14 +1871,21 @@
         };
         const demo = h('div', { class: 'suspect-demo' },
           ['gender', 'race', 'complexion', 'height', 'weight', 'hair', 'eyes', 'irNumber', 'fbiNumber', 'idocNumber', 'phone', 'marks'].map((k) => infoInput(k)));
-        return h('div', { class: 'suspect-card' }, h('div', { class: 'suspect-row' },
-          field('Name', input('name', { maxlength: 120, 'aria-label': `${who} name` })),
+        // v1.67: Not Identified: the name box is set aside (kept, in case it's filled later).
+        const nameIn = input('name', { maxlength: 120, 'aria-label': `${who} name` });
+        const notId = h('input', { type: 'checkbox', checked: !!s.notIdentified, 'aria-label': `${who} not identified` });
+        const showNotId = () => { nameIn.disabled = notId.checked; nameIn.placeholder = notId.checked ? 'Not Identified' : ''; card.classList.toggle('not-identified', notId.checked); };
+        notId.addEventListener('change', () => { s.notIdentified = notId.checked; showNotId(); save(); });
+        const card = h('div', { class: 'suspect-card' }, h('div', { class: 'suspect-row' },
+          h('div', { class: 'field suspect-name-field' }, h('span', { class: 'suspect-name-label' }, 'Name', h('label', { class: 'suspect-notid', title: 'The suspect has not been identified yet. Templates and the Draft show "Not Identified".' }, notId, h('span', {}, 'Not Identified'))), nameIn),
           field('DOB', dob),
           h('div', { class: 'field' }, h('span', {}, 'Age'), age),
           field('Residence', input('residence', { maxlength: 200, 'aria-label': `${who} residence`, title: s.residence || '' })),
           field('Role', role),
           h('button', { class: 'icon-btn danger-icon contact-remove', type: 'button', title: 'Remove this suspect', onclick: () => { c.suspects.splice(i, 1); draw(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Remove ${who}`))),
           demo);
+        showNotId();
+        return card;
       }) : [h('p', { class: 'muted small suspect-empty' }, 'No suspects yet.')]));
     };
     draw();
@@ -2109,19 +2161,30 @@
   }
 
   async function archiveCase(c) {
-    const ok = await confirmDialog({
-      title: 'Move this case to the archive?',
-      message: h('div', {},
+    // v1.67: which Archived sub-folder: EXPIRED (statute of limitations passed), NOLLE PROSEQUI,
+    // PROSECUTION, or none.
+    const entry = Vault.data.cases.find((x) => x.id === c.id);
+    const passed = entry && entry.sol && globalThis.CVLimits && CVLimits.state(entry.sol, today()) === 'expired';
+    const folder = await openDialog((close) => {
+      const pick = h('div', { class: 'arch-pick', role: 'radiogroup', 'aria-label': 'Archive folder' },
+        [...Vault.ARCHIVE_FOLDERS, ['', 'No Sub-folder']].map(([k, label]) => h('label', { class: 'arch-opt' },
+          h('input', { type: 'radio', name: 'arch-folder', value: k, checked: k === (passed ? 'expired' : '') }), I(k ? 'folder-archived' : 'archive'), h('span', {}, label))));
+      return h('form', { class: 'confirm', onsubmit: (e) => { e.preventDefault(); close((pick.querySelector('input:checked') || {}).value || ''); } },
+        h('h2', { icon: 'archive' }, 'Move this case to the archive?'),
         h('p', {}, `"${c.title || 'Untitled case'}" moves to CaseVault-Data\\archive on the SSD, with its notes, timeline, files, drafts and checks. Every file is copied and checked before the original is removed.`),
-        h('p', { class: 'muted small explain' }, 'It leaves the case list and opens read-only from "Archived" at the bottom of the list. You can restore it at any time.')),
-      confirmText: 'Archive case',
+        formSect('Archive Folder', 'folder-archived'), pick,
+        passed ? formHint(`The statute of limitations passed on ${fmtDate(entry.sol.expires)}, so EXPIRED is picked.`) : null,
+        h('p', { class: 'muted small explain' }, 'It leaves the case list and opens read-only from "Archived" at the bottom of the list. You can restore it at any time.'),
+        h('div', { class: 'dialog-actions' },
+          h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
+          h('button', { class: 'btn primary', type: 'submit' }, 'Archive Case')));
     });
-    if (!ok) return;
+    if (folder == null) return;
     await Save.flushAll();
     if (Save.failed.size) return toast('Some changes are not saved yet. Reconnect the SSD, then archive.', 'error', 8000);
     const progress = toast('Archiving: copying and checking files…', 'info', 600000);
     try {
-      await Save.track(`archive:${c.id}`, () => Vault.archiveCase(c.id, (n, name) => { progress.textContent = `Archiving: ${n} file${n === 1 ? '' : 's'} copied and checked (${name})…`; }));
+      await Save.track(`archive:${c.id}`, () => Vault.archiveCase(c.id, (n, name) => { progress.textContent = `Archiving: ${n} file${n === 1 ? '' : 's'} copied and checked (${name})…`; }, folder));
       progress.remove();
       state.caseObj = null;
       toast('Case archived. It opens read-only from "Archived" in the case list.', 'success', 7000);
