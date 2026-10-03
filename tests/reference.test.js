@@ -67,8 +67,9 @@ test('quick links: tabs, hiding, edits, custom links, and only web addresses', (
   const LK = require('../js/reference/links.js');
   const all = LK.linksOf({});
   assert.deepStrictEqual(all.filter((l) => l.tab === 'reference').map((l) => l.name), ['Location Codes', 'Common UCR', 'Charges', 'Narcotic Calculator', 'Find my Beat']);
-  assert.deepStrictEqual(all.filter((l) => l.tab === 'osint').map((l) => l.name), ['MaxMind IP', 'Fingerprint', 'NumLookup', 'Blockchair', 'Mempool', 'Chainalysis', 'Geotime LIVE', 'TinEye', 'Google', 'Google Maps', 'Google Images']);
-  assert.deepStrictEqual(all.filter((l) => l.tab === 'leo').map((l) => l.name), ['Accurint', 'Kodex Portal', 'Chicago HIDTA', 'Snapchat LE Portal', 'Meta LE Portal', 'Chicago Police Directives']);
+  assert.deepStrictEqual(all.filter((l) => l.tab === 'osint').map((l) => l.name), ['MaxMind IP', 'Fingerprint', 'NumLookup', 'Blockchair', 'Mempool', 'Chainalysis', 'Geotime LIVE', 'ZetX', 'Bandwidth', 'TextNow', 'Blockchain Explorer', 'TRM Labs', 'TinEye', 'Google', 'Google Maps', 'Google Images']);
+  assert.deepStrictEqual(all.filter((l) => l.tab === 'leo').map((l) => l.name), ['Accurint', 'Kodex Portal', 'Chicago HIDTA', 'Snapchat LE Portal', 'Meta LE Portal', 'Illinois Compiled Statutes', 'Chicago Cop', 'NW3C', 'Chicago Police Directives']);
+  assert.strictEqual(all.find((l) => l.id === 'osint-geotime').url, 'https://live.geotime.com/#/login', 'v1.57: Geotime LIVE address');
   for (const l of all) if (l.url) assert.match(l.url, /^https:\/\//, l.name);
   const s = LK.linksOf({ hidden: ['osint-fingerprint', 'leo-chicago-hidta'], edits: { 'leo-chicago-hidta': { url: 'portal.example.org/login' }, 'leo-kodex': { url: 'portal.example.org/login' } }, custom: [{ id: 'c1', tab: 'leo', name: 'My portal', url: 'https://example.org' }, { id: 'c2', tab: 'reference', name: 'x', url: 'https://example.org' }] });
   assert.ok(s.find((l) => l.id === 'osint-fingerprint').hidden);

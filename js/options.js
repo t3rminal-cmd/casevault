@@ -179,7 +179,11 @@
       tabs.forEach(([key, label, icon]) => tabBar.append(h('button', { class: 'opt-tab', type: 'button', role: 'tab', 'data-key': key, icon, onclick: () => show(key) }, label)));
       show('display');
       return h('div', { class: 'options-form' },
-        h('div', { class: 'opt-head' }, h('h2', { icon: 'sliders2' }, 'Options'), h('div', { class: 'spacer' }), h('button', { class: 'btn primary', type: 'button', icon: 'check2', onclick: () => close() }, 'Done')),
+        // v1.57: a header like the other boxes: icon tile, title and a line under it.
+        h('div', { class: 'opt-head' },
+          h('span', { class: 'opt-head-icon', 'aria-hidden': 'true' }, ui.icon('sliders2')),
+          h('div', { class: 'opt-head-text' }, h('h2', {}, 'Options'), h('p', { class: 'muted small' }, 'How CaseVault looks on this PC, and tools for templates.')),
+          h('div', { class: 'spacer' }), h('button', { class: 'btn primary', type: 'button', icon: 'check2', onclick: () => close() }, 'Done')),
         tabBar, body);
     });
   }
@@ -195,13 +199,22 @@
     const reset = h('button', { class: 'btn small ghost', type: 'button', onclick: () => set(100) }, 'Reset');
     return h('div', { class: 'opt-row', title: tip }, h('span', { class: 'opt-label' }, label), minus, input, plus, out, reset);
   }
+  /** v1.57: a setting in its own card: an icon tile, the name and what it does, then the slider. */
+  function card(icon, title, sub, row) {
+    const { h } = ui;
+    return h('div', { class: 'opt-card' },
+      h('div', { class: 'opt-card-head' }, h('span', { class: 'opt-card-icon', 'aria-hidden': 'true' }, ui.icon(icon)),
+        h('div', {}, h('strong', {}, title), h('span', { class: 'muted small block' }, sub))),
+      row);
+  }
 
   function displayPanel() {
     const { h } = ui;
     return h('section', { class: 'opt-panel' },
-      h('h3', { icon: 'zoom-in' }, 'Display on this PC'),
-      slider('Zoom', ZOOM, getZoom(), (v) => `${v}%`, setZoom, 'Makes everything in CaseVault bigger or smaller. Ctrl + and Ctrl − in the browser do the same.'),
-      slider('Brightness', BRIGHT, getBrightness(), (v) => `${v}%`, setBrightness, 'Darkens or lightens CaseVault, for example in a dark room at night.'),
+      card('zoom-in', 'Zoom', 'Everything in CaseVault bigger or smaller. Ctrl + and Ctrl − in the browser do the same.',
+        slider('Zoom', ZOOM, getZoom(), (v) => `${v}%`, setZoom, 'Makes everything in CaseVault bigger or smaller.')),
+      card('sun-fill', 'Brightness', 'Darker or lighter, for example in a dark room at night.',
+        slider('Brightness', BRIGHT, getBrightness(), (v) => `${v}%`, setBrightness, 'Darkens or lightens CaseVault.')),
       h('p', { class: 'muted small explain' }, 'Kept in this browser on this PC, like the theme. Each PC has its own. Nothing about your cases is stored here.'));
   }
 

@@ -2969,9 +2969,7 @@ body.sidebar-collapsed #btn-side-search, body.sidebar-collapsed #btn-side-home {
    a filled button, the Overview banner, the privacy screen) its plain shape shows instead. */
 svg.ci > image { display: inline; }
 svg.ci:not(.ci-only) > :not(image) { display: none; }
-.btn.primary svg.ci:not(.ci-only) > :not(image), .btn.danger svg.ci:not(.ci-only) > :not(image), .hero svg.ci:not(.ci-only) > :not(image),
 .privacy-screen svg.ci:not(.ci-only) > :not(image) { display: inline; }
-.btn.primary svg.ci:not(.ci-only) > image, .btn.danger svg.ci:not(.ci-only) > image, .hero svg.ci:not(.ci-only) > image,
 .privacy-screen svg.ci:not(.ci-only) > image { display: none; }
 /* A colour picture is a touch larger than a line icon so it reads at the same weight. */
 svg.ci { overflow: visible; }
@@ -3071,14 +3069,23 @@ svg.ci > image { transform: scale(1.12); transform-origin: 50% 50%; }
 .tb-status .net-status.off { --state: var(--ok); } .tb-status .net-status.on { --state: var(--danger); }
 .tb-status .engine-status.offline { --state: var(--danger); } .tb-status .engine-status.connected { --state: var(--ok); }
 .tb-status .mem-status:not(.warn):not(.high) { --state: var(--ok); } .tb-status .mem-status.warn { --state: var(--warn); } .tb-status .mem-status.high { --state: var(--danger); }
-/* On a filled (blue or red) button a colour icon sits on a small white tile. */
-.btn.primary svg.ci:not(.ci-only) > image, .btn.danger svg.ci:not(.ci-only) > image { display: inline; }
-.btn.primary svg.ci:not(.ci-only) > :not(image), .btn.danger svg.ci:not(.ci-only) > :not(image) { display: none; }
-.btn.primary svg.ci, .btn.danger svg.ci { background: #fff; padding: 1px; box-sizing: content-box; }
-/* The Overview banner keeps its white line icons (unchanged). */
-.hero svg.ci:not(.ci-only) > :not(image) { display: inline !important; }
-.hero svg.ci:not(.ci-only) > image { display: none !important; }
-.hero svg.ci { background: none !important; padding: 0 !important; }
+/* v1.57: the blue and red buttons are tinted, not filled: a light tint, a coloured border and
+   coloured words, so the colour icons sit on them as they are (no white square behind them). */
+:root { --accent-strong: #0a4fb8; --danger-strong: #b4232f; --btn-primary-bg: #e9f1ff; --btn-primary-hover: #d9e7ff; --btn-danger-bg: #fdeced; --btn-danger-hover: #fadadd; }
+:root[data-theme="dark"] { --accent-strong: #8cc4ff; --danger-strong: #ff8a84; --btn-primary-bg: rgba(88, 166, 255, .16); --btn-primary-hover: rgba(88, 166, 255, .26); --btn-danger-bg: rgba(248, 81, 73, .16); --btn-danger-hover: rgba(248, 81, 73, .26); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --accent-strong: #8cc4ff; --danger-strong: #ff8a84; --btn-primary-bg: rgba(88, 166, 255, .16); --btn-primary-hover: rgba(88, 166, 255, .26); --btn-danger-bg: rgba(248, 81, 73, .16); --btn-danger-hover: rgba(248, 81, 73, .26); } }
+.btn.primary, .btn.primary:hover, .btn.primary:focus-visible { background: var(--btn-primary-bg); border: 1px solid var(--accent); color: var(--accent-strong); font-weight: 700; filter: none; box-shadow: inset 0 -2px 0 var(--accent); }
+.btn.primary:hover { background: var(--btn-primary-hover); }
+.btn.danger, .btn.danger:hover, .btn.danger:focus-visible { background: var(--btn-danger-bg); border: 1px solid var(--danger); color: var(--danger-strong); font-weight: 700; filter: none; box-shadow: inset 0 -2px 0 var(--danger); }
+.btn.danger:hover { background: var(--btn-danger-hover); }
+.btn.primary:disabled, .btn.danger:disabled { opacity: .55; }
+.btn.primary .bi, .btn.danger .bi { color: inherit; }
+/* The Overview banner: white buttons with the colour icons, like New Case. */
+.hero .hero-btn, .hero .hero-btn:hover { background: #fff; color: #0b3d91; border: 1px solid #fff; }
+.hero .hero-btn:hover, .hero-actions .btn.primary:hover { background: #e7f0ff; }
+.hero-actions .btn.primary { background: #fff; color: #0b3d91; border-color: #fff; box-shadow: none; }
+.hero-art svg.ci:not(.ci-only) > :not(image) { display: inline !important; }
+.hero-art svg.ci:not(.ci-only) > image { display: none !important; }
 /* The deadline bell is red. */
 .case-bell, .case-bell .bi { color: var(--danger); }
 .tb-status .save-status { background: var(--surface) !important; border: 1px solid var(--border); box-shadow: inset 0 -3px 0 var(--state, transparent); }
@@ -3152,3 +3159,61 @@ section.foldable.folded > .fold-head { margin-bottom: 0; }
 @media (max-width: 640px) { .disc-tiles { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .disc-pair { grid-template-columns: minmax(0, 1fr); } }
 
 .files-table-wrap table.files.has-lc col.col-actions { width: 9rem; }
+
+/* v1.57: the drive name no longer shows under the logo; the SSD square in the header says where
+   the data is saved (hover it). */
+.brand .vault-name { display: none; }
+
+/* v1.57: Options. */
+.options-form { display: flex; flex-direction: column; gap: .8rem; }
+.opt-head { padding-bottom: .55rem; border-bottom: 1px solid var(--border); }
+.opt-head-icon, .opt-card-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 2.6rem; height: 2.6rem; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); }
+.opt-head-icon .bi, .opt-card-icon .bi { width: 1.6rem; height: 1.6rem; }
+.opt-head-text h2 { margin: 0; }
+.opt-head-text p { margin: .15rem 0 0; }
+.opt-tabs { gap: 0; border-bottom: 0; }
+.opt-tab { border: 1px solid var(--border); background: var(--surface-2); color: var(--text); margin-right: -1px; padding: .5rem 1.1rem; }
+.opt-tab.active { background: var(--surface); color: var(--accent-strong); border-bottom-color: var(--surface); box-shadow: inset 0 3px 0 var(--accent); }
+.opt-body { border: 1px solid var(--border); margin-top: -1px; padding: .9rem; background: var(--surface-2); }
+.opt-card { display: grid; gap: .55rem; padding: .7rem .8rem; background: var(--surface); border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0, 0, 0, .05); }
+.opt-card-head { display: flex; align-items: center; gap: .7rem; }
+.opt-card .opt-label { display: none; }
+.opt-card .opt-row { grid-template-columns: auto minmax(8rem, 1fr) auto 3.5rem auto; }
+
+/* v1.57: Ask AI window: a header bar with the robot on a tile and square tool buttons, the model and
+   case in a grey box, prompt chips with an accent line, and a framed message box. */
+.chat-float { border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(15, 23, 42, .18), 0 2px 6px rgba(15, 23, 42, .08); background: var(--surface); }
+.chat-float-head { background: var(--surface-2); padding: .4rem .45rem .4rem .5rem; gap: .25rem; border-bottom: 1px solid var(--border); box-shadow: inset 0 -2px 0 var(--accent); }
+.chat-float-title { gap: .5rem; }
+.chat-float-title > .bi, .chat-float-title > svg { width: 1.7rem; height: 1.7rem; padding: .2rem; background: var(--surface); border: 1px solid var(--border); box-sizing: border-box; }
+.chat-float-title strong { font-size: .95rem; letter-spacing: .02em; }
+.chat-float-head .icon-btn { width: 1.95rem; height: 1.95rem; background: var(--surface); border: 1px solid var(--border); }
+.chat-float-head .icon-btn:hover { border-color: var(--accent); background: var(--btn-primary-bg); }
+.chat-float-head .icon-btn .bi { width: 1.05rem; height: 1.05rem; }
+.chat-float .chat-options { background: var(--surface-2); border: 1px solid var(--border); padding: .5rem .6rem; }
+.chat-float .chat-options select { background: var(--surface); }
+.chat-thread { border-top: 0; }
+.chat-empty-icon { width: 3.2rem; height: 3.2rem; border-left: 3px solid var(--accent) !important; }
+.chat-empty-icon .bi { width: 2rem; height: 2rem; }
+.chat-starters .btn { background: var(--surface); border: 1px solid var(--border); box-shadow: inset 3px 0 0 var(--accent); text-align: left; }
+.chat-starters .btn:hover { background: var(--btn-primary-bg); border-color: var(--accent); }
+.chat-composer { border: 1px solid var(--border); background: var(--surface); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .05); }
+.chat-composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.chat-msg.user .chat-content { border: 1px solid var(--border); }
+.chat-msg.assistant .chat-avatar { border: 1px solid var(--border); background: var(--surface); }
+.disc-dest-hint { margin: 0; }
+
+/* v1.57: every grey field box gets a thin border and a faint line under it, so boxes next to each
+   other (and on grey sections) don't run together. */
+:root { --box-edge: #d6d3ca; --box-line: #c9c5ba; }
+:root[data-theme="dark"] { --box-edge: #3a424d; --box-line: #4a5360; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --box-edge: #3a424d; --box-line: #4a5360; } }
+.rf-section .field.rf-boxed, .cv-boxed .field { border: 1px solid var(--box-edge); box-shadow: inset 0 -2px 0 var(--box-line); }
+.rf-section .field.rf-boxed:focus-within, .cv-boxed .field:focus-within { border-color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+.cv-boxed table.files input, .cv-boxed table.files select { border: 1px solid var(--box-edge); }
+/* The case tabs: each as wide as its name (no overlapping names when there are many tabs). */
+.tab { flex: 1 1 auto; min-width: max-content; padding-left: .7rem; padding-right: .7rem; }
+/* The Vault's header icon on a white tile like the other box headers (not on a blue square). */
+.vault-badge { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); color: var(--accent); }
+.purge-skull { background: var(--btn-danger-bg); border: 1px solid var(--danger); color: var(--danger); }
+.purge-btn .bi { color: inherit; }

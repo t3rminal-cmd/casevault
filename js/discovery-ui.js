@@ -351,7 +351,20 @@
       const receipt = h('input', { type: 'checkbox', checked: settings.discoveryReceipt !== false });
       const dest = h('select', { 'aria-label': 'Where to' },
         canPick ? h('option', { value: 'pick' }, 'A USB drive or folder…') : null,
+        // v1.57: a blank CD or DVD that Windows has set up "Like a USB flash drive" is written to like
+        // a USB drive. CaseVault doesn't format or burn discs: Windows does that.
+        canPick ? h('option', { value: 'disc', title: 'A blank CD or DVD in this PC\'s disc drive, set up by Windows "Like a USB flash drive"' }, 'A CD or DVD drive…') : null,
         h('option', { value: 'ssd', title: 'CaseVault-Data\\exports on the SSD; burn it to a DVD from there' }, 'The SSD, for a DVD'));
+      // v1.57: what each choice means, under the list.
+      const HINTS = {
+        pick: 'Pick the USB drive, or a folder, in the window that opens next.',
+        disc: 'Put a blank CD or DVD in. If Windows asks how to use it, choose "Like a USB flash drive", then pick the disc drive in the window that opens next. CaseVault does not format or burn discs; Windows does.',
+        ssd: 'Saved in CaseVault-Data\\exports on the SSD. Burn it from there with File Explorer (Share → Burn to disc) for a DVD that plays in any computer.',
+      };
+      const destHint = h('p', { class: 'muted small disc-dest-hint' });
+      const showHint = () => { destHint.textContent = HINTS[dest.value] || ''; };
+      dest.addEventListener('change', showHint);
+      showHint();
       const err = h('p', { class: 'error-text small', role: 'alert' });
       const bar = h('div', { class: 'disc-progress', hidden: true }, h('div', { class: 'disc-progress-fill' }), h('span', { class: 'small' }));
       const go = h('button', { class: 'btn primary', type: 'submit' }, 'Create Discovery Package');
@@ -446,10 +459,11 @@
         if (!picked.length) { err.textContent = 'Add at least one file to the list on the right.'; return; }
         if (pw.value.length < 8) { err.textContent = 'Use a password of at least 8 characters.'; pw.focus(); return; }
         if (pw.value !== pw2.value) { err.textContent = 'The two passwords are not the same.'; pw2.focus(); return; }
-        if (!(await confirmList(dest.value === 'pick' ? 'the USB drive or folder you pick next' : 'CaseVault-Data\\exports on the SSD'))) return;
+        if (!(await confirmList(dest.value === 'pick' ? 'the USB drive or folder you pick next' : dest.value === 'disc' ? 'the CD or DVD drive you pick next' : 'CaseVault-Data\\exports on the SSD'))) return;
         let dir = null; let destLabel = '';
         try {
           if (dest.value === 'pick') { dir = await window.showDirectoryPicker({ id: 'cv-discovery', mode: 'readwrite' }); destLabel = `Folder "${dir.name}"`; }
+          else if (dest.value === 'disc') { dir = await window.showDirectoryPicker({ id: 'cv-discovery-disc', mode: 'readwrite' }); destLabel = `Disc "${dir.name}"`; }
           else { dir = await FS.getDir(Vault.root, 'exports', true); destLabel = 'CaseVault-Data\\exports'; }
         } catch (ex) { if (ex && ex.name === 'AbortError') return; err.textContent = ex.message; return; }
         go.disabled = true; bar.hidden = false;
@@ -469,6 +483,7 @@
               h('li', {}, 'Give the password to the recipient separately (by phone, not in the same envelope or email). CaseVault does not keep it.'),
               entry.receiptPdf ? h('li', {}, 'The receipt was saved to this computer\'s Downloads folder. Print it; the recipient, you and a witness sign it in ink at the hand-off. A copy is kept with the case.') : null,
               h('li', {}, 'The index PDF and the list of what was produced are kept with the case (Files → Discovery → Earlier productions).'),
+              dest.value === 'disc' ? h('li', {}, 'Before you take the disc out, open it in File Explorer and choose Eject (or Close session), so Windows finishes writing it and other computers can read it.') : null,
               dest.value === 'ssd' ? h('li', {}, 'For a DVD: put a blank disc in, open CaseVault-Data\\exports in File Explorer, select the package folder and choose Burn to disc (Share → Burn to disc). One DVD holds about 4.3 GB.') : null),
             h('div', { class: 'dialog-actions' },
               entry.receiptPdf ? h('button', { class: 'btn', type: 'button', icon: 'download', onclick: () => downloadPdf(entry.receiptPdf, receiptName(entry)) }, 'Download Receipt') : null,
@@ -493,7 +508,7 @@
             ui.field('Bates Prefix', prefixIn, '', 'Each page gets PREFIX-000001 and on. The next number continues from the last production with this prefix.'),
             ui.field('Start Number', startIn))),
         h('fieldset', { class: 'disc-card' }, h('legend', {}, icon('shield-lock-fill'), ' Where And Password'),
-          ui.field('Where To', dest),
+          ui.field('Where To', dest), destHint,
           h('div', { class: 'disc-pair' },
             ui.field('Password', pw, '', 'At least 8 characters. CaseVault doesn\'t keep it: write it down for the recipient.'),
             ui.field('Password Again', pw2))),

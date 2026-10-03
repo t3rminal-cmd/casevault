@@ -215,6 +215,24 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.57
+
+- **Icons and buttons.** Every icon is now in the colour style: the Ask AI window's buttons, Options, the Overview banner (its buttons are white now), Suspects, Case Actions, the arrows, plus and minus, close, warnings and info, file types, and the theme switch. Only small arrows that open lists and the text-formatting buttons stay plain.
+  - The blue buttons (Save, Close Case, Create…) and the red ones (Delete Case, Purge…) are a light tint with a coloured border and coloured words, so their colour icons sit on them without a white square.
+- **Field boxes** (Draft, Arrest details, Mail, Timeline, Contacts, Vault…) have a thin border and a faint line under them, so boxes next to each other don't run together.
+- **Header.** The drive name ("V: | CaseVault-Data") no longer shows under the CaseVault logo; point at the SSD square at the top to see where the data is saved.
+- **Options** has a new look: an icon header, tabs, and each setting in its own card.
+- **Ask AI window**: a header bar with square buttons, the model and case in a grey box, and framed prompt suggestions and message box.
+- **No double close buttons.** A box that has Done, Close, Cancel or OK no longer also has an X. Esc still closes every box.
+- **Quick links:**
+  - LEO: **Illinois Compiled Statutes**, **Chicago Cop**, **NW3C**.
+  - OSINT: **ZetX**, **Bandwidth**, **TextNow**, **Blockchain Explorer**, **TRM Labs**.
+  - **Geotime LIVE** now opens https://live.geotime.com/#/login. If you saved your own address for it earlier, yours is kept.
+  - Accurint and Chicago HIDTA have new icons.
+- **Discovery → Where To → A CD or DVD drive.** Put a blank CD or DVD in. If Windows asks how to use the disc, choose **Like a USB flash drive**. Then pick the disc drive in the window that opens, and CaseVault writes the package to it like a USB drive. Before you take it out, choose **Eject** (or **Close session**) in File Explorer so other computers can read it.
+  - CaseVault does not format or burn discs; Windows does. For a disc made the other way (a mastered disc that plays in any player or older computer), use **The SSD, for a DVD** and burn the package folder with File Explorer (Share → Burn to disc), as before.
+- **Updater 1.2.1:** the logo on the right of the Updater's banner is gone.
+
 ### What's new in v1.56
 
 - **Link Chart overhaul** (see *Link Chart* under *Files* for the details):

@@ -15,7 +15,14 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.56)
+## Features (v1.57)
+
+- Colour icons everywhere (Ask AI window, Options, the Overview banner, Suspects, Case Actions, quick links, arrows, plus/minus, close, warnings and more); the blue and red buttons are tinted with a coloured border, so their icons sit on them cleanly
+- Options and the Ask AI window redesigned; grey field boxes have a thin border so they don't run together
+- No drive name under the logo (the SSD square in the header shows where the data is saved); the Updater (1.2.1) has no logo on the right
+- No X on boxes that already have Done, Close or Cancel
+- Quick links: Illinois Compiled Statutes, Chicago Cop, NW3C (LEO); ZetX, Bandwidth, TextNow, Blockchain Explorer, TRM Labs (OSINT); Geotime LIVE address filled in
+- Discovery: Where To can be a CD or DVD drive (a disc Windows set up "Like a USB flash drive")
 
 - Link Chart: Primary (was Subject); Tree or Free layout (drag cards); Move Left / Right; cards per row with a readability line for the portrait page; Link Cards (click two cards to link with an arrow, again to unlink) with arrows to, from or both ways; zoom and Fit; Clear Chart; no cut-off words; phone format; saved PDFs carry the chart so Files → Link Charts can open it back in the tab
 
