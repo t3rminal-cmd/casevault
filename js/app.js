@@ -486,6 +486,7 @@
   function onDriveLost() {
     if (!state.connected) return;
     state.connected = false;
+    quickFooter(false);
     CVOutbound.goOffline('drive disconnected');
     CVApiKey.forget();
     CVChatUI.reset();
@@ -739,7 +740,8 @@
 
   function route() {
     if (!state.connected) return;
-    quickFooter(false);
+    // v1.69: the Quick Links footer stays on every page, like the case list.
+    if (!$('#ql-footer').childElementCount) quickFooter(true);
     if (/^#\/online\b/.test(location.hash)) return showOnline();
     // Old #/chat links open the floating Ask AI box over the overview.
     if (/^#\/chat\b/.test(location.hash)) { history.replaceState(null, '', '#/'); CVChatUI.toggle(true); }
@@ -804,6 +806,7 @@
    * folder (key 'op-<id>', with Subpoenas, Affidavits, Operation Plans, Maps, Subject Data and
    * Running Vehicle List). Files are kept as they are named, in CaseVault-Data\\shared. */
   const sharedOpen = {};
+  const SHARED_ICONS = { Subpoenas: 'file-earmark-ruled', Affidavits: 'pencil-square', 'Operation Plans': 'card-checklist', Maps: 'map', 'Subject Data': 'person-vcard', 'Running Vehicle List': 'car-front' };
   function sharedFilesBox(key, { folders = [], empty = 'No files yet.' } = {}) {
     const box = h('div', { class: 'shared-files', 'data-key': key });
     let folder = folders.length ? (sharedOpen[key] || folders[0]) : '';
@@ -824,10 +827,11 @@
         list = await Vault.listShared(key, folder);
         if (folders.length) for (const f of folders) counts[f] = f === folder ? list.length : (await Vault.listShared(key, f)).length;
       } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
-      const chips = folders.length ? h('div', { class: 'shared-folders', role: 'tablist' }, folders.map((f) => h('button', {
-        type: 'button', role: 'tab', class: `shared-folder${f === folder ? ' active' : ''}`, 'aria-selected': String(f === folder),
+      // v1.69: the folders are tabs, like a case's Details / Timeline / Draft tabs.
+      const chips = folders.length ? h('nav', { class: 'tabs shared-tabs', role: 'tablist' }, folders.map((f) => h('button', {
+        type: 'button', role: 'tab', class: `tab${f === folder ? ' active' : ''}`, 'aria-selected': String(f === folder), icon: SHARED_ICONS[f] || 'folder',
         onclick: () => { folder = f; sharedOpen[key] = f; draw(); },
-      }, I(f === folder ? 'folder2-open' : 'folder'), h('span', {}, f), h('span', { class: 'count' }, String(counts[f] || 0))))) : null;
+      }, f, h('span', { class: 'tab-count' }, String(counts[f] || 0))))) : null;
       const reader = { readFile: (name) => Vault.readShared(key, folder, name.split('/').pop()), where: `${key}${folder ? `\\${folder}` : ''}` };
       const rows = list.length ? h('table', { class: 'files shared-table' },
         h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', { class: 'num' }, 'Size'), h('th', {}, 'Updated'), h('th', { class: 'col-actions' }, ''))),
@@ -891,12 +895,12 @@
         : h('p', { class: 'muted' }, cases.length ? 'Nothing changed since you cleared this list.' : 'Create your first case with "New case".')),
     ));
     // v1.63: Quick Links in the footer bar under the page, from the case list to the right edge.
-    quickFooter(true);
   }
 
   /** v1.63: the Quick Links footer: shown on the Overview, empty and hidden everywhere else.
    * The round Ask AI / Notes buttons sit just above it (--ql-dock-h). */
   let footerRO = null;
+  document.addEventListener('cv-links-changed', () => { if (state.connected && $('#ql-footer').childElementCount) quickFooter(true); });
   function quickFooter(on) {
     const foot = $('#ql-footer');
     if (!foot) return;
@@ -1921,16 +1925,17 @@
         const PERSON = (k) => CVReportFields.SUSPECT_INFO.find(([key]) => key === k);
         const infoInput = (k, attrs = {}) => {
           // v1.39: the record numbers and a phone, besides the description.
-          const EXTRA = { irNumber: 'IR Number', fbiNumber: 'FBI Number', idocNumber: 'IDOC Number', phone: 'Phone Number' };
+          const EXTRA = { phone: 'Phone Number', moniker: 'Moniker / Social Media' };
           const [, label, kind, opts] = PERSON(k) || [k, EXTRA[k] || k, k === 'phone' ? 'phone' : 'text'];
           let el;
           if (kind === 'select') el = h('select', { 'aria-label': `${who} ${label}` }, opts.map((o) => h('option', { value: o, selected: o === (s.info[k] || '') }, o || '—')));
-          else el = h('input', { value: s.info[k] || '', autocomplete: 'off', maxlength: 200, 'aria-label': `${who} ${label}`, type: kind === 'phone' ? 'tel' : 'text', list: kind === 'hair' ? 'suspect-hair' : kind === 'eyes' ? 'suspect-eyes' : null, placeholder: kind === 'height' ? '5 ft 10 in' : kind === 'weight' ? '160 Pounds' : '', ...attrs });
+          else el = h('input', { value: s.info[k] || '', autocomplete: 'off', maxlength: 200, 'aria-label': `${who} ${label}`, type: kind === 'phone' ? 'tel' : 'text', list: kind === 'hair' ? 'suspect-hair' : kind === 'hairStyle' ? 'suspect-hairstyle' : kind === 'eyes' ? 'suspect-eyes' : null, placeholder: kind === 'height' ? '5 ft 10 in' : kind === 'weight' ? '160 Pounds' : '', ...attrs });
           el.addEventListener(kind === 'select' ? 'change' : 'input', () => { s.info[k] = el.value.trim(); save(); });
           return field(label, el, kind === 'wide' ? 'suspect-wide' : '');
         };
         const demo = h('div', { class: 'suspect-demo' },
-          ['gender', 'race', 'complexion', 'height', 'weight', 'hair', 'eyes', 'irNumber', 'fbiNumber', 'idocNumber', 'phone', 'marks'].map((k) => infoInput(k)));
+          // v1.69: the same fields as an offender on the Draft (all but Clothing Description).
+          ['gender', 'identity', 'race', 'complexion', 'height', 'weight', 'hair', 'hairStyle', 'eyes', 'veteran', 'relation', 'irNumber', 'fbiNumber', 'idocNumber', 'phone', 'moniker', 'marks'].map((k) => infoInput(k)));
         // v1.67: Not Identified: the name box is set aside (kept, in case it's filled later).
         const nameIn = input('name', { maxlength: 120, 'aria-label': `${who} name` });
         const notId = h('input', { type: 'checkbox', checked: !!s.notIdentified, 'aria-label': `${who} not identified` });
@@ -1952,6 +1957,7 @@
     return h('section', { class: 'contacts suspects cv-boxed', 'aria-labelledby': 'suspects-title' },
       h('h3', { id: 'suspects-title', icon: 'person-exclamation', title: 'The people this case is about. The age is worked out from the date of birth. The main suspect fills {{suspect.name}}, {{suspect.dob}}, {{suspect.age}} and so on in templates; {{suspects}} lists them all.' }, 'Suspects'),
       h('datalist', { id: 'suspect-hair' }, CVReportFields.PICKS.hair.map((x) => h('option', { value: x }))),
+      h('datalist', { id: 'suspect-hairstyle' }, CVReportFields.PICKS.hairStyle.map((x) => h('option', { value: x }))),
       h('datalist', { id: 'suspect-eyes' }, CVReportFields.PICKS.eyes.map((x) => h('option', { value: x }))),
       rows,
       h('div', { class: 'contact-add' }, h('button', { class: 'btn small', type: 'button', icon: 'person-plus', onclick: () => {

@@ -238,7 +238,16 @@
       // The input keeps its own listeners; a searchable list wraps it (box), not replaces it.
       let box = el;
       // v1.44: Method Code and Safe Method offer DNA (does not apply); anything else can be typed.
-      if (key === 'methodCode' || key === 'safeMethod') box = CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }], onPick: () => save() });
+      if (['methodCode', 'safeMethod', 'arrestUnit', 'residence'].includes(key)) box = CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }], onPick: () => save() });
+      // v1.69: Court Branch and Court Officer can be Pending, and so can the Court Date.
+      if (key === 'courtBranch') box = CVCombo.attach(el, { items: () => [{ value: 'Pending', label: 'Pending', hint: 'Not set yet' }], onPick: () => save() });
+      if (key === 'courtDate') {
+        const pend = h('input', { type: 'checkbox', checked: data.courtDate === 'Pending', 'aria-label': 'Court Date pending' });
+        const showPend = () => { el.disabled = pend.checked; if (pend.checked) el.value = ''; box.classList.toggle('is-pending', pend.checked); };
+        pend.addEventListener('change', () => { data.courtDate = pend.checked ? 'Pending' : el.value; showPend(); save(); });
+        box = h('div', { class: 'rf-date-pending' }, el, h('label', { class: 'check-row rf-pending', title: 'The court date is not set yet' }, pend, h('span', {}, 'Pending')));
+        showPend();
+      }
       if (kind === 'ucr') {
         // From Common UCR; an empty Offense Classification takes the UCR group (Narcotics…).
         // v1.39: picking an IUCR code puts its description in Offense Classification (for 2170:
@@ -488,7 +497,7 @@
       // v1.68: it sits in its own column beside the fold arrow, so the checks line up down the page.
       const done = h('span', { class: 'rf-done', title: 'Every field in this part is filled in (or ticked off)' }, ui.icon('check-circle-fill'), h('span', { class: 'sr-only' }, `${title}: complete`));
       const sec = h('section', { class: `rf-section rf-${id}` },
-        h('div', { class: 'rf-head' }, h('label', { class: 'rf-include', title: 'Untick if this part doesn\'t apply: it is left out of the PDF' }, cb), h('h3', { icon }, title), h('div', { class: 'spacer' }), done, fold),
+        h('div', { class: 'rf-head' }, h('label', { class: 'rf-include', title: 'Untick if this part doesn\'t apply: it is left out of the PDF' }, cb), h('span', { class: 'rf-hidden-tag', 'aria-hidden': 'true' }, 'Hidden on screen'), h('h3', { icon }, title), h('div', { class: 'spacer' }), done, fold),
         inner);
       let pending = 0;
       // v1.68: a line or list that is ticked off counts as filled, and so does a whole part that is
@@ -538,9 +547,16 @@
 
     // v1.54: a line whose label is a switch: the Search Warrant or the Subpoena number, the ASA or
     // the AUSA. The text moves with the switch; the other of the pair is left out of the report.
+    // v1.69: a label switch is as wide as its longest choice (Consolas: every letter is 1ch, plus
+    // the letter spacing), so no browser cuts "SEARCH WARRANT NUMBER" short.
+    function fitSwitch(sel, labels) {
+      const n = Math.max(...labels.map((l) => l.length));
+      sel.style.width = `calc(${n} * (1ch + .02em) + 1.8rem)`;
+    }
     function switchLine(group, choices) {
       let cur = data[`${group}Kind`] || choices[0][0];
       const sel = h('select', { class: 'rf-switch', 'aria-label': `${choices.map((c) => c[1]).join(' or ')}` }, choices.map(([k, l]) => h('option', { value: k, selected: k === cur }, l)));
+      fitSwitch(sel, choices.map((c) => c[1]));
       const inp = h('input', { autocomplete: 'off', value: data[cur] || '', 'aria-label': choices.find((c) => c[0] === cur)[1] });
       inp.addEventListener('input', () => { data[cur] = inp.value; save(); });
       const on = !(data.hidden || []).includes(cur);
@@ -566,6 +582,7 @@
     }
     function judgeLine() {
       const sel = h('select', { class: 'rf-switch', 'aria-label': 'Judge or Magistrate' }, ['Judge', 'Magistrate'].map((t) => h('option', { value: t, selected: t === (data.judgeTitle || 'Judge') }, `${t} Approving`)));
+      fitSwitch(sel, ['Judge Approving', 'Magistrate Approving']);
       sel.addEventListener('change', () => { data.judgeTitle = sel.value; save(); });
       const inp = h('input', { autocomplete: 'off', value: data.judge || '', 'aria-label': 'Judge or magistrate' });
       inp.addEventListener('input', () => { data.judge = inp.value; save(); });

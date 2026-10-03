@@ -215,6 +215,26 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.69
+
+- **Quick Links** stay at the bottom of every page, not only the Overview. Changes in Vault → Quick links show at once.
+- **Operation Folder:** the folders (Subpoenas, Affidavits, Operation Plans, Maps, Subject Data, Running Vehicle List) are tabs like a case's Details, Timeline, Draft… tabs, each with its count.
+- **Sidebar:** case numbers and the archive sub-folders (EXPIRED, NOLLE PROSEQUI, PROSECUTION) are the same size as the folder names.
+- **One look for every field**, the Draft's: a grey box, the heading small and grey at its top, and what you type at the same size. This is on every page and popup (Details, New Case, New Operation, Timeline, Mail, Vault…), and the Operation page's details match.
+- **Dates:** type the first letters of a month and it's predicted (*sep* → *September*); press **Tab** to take it, type the day, and **Tab** again to fill in this year (*September 30, 2026*). Typing numbers (12.01.2026) works as before.
+- **Suspects and Offenders have the same fields**, the Offender also has Clothing Description:
+  - **Hair Style** is new on both, with a list to pick from or type over.
+  - Suspects gain Gender Identity, Veteran, Relation Code and Moniker / Social Media. Offenders gain IR, FBI and IDOC Numbers.
+  - **Add From Suspects** copies all of them; the moniker joins the offender's Monikers / Social Media.
+- **Draft:**
+  - *Hidden on screen* now sits beside the part's checkbox, in its own column, so the titles line up.
+  - **Arrest Unit** and **If Residence, Where** offer **DNA** (Does Not Apply).
+  - **Court Branch and Court Officer** offers **Pending**, and **Court Date** has a **Pending** box.
+  - **Adderall** is in the Narcotic Type list.
+  - The **Search Warrant Number / Subpoena GJ Number** label switch (and ASA / AUSA, Judge / Magistrate) is always wide enough for its words.
+- **Checks (AI):** a photo is read only for the words written in it. OCR lines it isn't sure of, or that aren't real words, are dropped, and a photo with no writing is skipped. The AI sees the photo as *Photo 2*, never by its file name, so camera names like *IMG_20250312_1430* can't be read as a date and time. No hidden camera data is ever read.
+- The **Power Off** hover text is shorter.
+
 ### What's new in v1.68
 
 - **Additional Exhibits** (Draft → Evidence Inventoried): photographs or screenshots that aren't tied to an inventory number.

@@ -43,6 +43,18 @@
     return m ? `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}, ${m[1]}` : String(iso || '');
   }
 
+  /** v1.69: the month whose name starts with these letters ("sep" -> "September"), or ''. */
+  function predictMonth(letters) {
+    const t = String(letters || '').toLowerCase();
+    if (!t) return '';
+    return MONTHS.find((m) => m.toLowerCase().startsWith(t)) || '';
+  }
+  /** A whole month name, or its first three letters or more -> the month's name; else ''. */
+  function monthOf(word) {
+    const t = String(word || '').toLowerCase();
+    return t.length >= 3 ? (MONTHS.find((m) => m.toLowerCase().startsWith(t)) || '') : '';
+  }
+
   /** What was typed -> "YYYY-MM-DD", or '' if it isn't a real date. Month first, as in the US. */
   function parseDate(text) {
     const s = String(text || '').trim();
@@ -112,6 +124,24 @@
     });
     Object.defineProperty(wrap, 'name', { get: () => hidden.name });
 
+    // v1.69: type a month's first letters and it's predicted ("sep" -> "September", the rest
+    // selected); Tab takes it. "September 30" + Tab adds this year and finishes the date.
+    text.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab' || e.shiftKey) return;
+      const v = text.value;
+      const full = monthOf(v.trim());
+      if (full && text.selectionEnd === v.length && text.selectionStart < v.length) {
+        e.preventDefault();
+        text.value = `${full} `;
+        text.setSelectionRange(text.value.length, text.value.length);
+        return;
+      }
+      const md = /^([A-Za-z]+)\.?\s+(\d{1,2})$/.exec(v.trim());
+      if (md && monthOf(md[1])) {
+        text.value = `${monthOf(md[1])} ${Number(md[2])}, ${new Date().getFullYear()}`;
+        text.dispatchEvent(new root.Event('input', { bubbles: false }));
+      }
+    });
     text.addEventListener('input', (e) => {
       e.stopPropagation();
       // Dots go in as you type: "1201" -> "12.01", "12012026" -> "12.01.2026".
@@ -119,6 +149,12 @@
       const d = text.value.replace(/\D/g, '');
       if (/^[\d.]*$/.test(text.value) && d.length <= 8 && text.selectionStart === text.value.length && !(e.inputType || '').startsWith('delete')) {
         text.value = d.length <= 2 ? d : d.length <= 4 ? `${d.slice(0, 2)}.${d.slice(2)}` : `${d.slice(0, 2)}.${d.slice(2, 4)}.${d.slice(4)}`;
+      }
+      // v1.69: letters only: predict the month, the part not typed selected.
+      const typed = text.value;
+      if (/^[A-Za-z]+$/.test(typed) && !(e.inputType || '').startsWith('delete') && text.selectionStart === typed.length) {
+        const full = predictMonth(typed);
+        if (full && full.length > typed.length) { text.value = full; text.setSelectionRange(typed.length, full.length); }
       }
       const next = parseDate(text.value);
       if (next || !text.value.trim()) {
@@ -284,7 +320,7 @@
   /** A folder path as shown on screen (v1.22): "cases\\2026-B1\\files" -> "cases | 2026-B1 | files". */
   const pathText = (p) => String(p || '').split(/[\\/]+/).filter(Boolean).join(' | ');
 
-  const api = { phone, ssn, dateText, parseDate, dateField, monthGrid, calendar, install, titleCase, pathText };
+  const api = { phone, ssn, dateText, parseDate, predictMonth, monthOf, dateField, monthGrid, calendar, install, titleCase, pathText };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else {
     root.CVFormat = api;

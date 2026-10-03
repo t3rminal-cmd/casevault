@@ -28,6 +28,8 @@
 
   const savedLinks = () => (Vault.data && Vault.data.settings.quickLinks) || {};
   const saveLinks = (patch) => ui.Save.track('settings', () => Vault.updateSettings({ quickLinks: { ...savedLinks(), ...patch } }));
+  // v1.69: edits in Vault → Quick links also redraw the footer, which now stays on every page.
+  const saveLinksAll = async (patch) => { const r = await saveLinks(patch); document.dispatchEvent(new CustomEvent('cv-links-changed')); return r; };
 
   /* ---------- Quick links (bottom of the Overview) ---------- */
 
@@ -147,8 +149,8 @@
         if (name.value.trim() === l.name && clean === (l.url || '')) return true;
         const s = savedLinks();
         try {
-          if (l.custom) await saveLinks({ custom: (s.custom || []).map((c) => (c.id === l.id ? { ...c, name: name.value.trim() || c.name, url: clean } : c)) });
-          else await saveLinks({ edits: { ...(s.edits || {}), [l.id]: { ...((s.edits || {})[l.id] || {}), name: name.value.trim() || l.name, url: clean } } });
+          if (l.custom) await saveLinksAll({ custom: (s.custom || []).map((c) => (c.id === l.id ? { ...c, name: name.value.trim() || c.name, url: clean } : c)) });
+          else await saveLinksAll({ edits: { ...(s.edits || {}), [l.id]: { ...((s.edits || {})[l.id] || {}), name: name.value.trim() || l.name, url: clean } } });
           if (redraw) draw();
           return true;
         } catch { return false; /* reported */ }
@@ -162,14 +164,14 @@
       hidden.addEventListener('change', async () => {
         const set = new Set(savedLinks().hidden || []);
         if (hidden.checked) set.delete(l.id); else set.add(l.id);
-        try { await saveLinks({ hidden: [...set] }); } catch { /* reported */ }
+        try { await saveLinksAll({ hidden: [...set] }); } catch { /* reported */ }
       });
       return h('li', { class: 'links-row' },
         h('span', { class: 'links-icon' }, ui.icon(l.icon)), name, url,
         h('label', { class: 'check-row small', title: 'Show this button in Quick links' }, hidden, h('span', {}, 'Show')),
         l.custom
-          ? h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Remove this link', onclick: async () => { try { await saveLinks({ custom: (savedLinks().custom || []).filter((c) => c.id !== l.id) }); draw(); } catch { /* reported */ } } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, `Remove ${l.name}`))
-          : h('button', { class: 'icon-btn', type: 'button', title: 'Back to the built-in name and address', onclick: async () => { const e = { ...(savedLinks().edits || {}) }; delete e[l.id]; try { await saveLinks({ edits: e }); draw(); } catch { /* reported */ } } }, ui.icon('arrow-counterclockwise'), h('span', { class: 'sr-only' }, `Reset ${l.name}`)));
+          ? h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Remove this link', onclick: async () => { try { await saveLinksAll({ custom: (savedLinks().custom || []).filter((c) => c.id !== l.id) }); draw(); } catch { /* reported */ } } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, `Remove ${l.name}`))
+          : h('button', { class: 'icon-btn', type: 'button', title: 'Back to the built-in name and address', onclick: async () => { const e = { ...(savedLinks().edits || {}) }; delete e[l.id]; try { await saveLinksAll({ edits: e }); draw(); } catch { /* reported */ } } }, ui.icon('arrow-counterclockwise'), h('span', { class: 'sr-only' }, `Reset ${l.name}`)));
     };
     const addRow = (tab) => {
       const name = h('input', { placeholder: 'Name', maxlength: 60, 'aria-label': 'New link name' });
@@ -179,7 +181,7 @@
         const clean = LK().cleanUrl(url.value);
         if (!name.value.trim() || !clean) { toast('Give the link a name and a web address (for example portal.example.org).', 'error'); return; }
         const custom = [...(savedLinks().custom || []), { id: `custom-${Date.now().toString(36)}`, tab, name: name.value.trim(), url: clean }];
-        try { await saveLinks({ custom }); draw(); } catch { /* reported */ }
+        try { await saveLinksAll({ custom }); draw(); } catch { /* reported */ }
       } }, name, url, h('button', { class: 'btn small', type: 'submit', icon: 'plus-lg' }, `Add to ${tab === 'leo' ? 'LEO' : 'OSINT'}`));
     };
     draw();
