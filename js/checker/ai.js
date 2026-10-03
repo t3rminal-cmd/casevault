@@ -132,7 +132,7 @@
         if (!group.length) return;
         const start = group[0].start;
         const end = group[group.length - 1].end;
-        out.push({ doc: doc.docIndex, docName: doc.name, paragraph: para.index, page: para.page ?? null, ...cellOf(para), start, end, text: para.text.slice(start, end), paraText: para.text });
+        out.push({ doc: doc.docIndex, docName: doc.name, promptName: doc.kind === 'image' ? `Photo ${doc.docIndex + 1}` : doc.name, paragraph: para.index, page: para.page ?? null, ...cellOf(para), start, end, text: para.text.slice(start, end), paraText: para.text });
         group = [];
       };
       for (const s of sents) {
@@ -176,7 +176,9 @@
   };
 
   function userPrompt(statement, passages) {
-    const list = passages.map((p, i) => `[${i + 1}] (${p.docName}${p.sheet != null ? `, ${p.sheet} row ${p.row}` : p.field != null ? `, ${p.field}` : p.page ? `, page ${p.page}` : ''})\n${p.promptText || p.text}`).join('\n\n');
+    // v1.69: a photo is named "Photo 2" here, never by its file name (a camera's IMG_20250312_1430
+    // read as a date and time and was flagged).
+    const list = passages.map((p, i) => `[${i + 1}] (${p.promptName || p.docName}${p.sheet != null ? `, ${p.sheet} row ${p.row}` : p.field != null ? `, ${p.field}` : p.page ? `, page ${p.page}` : ''})\n${p.promptText || p.text}`).join('\n\n');
     return `STATEMENT FROM THE AFFIDAVIT:\n${statement.text}\n\nPASSAGES FROM THE REPORTS:\n${list}`;
   }
 

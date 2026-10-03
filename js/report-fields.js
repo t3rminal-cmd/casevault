@@ -127,10 +127,13 @@
     ['identity', 'Gender Identity', 'select', ['', 'Man', 'Woman', 'Transgender Man', 'Transgender Woman', 'Non-Binary', 'Other', 'Declined to State']],
     ['race', 'Race', 'select', ['', 'White', 'Black', 'White Hispanic', 'Black Hispanic', 'Asian / Pacific Islander', 'American Indian / Alaska Native', 'Unknown']],
     ['complexion', 'Complexion', 'select', ['', 'Light', 'Fair', 'Medium', 'Olive', 'Light Brown', 'Medium Brown', 'Dark Brown', 'Dark', 'Ruddy', 'Albino']],
-    ['height', 'Height', 'height'], ['weight', 'Weight', 'weight'], ['hair', 'Hair Color', 'hair'], ['eyes', 'Eye Color', 'eyes'],
+    ['height', 'Height', 'height'], ['weight', 'Weight', 'weight'], ['hair', 'Hair Color', 'hair'], ['hairStyle', 'Hair Style', 'hairStyle'], ['eyes', 'Eye Color', 'eyes'],
     ['veteran', 'Veteran', 'select', ['', 'Yes', 'No']],
     ['marks', 'Tattoos / Scars', 'wide'], ['clothing', 'Clothing Description', 'wide'],
   ];
+  // v1.69: an offender has the suspect's record numbers too, so both have the same fields
+  // (the offender also has Clothing Description).
+  const RECORD_NUMBERS = [['irNumber', 'IR Number', 'text'], ['fbiNumber', 'FBI Number', 'text'], ['idocNumber', 'IDOC Number', 'text']];
   // The officers' roles at the scene (Police Personnel).
   const ROLES = ['', 'Case', 'Affiant', 'Entry', 'Perimeter', 'UCO', 'Surveillance', 'Enforcement', 'Sergeant', 'Lieutenant', 'Agent', 'Other'];
   // Officer's Report lines that can be ticked off when they don't apply (v1.22; every line since
@@ -160,7 +163,7 @@
     narcotics: { title: 'Narcotics Recovered', item: 'Narcotic', fields: [['drug', 'Narcotics Type Recovered', 'narcotic'], ['amount', 'Total Weight', 'text'], ['unit', 'Unit', 'select', NARCOTIC_UNITS], ['price', 'Purchase Price', 'money'], ['value', 'Street Value', 'money']] },
     victimsList: { title: 'Victims', item: 'Victim', fields: [['name', 'Name', 'victim'], ['officer', 'Officer Name', 'text'], ...PERSON.slice(1)] },
     // v1.39: an offender's phone numbers and monikers (with the social media app each is used on).
-    offendersList: { title: 'Offenders', item: 'Offender', fields: [...PERSON, ['phones', 'Phone Numbers', 'phones'], ['socials', 'Monikers / Social Media', 'socials']] },
+    offendersList: { title: 'Offenders', item: 'Offender', fields: [...PERSON, ...RECORD_NUMBERS, ['phones', 'Phone Numbers', 'phones'], ['socials', 'Monikers / Social Media', 'socials']] },
     // v1.54: one entry per denomination, with how many bills and their serial numbers; one Recovered
     // or Not Recovered for all of them (fundsRecovered).
     funds: { title: 'Pre-Recorded Funds', item: 'Denomination', fields: [['denomination', 'Denomination', 'select', DENOMINATIONS], ['quantity', 'Quantity', 'text'], ['serials', 'Serial Numbers', 'serials']] },
@@ -174,6 +177,8 @@
   const PICKS = {
     victim: ['State of Illinois'],
     hair: ['Black', 'Brown', 'Blonde', 'Red', 'Gray', 'White', 'Bald', 'Dyed'],
+    // v1.69
+    hairStyle: ['Short', 'Medium', 'Long', 'Bald / Shaved', 'Buzz Cut', 'Fade', 'Afro', 'Braids', 'Cornrows', 'Dreadlocks', 'Twists', 'Ponytail', 'Bun', 'Curly', 'Wavy', 'Straight', 'Mohawk', 'Receding'],
     eyes: ['Brown', 'Black', 'Blue', 'Green', 'Hazel', 'Gray'],
     // Street gangs often named in Chicago reports, then national and foreign gangs and cartels.
     gang: ['Gangster Disciples', 'Black Disciples', 'Black P. Stones', 'Vice Lords', 'Conservative Vice Lords', 'Traveling Vice Lords', 'Four Corner Hustlers', 'Mickey Cobras', 'New Breeds', 'Black Souls',
@@ -182,7 +187,7 @@
   };
 
   const EVIDENCE_TYPES = ['Narcotics', 'Currency', 'Personal Currency', 'Personal Property', 'Personal Jewelry', 'Jewelry', 'Electronics', 'Video/Audio', 'Photograph', 'Packaging', 'Other'];
-  const DRUG_TYPES = ['Cannabis', 'Cocaine', 'Crack Cocaine', 'Heroin', 'Fentanyl', 'Methamphetamine', 'MDMA / Ecstasy', 'PCP', 'Oxycodone', 'Hydrocodone', 'Alprazolam', 'Ketamine', 'Psilocybin', 'LSD', 'Other Controlled Substance'];
+  const DRUG_TYPES = ['Cannabis', 'Cocaine', 'Crack Cocaine', 'Heroin', 'Fentanyl', 'Methamphetamine', 'MDMA / Ecstasy', 'PCP', 'Oxycodone', 'Hydrocodone', 'Alprazolam', 'Adderall', 'Ketamine', 'Psilocybin', 'LSD', 'Other Controlled Substance'];
   // Types saved before v1.20.
   const OLD_TYPES = { Narcotic: 'Narcotics', 'Personal property': 'Personal Property', 'Personal currency': 'Personal Currency', 'Recording (audio/video)': 'Video/Audio' };
   // A 'list' entry in a section only marks where that list shows; it isn't a field of its own.
@@ -369,7 +374,7 @@
 
   // Offender fields copied from a suspect's saved details, if any (v1.23 kept them on the suspect): all but the three
   // on the suspect's own row (name, date of birth, age).
-  const SUSPECT_INFO = PERSON.filter(([k]) => !['name', 'dob', 'age'].includes(k));
+  const SUSPECT_INFO = [...PERSON.filter(([k]) => !['name', 'dob', 'age'].includes(k)), ...RECORD_NUMBERS];
   const nameKey = (n) => String(n || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
   /** A Details suspect copied into the report's Offenders: the offender with the same name is
@@ -391,6 +396,9 @@
     // v1.39: the suspect's phone joins the offender's phone numbers.
     const ph = String(info.phone || '').trim();
     if (ph) { o.phones = Array.isArray(o.phones) ? o.phones : []; if (!o.phones.includes(ph)) o.phones.push(ph); }
+    // v1.69: and the suspect's moniker its Monikers / Social Media.
+    const mon = String(info.moniker || '').trim();
+    if (mon) { o.socials = Array.isArray(o.socials) ? o.socials : []; if (!o.socials.some((x) => x && nameKey(x.name) === nameKey(mon))) o.socials.push({ name: mon, app: '' }); }
     return { index, added };
   }
 

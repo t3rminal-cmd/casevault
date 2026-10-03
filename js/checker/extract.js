@@ -384,13 +384,29 @@
     }
   }
 
+  /** v1.69: a photo's own words only. OCR on a photo without writing invents "text" out of
+   * shapes and shadows, and that gave false flags: lines read with low confidence, or with no
+   * real word in them, are left out. Nothing but the pixels is read (no camera data). */
+  const realLine = (t) => /[A-Za-z]{3,}|\d{3,}/.test(t) && (t.replace(/[^A-Za-z0-9]/g, '').length / Math.max(1, t.replace(/\s/g, '').length)) >= 0.6;
+  function photoText(data) {
+    const lines = (data.blocks || []).flatMap((b) => (b.paragraphs || []).flatMap((p) => p.lines || []));
+    if (!lines.length) return (data.confidence || 0) >= 60 ? (data.text || '').split('\n').filter((l) => realLine(l.trim())).join('\n') : '';
+    return lines.filter((l) => (l.confidence || 0) >= 60 && realLine(String(l.text || '').trim())).map((l) => String(l.text).trim()).join('\n');
+  }
   async function extractImage(file, progress) {
-    const text = await ocr(file, (pct) => progress?.(`OCR ${pct}%`));
+    const worker = await getOcrWorker();
+    ocrProgress = (pct) => progress?.(`OCR ${pct}%`);
+    let text = '';
+    try { const { data } = await worker.recognize(file, {}, { text: true, blocks: true }); text = photoText(data); } finally { ocrProgress = null; }
+    const paragraphs = paragraphsFromText(text, 1);
     return {
       pageCount: 1,
-      paragraphs: paragraphsFromText(text, 1),
+      paragraphs,
       ocrPages: [1],
-      warnings: ['This is a photo or scan read with OCR. OCR can misread characters; check its flags against the original.'],
+      photo: true,
+      warnings: [paragraphs.length
+        ? 'This is a photo or scan: only the words written in it were read (OCR), nothing else about the file. OCR can misread characters; check its flags against the original.'
+        : 'No writing was found in this photo, so it was not checked.'],
     };
   }
 
@@ -424,7 +440,7 @@
 
   // Bumped when extraction improves, so text cached on the SSD by an older version is read again
   // (e.g. XFA forms that v1.7 read as "Please wait...").
-  const VERSION = 2;
+  const VERSION = 3; // v1.69: photos keep only confidently read words
 
-  root.CVExtract = { VERSION, loadPdfjs, openPdf, extract, kindOf, supportMessage, paragraphsFromText, shutdown, readXfaFields, renderXfa, unzipEntry };
+  root.CVExtract = { VERSION, photoText, realLine, loadPdfjs, openPdf, extract, kindOf, supportMessage, paragraphsFromText, shutdown, readXfaFields, renderXfa, unzipEntry };
 })(this);

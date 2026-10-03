@@ -15,6 +15,15 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.69)
+
+- Quick Links footer on every page, like the case list; Operation Folder folders are tabs like a case's tabs; sidebar case numbers and archive sub-folders the size of the folder names
+- One field look everywhere (the Draft's): grey box, small grey heading inside, entry at the same size, on every page and popup
+- Date boxes predict the month as you type ("sep" → September, Tab takes it; "September 30" + Tab adds the year)
+- Suspects and Offenders have the same fields (the Offender also has Clothing): Hair Style (new), Gender Identity, Veteran, Relation Code, IR / FBI / IDOC Numbers, Moniker; Add From Suspects copies them
+- Draft: "Hidden on screen" beside the checkbox; DNA for Arrest Unit and If Residence, Where; Pending for Court Branch and Court Date; Adderall in Narcotic Type; the Search Warrant / Subpoena GJ label is never cut off
+- Checks: a photo is read only for the words written in it (unsure OCR is dropped) and is never named by its file name to the AI, so camera names and noise no longer cause false flags; Power Off tooltip shortened
+
 ## Features (v1.68)
 
 - Draft → Evidence: Additional Exhibits (photographs or text-message screenshots not tied to an inventory number), numbered on their own (Additional Exhibit 1; photos 1a, 1b) with Next Additional No., Reset to 1 and Automatic; they appear in the report, its exhibit list and the photo pages
