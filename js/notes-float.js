@@ -192,6 +192,15 @@
       dock.append(chat);
     }
     dock.append(fab);
+    // v1.70: Back to Top, beside Ask AI: shown once the page has scrolled down.
+    const top = ui.h('button', { id: 'btn-top-fab', class: 'fab top-fab', type: 'button', title: 'Back to top', 'data-tip-side': 'left' }, ui.icon('arrow-up'), ui.h('span', { class: 'sr-only' }, 'Back to top'));
+    const scroller = () => document.getElementById('main');
+    top.addEventListener('click', () => { const m = scroller(); if (m) m.scrollTo({ top: 0, behavior: 'smooth' }); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    const sync = () => { const m = scroller(); top.classList.toggle('on', ((m && m.scrollTop) || 0) > 300 || window.scrollY > 300); };
+    document.addEventListener('scroll', sync, { capture: true, passive: true });
+    window.addEventListener('hashchange', () => setTimeout(sync, 50));
+    dock.prepend(top);
+    sync();
     document.body.append(dock);
   }
 

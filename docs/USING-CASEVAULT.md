@@ -215,6 +215,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.70
+
+- **Overview:** the **OPERATIONS**, **GENERAL FILES** and **OTHER FILES** headings no longer have folder icons.
+- **Files tab:** an Additional Exhibit's photos are listed as *Exhibit 1a*, *1b*… (the files keep their names on the SSD). The eye button is gone: click a file's name to open it.
+- **Back to Top:** once you scroll down a page, an up arrow appears at the bottom right, beside Ask AI. Click it to go back to the top.
+
 ### What's new in v1.69
 
 - **Quick Links** stay at the bottom of every page, not only the Overview. Changes in Vault → Quick links show at once.

@@ -881,7 +881,7 @@
       generalYearFolders(cases),
       // v1.68: OTHER FILES: anything not tied to a case number or an Operation.
       h('div', { class: 'dash-section other-files-section' },
-        h('div', { class: 'section-head' }, h('h2', { class: 'section-title caps', icon: 'folder2-open' }, 'Other Files'), h('div', { class: 'spacer' })),
+        h('div', { class: 'section-head' }, h('h2', { class: 'section-title caps' }, 'Other Files'), h('div', { class: 'spacer' })),
         h('p', { class: 'muted small' }, 'Files not tied to a case number or an Operation: forms, training, reference sheets… Kept on the SSD in CaseVault-Data\\shared\\other.'),
         sharedFilesBox('other', { empty: 'No files yet. Add forms, training or reference sheets here.' })),
       h('div', { class: 'dash-section' }, h('div', { class: 'section-head' }, h('h2', { class: 'section-title' }, 'Recently updated'), h('div', { class: 'spacer' }),
@@ -1185,7 +1185,7 @@
         h('div', { class: 'op-open-cases' }, open.op ? h('a', { class: 'op-folder-card', href: `#/operation/${encodeURIComponent(open.op.id)}`, title: 'Subpoenas, Affidavits, Operation Plans, Maps, Subject Data and the Running Vehicle List, for the whole Operation' },
           I('op-folder'), h('span', { class: 'op-folder-card-text' }, h('strong', {}, 'Operation Folder'), h('span', { class: 'muted small' }, Vault.OP_FOLDERS.join(' · ')))) : null,
         ...open.group.map((c) => overviewCard(c)))) : null;
-      box.replaceChildren(...[h('div', { class: 'section-head' }, h('h2', { class: 'section-title caps', icon: 'folder-fill' }, 'General Files'), h('div', { class: 'spacer' }),
+      box.replaceChildren(...[h('div', { class: 'section-head' }, h('h2', { class: 'section-title caps' }, 'General Files'), h('div', { class: 'spacer' }),
         h('a', { class: 'btn small ghost', href: '#/general' }, 'All Cases')),
         list.length ? tiles : h('p', { class: 'muted' }, 'Every case is in an Operation. Cases that aren\'t show here by the year they were opened.'), inside].filter(Boolean));
     };
@@ -1218,7 +1218,7 @@
           h('div', { class: 'spacer' }),
           h('button', { type: 'button', class: 'btn small', onclick: () => newCase(open.op ? { operationId: open.op.id } : {}) }, open.op ? 'Add Case Number' : 'New Case')),
         h('div', { class: 'op-open-cases' }, open.group.length ? open.group.map((c) => overviewCard(c)) : [h('p', { class: 'muted' }, open.op ? 'No cases in this Operation yet. Add Case Number creates one here.' : 'No independent cases.')])) : null;
-      box.replaceChildren(...[h('div', { class: 'section-head' }, h('h2', { class: 'section-title caps', icon: 'op-folder' }, 'Operations'), h('div', { class: 'spacer' }),
+      box.replaceChildren(...[h('div', { class: 'section-head' }, h('h2', { class: 'section-title caps' }, 'Operations'), h('div', { class: 'spacer' }),
         h('a', { class: 'btn small ghost', href: '#/operations' }, 'All Operations')),
         list.length ? tiles : h('p', { class: 'muted' }, 'No Operations yet. All Operations → New Operation makes one.'), opBox ? null : inside].filter(Boolean));
       if (opBox) { opBox.hidden = !inside; opBox.replaceChildren(...(inside ? [inside] : [])); }
@@ -2707,8 +2707,9 @@
     const docLabel = (f) => (f.folder ? (CF.byFolder(f.folder) || {}).label || f.folder : 'Unsorted');
     // v1.27: Name "2024-JH123456 | Arrest Report" (no extension), File ".docx", Added "09.30 08.57".
     const extOf = (base) => ((/(\.[a-z0-9]{1,6})$/i.exec(base) || [])[1] || '').toLowerCase();
+    // v1.70: an Additional Exhibit's photos show as "Exhibit 1a" here (the file keeps its name).
     const nameOf = (base) => {
-      const stem = base.slice(0, base.length - extOf(base).length);
+      const stem = base.slice(0, base.length - extOf(base).length).replace(/\bAdditional (?=Exhibit\b)/g, '');
       if (prefix && stem.toLowerCase().startsWith(prefix.toLowerCase()) && stem.length > prefix.length) {
         const rest = stem.slice(prefix.length).replace(/^[\s_-]+/, '');
         return rest ? `${stem.slice(0, prefix.length)} | ${rest}` : stem;
@@ -2762,7 +2763,6 @@
             h('td', { class: 'num muted' }, fmtSize(f.size)),
             h('td', { class: 'muted fadded', title: `Last updated ${fmtDateTime(f.modified)}` }, addedText(f.modified)),
             h('td', { class: 'actions' },
-              h('button', { 'data-ro-ok': 'true', class: 'icon-btn', type: 'button', title: 'Open', onclick: () => previewFile(c, f.name) }, I('eye'), h('span', { class: 'sr-only' }, `Open ${f.base}`)),
               // v1.56: a Link Chart PDF goes back to the Link Chart tab.
               f.folder === 'Link Charts' && /\.pdf$/i.test(f.base) ? h('button', { class: 'icon-btn', type: 'button', title: 'Open in Link Chart: send this chart back to the Link Chart tab to change it', onclick: async () => { if (await CVLinkChartUI.openFromFile(c, f.name)) showCase(c.id, 'linkchart'); } }, I('diagram-3-fill'), h('span', { class: 'sr-only' }, `Open ${f.base} in Link Chart`)) : null,
               h('button', { class: 'icon-btn', type: 'button', title: f.folder ? 'Move or rename' : 'File it in a folder', onclick: () => moveFileDialog(c, f, current) }, I('arrow-left-right'), h('span', { class: 'sr-only' }, `Move or rename ${f.base}`)),

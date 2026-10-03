@@ -15,6 +15,12 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.70)
+
+- Overview headings OPERATIONS, GENERAL FILES and OTHER FILES without folder icons
+- Files tab: Additional Exhibit photos show as "Exhibit 1a"; no eye button (click the name to open)
+- Back to Top arrow beside Ask AI, bottom right, once a page is scrolled down
+
 ## Features (v1.69)
 
 - Quick Links footer on every page, like the case list; Operation Folder folders are tabs like a case's tabs; sidebar case numbers and archive sub-folders the size of the folder names
