@@ -15,7 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.64)
+## Features (v1.65)
+
+- Quick Links footer is a little taller: four rows of links, so every OSINT link shows at once; the same height on every tab
 
 - Case tabs (Details, Arrest, Timeline, Draft, Reports, Files, Link Chart, Mail, Checks) look like the Options tabs: boxes side by side, each with its own icon; the open tab is white with a blue line along its top
 

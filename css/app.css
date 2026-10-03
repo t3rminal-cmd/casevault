@@ -3389,7 +3389,8 @@ section.foldable.folded > .fold-head { margin-bottom: 0; }
 .quick-links-box.in-footer .ql-head > .btn { order: 4; margin-left: auto; font-size: .78rem; }
 .quick-links-box.in-footer .ql-head > .small + .btn { margin-left: 0; }
 .quick-links-box.in-footer > .quick-links, .quick-links-box.in-footer > p { order: 5; flex-basis: 100%; margin: 0; }
-.quick-links-box.in-footer > .quick-links { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .35rem; max-height: calc(2 * 2.35rem + .35rem); overflow-y: auto; scrollbar-width: thin; }
+.quick-links-box.in-footer > .quick-links { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .35rem; grid-auto-rows: 2.35rem; align-content: start; height: calc(4 * 2.35rem + 3 * .35rem); overflow-y: auto; scrollbar-width: thin; }
+/* v1.65: four rows of links (all of OSINT at five columns), the same height on every tab. */
 .quick-links-box.in-footer .quick-link { min-height: 2.35rem; height: 100%; padding: .2rem .5rem .2rem .3rem; gap: .4rem; box-shadow: none; }
 .quick-links-box.in-footer .quick-link:hover { transform: none; }
 .quick-links-box.in-footer .ql-icon { width: 1.55rem; height: 1.55rem; font-size: .85rem; border-radius: 0; flex-shrink: 0; }
@@ -3401,7 +3402,7 @@ section.foldable.folded > .fold-head { margin-bottom: 0; }
 .quick-links-box.in-footer .ql-split-opts { margin-left: auto; display: grid; gap: .15rem; flex-shrink: 0; }
 .quick-links-box.in-footer .ql-split-opt { text-align: center; line-height: 1.25; }
 .quick-links-box.in-footer .ql-split-opt:hover, .quick-links-box.in-footer .ql-split-opt:focus-visible { background: var(--accent-soft); border-color: var(--accent); }
-.quick-links-box.in-footer.editing > .quick-links { max-height: 40vh; }
+.quick-links-box.in-footer.editing > .quick-links { height: auto; max-height: 40vh; grid-auto-rows: auto; }
 .quick-links-box.in-footer.editing .ql-edit-wrap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .2rem; }
 .quick-links-box.in-footer.editing .ql-edit-wrap > .quick-link { grid-column: 1 / -1; grid-row: 1; height: auto; }
 .quick-links-box.in-footer.editing .ql-edit-wrap > .ql-move { grid-row: 2; width: auto; height: 1.5rem; }
