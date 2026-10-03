@@ -3417,3 +3417,12 @@ body .fab-dock { bottom: calc(var(--ql-dock-h, 0px) + 1.2rem); }
   .ql-footer > .ql-foot-title { display: none; }
   .quick-links-box.in-footer > .quick-links { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* v1.64: the case tabs look like the Options tabs: boxes side by side with an icon; the open
+   tab is white with a blue line along its top. */
+.tabs { gap: 0; border: 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.tab { gap: .35rem; border: 1px solid var(--border); border-radius: 0; background: var(--surface-2); color: var(--text); margin: 0 -1px -1px 0; padding: .5rem .55rem; font-size: .92rem; font-weight: 500; }
+.tab:hover { background: var(--accent-soft); color: var(--accent-strong, var(--accent)); }
+.tab.active, .tab.active:hover { background: var(--surface); color: var(--accent-strong, var(--accent)); border: 1px solid var(--border); border-bottom-color: var(--surface); box-shadow: inset 0 3px 0 var(--accent); font-weight: 700; }
+.tab .icon, .tab svg { display: inline-block; }
+.tab svg.bi { width: 1rem; height: 1rem; flex-shrink: 0; }

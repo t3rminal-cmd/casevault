@@ -15,7 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## Features (v1.63)
+## Features (v1.64)
+
+- Case tabs (Details, Arrest, Timeline, Draft, Reports, Files, Link Chart, Mail, Checks) look like the Options tabs: boxes side by side, each with its own icon; the open tab is white with a blue line along its top
 
 - Quick Links are a footer on the Overview: a bar under the page from the case list to the right edge of the screen, with the tabs on top and the links in five equal columns (two rows show; more scroll); Charges shows its Federal and State choices in the button
 
