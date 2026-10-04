@@ -15,6 +15,13 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.80)
+
+- Mission Folder → Subject Data opens a demographics sheet per subject (name, alias, date of birth, description, record numbers, address, notes) with a photo on the right; Add Subject for as many as needed
+- Files: the row button is a pencil (Rename or Move) and the dialog's button says Save; renaming a file of a case number with hyphens no longer doubles the case number
+- Dates have two-digit days everywhere ("October 04, 2026") and sit on the right in tables
+- Pre-Recorded Funds: Electronic Funds as a denomination (with transaction / reference numbers)
+
 ## Features (v1.79)
 
 - Files tab: the Document column shows each file's icon (its type in the hover box); files can be arranged in every view, All documents included; a renamed file keeps its place

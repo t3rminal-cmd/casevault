@@ -609,6 +609,16 @@
         ser.value = (g.serials || []).join('\n');
         const count = () => ser.value.split(/[\n,;]+/).map((x) => x.trim()).filter(Boolean);
         ser.addEventListener('input', () => { if (!qty.dataset.typed) qty.value = count().length || ''; });
+        // v1.80: Electronic Funds: an amount of transfers and their reference numbers, not bills.
+        const serLabel = h('span');
+        const showKind = () => {
+          const e = den.value === 'Electronic Funds';
+          qty.placeholder = e ? 'How many transfers' : 'How many bills';
+          ser.placeholder = e ? 'One transaction or reference number per line (optional)' : 'One serial number per line (or separated by commas)';
+          serLabel.textContent = e ? 'Transaction / Reference Numbers' : 'Serial Numbers';
+        };
+        den.addEventListener('change', showKind);
+        showKind();
         qty.addEventListener('input', () => { qty.dataset.typed = '1'; });
         const err = h('p', { class: 'error-text small' });
         return h('form', { class: 'rf-fund-form cv-boxed', onsubmit: (e) => {
@@ -617,15 +627,15 @@
           close({ denomination: den.value, quantity: String(qty.value || count().length || ''), serials: count() });
         } },
         h('h2', {}, g.denomination ? 'Change Pre-Recorded Funds' : 'Add Pre-Recorded Funds'),
-        h('div', { class: 'rf-fund-grid' }, ui.field('Denomination', den), ui.field('Quantity', qty), ui.field('Serial Numbers', ser, 'span-2')),
+        h('div', { class: 'rf-fund-grid' }, ui.field('Denomination', den), ui.field('Quantity', qty), ui.field(serLabel, ser, 'span-2')),
         h('p', { class: 'muted small' }, 'The quantity counts the serial numbers you enter; type another number when not every bill was recorded.'),
         err,
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, g.denomination ? 'Save' : 'Add')));
       });
       const draw = () => {
         box.replaceChildren(...(data.funds.length ? data.funds.map((g, i) => h('div', { class: 'rf-fund' },
-          h('strong', { class: 'rf-fund-den' }, `${g.denomination || '—'} × ${g.quantity || (g.serials || []).length || 0}`),
-          h('span', { class: 'rf-fund-serials' }, (g.serials || []).length ? (g.serials || []).join(', ') : h('span', { class: 'muted' }, 'No serial numbers')),
+          h('strong', { class: 'rf-fund-den' }, g.denomination === 'Electronic Funds' && !(g.quantity || (g.serials || []).length) ? 'Electronic Funds' : `${g.denomination || '—'} × ${g.quantity || (g.serials || []).length || 0}`),
+          h('span', { class: 'rf-fund-serials' }, (g.serials || []).length ? (g.serials || []).join(', ') : h('span', { class: 'muted' }, g.denomination === 'Electronic Funds' ? 'No reference numbers' : 'No serial numbers')),
           archived ? '' : h('span', { class: 'rf-fund-btns' },
             h('button', { class: 'icon-btn', type: 'button', title: 'Change', onclick: async () => { const r = await fundDialog(g); if (r) { data.funds[i] = r; draw(); save(); } } }, ui.icon('pencil'), h('span', { class: 'sr-only' }, 'Change')),
             h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Delete', onclick: () => { data.funds.splice(i, 1); draw(); save(); } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, 'Delete'))))) : [h('p', { class: 'muted small rf-none' }, 'No pre-recorded funds yet.')]));

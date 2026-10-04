@@ -23,7 +23,7 @@
   const clean = (s) => String(s == null ? '' : s).trim();
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   // The long date, as everywhere in CaseVault (v1.32): "September 30, 2026".
-  const US = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(clean(iso)); return m ? `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}, ${m[1]}` : clean(iso); };
+  const US = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(clean(iso)); return m ? `${MONTHS[Number(m[2]) - 1]} ${m[3]}, ${m[1]}` : clean(iso); };
   // v1.44: military time without the colon (1435), as on the form.
   const MIL = (t) => { const m = /^(\d{1,2}):(\d{2})$/.exec(clean(t)); return m ? `${m[1].padStart(2, '0')}${m[2]}` : clean(t); };
   const when = (d, t) => [US(d), MIL(t)].filter(Boolean).join(' ');

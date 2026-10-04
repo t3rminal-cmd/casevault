@@ -22,7 +22,7 @@
 (function (root) {
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   /** "2026-09-30" -> "September 30, 2026" (v1.32: the long date everywhere). */
-  const longDate = (v) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || '')); return m ? `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}, ${m[1]}` : String(v || ''); };
+  const longDate = (v) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || '')); return m ? `${MONTHS[Number(m[2]) - 1]} ${m[3]}, ${m[1]}` : String(v || ''); };
 
   // [key, label, kind, options]. kind: text, number, date, time, select, yesno, textarea, ucr,
   // location, check (a tick box), line (a long one-line entry, label on the left).
@@ -157,7 +157,7 @@
   const shortCode = (v) => Object.keys(SPELLED).find((k) => SPELLED[k] === v) || v;
   // Units the narcotic calculator prices by (js/reference).
   const NARCOTIC_UNITS = ['', 'gram', 'ounce', 'pound', 'kilogram', 'pill', 'mL'];
-  const DENOMINATIONS = ['', '$1', '$2', '$5', '$10', '$20', '$50', '$100'];
+  const DENOMINATIONS = ['', '$1', '$2', '$5', '$10', '$20', '$50', '$100', 'Electronic Funds']; // v1.80: Electronic Funds
   const RECOVERED = ['', 'Recovered', 'Not Recovered'];
   const LISTS = {
     narcotics: { title: 'Narcotics Recovered', item: 'Narcotic', fields: [['drug', 'Narcotics Type Recovered', 'narcotic'], ['amount', 'Total Weight', 'text'], ['unit', 'Unit', 'select', NARCOTIC_UNITS], ['price', 'Purchase Price', 'money'], ['value', 'Street Value', 'money']] },
@@ -293,7 +293,8 @@
     const out = (d.funds || []).filter(filled).map((g) => {
       const n = String(g.quantity || '').trim() || (g.serials && g.serials.length ? String(g.serials.length) : '');
       const serials = (g.serials || []).filter((x) => String(x || '').trim());
-      return [[g.denomination, n ? `x ${n}` : ''].filter(Boolean).join(' '), serials.length ? `Serial Number${serials.length === 1 ? '' : 's'} ${serials.join(', ')}` : ''].filter(Boolean).join(' - ');
+      const word = g.denomination === 'Electronic Funds' ? 'Reference Number' : 'Serial Number';
+      return [[g.denomination, n ? `x ${n}` : ''].filter(Boolean).join(' '), serials.length ? `${word}${serials.length === 1 ? '' : 's'} ${serials.join(', ')}` : ''].filter(Boolean).join(' - ');
     });
     if (out.length && d.fundsRecovered) out.push(d.fundsRecovered);
     return out;

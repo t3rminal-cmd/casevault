@@ -76,7 +76,7 @@
     ops.push(`0.6 w ${M} ${(top + 6).toFixed(2)} m ${PW - M} ${(top + 6).toFixed(2)} l S`);
     const x = M + (areaW - w) / 2; const y = top - hgt;
     ops.push(`q ${w.toFixed(2)} 0 0 ${hgt.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)} cm /Im0 Do Q`);
-    const printed = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    const printed = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: '2-digit' });
     text(M, M - 12, `Printed ${printed}`, 7.5, false);
     text(PW - M - R.width('Page 1 of 1', 8, false, 'helvetica'), M - 12, 'Page 1 of 1', 8, false);
     const pdf = R.assemble([{ ops, sigs: [], imgs: [0], signed: true }], { photos: [{ jpeg, w: cv.width, h: cv.height, index: 0 }], title: 'Link Chart' });

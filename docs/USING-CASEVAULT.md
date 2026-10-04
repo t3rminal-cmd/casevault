@@ -215,6 +215,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.80
+
+- **Subject Data sheet:** open a Mission, then **Subject Data** in its Mission Folder. Each subject gets a demographics sheet (name, alias, date of birth, gender, race, height, weight, hair, eyes, phone, IR/FBI/IDOC numbers, address, tattoos/scars, notes) with **Add Photo** on the right. **Add Subject** adds as many as you need; the sheet saves as you type, in the folder on the SSD.
+- **Rename or Move:** in the Files tab the row's pencil button opens **Rename or Move**; type a new name, pick another folder, or both, then **Save**. A case number with hyphens (2026-EX-100) is no longer put in the new name twice.
+- **Dates:** days always have two digits ("October 04, 2026"), everywhere, and dates line up on the right in tables (Updated, Opened, Start and End Date).
+- **Pre-Recorded Funds:** **Electronic Funds** is now a denomination; its numbers are transaction / reference numbers instead of serial numbers.
+
 ### What's new in v1.79
 
 - **Files tab:** the **Document** column now shows each file's icon (hover it for the document type and file type). **Arrange** works in every view, **All documents** included, and so does dragging rows when the order is **Custom**. A file you rename keeps its place.
