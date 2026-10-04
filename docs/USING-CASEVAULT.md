@@ -215,6 +215,14 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.81
+
+- **Supplementary Report PDF layout:** each offender has a sheet of their own: In Custody or Not in Custody, then Name and A.K.A., gender | race | age, height and weight, DOB, eyes and hair, complexion and tattoos/scars, what they were wearing, residence, phone, IR and CB numbers, vehicle, VIN and plates. **Police Personnel** is a table (Name, Star, Unit, Role), each **Charge** is its statute over its description, and each **Exhibit** shows its inventory number, type and description (additional exhibits as Exhibit 13a, 13b… with their photo labels).
+- **Status and How Cleared** on the PDF use square boxes with an X, like Update Information.
+- **Offenders** on the Draft have **Custody** (In Custody / Not in Custody), **Residence**, **CB Number**, **Vehicle**, **VIN** and **Plates**.
+- **Subject Data** fills itself from the reports: the Name box suggests the suspects (Details) and offenders (Draft) of the Mission's cases; pick one to fill the empty boxes. **Add From Reports** adds everyone not on the sheet yet.
+- **Mission Folder** has an **Other** folder next to Vehicle List.
+
 ### What's new in v1.80
 
 - **Subject Data sheet:** open a Mission, then **Subject Data** in its Mission Folder. Each subject gets a demographics sheet (name, alias, date of birth, gender, race, height, weight, hair, eyes, phone, IR/FBI/IDOC numbers, address, tattoos/scars, notes) with **Add Photo** on the right. **Add Subject** adds as many as you need; the sheet saves as you type, in the folder on the SSD.
