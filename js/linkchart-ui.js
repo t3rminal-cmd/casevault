@@ -53,7 +53,12 @@
     }
     const { svg, width, height } = LC().toSvg(chart, { photoUrl: (n) => photos.get(n.photo) || '', iconUrl: (k) => icons.get(k) || '', pad: 6 });
     const PW = R.PAGE_W; const PH = R.PAGE_H; const M = 36;
-    const top = PH - M - 46; const areaW = PW - 2 * M; const areaH = top - (M + 14);
+    // v1.85: the department letterhead across the top, when there is one.
+    const pics = [null]; // image 0 is the chart; the logo (if any) is image 1
+    const lh = R.withLogo(root.CVLetterhead ? await root.CVLetterhead.forPdf() : null, pics);
+    const headOps = [];
+    const lhH = lh ? R.letterhead(headOps, lh, M, PH - M, PW - 2 * M, 'helvetica') : 0;
+    const top = PH - M - 46 - lhH; const areaW = PW - 2 * M; const areaH = top - (M + 14);
     const k = Math.min(areaW / width, areaH / height, 1.6);
     const w = width * k; const hgt = height * k;
     // Drawn at about 200 dots per inch of the printed size (more when the chart is shrunk a lot).
@@ -68,18 +73,19 @@
       g.drawImage(img, 0, 0, cv.width, cv.height);
     } finally { URL.revokeObjectURL(url); }
     const jpeg = new Uint8Array(await (await new Promise((r) => cv.toBlob(r, 'image/jpeg', 0.92))).arrayBuffer());
-    const ops = [];
+    const ops = [...headOps];
     const text = (x, y, s, size, bold) => ops.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${x.toFixed(2)} ${y.toFixed(2)} Td ${R.pdfString(s)} Tj ET`);
-    text(M, PH - M - 14, 'Link Chart', 16, true);
+    text(M, PH - M - lhH - 14, 'Link Chart', 16, true);
     const sub = [chart.title, c.number ? `Case ${c.number}` : '', c.subject || ''].filter(Boolean).join(' · ');
-    if (sub) text(M, PH - M - 30, sub, 10, false);
+    if (sub) text(M, PH - M - lhH - 30, sub, 10, false);
     ops.push(`0.6 w ${M} ${(top + 6).toFixed(2)} m ${PW - M} ${(top + 6).toFixed(2)} l S`);
     const x = M + (areaW - w) / 2; const y = top - hgt;
     ops.push(`q ${w.toFixed(2)} 0 0 ${hgt.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)} cm /Im0 Do Q`);
     const printed = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: '2-digit' });
     text(M, M - 12, `Printed ${printed}`, 7.5, false);
     text(PW - M - R.width('Page 1 of 1', 8, false, 'helvetica'), M - 12, 'Page 1 of 1', 8, false);
-    const pdf = R.assemble([{ ops, sigs: [], imgs: [0], signed: true }], { photos: [{ jpeg, w: cv.width, h: cv.height, index: 0 }], title: 'Link Chart' });
+    const images = [{ jpeg, w: cv.width, h: cv.height, index: 0 }, ...pics.slice(1)];
+    const pdf = R.assemble([{ ops, sigs: [], imgs: images.map((p) => p.index), signed: true }], { photos: images, title: 'Link Chart' });
     // v1.56: the chart rides inside, so Files can send it back to the tab.
     return LC().embed(pdf, chart);
   }
@@ -470,6 +476,7 @@
     };
 
     panel.replaceChildren(h('section', { class: 'lc' },
+      archived || !root.CVLetterhead ? null : root.CVLetterhead.editor(), // v1.85: the letterhead on the PDF
       h('div', { class: 'lc-head cv-boxed' },
         h('label', { class: 'field lc-title' }, h('span', {}, 'Chart Title'), title),
         h('div', { class: 'lc-head-actions' }, status,

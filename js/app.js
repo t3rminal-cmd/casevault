@@ -106,8 +106,20 @@
   const STATUS_ICONS = { Open: 'folder2-open', Pending: 'hourglass-split', Closed: 'lock-fill', Archived: 'archive' };
   const statusPill = (status) => h('span', { class: `pill status-${String(status).toLowerCase()}`, icon: STATUS_ICONS[status] }, status);
   const I = (name, opts) => CVIcons.icon(name, opts);
+  // v1.85: still being worked on (Templates, the Checker, the Anonymizer).
+  const betaTag = () => h('span', { class: 'beta-tag', title: 'Beta: still being worked on. Check what it gives you before you rely on it.' }, 'Beta');
+
+  /* v1.85: the last errors, for Report a Problem. Kept in memory only, never written on their own. */
+  const PROBLEMS = [];
+  const noteProblem = (kind, text) => {
+    PROBLEMS.push({ at: new Date().toISOString(), kind, text: String(text || '').slice(0, 1200) });
+    if (PROBLEMS.length > 40) PROBLEMS.shift();
+  };
+  window.addEventListener('error', (e) => noteProblem('error', `${e.message || 'Error'}${e.filename ? ` (${String(e.filename).split('/').pop()}:${e.lineno}:${e.colno})` : ''}${e.error && e.error.stack ? `\n${e.error.stack}` : ''}`));
+  window.addEventListener('unhandledrejection', (e) => { const r = e.reason; noteProblem('promise', r && r.stack ? r.stack : String(r)); });
 
   function toast(message, kind = 'info', ms = 4000) {
+    if (kind === 'error') noteProblem('message', typeof message === 'string' ? message : (message && message.textContent) || '');
     const el = h('div', { class: `toast ${kind}`, role: kind === 'error' ? 'alert' : 'status' }, message);
     $('#toasts').append(el);
     setTimeout(() => el.remove(), ms);
@@ -129,7 +141,7 @@
     ['panel', '.vault-panel'],
     ['form', '.op-form, .new-case-form'],
     ['full', '.preview, .doc-view, .lib-preview, .pdf-view, .word-view, .disc'],
-    ['wide', '.type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
+    ['wide', '.problem-form, .shortcuts-form, .type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
   ];
 
   function openDialog(build) {
@@ -489,6 +501,86 @@
     renderCaseList();
     route();
     CVChecks.onVaultOpen();
+    if (!sameVault) safetyChecks();
+  }
+
+  /* v1.85: data safety. How long since the last full backup (to another drive), and whether the
+   * daily vault.json backup and the SSD's free space are fine. */
+  const FULL_BACKUP_DAYS = 7;
+  function fullBackupAge() {
+    const last = Vault.data && Vault.data.settings && Vault.data.settings.lastFullBackup;
+    if (!last || !last.at) return null;
+    return Math.max(0, Math.floor((Date.now() - Date.parse(last.at)) / 86400000));
+  }
+  function fullBackupText() {
+    const n = fullBackupAge();
+    if (n == null) return 'No full backup yet';
+    return `Last full backup: ${n === 0 ? 'today' : n === 1 ? 'yesterday' : `${n} days ago`}`;
+  }
+  async function safetyChecks() {
+    const warn = [];
+    try {
+      const names = await Vault.listBackups();
+      if (!names.some((x) => x.startsWith(`vault-${Vault.localDay()}`))) warn.push('Today\'s automatic backup of vault.json is missing. Open ⋮ → Vault → Backups and click Back Up Now.');
+    } catch { /* drive lost: reported elsewhere */ }
+    const age = fullBackupAge();
+    if (age == null || age > FULL_BACKUP_DAYS) warn.push(`${fullBackupText()}. Back up the whole vault to a second drive: ⋮ → Vault → Backups.`);
+    if (MODE === 'helper' && HelperFS.sysinfo) {
+      const si = await HelperFS.sysinfo();
+      if (si && si.diskTotal && (si.diskFree < 2 * 1024 ** 3 || si.diskFree / si.diskTotal < 0.05)) warn.push(`The SSD is nearly full: ${fmtSize(si.diskFree)} free. Archive or move large files before it fills up.`);
+    }
+    if (warn.length) toast(h('span', {}, ...warn.flatMap((w, i) => [i ? h('br') : null, w])), 'error', 12000);
+  }
+
+  async function fullBackupDialog() {
+    if (MODE !== 'direct') {
+      const ok = await openDialog((close) => h('div', { class: 'backup-form' },
+        h('h2', { icon: 'hdd-fill' }, 'Back Up the Whole Vault'),
+        h('p', {}, 'In this browser CaseVault cannot reach a second drive itself. Copy the folder with File Explorer:'),
+        h('ol', { class: 'backup-steps' },
+          h('li', {}, 'Close CaseVault (⋮ → Power Off) so nothing is being saved.'),
+          h('li', {}, 'Plug in the backup drive (an encrypted drive, not this PC).'),
+          h('li', {}, h('span', {}, 'Copy the whole ', h('strong', {}, 'CaseVault-Data'), ' folder from the SSD to the backup drive.')),
+          h('li', {}, 'Open the copy\'s vault.json to check it is there, then come back here.')),
+        h('p', { class: 'muted small' }, 'In Chrome or Edge, CaseVault copies and checks every file for you.'),
+        h('div', { class: 'dialog-actions' },
+          h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'),
+          h('button', { class: 'btn primary', type: 'button', icon: 'check-circle-fill', onclick: () => close(true) }, 'I Copied It Today'))));
+      if (!ok) return false;
+      await Save.track('settings', () => Vault.recordManualBackup());
+      toast('Full backup recorded for today.', 'success');
+      if (location.hash === '#/' || location.hash === '') route();
+      return true;
+    }
+    const go = await confirmDialog({
+      title: 'Back Up the Whole Vault',
+      message: h('div', {},
+        h('p', {}, 'Every case, file, report, template and setting in CaseVault-Data is copied to a new folder on the drive you pick next, then read back and checked byte for byte.'),
+        h('p', { class: 'muted small' }, 'Pick a folder on a different encrypted drive, not on this SSD and not on this PC. The copy is named CaseVault-Backup-<date>.')),
+      confirmText: 'Pick the Backup Drive',
+    });
+    if (!go) return false;
+    let dir;
+    try { dir = await window.showDirectoryPicker({ id: 'cv-full-backup', mode: 'readwrite' }); } catch (err) { if (err && err.name !== 'AbortError') toast(err.message, 'error'); return false; }
+    await Save.flushAll();
+    if (Save.failed.size) { toast('Some changes are not saved yet. Reconnect the SSD, then back up.', 'error', 8000); return false; }
+    const progress = toast('Backing up: starting…', 'info', 3600000);
+    try {
+      const r = await Save.track('fullbackup', () => Vault.fullBackup(dir, (n, name, bytes) => { progress.textContent = `Backing up: ${n} file${n === 1 ? '' : 's'} copied and checked (${fmtSize(bytes)}), ${name}`; }));
+      progress.remove();
+      await openDialog((close) => h('div', { class: 'backup-form' },
+        h('h2', { icon: 'check-circle-fill' }, 'Full Backup Done'),
+        h('p', {}, `${r.files} file${r.files === 1 ? '' : 's'} (${fmtSize(r.bytes)}) copied to "${dir.name}\\${r.folder}" and checked byte for byte.`),
+        h('p', { class: 'muted small' }, 'Keep the backup drive somewhere other than where the SSD is kept. To restore, copy the backup folder\'s contents into an empty CaseVault-Data folder and open it.'),
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
+      if (location.hash === '#/' || location.hash === '') route();
+      return true;
+    } catch (err) {
+      progress.remove();
+      if (FS.isDisconnectError(err) && !(await Vault.ping().catch(() => false))) { onDriveLost(); return false; }
+      toast(`The backup did not finish: ${err.message}`, 'error', 12000);
+      return false;
+    }
   }
 
   function onDriveLost() {
@@ -618,32 +710,29 @@
   /** A folder in the case list: { key, op (null for General Files), cases }. */
   function operationGroup(group) {
     const { key, op, cases } = group;
-    const opFiles = !!group.opFiles;
-    const label = opFiles ? 'Mission Files' : op ? opLabel(op) : 'General Files';
+    const label = op ? opLabel(op) : 'Independent Cases';
     const open = folderOpen(group);
     const bell = cases.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date));
-    const meta = opFiles ? `${cases.length} closed case${cases.length === 1 ? '' : 's'} of ongoing Missions`
-      : op && group.partial ? `${cases.length} closed · ongoing`
+    const meta = op && group.partial ? `${cases.length} closed · ongoing`
       : op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : `${group.total} independent case${group.total === 1 ? '' : 's'}`;
-    const det = h('details', { class: `op-group${op || opFiles ? '' : ' general-group'}${opFiles ? ' opfiles-group' : ''}${bell ? ' has-reminder' : ''}`, open },
-      h('summary', { class: 'op-head', title: opFiles ? 'Closed cases whose Mission is still going on. Each is still in its Mission\'s folder above.' : op && group.partial ? `${label}: the closed cases of this Mission, which is still going on. They stay in its folder in MISSION FILES too.` : op ? `${label}: open the Mission` : 'General Files: every case; these are the ones not in a Mission' },
-        h('span', { class: `op-folder${op || opFiles ? '' : ' gf-icon'}` }, I(op || opFiles ? 'op-folder' : 'folder-fill')),
+    const det = h('details', { class: `op-group${op ? '' : ' general-group'}${bell ? ' has-reminder' : ''}`, open },
+      h('summary', { class: 'op-head', title: op && group.partial ? `${label}: the closed cases of this Mission, which is still going on. They stay in its folder in MISSION FILES too.` : op ? `${label}: open the Mission` : 'INDEPENDENT CASES: the cases not in a Mission. Click to open General Files, the list of every case.' },
+        h('span', { class: `op-folder${op ? '' : ' gf-icon'}` }, I(op ? 'op-folder' : 'folder-fill')),
         h('span', { class: 'op-text' },
           // v1.60: an Operation's number on top, its name under it.
-          h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, ...(op && !opFiles
+          h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, ...(op
             ? [h('span', { class: 'op-num' }, op.number || 'No number'), op.name ? h('span', { class: 'op-title' }, op.name) : null].filter(Boolean)
-            : [opFiles ? 'MISSION FILES' : 'GENERAL FILES'])), // v1.77: the folder names in capitals
+            : [h('span', { class: 'ind-name' }, 'INDEPENDENT CASES')])), // v1.77: the folder names in capitals; v1.85: was GENERAL FILES
             bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
           h('span', { class: 'op-meta muted' }, meta)),
         cases.length > 1 ? h('span', { class: 'op-count' }, String(cases.length)) : null,
         // v1.83: GENERAL FILES has a + for a new case, like MISSION FILES has one for a new Mission.
-        !op && !opFiles && !group.closed ? h('button', { class: 'icon-btn mission-add general-add', type: 'button', title: 'New case in General Files', onclick: (e) => { e.preventDefault(); e.stopPropagation(); newCase(); } }, I('plus-lg'), h('span', { class: 'sr-only' }, 'New case')) : null,
+        !op && !group.closed ? h('button', { class: 'icon-btn mission-add general-add', type: 'button', title: 'New independent case (not in a Mission)', onclick: (e) => { e.preventDefault(); e.stopPropagation(); newCase(); } }, I('plus-lg'), h('span', { class: 'sr-only' }, 'New case')) : null,
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
       h('ul', { class: 'op-cases' }, cases.length ? cases.map((c) => caseItem(c, true, { dim: !!op && !group.closed && c.status === 'Closed' })) : [h('li', { class: 'empty muted small' }, op ? 'No cases in this Mission yet.' : 'No independent cases.')]));
     // A click on the folder's name opens the Operation (or General Files); the arrow folds it.
     det.querySelector('summary').addEventListener('click', (e) => {
       if (e.target.closest('.op-chev') || e.target.closest('.general-add')) return;
-      if (opFiles) return; // just folds
       e.preventDefault();
       location.hash = op ? `#/operation/${encodeURIComponent(op.id)}` : '#/general';
     });
@@ -736,8 +825,8 @@
     const openGroups = groups.filter((g) => !isClosedGroup(g) && !(g.key === GENERAL && !g.cases.length && groups.some((x) => x !== g && !isClosedGroup(x))));
     const closedGroups = groups.filter(isClosedGroup);
     // v1.78: the Missions sit inside one MISSION FILES folder, like GENERAL FILES, with New Mission.
-    const missionGroups = openGroups.filter((g) => g.op || g.opFiles);
-    const otherGroups = openGroups.filter((g) => !(g.op || g.opFiles));
+    const missionGroups = openGroups.filter((g) => g.op);
+    const otherGroups = openGroups.filter((g) => !g.op);
     list.replaceChildren(missionFolder(missionGroups), ...(otherGroups.length ? otherGroups.map((g) => operationGroup(g)) : missionGroups.length ? [] : [h('li', { class: 'empty muted' },
       closedGroups.length ? 'Every Mission is closed.' : activeCount ? 'No cases match.' : Vault.data.cases.length ? 'No active cases.' : 'No cases yet. Click "New case".')]));
     // Closed Operations (and closed independent cases): above Archived, at the bottom (v1.42).
@@ -1181,6 +1270,12 @@
         e.preventDefault();
         const fields = { number: numberIn.value, name: nameIn.value, status: statusIn.value, start: startIn.value, end: endIn.value, notes: notesIn.value };
         const errs = CVOperation.validateOperation(fields, Vault.listOperations(), op ? op.id : '');
+        // v1.85: a Mission is Closed only when its cases are: Close Mission gives each a disposition.
+        if (fields.status === 'Closed' && (!op || op.status !== 'Closed')) {
+          const open = op ? Vault.operationMembers(op.id).filter((x) => !isArchivedEntry(x) && x.status !== 'Closed') : [];
+          if (!op) errs.push('A new Mission starts Open or Pending.');
+          else if (open.length) errs.push(`${plural(open.length, 'case number')} of this Mission ${open.length === 1 ? 'is' : 'are'} still open (${open.map((x) => x.number || 'no number').join(', ')}). Use Close Mission on the Mission page to close them with a disposition.`);
+        }
         err.hidden = !errs.length;
         err.textContent = errs.join(' ');
         if (errs.length) return;
@@ -1309,6 +1404,18 @@
         h('span', { class: 'page-icon' }, I('op-folder')),
         h('div', { class: 'page-title' }, h('h1', {}, opLabel(op)), h('div', { class: 'muted small' }, plural(members.length, 'case'), ' · ', statusPill(op.status))),
         h('div', { class: 'spacer' }),
+        // v1.85: Close Mission lives here (it was on every case's Details tab): each open case number
+        // gets a disposition; Reopen Mission when it is closed.
+        (() => {
+          const open = members.filter((x) => !isArchivedEntry(x) && x.status !== 'Closed');
+          if (open.length) return h('button', { class: 'btn', type: 'button', icon: 'lock-fill', title: `Closes the ${plural(open.length, 'open case number')} of this Mission, each with a disposition.`, onclick: async () => {
+            try { const first = await Vault.getCase(open[0].id); if (await CVClosingUI.closeCaseDialog(first, { operation: open })) redraw(); } catch (err) { if (FS.isDisconnectError(err)) onDriveLost(); else toast(err.message, 'error'); }
+          } }, 'Close Mission');
+          if (op.status === 'Closed') return h('button', { class: 'btn', type: 'button', icon: 'unlock', title: 'Back to Open. Its cases stay closed until you reopen each one.', onclick: async () => {
+            try { await Save.track(`op:${op.id}`, () => Vault.updateOperation(op.id, { status: 'Open', end: '' })); toast('Mission reopened.', 'success'); renderCaseList(); redraw(); } catch { /* reported */ }
+          } }, 'Reopen Mission');
+          return null;
+        })(),
         h('button', { class: 'btn', type: 'button', icon: 'pencil', onclick: async () => { if (await operationDialog(op)) redraw(); } }, 'Edit Mission')),
       h('div', { class: 'op-info' },
         info('Mission Number', op.number), info('Mission Name', op.name), info('Status', op.status), info('Start Date', op.start ? fmtDate(op.start) : ''), info('End Date', op.end ? fmtDate(op.end) : '')),
@@ -1601,7 +1708,10 @@
       h('div', { class: 'hero-art', 'aria-hidden': 'true' }, h('span', { class: 'hero-ring r1' }), h('span', { class: 'hero-ring r2' }), h('span', { class: 'hero-ring r3' }), I('shield-lock-fill')),
       h('div', { class: 'hero-text' },
         h('div', { class: 'hero-line' }, h('h1', { class: 'hero-title' }, `${greet}${who ? `, ${who.split(/\s+/)[0]}` : ''}`), dateLine),
-        counts),
+        counts,
+        // v1.85: when the whole vault was last backed up to another drive.
+        (() => { const n = fullBackupAge(); const due = n == null || n > FULL_BACKUP_DAYS;
+          return h('button', { type: 'button', class: `hero-backup${due ? ' due' : ''}`, title: 'Back up the whole vault to another drive', onclick: () => showVaultPanel('backups') }, I(due ? 'exclamation-triangle-fill' : 'hdd-fill'), h('span', {}, fullBackupText())); })()),
       clock);
   }
 
@@ -2025,7 +2135,7 @@
         h('div', { class: 'case-subject', id: 'case-subject' }, c.subject || 'No subject yet'),
         h('div', { class: 'case-sub muted', id: 'case-sub' }, caseSubtitle(c))),
       h('nav', { class: 'tabs', role: 'tablist' }, tabs.map(([t, label]) =>
-        h('a', { href: `#/case/${encodeURIComponent(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab), icon: TAB_ICONS[t] }, label))),
+        h('a', { href: `#/case/${encodeURIComponent(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab), icon: TAB_ICONS[t] }, label, t === 'checks' ? betaTag() : null))),
       panel));
     // Read-only: everything in the tab that could change the case is switched off, now and as
     // the tab redraws. (vault.js refuses the writes too.)
@@ -2096,25 +2206,20 @@
     };
     const bind = (input, apply) => { input.addEventListener('input', () => { apply(input.value); save(); }); return input; };
 
-    const closedInput = h('input', { type: 'date', value: c.dates.closed || '' });
+    // v1.85: set by Close Case (and cleared by Reopen), so it is shown, not typed.
+    const closedInput = h('input', { type: 'text', value: c.dates.closed ? fmtDate(c.dates.closed) : 'Not closed', readonly: true, tabindex: -1, class: 'readonly-date', 'aria-label': 'Closed', title: c.status === 'Closed' ? 'Set when the case was closed. To change it, reopen the case and close it again.' : 'Filled in when you close the case.' });
     // v1.84: the drop-down offers Open and Pending; closing and archiving use their own buttons
     // (they ask for the disposition or the reason). A closed case shows Closed, greyed.
     const statusSelect = h('select', { title: 'Open or Pending. To close or archive the case, use the Close Case and Archive buttons.' },
       ['Open', 'Pending', ...(['Open', 'Pending'].includes(c.status) ? [] : [c.status])].map((s) => h('option', { selected: s === c.status, disabled: !['Open', 'Pending'].includes(s) }, s)));
     statusSelect.addEventListener('change', () => {
-      // "Archived" means moving the case to the archive: ask first.
-      if (statusSelect.value === 'Archived' && !Vault.isArchived(c.id)) {
-        statusSelect.value = c.status;
-        archiveCase(c);
-        return;
-      }
-      // Closed goes through "Close case…" (disposition), Pending asks what it's waiting on, and
-      // Open on a closed case reopens it. If the dialog is cancelled, nothing changes.
+      // Pending asks what it's waiting on, and Open on a closed case reopens it. If the dialog is
+      // cancelled, nothing changes. (Closing and archiving have their own buttons, v1.84.)
       const want = statusSelect.value;
       statusSelect.value = c.status;
-      if (want === 'Closed') { CVClosingUI.closeCaseDialog(c); return; }
       if (want === 'Pending') { CVClosingUI.pendingDialog(c); return; }
       if (want === 'Open' && c.status === 'Closed') { CVClosingUI.reopenCase(c); return; }
+      if (want !== c.status) Vault.logActivity(c, `Status: ${c.status} to ${want}`);
       c.status = want;
       if (want === 'Open') c.pending = null;
       statusSelect.value = want;
@@ -2122,7 +2227,7 @@
       save();
     });
     const statusNote = h('span', { class: 'muted small block status-note' }, CVClosingUI.statusLine(c));
-    const statusHint = h('span', { class: 'muted small block status-hint' }, c.status === 'Closed' ? 'Pick Open to reopen. Archive uses its button.' : 'To close or archive, use the buttons below.');
+    const statusHint = h('span', { class: 'muted small block status-hint' }, c.status === 'Closed' ? 'Pick Open to reopen. Archive uses its button.' : 'Pending: waiting on someone else. No leads left? Close it as Inactive. Close and Archive use the buttons below.');
     const archived = Vault.isArchived(c.id);
 
     const members = archived ? [c] : [c, ...operationCases(c).filter((x) => x.id !== c.id)];
@@ -2155,7 +2260,7 @@
           field('Subject Name', subjectIn, '', 'The person the case is about. Shown under the Case Number. Several cases can have the same subject.'),
           h('label', { class: 'field' }, h('span', {}, 'Status'), statusSelect, statusNote, archived ? null : statusHint),
           field('Opened', bind(h('input', { type: 'date', value: c.dates.opened || '' }), (v) => { c.dates.opened = v; })),
-          field('Closed', bind(closedInput, (v) => { c.dates.closed = v; }))),
+          field('Closed', closedInput)),
         caseTiles(c, members, archived)),
       miniTimeline(c, members),
       // ---- this case number
@@ -2177,6 +2282,7 @@
       makeFoldable(suspectsSection(c, save), 'overview-suspects'),
       makeFoldable(contactsSection(c, save), 'overview-contacts'),
       makeFoldable(deconflictionSection(c, save), 'overview-deconfliction'),
+      makeFoldable(caseHistorySection(c), 'case-history'),
       // Everything saves by itself as you type; the button saves now and says so.
       // (An archived case gets an empty string here: a null would show as the word "null".)
       archived ? '' : h('div', { class: 'details-save' },
@@ -2191,14 +2297,9 @@
         h('h3', { id: 'case-actions-title', icon: 'sliders' }, 'Case actions'),
         // Same-size buttons, icon and name; the explanation shows when you point at one.
         h('div', { class: 'case-actions-grid' },
-          archived
-            ? h('button', { class: 'btn action-btn', type: 'button', icon: 'arrow-counterclockwise', title: 'Moves the case back to the active list, with the status it had before, so it can be changed again.', onclick: () => restoreCase(c) }, 'Restore to active cases')
-            : null,
           !archived ? (c.status === 'Closed'
             ? h('button', { class: 'btn action-btn', type: 'button', icon: 'unlock', title: 'Back to Open, for new information. The closing is kept in the case\'s history.', onclick: () => CVClosingUI.reopenCase(c) }, 'Reopen case')
             : h('button', { class: 'btn primary action-btn', type: 'button', icon: 'lock-fill', title: 'When the investigation of this case number is finished: choose how it ended, such as arrest, exceptionally cleared or unfounded. Lists loose ends first.', onclick: () => CVClosingUI.closeCaseDialog(c) }, 'Close Case')) : null,
-          // v1.27: close every open case number of the operation at once.
-          !archived && members.length > 1 && members.some((x) => x.status !== 'Closed') ? h('button', { class: 'btn action-btn', type: 'button', icon: 'lock-fill', title: `Closes all ${members.filter((x) => x.status !== 'Closed').length} open case numbers of this Mission with one disposition.`, onclick: () => CVClosingUI.closeCaseDialog(c, { operation: members }) }, 'Close Mission') : null,
           !archived && !CVClosingUI.hasArrestTab(c) ? h('button', { class: 'btn action-btn', type: 'button', icon: 'person-vcard', title: 'Arrestee, arrest and charges, for the arrest report. Adds an Arrest details tab.', onclick: async () => {
             c.arrest = true;
             delete c.arrestRemoved;
@@ -2208,6 +2309,7 @@
           !archived && CVClosingUI.hasArrestTab(c) ? h('button', { class: 'btn action-btn', type: 'button', icon: 'trash3', title: 'Takes the Arrest details tab off this case and deletes what was entered in it.', onclick: () => CVClosingUI.deleteArrest(c) }, 'Delete Arrest') : null,
           !archived && Vault.conventionalId(c) ? h('button', { class: 'btn action-btn', type: 'button', icon: 'folder', title: `Renames this case's folder on the SSD to the <year>-<case no.> convention (${Vault.conventionalId(c)}). Every file is copied and checked first.`, onclick: () => renameCaseFolder(c) }, 'Rename folder') : null,
           !archived ? h('button', { class: 'btn action-btn', type: 'button', icon: 'archive', title: 'Keeps everything, read-only, in CaseVault-Data\\archive. It leaves the case list but can still be opened, searched and restored.', onclick: () => archiveCase(c) }, 'Archive Case') : null,
+          h('button', { class: 'btn action-btn', type: 'button', icon: 'file-earmark-pdf', title: 'One page for a supervisor: status, disposition, arrestees and charges, exhibits and the timeline.', onclick: () => caseSummary(c) }, 'Case Summary'),
           h('button', { class: 'btn danger action-btn', type: 'button', icon: 'trash3', title: 'Permanently deletes the case from the SSD. There is no trash to get it back from.', onclick: () => deleteCase(c) }, 'Delete case…'))));
 
     // Cases of the operation made before v1.27 each had their own suspects, contacts and
@@ -2545,6 +2647,56 @@
       h('div', { class: 'contact-add' }, add));
   }
 
+  /* v1.85: Case History: each status change and move, newest first. Cases from before v1.85 show
+   * what their dates and closing history tell. */
+  function historyOf(c) {
+    const rows = Array.isArray(c.activity) && c.activity.length ? c.activity.map((a) => ({ at: a.at, what: a.what })) : [];
+    if (!rows.length) {
+      if (c.dates && c.dates.opened) rows.push({ day: c.dates.opened, what: 'Opened' });
+      for (const x of c.closureHistory || []) {
+        const d = CVClosing.disposition(x.disposition);
+        if (x.date || x.at) rows.push({ day: x.date, at: x.date ? null : x.at, what: `Closed: ${d ? d.label : x.disposition || ''}` });
+        if (x.reopened) rows.push({ at: x.reopened, what: 'Reopened' });
+      }
+      if (c.closure) { const d = CVClosing.disposition(c.closure.disposition); rows.push({ day: c.closure.date, at: c.closure.date ? null : c.closure.at, what: `Closed: ${d ? d.label : ''}` }); }
+      if (c.dates && c.dates.archived) rows.push({ day: c.dates.archived, what: `Archived${c.archiveReason ? `: ${c.archiveReason}` : ''}` });
+    }
+    const key = (r) => r.at || `${r.day}T12:00:00`;
+    return rows.sort((a, b) => key(b).localeCompare(key(a)));
+  }
+  function caseHistorySection(c) {
+    const rows = historyOf(c);
+    return h('section', { class: 'contacts case-history cv-boxed', 'aria-labelledby': 'history-title' },
+      h('h3', { id: 'history-title', icon: 'clock-history', title: 'Each change of status, closing, reopening, archiving and Mission move, newest first.' }, 'Case History'),
+      rows.length ? h('ol', { class: 'history-list' }, rows.map((r) => h('li', {},
+        h('span', { class: 'history-when muted small nowrap' }, r.at ? fmtDateTime(Date.parse(r.at)) : r.day ? fmtDate(r.day) : ''),
+        h('span', { class: 'history-what' }, r.what)))) : h('p', { class: 'muted small' }, 'Nothing yet.'));
+  }
+
+  /* v1.85: Case Summary: one page for a supervisor, as a PDF (the letterhead on top). */
+  async function caseSummary(c) {
+    let arrest = null; let fields = null; let tl = { events: [] };
+    try {
+      [arrest, fields, tl] = await Promise.all([
+        Vault.readCaseJSON(c.id, 'arrest.json').catch(() => null),
+        Vault.readCaseJSON(c.id, 'report-fields.json').catch(() => null),
+        Vault.getTimeline(c.id).catch(() => ({ events: [] })),
+      ]);
+    } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
+    const op = opOf(c);
+    const lh = await CVLetterhead.forPdf().catch(() => null);
+    const bytes = CVCaseSummary.build({ c, op, arrest, fields, timeline: tl, history: historyOf(c), fmtDate }, { letterhead: lh, printed: fmtDate(today()) });
+    const name = `Case Summary ${c.number || 'case'}.pdf`.replace(/[\\/:*?"<>|]/g, '');
+    const viewer = CVPdfViewer.create(bytes, { h, icon: I, title: 'Case Summary', fileName: name });
+    await openDialog((done) => h('div', { class: 'pdf-view' }, h('h2', {}, 'Case Summary'), viewer,
+      h('div', { class: 'dialog-actions' },
+        Vault.isArchived(c.id) ? null : h('button', { class: 'btn', type: 'button', icon: 'save', title: 'Save this PDF in the case\'s Files', onclick: async () => {
+          try { await Save.track(`files:${c.id}`, () => Vault.addFile(c.id, new File([bytes], name, { type: 'application/pdf' }), { folder: 'Supplementary Report', description: 'Case Summary', replace: true })); toast('Saved to Files → Supplementary Report.', 'success'); } catch (err) { toast(`Not saved: ${err.message}`, 'error'); }
+        } }, 'Save PDF to Case'),
+        h('button', { class: 'btn primary', type: 'button', onclick: () => done() }, 'Done'))));
+    viewer.destroy();
+  }
+
   // Pending edits to a case that is being deleted are dropped rather than written.
   function dropPendingSaves(id) {
     for (const key of [...Save.timers.keys()]) {
@@ -2676,6 +2828,21 @@
     });
     if (choice === 'archive') return archiveCase(c);
     if (choice !== 'delete') return;
+    // v1.85: asked twice. The last one, over a big skull and crossbones, is a little less serious.
+    const last = await openDialog((close) => {
+      const no = h('button', { class: 'btn primary', type: 'button', autofocus: true, onclick: () => close(false) }, 'Spare It');
+      return h('form', { class: 'doom-form', onsubmit: (e) => { e.preventDefault(); close(true); } },
+        h('div', { class: 'doom-skull', 'aria-hidden': 'true' }, I('skull-crossbones')),
+        h('div', { class: 'doom-body' },
+          h('h2', {}, 'Last Chance, Detective'),
+          h('p', { class: 'doom-case' }, c.number || c.title || 'This case'),
+          h('p', {}, 'You are about to send this case to the big evidence locker in the sky. There is no trash can, no "Undo", and IT cannot pull it out of a dumpster for you.'),
+          h('p', { class: 'muted small' }, 'Did you make a full backup? No judgment. Okay, a little judgment.'),
+          h('div', { class: 'dialog-actions' },
+            no,
+            h('button', { class: 'btn danger', type: 'submit', icon: 'skull-crossbones' }, 'Delete It Forever'))));
+    });
+    if (!last) { toast('Case spared. It lives to see another day.', 'success'); return; }
     dropPendingSaves(c.id);
     try {
       await Save.track(`delete:${c.id}`, () => Vault.deleteCase(c.id));
@@ -3503,10 +3670,34 @@
             ['shield-check', 'App version', Vault.APP_VERSION], [MODE === 'direct' ? 'usb-drive' : 'plug', 'Mode', MODE === 'direct' ? 'Direct' : 'Helper', MODE === 'direct' ? 'The browser opens the SSD itself.' : 'The CaseVault helper on 127.0.0.1 opens the SSD.']]
             .map(([ic, k, val, tip]) => h('div', { class: 'fact', title: tip || null }, h('span', { class: 'fact-icon' }, I(ic)), h('span', {}, h('span', { class: 'small muted block' }, k), h('strong', {}, val))))),
         h('p', { class: 'muted small' }, 'Vault ID ', h('span', { class: 'mono' }, v.vaultId || '—')));
+      // v1.85: a full backup to another drive, and each vault.json backup can be restored.
+      const last = v.settings.lastFullBackup;
+      const age = fullBackupAge();
+      const restoreRow = (name) => h('li', { class: 'backup-row' }, h('span', { class: 'mono small' }, name),
+        h('button', { class: 'btn small', type: 'button', icon: 'arrow-counterclockwise', title: 'Puts this copy of vault.json back. The current one is backed up first.', onclick: async () => {
+          const ok = await confirmDialog({ title: 'Restore This Backup?', message: `vault.json goes back to ${name}: the case list, Missions and settings as they were then. The current vault.json is backed up first, so this can be undone by restoring that copy. Case folders are not changed; every case still on the SSD stays in the list.`, confirmText: 'Restore', danger: true });
+          if (!ok) return;
+          await Save.flushAll();
+          try {
+            const r = await Save.track('restore', () => Vault.restoreBackup(name));
+            close();
+            toast(`Restored ${name}: ${r.cases} case${r.cases === 1 ? '' : 's'}. The previous vault.json is saved as ${r.safety}.`, 'success', 10000);
+            state.caseObj = null;
+            renderCaseList();
+            route();
+          } catch (err) { toast(`Not restored: ${err.message}`, 'error', 9000); }
+        } }, 'Restore'));
       const backupsSec = h('section', { 'data-section': 'backups' },
         h('h3', {}, 'Backups'),
-        h('p', {}, `A copy of vault.json is saved to the backups folder once a day. ${backups.length} backup${backups.length === 1 ? '' : 's'} on the SSD${backups[0] ? `, newest: ${backups[0]}` : ''}.`),
-        h('p', { class: 'muted small explain' }, 'This covers the case index and settings. To back up whole cases (notes, timelines, files), copy the entire CaseVault-Data folder to a second encrypted drive.'),
+        h('div', { class: `backup-full${age == null || age > FULL_BACKUP_DAYS ? ' backup-due' : ''}` },
+          h('span', { class: 'fact-icon' }, I('hdd-fill')),
+          h('div', {}, h('strong', { class: 'block' }, 'Whole vault to another drive'),
+            h('span', { class: 'small' }, last && last.at ? `${fullBackupText()} (${fmtDateTime(Date.parse(last.at))})${last.files ? `, ${last.files} files, ${fmtSize(last.bytes)}, checked` : last.manual ? ', copied by hand' : ''}.` : 'No full backup yet. If the SSD is lost or fails, everything on it is gone.'),
+            h('span', { class: 'muted small block' }, `Do this at least every ${FULL_BACKUP_DAYS} days. The banner reminds you.`)),
+          h('div', { class: 'spacer' }),
+          h('button', { class: 'btn primary', type: 'button', icon: 'hdd-fill', onclick: async () => { close(); await fullBackupDialog(); } }, 'Back Up Everything')),
+        h('p', {}, `A copy of vault.json (the case list, Missions and settings) is saved once a day. ${backups.length} backup${backups.length === 1 ? '' : 's'} on the SSD${backups[0] ? `, newest: ${backups[0]}` : ''}.`),
+        backups.length ? h('details', { class: 'backup-list' }, h('summary', {}, 'Restore a vault.json backup'), h('ul', {}, backups.slice(0, 30).map(restoreRow))) : null,
         h('div', { class: 'row' },
           h('label', { class: 'inline' }, 'Keep the newest ', keep, ' backups'),
           h('div', { class: 'spacer' }),
@@ -3561,7 +3752,7 @@
         }
         scroller.append(sec);
         nav.append(h('button', { type: 'button', class: 'vault-nav-item', 'data-target': key, onclick: () => scrollToSection(sec, true) },
-          h('span', {}, title ? title.textContent.replace(/\s*\(.*\)$/, '').trim() : key), I(SECTION_ICONS[key] || 'gear')));
+          h('span', {}, title ? [...title.childNodes].filter((n) => !(n.classList && n.classList.contains('beta-tag'))).map((n) => n.textContent).join('').replace(/\s*\(.*\)$/, '').trim() : key), I(SECTION_ICONS[key] || 'gear')));
       });
       const spy = new IntersectionObserver((entries) => {
         const top = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
@@ -3711,6 +3902,86 @@
   // v1.28: Vault, Library and Reference are on the Overview, not in the menu.
   $('#btn-options').addEventListener('click', () => CVOptions.open(window.CaseVaultUI));
   $('#btn-contact-dev').addEventListener('click', () => CVOptions.contactDev(window.CaseVaultUI));
+  $('#btn-problem').addEventListener('click', () => reportProblem());
+  $('#btn-shortcuts').addEventListener('click', () => shortcutsDialog());
+
+  /* v1.85: Report a Problem. The app version, browser, screen and the last errors, with case
+   * numbers, names, Missions and the letterhead taken out, saved as a text file on the SSD (or
+   * copied) to send to the developer. Nothing is sent from here. */
+  function scrubbed(text) {
+    let t = String(text || '');
+    const words = new Set();
+    const add = (v) => { const x = String(v || '').trim(); if (x.length >= 3) words.add(x); };
+    if (Vault.data) {
+      for (const c of Vault.data.cases || []) { add(c.number); add(c.subject); add(c.title); add(c.fileNumber); add(c.id); }
+      for (const o of Vault.data.operations || []) { add(o.number); add(o.name); }
+      const st = Vault.data.settings || {};
+      if (st.affiant) for (const v of Object.values(st.affiant)) if (typeof v === 'string') add(v);
+      if (st.letterhead && st.letterhead.header) st.letterhead.header.split('\n').forEach(add);
+    }
+    for (const w of [...words].sort((a, b) => b.length - a.length)) t = t.split(w).join('[removed]');
+    return t
+      .replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, '[email]')
+      .replace(/\(?\b\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g, '[phone]')
+      .replace(/\b\d{3}-\d{2}-\d{4}\b/g, '[ssn]')
+      .replace(/(cases|archive)\/[^\s/)]+/g, '$1/[case]');
+  }
+  async function problemText(what) {
+    const si = MODE === 'helper' && HelperFS.sysinfo ? await HelperFS.sysinfo().catch(() => null) : null;
+    const lines = [
+      'CaseVault problem report',
+      `Made: ${new Date().toISOString()}`,
+      `App version: ${Vault.APP_VERSION}`,
+      `Mode: ${MODE === 'direct' ? 'Direct (Chrome/Edge)' : 'Helper'}`,
+      `Browser: ${navigator.userAgent}`,
+      `Screen: ${innerWidth}x${innerHeight} at ${devicePixelRatio}x, zoom ${CVOptions.getZoom ? CVOptions.getZoom() : 100}%`,
+      `Page: ${location.hash.replace(/\/case\/[^/]+/, '/case/[case]').replace(/\/operation\/[^/]+/, '/operation/[mission]') || '#/'}`,
+      `Cases: ${Vault.data ? Vault.data.cases.length : 0}, Missions: ${Vault.data ? (Vault.data.operations || []).length : 0}`,
+      si && si.diskTotal ? `SSD free: ${fmtSize(si.diskFree)} of ${fmtSize(si.diskTotal)}` : null,
+      `Unsaved changes: ${Save.timers.size}, failed saves: ${Save.failed.size}`,
+      '',
+      'What happened:',
+      what || '(not described)',
+      '',
+      `Recent errors (${PROBLEMS.length}):`,
+      ...(PROBLEMS.length ? PROBLEMS.map((p) => `[${p.at}] ${p.kind}: ${p.text}`) : ['none']),
+    ].filter((x) => x != null);
+    return scrubbed(lines.join('\n'));
+  }
+  async function reportProblem() {
+    const what = h('textarea', { rows: 3, maxlength: 2000, placeholder: 'What were you doing when it went wrong? No case details, names or numbers.', 'aria-label': 'What happened' });
+    const preview = h('textarea', { class: 'problem-preview mono', rows: 12, readonly: true, 'aria-label': 'The report' });
+    const refresh = async () => { preview.value = await problemText(what.value.trim()); };
+    what.addEventListener('input', debounce(refresh, 300));
+    await refresh();
+    await openDialog((close) => h('div', { class: 'problem-form' },
+      h('h2', { icon: 'clipboard2-pulse' }, 'Report a Problem'),
+      h('p', { class: 'muted small explain' }, 'This is everything the report holds. Case numbers, names, Missions and your letterhead are taken out. Read it, then save it to the SSD or copy it, and send it with Contact Dev.'),
+      field('What happened', what), field('The report', preview),
+      h('div', { class: 'dialog-actions' },
+        h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Close'),
+        h('button', { class: 'btn', type: 'button', icon: 'copy', onclick: async () => {
+          try { await navigator.clipboard.writeText(preview.value); toast('Report copied.', 'success'); } catch { preview.select(); toast('Select the text and copy it with Ctrl+C.', 'info'); }
+        } }, 'Copy'),
+        h('button', { class: 'btn primary', type: 'button', icon: 'save', onclick: async () => {
+          try {
+            const d = new Date();
+            const name = `problem-report-${Vault.localDay(d)}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}.txt`;
+            await Save.track('problem', async () => FS.writeText(await FS.getDir(Vault.root, 'exports', true), name, preview.value));
+            toast(`Saved as CaseVault-Data\\exports\\${name}. Attach it in Contact Dev.`, 'success', 8000);
+            close();
+          } catch (err) { toast(`Not saved: ${err.message}`, 'error'); }
+        } }, 'Save to SSD'))));
+  }
+
+  /* v1.85: keyboard shortcuts. */
+  const SHORTCUTS = [['Ctrl+K', 'Search the case list'], ['N', 'New case (when not typing)'], ['Ctrl+S', 'Save every change now'], ['Ctrl+\\', 'Show or hide the case list'], ['Esc', 'Close the popup'], ['?', 'This list']];
+  function shortcutsDialog() {
+    return openDialog((close) => h('div', { class: 'shortcuts-form' },
+      h('h2', { icon: 'lightning-charge' }, 'Keyboard Shortcuts'),
+      h('table', { class: 'data-table shortcuts-table' }, h('tbody', {}, SHORTCUTS.map(([k, v]) => h('tr', {}, h('td', {}, h('kbd', {}, k)), h('td', {}, v))))),
+      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
+  }
 
   // The menu (top right): Reference, Library, Vault, Theme, Options, Contact Dev.
   const menuBtn = $('#btn-menu');
@@ -3754,6 +4025,22 @@
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();
       Save.flushAll();
+    }
+    // v1.85: Ctrl+K searches the case list; N makes a new case and ? lists the shortcuts, when
+    // you're not typing in a box and no popup is open.
+    const typing = e.target && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName));
+    const popup = !!document.querySelector('#dialog[open]') || !!(window.CVPrivacy && CVPrivacy.locked);
+    if (state.connected && !popup && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      // The search box opens from the magnifier at the top of the case list.
+      const q = $('#case-search');
+      if (document.activeElement !== q) { const b2 = $('#btn-side-search'); if (b2) b2.click(); }
+      if (document.activeElement === q) q.select();
+      return;
+    }
+    if (state.connected && !popup && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (e.key === 'n' || e.key === 'N') { e.preventDefault(); newCase(); return; }
+      if (e.key === '?') { e.preventDefault(); shortcutsDialog(); return; }
     }
     // Ctrl+\ shows or hides the case list (Ctrl+B is left to the browser and text fields).
     if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === '\\' || e.code === 'Backslash')) {
@@ -3969,7 +4256,7 @@
   }
 
   // Small toolkit shared with the consistency checker screen (js/checker/checks-ui.js).
-  window.CaseVaultUI = { h, icon: I, $, toast, openDialog, confirmDialog, field, fmtDate, fmtDateTime, fmtSize, Save, state, go, refresh: () => route(), previewFile, onDriveLost, showVaultPanel, makeFoldable };
+  window.CaseVaultUI = { h, icon: I, betaTag, $, toast, openDialog, confirmDialog, field, fmtDate, fmtDateTime, fmtSize, Save, state, go, refresh: () => route(), previewFile, onDriveLost, showVaultPanel, makeFoldable };
   CVChecks.init(window.CaseVaultUI);
   CVOutbound.init(window.CaseVaultUI);
   CVOutbound.onChange(renderNetStatus);
@@ -3986,6 +4273,7 @@
   CVActivityLib.mount(CVActivity, $('#ai-activity'));
   CVDraftsUI.init(window.CaseVaultUI);
   CVClosingUI.init(window.CaseVaultUI);
+  CVLetterhead.init(window.CaseVaultUI);
   CVReportFieldsUI.init(window.CaseVaultUI);
   CVReferenceUI.init(window.CaseVaultUI);
   CVLibraryUI.init(window.CaseVaultUI);

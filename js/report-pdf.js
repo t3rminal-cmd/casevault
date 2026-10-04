@@ -91,7 +91,7 @@
   const M = 36; // margin
   const INNER = PAGE_W - 2 * M;
 
-  function layout(data, { agency = '', title = F().titleFor(data), caseLabel = '', printed = '', photos: photosIn = [] } = {}) {
+  function layout(data, { agency = '', title = F().titleFor(data), caseLabel = '', printed = '', photos: photosIn = [], lh = null } = {}) {
     const RF = F();
     const d = RF.normalize(data);
     const val = (k) => RF.shown(k, d[k]);
@@ -137,9 +137,11 @@
       pages.push({ ops, sigs, imgs: [], signed: false });
       y = PAGE_H - M;
       if (pages.length === 1) {
+        // v1.85: the department letterhead across the top, when there is one.
+        if (lh) { y -= letterhead(ops, lh, M, y, INNER, 'times'); if (lh.logo) pages[0].imgs.push(lh.logo.index); }
         // Title on the left, the agency under it; the R.D. Number in a box on the right (v1.48).
         text(M, y - 14, title, 14, true);
-        if (agency) text(M, y - 25, agency.toUpperCase(), 7.5, true);
+        if (agency && !(lh && lh.header)) text(M, y - 25, agency.toUpperCase(), 7.5, true);
         const bw = (INNER / 8) * 2;
         fill(PAGE_W - M - bw, y - 10.5, bw, 10.5, 0.9);
         rect(PAGE_W - M - bw, y - 30, bw, 30, 0.9);
@@ -502,6 +504,50 @@
     return pages;
   }
 
+  /* ---------------- v1.85: the letterhead ---------------- */
+
+  /** The department logo (top left) and the department header to its right, across the top of the
+   * first page. lh: { header, logo: { index, w, h } | null }. Pushes onto ops; returns the height
+   * used (0 when there is no letterhead). */
+  function letterhead(ops, lh, x, yTop, innerW, face = 'helvetica') {
+    const lines = String((lh && lh.header) || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(0, 4);
+    const logo = lh && lh.logo;
+    if (!lines.length && !logo) return 0;
+    const S = 52;
+    let tx = x;
+    if (logo) {
+      const k = Math.min((S - 4) / logo.w, (S - 4) / logo.h);
+      const w = logo.w * k; const hh = logo.h * k;
+      ops.push(`q ${w.toFixed(2)} 0 0 ${hh.toFixed(2)} ${(x + (S - w) / 2).toFixed(2)} ${(yTop - S + (S - hh) / 2).toFixed(2)} cm /Im${logo.index} Do Q`);
+      tx = x + S + 10;
+    }
+    const sizes = lines.map((_, i) => (i === 0 ? 13 : 9));
+    const lead = sizes.map((z) => z + 3);
+    const total = lead.reduce((a, b) => a + b, 0);
+    let ty = yTop - (S - total) / 2 - sizes[0];
+    const room = innerW - (tx - x);
+    lines.forEach((l, i) => {
+      let z = sizes[i];
+      while (z > 6 && width(l, z, i === 0, face) > room) z -= 0.5;
+      ops.push(`BT /${i === 0 ? 'F2' : 'F1'} ${z} Tf ${tx.toFixed(2)} ${ty.toFixed(2)} Td ${pdfString(l)} Tj ET`);
+      ty -= lead[i];
+    });
+    ops.push(`0.8 w ${x.toFixed(2)} ${(yTop - S - 5).toFixed(2)} m ${(x + innerW).toFixed(2)} ${(yTop - S - 5).toFixed(2)} l S`);
+    return S + 11;
+  }
+
+  /** Adds the letterhead's logo to a photo list; -> the lh object for letterhead(). */
+  function withLogo(letterheadIn, photos) {
+    if (!letterheadIn) return null;
+    const lh = { header: letterheadIn.header || '', logo: null };
+    if (letterheadIn.logo && letterheadIn.logo.jpeg) {
+      const p = { ...letterheadIn.logo, index: photos.length };
+      photos.push(p);
+      lh.logo = p;
+    }
+    return lh.header || lh.logo ? lh : null;
+  }
+
   /* ---------------- the PDF file ---------------- */
 
   /** -> Uint8Array: the report as a PDF. opts: { agency, title, caseLabel, printed } */
@@ -510,7 +556,9 @@
     // With Evidence left out, no photos go in the file at all.
     const evidenceOff = Array.isArray(data && data.hidden) && data.hidden.includes('evidence');
     const photos = evidenceOff ? [] : (opts.photos || []).map((p, index) => ({ ...p, index }));
-    return assemble(layout(data, { ...opts, photos }), { photos, title: opts.title || F().titleFor(data), face: 'times' });
+    const all = [...photos];
+    const lh = withLogo(opts.letterhead, all);
+    return assemble(layout(data, { ...opts, photos, lh }), { photos: all, title: opts.title || F().titleFor(data), face: 'times' });
   }
 
   /**
@@ -600,7 +648,7 @@
     return bytes;
   }
 
-  const api = { build, layout, assemble, textsReport, wrap, width, pdfString, plain, PAGE_W, PAGE_H, M };
+  const api = { build, layout, assemble, textsReport, wrap, width, pdfString, plain, letterhead, withLogo, PAGE_W, PAGE_H, M };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportPdf = api;
 })(this);

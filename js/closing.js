@@ -34,7 +34,7 @@
     { key: 'exceptional', label: 'Exceptionally cleared', hint: 'Offender known and enough to charge, but something outside your control prevents it.',
       reasons: ['Death of the offender', 'Prosecution declined', 'Victim refused to cooperate', 'Extradition denied', 'Juvenile, no custody', 'Other'] },
     { key: 'unfounded', label: 'Unfounded', hint: 'The investigation showed no offense occurred.' },
-    { key: 'inactive', label: 'Inactive / no further leads', hint: 'Suspended until new information comes in. Can be reopened.' },
+    { key: 'inactive', label: 'Inactive / no further leads', hint: 'Nothing left to work and nothing to wait for: closed until new information comes in. Can be reopened. (Waiting on a lab or the DA is Pending, not this.)' },
     { key: 'referred', label: 'Referred to another agency', hint: 'Handed to the agency with jurisdiction.' },
     { key: 'other', label: 'Other', hint: 'Explain in the closing note.' },
   ];

@@ -232,7 +232,7 @@
       const p = Vault.data.settings.affiant || {};
       const photos = {};
       for (const [i, a] of arrest.arrestees.entries()) { if (a.photo) { try { photos[i] = await photoJpeg(a.photo); } catch { /* left out */ } } }
-      return CVArrestPdf.build(arrest, { agency: p.agency || '', caseNumber: c.number || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' · '), printed: '', photos });
+      return CVArrestPdf.build(arrest, { letterhead: root.CVLetterhead ? await root.CVLetterhead.forPdf() : null, agency: p.agency || '', caseNumber: c.number || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' · '), printed: '', photos });
     };
     const pdfName = () => `Arrest Report ${CVArrestPdf.reportName(arrest.arrestees[0] || {})}.pdf`.replace(/[\\/:*?"<>|]/g, '');
     async function showPdf(bytes) {
@@ -289,6 +289,7 @@
         printBtn, archived ? null : pdfCaseBtn, archived ? null : signBtn,
         h('div', { class: 'spacer' }), status, archived ? null : saveBtn,
         archived ? null : h('button', { class: 'btn small danger-ghost', type: 'button', title: 'Deletes all the arrest details of this case and takes the tab off', onclick: () => deleteArrest(c) }, 'Delete Arrest')),
+      archived || !root.CVLetterhead ? null : root.CVLetterhead.editor(), // v1.85
       list,
       archived ? null : h('div', { class: 'row' },
         h('button', { class: 'btn', type: 'button', onclick: () => { const a = K().emptyArrestee(); if (c.number) a.rdNumber = c.number; arrest.arrestees.push(a); changed(); draw(); } }, '+ Add another arrestee'),
@@ -457,6 +458,7 @@
         if (was && was.at && was.at !== oc.closure.at) oc.closureHistory = [...(oc.closureHistory || []), was];
         oc.pending = null;
         if (closure.disposition === 'arrest') { oc.arrest = true; delete oc.arrestRemoved; }
+        Vault.logActivity(oc, `Closed: ${K().disposition(closure.disposition).label}${closure.reason ? ` (${closure.reason})` : ''}${closure.closedBy ? `, by ${closure.closedBy}` : ''}`);
         await Save.track(`case:${oc.id}`, () => Vault.saveCase(structuredClone(oc)));
         // The Draft tab of each case closed: Status, How Cleared and the boxes ticked (v1.39).
         if (draft && RF) {
@@ -491,6 +493,7 @@
             oc.pending = b.pending;
             oc.arrest = b.arrest;
             if (b.arrestRemoved) oc.arrestRemoved = b.arrestRemoved;
+            Vault.logActivity(oc, `Close undone: back to ${b.status}`);
             await Save.track(`case:${oc.id}`, () => Vault.saveCase(structuredClone(oc)));
             if (RF && 'fields' in b) await Save.track(`report-fields:${oc.id}`, () => Vault.writeCaseJSON(oc.id, 'report-fields.json', RF.normalize(b.fields)));
           } catch { /* reported by Save */ }
@@ -565,6 +568,7 @@
     c.closure = null;
     c.status = 'Open';
     c.dates.closed = '';
+    Vault.logActivity(c, 'Reopened');
     try {
       await Save.track(`case:${c.id}`, () => Vault.saveCase(structuredClone(c)));
       toast('Case reopened.', 'success');
@@ -586,7 +590,7 @@
       const addDeadline = h('input', { type: 'checkbox', checked: true });
       return h('form', { onsubmit: (e) => { e.preventDefault(); close({ reason: reason.value, detail: detail.value.trim(), followUp: follow.value, addDeadline: addDeadline.checked }); } },
         h('h2', {}, 'Set the case to Pending'),
-        h('p', { class: 'muted small explain' }, 'Pending means you\'re waiting on someone else and can\'t move the case forward yourself. Set it back to Open when you can work it again.'),
+        h('p', { class: 'muted small explain' }, 'Pending means you\'re waiting on someone else (a lab, the DA, another agency) and can\'t move the case forward yourself. Set it back to Open when you can work it again. If there are no leads left and nothing to wait for, close it as Inactive instead.'),
         h('div', { class: 'form-grid' }, ui.field('Waiting on', reason), ui.field('Details', detail), ui.field('Follow up by', follow), h('div')),
         h('label', { class: 'check-row' }, addDeadline, h('span', {}, 'Add the follow-up date to the timeline as a deadline, so it shows in the case list and the Overview')),
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Set to Pending')));
@@ -594,6 +598,7 @@
     if (!result) return false;
     c.status = 'Pending';
     c.pending = { reason: result.reason, detail: result.detail, followUp: result.followUp, since: today() };
+    Vault.logActivity(c, `Pending: waiting on ${result.reason}${result.detail ? ` (${result.detail})` : ''}`);
     try {
       await Save.track(`case:${c.id}`, () => Vault.saveCase(structuredClone(c)));
       if (result.addDeadline && result.followUp) {

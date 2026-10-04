@@ -322,7 +322,7 @@
       h('div', { class: 'dev-card' },
       h('div', { class: 'dev-card-head' },
         h('span', { class: 'dev-card-icon', 'aria-hidden': 'true' }, ui.icon('incognito')),
-        h('div', {}, h('h3', {}, 'Document Anonymizer'), h('p', { class: 'muted small' }, 'Turns a real document into a fictitious one to keep as a template or give the AI to learn from. Runs on this PC only.'))),
+        h('div', {}, h('h3', {}, 'Document Anonymizer', ui.betaTag ? ui.betaTag() : null), h('p', { class: 'muted small' }, 'Turns a real document into a fictitious one to keep as a template or give the AI to learn from. Runs on this PC only.'))),
       h('div', { class: 'dev-col dev-step' },
         step(1, 'Original', 'Drop a file or paste the text.'),
         drop, src, extra),

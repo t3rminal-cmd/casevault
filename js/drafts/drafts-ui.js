@@ -1056,7 +1056,7 @@
 
     draw();
     return h('section', { 'data-section': 'templates' },
-      h('h3', {}, 'Templates'),
+      h('h3', {}, 'Templates', ui.betaTag ? ui.betaTag() : null),
       h('p', { class: 'muted small explain' }, 'Your own document formats for Drafts, kept as Markdown files in CaseVault-Data\\templates on the SSD. To add one: Import your agency\'s Word form (or a .md/.txt file), or New template and paste the text. Where a case detail goes, put a placeholder like {{case.number}}: the editor lists them all. # at the start of a line makes a heading, **bold**, *italic*, - for a list.'),
       box,
       h('div', { class: 'row template-actions' },

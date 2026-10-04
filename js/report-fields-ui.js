@@ -79,7 +79,7 @@
   async function pdfFor(c, data) {
     const d = data || await load(c);
     const p = Vault.data.settings.affiant || {};
-    return CVReportPdf.build(d, { agency: p.agency || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' · '), printed: '', photos: await photoJpegs(c, d) });
+    return CVReportPdf.build(d, { letterhead: root.CVLetterhead ? await root.CVLetterhead.forPdf() : null, agency: p.agency || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' · '), printed: '', photos: await photoJpegs(c, d) });
   }
 
   /** Saves the PDF in the case's Supplementary Report folder, in place of the one saved before. */
@@ -982,6 +982,8 @@
         h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-right', title: 'Fold every part away on screen (they stay in the PDF). Open one with its arrow.', onclick: () => foldAll(true) }, 'Hide All')),
       h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case: fill it in, then Send Draft to Reports puts it under Reports and its PDF under Files. Clear All starts another one. Saved as report-fields.json.'),
       h('div', { class: 'rf-actions' }, archived ? null : sendBtn, printBtn, archived ? null : clearBtn, h('div', { class: 'spacer' }), archived ? null : saveBtn),
+      // v1.85: the department letterhead, as at the top of the PDF.
+      archived || !root.CVLetterhead ? null : root.CVLetterhead.editor(),
       ...sections.slice(0, -1),
       part('evidence', 'Evidence Inventoried', 'box-seam', evRows, archived ? null : h('div', { class: 'contact-add rf-evidence-add' }, addExhibit, numbering), extrasBox),
       part('summary', 'Summary of Investigation', 'journal-text', fmt, rich.el, narrative),
