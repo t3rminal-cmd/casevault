@@ -215,6 +215,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.83
+
+- **CLOSED FILES and ARCHIVED** in the sidebar now look like MISSION FILES and GENERAL FILES: a card with the folder icon, the name in capitals with a line under it (how many closed or archived cases), the count and the arrow. The CLOSED FILES count is the number of closed cases, the same as the banner.
+- **+ on GENERAL FILES** starts a new case, like + on MISSION FILES starts a new Mission.
+- **Recently Updated:** the status boxes (Open, Pending, Closed, Archived) are all the same width.
+- **Reopen a case:** the message shows the closing date written out ("October 04, 2026").
+
 ### What's new in v1.82
 
 - **Sidebar folders stay as you left them:** a folder you open or fold (MISSION FILES, a Mission, GENERAL FILES) stays that way until you click it again, even when you go to another page.
