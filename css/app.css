@@ -3776,3 +3776,16 @@ html .tl-item.deadline::before { transform: none; }
 .files-table-wrap col.col-actions { width: 5.6rem; }
 .files-table-wrap .fn-pre { white-space: nowrap; }
 .folder-reset.folder-arrange, .folder-reset.disc-open { width: 9.5rem; justify-content: center; }
+
+/* v1.78: MISSION FILES in the case list: the Missions inside one blue folder, with + New Mission. */
+.op-group.mission-group { border-left-color: #1f6fd1; }
+.mission-children { list-style: none; margin: 0; padding: .35rem .4rem .45rem .6rem; display: grid; gap: .4rem; border-top: 1px solid var(--border); }
+.mission-children > li { list-style: none; }
+.mission-children .empty { padding: .3rem .2rem; }
+.mission-group > .op-head .mission-add { flex: none; width: 1.7rem; height: 1.7rem; border: 1px solid var(--border); background: var(--surface); color: #1f6fd1; }
+.mission-group > .op-head .mission-add:hover { background: color-mix(in srgb, #1f6fd1 12%, var(--surface)); border-color: #1f6fd1; }
+.mission-group > .op-head .mission-add .bi { width: .85rem; height: .85rem; }
+.ov-head-actions { display: flex; gap: .4rem; align-items: center; }
+/* v1.78: the timeline dot sits exactly on the centre of the line (it was 3.5px to the right). */
+.tl-modern .tl-item::before { box-sizing: border-box; width: calc(.85rem + 6px); height: calc(.85rem + 6px); left: calc(4.6rem + 1.5px - (.85rem + 6px) / 2); top: calc(.95rem - 3px); }
+@media (max-width: 640px) { .tl-modern .tl-item::before { left: calc(3.95rem + 1.5px - (.85rem + 6px) / 2); } }

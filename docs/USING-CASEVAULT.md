@@ -215,6 +215,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.78
+
+- **Operations are now Missions.** Every label, button and message says Mission: New Mission, Mission Number, Mission Name, Mission Folder, Mission Plans, Delete Mission. Your existing Operations simply show as Missions; nothing on the SSD is renamed.
+- **MISSION FILES in the sidebar.** Every Mission sits inside one **MISSION FILES** folder, like **GENERAL FILES**. Click **+** on it to make a new Mission. Click the folder's name to see all Missions; the arrow folds it. **New Mission** is also beside **All Missions** on the home page.
+- **A Mission's Timeline on its page.** Open a Mission: its **TIMELINE** (every case number in it) is right under Files. Add, edit and tick off entries there.
+- **Timeline dots** now sit exactly on the centre of the line.
+
 ### What's new in v1.77
 
 - **Sidebar folder names in capitals:** **MISSION FILES** (the closed cases of Operations that are still going on; it was "Operation Files"), **GENERAL FILES**, **CLOSED FILES** (it was "Closed") and **ARCHIVED**.

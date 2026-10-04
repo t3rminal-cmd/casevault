@@ -350,9 +350,9 @@
       const byNum = (a, b) => String(a.number || '').localeCompare(String(b.number || ''), undefined, { numeric: true });
       const source = h('select', { 'aria-label': 'Files from' },
         h('option', { value: `case:${c.id}` }, `This case: ${c.number || 'No number'}`),
-        myOp ? h('option', { value: `op:${myOp.id}` }, `This Operation: ${opName(myOp)}`) : null,
+        myOp ? h('option', { value: `op:${myOp.id}` }, `This Mission: ${opName(myOp)}`) : null,
         h('option', { value: 'all' }, 'All cases'),
-        ops.filter((o) => !myOp || o.id !== myOp.id).length ? h('optgroup', { label: 'Operations' }, ops.filter((o) => !myOp || o.id !== myOp.id).map((o) => h('option', { value: `op:${o.id}` }, opName(o)))) : null,
+        ops.filter((o) => !myOp || o.id !== myOp.id).length ? h('optgroup', { label: 'Missions' }, ops.filter((o) => !myOp || o.id !== myOp.id).map((o) => h('option', { value: `op:${o.id}` }, opName(o)))) : null,
         active.length > 1 ? h('optgroup', { label: 'Cases' }, active.filter((x) => x.id !== c.id).sort(byNum).map((x) => h('option', { value: `case:${x.id}` }, [x.number || 'No number', x.subject].filter(Boolean).join(' · ')))) : null);
       let shownCases = [c.id];
       const left = h('div', { class: 'disc-list', role: 'list' });
