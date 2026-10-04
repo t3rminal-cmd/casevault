@@ -203,6 +203,7 @@
     const CHARGE_ITEMS = (RD.CHARGES || []).flatMap((g) => g.codes.map(([statute, desc]) => ({ value: statute, label: `${statute} ${desc}`, hint: g.title, statute, desc })));
     const pickItems = (list) => list.map((v) => ({ value: v, label: v }));
     // Narcotic types: the calculator's list (it has prices), then the evidence types not in it.
+    const DNA_ITEMS = [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }];
     const NARCOTIC_ITEMS = [...Object.keys(RD.NARCOTIC_DATA || {}).map((k) => ({ value: k, label: k, hint: RD.NARCOTIC_DATA[k].cat })),
       ...F().DRUG_TYPES.filter((d) => !(RD.NARCOTIC_DATA || {})[d]).map((d) => ({ value: d, label: d }))];
     const moneyText = (v) => {
@@ -238,7 +239,8 @@
       // The input keeps its own listeners; a searchable list wraps it (box), not replaces it.
       let box = el;
       // v1.44: Method Code and Safe Method offer DNA (does not apply); anything else can be typed.
-      if (['methodCode', 'safeMethod', 'arrestUnit', 'residence'].includes(key)) box = CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }], onPick: () => save() });
+      // v1.76: the IR Number can be DNA as well.
+      if (['methodCode', 'safeMethod', 'arrestUnit', 'residence', 'irNumber'].includes(key)) box = CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }], onPick: () => save() });
       // v1.69: Court Branch and Court Officer can be Pending, and so can the Court Date.
       if (key === 'courtBranch') box = CVCombo.attach(el, { items: () => [{ value: 'Pending', label: 'Pending', hint: 'Not set yet' }], onPick: () => save() });
       if (key === 'courtDate') {
@@ -392,6 +394,8 @@
             if (key === 'victimsList' && k === 'name') el.addEventListener('input', redrawIfState);
             if (F().PICKS[kind]) box = CVCombo.attach(el, { items: () => pickItems(F().PICKS[kind]), onPick: () => { if (key === 'victimsList') redrawIfState(); } });
             else if (kind === 'narcotic') box = CVCombo.attach(el, { items: () => NARCOTIC_ITEMS });
+            // v1.76: IR, FBI and IDOC Numbers can be DNA (does not apply).
+            else if (['irNumber', 'fbiNumber', 'idocNumber'].includes(k)) box = CVCombo.attach(el, { items: () => DNA_ITEMS });
             else if (key === 'narcotics' && k === 'value') {
               // Street value from the narcotic calculator (Reference): type, amount and unit.
               const calc = h('button', { class: 'btn small rf-calc', type: 'button', icon: 'calculator', title: 'Work out the street value with the narcotic calculator (Reference → Narcotic calculator)', onclick: () => {
@@ -497,7 +501,9 @@
       // v1.68: it sits in its own column beside the fold arrow, so the checks line up down the page.
       const done = h('span', { class: 'rf-done', title: 'Every field in this part is filled in (or ticked off)' }, ui.icon('check-circle-fill'), h('span', { class: 'sr-only' }, `${title}: complete`));
       const sec = h('section', { class: `rf-section rf-${id}` },
-        h('div', { class: 'rf-head' }, h('label', { class: 'rf-include', title: 'Untick if this part doesn\'t apply: it is left out of the PDF' }, cb), h('span', { class: 'rf-hidden-tag', 'aria-hidden': 'true' }, 'Hidden on screen'), h('h3', { icon }, title), h('div', { class: 'spacer' }), done, fold),
+        // v1.76: "Hidden on screen" floats beside the checkbox on hover; "Not in the report" has its
+        // own column next to the green check.
+        h('div', { class: 'rf-head' }, h('label', { class: 'rf-include' }, cb, h('span', { class: 'rf-include-tip', 'aria-hidden': 'true' }, h('span', { class: 'tip-on' }, 'In the report. Untick to leave it out of the PDF'), h('span', { class: 'tip-off' }, 'Not in the report. Tick to put it back'), h('span', { class: 'tip-hidden' }, 'Hidden on screen (it stays in the PDF)'))), h('h3', { icon }, title), h('div', { class: 'spacer' }), h('span', { class: 'rf-off-tag', 'aria-hidden': 'true' }, 'Not in the report'), done, fold),
         inner);
       let pending = 0;
       // v1.68: a line or list that is ticked off counts as filled, and so does a whole part that is
@@ -637,6 +643,12 @@
           h('div', { class: 'spacer' }), h('label', { class: 'field rf-boxed rf-funds-rec' }, rec)));
       return wrap;
     }
+    // v1.76: Victim/Offender/Property/Circumstances Verified and Updated share one grey box.
+    function updateFields(s) {
+      const checks = s.fields.filter((f) => f[2] === 'check');
+      return [h('div', { class: 'rf-checkbox-group' }, checks.map(([k, label, kind, opts]) => input(k, label, kind, opts))),
+        ...s.fields.filter((f) => f[2] !== 'check').map(([k, label, kind, opts]) => input(k, label, kind, opts))];
+    }
     function reportLines(s) {
       const out = [];
       const byKey = Object.fromEntries(s.fields.map((f) => [f[0], f]));
@@ -651,7 +663,7 @@
       return out;
     }
     const sections = F().SECTIONS.map((s) => part(s.id, s.title, s.icon,
-      h('div', { class: s.id === 'report' ? 'rf-lines' : `rf-grid${s.id === 'update' || s.id === 'people' ? ' rf-grid-4' : s.id === 'approval' ? ' rf-grid-officers' : s.id === 'assignment' ? ' rf-grid-assign' : ''}` }, s.id === 'report' ? reportLines(s) : s.fields.map(([k, label, kind, opts]) => input(k, label, kind, opts))),
+      h('div', { class: s.id === 'report' ? 'rf-lines' : `rf-grid${s.id === 'update' || s.id === 'people' ? ' rf-grid-4' : s.id === 'approval' ? ' rf-grid-officers' : s.id === 'assignment' ? ' rf-grid-assign' : ''}` }, s.id === 'report' ? reportLines(s) : s.id === 'update' ? updateFields(s) : s.fields.map(([k, label, kind, opts]) => input(k, label, kind, opts))),
       ...(s.lists || []).map(listEditor)));
 
     // ---- evidence inventoried: one card per exhibit (number given automatically)

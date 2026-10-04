@@ -3722,3 +3722,57 @@ a[href]:not(.btn):not(.tab):not(.quick-link):not(.qa-tile):not(.case-item):not(.
 a[href], button:not(:disabled), [role="button"], summary, .op-folder-tile, label.check-row { cursor: pointer; }
 /* OTHER FILES (11 letters) spaced out to the width of MISSION FILES and GENERAL FILES (13). */
 .dashboard .ov-files-title > span.ov-title-wide { letter-spacing: calc(.05em + .2ch); margin-right: -.2ch; }
+
+/* v1.76: every timeline marker is a circle (events, deadlines, overdue, done and the Today mark). */
+.tl-modern .tl-item::before, .tl-modern .tl-today::before { border-radius: 50% !important; }
+.tl-modern .tl-item.deadline::before { transform: none; }
+html .htl-item.deadline .htl-dot { border-radius: 50% !important; transform: none; }
+html .htl-item.deadline .htl-link:hover .htl-dot { transform: scale(1.25); }
+html .mini-tl-dot.deadline { border-radius: 50% !important; transform: translate(-50%, -50%); }
+html .mini-tl-dot.deadline:hover, html .mini-tl-dot.deadline:focus-visible { transform: translate(-50%, -50%) scale(1.5); }
+html .tl-item::before { border-radius: 50% !important; }
+html .tl-item.deadline::before { transform: none; }
+
+/* v1.76: Draft part headers. The checkbox explains itself in a float box on hover (in the report,
+   left out, or hidden on screen); "Not in the report" has its own column next to the green check. */
+.rf-head .rf-hidden-tag { display: none; }
+.rf-section.rf-off h3::after { content: none; }
+.rf-include { position: relative; }
+.rf-include-tip { position: absolute; left: calc(100% + .6rem); top: 50%; transform: translateY(-50%); z-index: 30; display: none; padding: .35rem .6rem; background: var(--text); color: var(--surface); font-size: .75rem; font-weight: 500; letter-spacing: 0; text-transform: none; white-space: nowrap; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); pointer-events: none; }
+.rf-include-tip::before { content: ""; position: absolute; left: -5px; top: 50%; margin-top: -5px; border: 5px solid transparent; border-left: 0; border-right-color: var(--text); }
+.rf-include:hover .rf-include-tip, .rf-include:focus-within .rf-include-tip { display: block; }
+.rf-include-tip > span { display: none; }
+.rf-section:not(.rf-off):not(.rf-folded) .rf-include-tip .tip-on,
+.rf-section.rf-off .rf-include-tip .tip-off,
+.rf-section.rf-folded:not(.rf-off) .rf-include-tip .tip-hidden { display: inline; }
+.rf-head .rf-off-tag { flex: none; width: 8.6rem; text-align: right; font-size: .75rem; font-weight: 500; color: var(--muted); visibility: hidden; white-space: nowrap; }
+.rf-section.rf-off .rf-head .rf-off-tag { visibility: visible; }
+
+/* v1.76: Update Information and Status: the eight Verified / Updated ticks in one grey box. */
+.rf-checkbox-group { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, max-content); justify-content: space-between; gap: .2rem 1rem; padding: .5rem .8rem; background: var(--rf-box); border: 1px solid var(--box-edge, transparent); }
+.rf-checkbox-group .rf-check { min-height: 1.9rem; }
+@media (max-width: 760px) { .rf-checkbox-group { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.rf-checkbox-group .rf-check span { white-space: nowrap; }
+
+/* v1.76: Files tab. The Updated column shows the time under the date; the folder list's Arrange
+   button is boxed like Discovery; a folder's files can be arranged from the line above the table. */
+.files-table-wrap td.fadded { line-height: 1.25; }
+.fadded-day, .fadded-time { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fadded-time { font-size: .78em; opacity: .85; }
+.files-where-row { display: flex; align-items: center; gap: .8rem; }
+.files-where-row .files-where { flex: 1; min-width: 0; }
+.files-where-row .files-arrange { flex: none; }
+.folder-reset.folder-arrange { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+.type-table { table-layout: fixed; width: 100%; }
+.type-table col.tt-file { width: 22%; } .type-table col.tt-type { width: 24%; } .type-table col.tt-name { width: 22%; } .type-table col.tt-saved { width: 32%; }
+.type-table td { overflow-wrap: anywhere; }
+.type-table td select, .type-table td input { width: 100%; min-width: 0; box-sizing: border-box; }
+/* v1.76: the Files table text matches the folder list and the Draft fields (.9rem). */
+.files-table-wrap table.files tbody td, .files-table-wrap .fname-link { font-size: .9rem; }
+.files-table-wrap .fname-folder { font-size: .75rem; }
+/* v1.76: more room for the name: narrower Size and action columns; the case number never breaks. */
+.files-table-wrap col.col-type { width: 9rem; }
+.files-table-wrap col.col-size { width: 4.8rem; }
+.files-table-wrap col.col-actions { width: 5.6rem; }
+.files-table-wrap .fn-pre { white-space: nowrap; }
+.folder-reset.folder-arrange, .folder-reset.disc-open { width: 9.5rem; justify-content: center; }
