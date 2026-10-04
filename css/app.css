@@ -3789,3 +3789,39 @@ html .tl-item.deadline::before { transform: none; }
 /* v1.78: the timeline dot sits exactly on the centre of the line (it was 3.5px to the right). */
 .tl-modern .tl-item::before { box-sizing: border-box; width: calc(.85rem + 6px); height: calc(.85rem + 6px); left: calc(4.6rem + 1.5px - (.85rem + 6px) / 2); top: calc(.95rem - 3px); }
 @media (max-width: 640px) { .tl-modern .tl-item::before { left: calc(3.95rem + 1.5px - (.85rem + 6px) / 2); } }
+
+/* v1.79: drop-down lists fit the window: a long choice wraps instead of making the list wider than
+   the screen, and a typed-in list is at least as wide as its box but never wider than the window. */
+.sel-opt { white-space: normal; overflow-wrap: anywhere; }
+.combo-list { min-width: 100%; width: max-content; max-width: min(30rem, calc(100vw / var(--z, 1) - 16px)); right: auto; }
+.combo-list .combo-opt { white-space: normal; overflow-wrap: anywhere; }
+
+/* v1.79: Gang Affiliations, Persons Present, Police Personnel, Vehicles and Notifications each sit in
+   one grey box (like the Verified / Updated box): the title, its cards and the Add button. */
+.rf-list:is(.rf-list-gangs, .rf-list-notArrested, .rf-list-personnel, .rf-list-vehicles, .rf-list-notifications) { padding: .6rem .8rem .7rem; background: var(--rf-box); border: 1px solid var(--box-edge, var(--border)); }
+.rf-list:is(.rf-list-gangs, .rf-list-notArrested, .rf-list-personnel, .rf-list-vehicles, .rf-list-notifications) .rf-item { background: var(--surface); }
+
+/* v1.79: Timeline spacing. A wider date square (the time never clips), then an even gap with the line
+   and its dot in the middle, then the event box: date | gap (line) | event | actions. */
+.timeline.tl-modern { --tl-date: 5.4rem; --tl-gap: 2.8rem; --tl-x: calc(var(--tl-date) + var(--tl-gap) / 2); }
+.timeline.tl-modern::before { left: calc(var(--tl-x) - 1.5px); }
+.tl-modern .tl-item { grid-template-columns: var(--tl-date) var(--tl-gap) minmax(0, 1fr) auto; column-gap: 0; }
+.tl-modern .tl-when { grid-column: 1; padding: .4rem .3rem; }
+.tl-modern .tl-time { white-space: nowrap; font-size: .72rem; }
+.tl-modern .tl-day, .tl-modern .tl-wk { white-space: nowrap; }
+.tl-modern .tl-body { grid-column: 3; }
+.tl-modern .tl-actions { grid-column: 4; margin-left: .7rem; }
+.tl-modern .tl-item::before { left: calc(var(--tl-x) - (.85rem + 6px) / 2); }
+.tl-modern .tl-month, .tl-modern .tl-today, .tl-modern .empty { margin-left: calc(var(--tl-date) + var(--tl-gap)); }
+.tl-modern .tl-today::before { left: calc(var(--tl-gap) / -2 - .45rem); }
+@media (max-width: 640px) {
+  .timeline.tl-modern { --tl-date: 4.4rem; --tl-gap: 2.2rem; }
+  .tl-modern .tl-item::before { left: calc(var(--tl-x) - (.85rem + 6px) / 2); }
+  .tl-modern .tl-actions { grid-column: 3; margin-left: 0; }
+}
+
+/* v1.79: Files tab: the Document column holds the file's icon, centred; the name no longer has one. */
+.files-table-wrap col.col-type { width: 7rem; }
+.files-table-wrap td.fdoc-icon { text-align: center; }
+.files-table-wrap td.fdoc-icon .file-icon { margin: 0; }
+.tl-modern .tl-actions { align-self: start; padding-top: .55rem; }

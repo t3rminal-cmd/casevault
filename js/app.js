@@ -2931,17 +2931,16 @@
       if (prefix && stem.toLowerCase().startsWith(prefix.toLowerCase()) && stem.length > prefix.length) {
         let rest = stem.slice(prefix.length).replace(/^[\s_-]+/, '');
         const label = f && f.folder ? docLabel(f) : '';
-        if (label && rest.toLowerCase().startsWith(label.toLowerCase())) {
-          const after = rest.slice(label.length).replace(/^[\s_-]+/, '');
-          if (after && !/^\(\d+\)$/.test(after)) rest = after;
-        }
+        // v1.79: only "Type - Description" loses its type ("Exhibit 3b" stays "Exhibit 3b").
+        const m = label ? new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+-\\s+(.+)$`, 'i').exec(rest) : null;
+        if (m && !/^\(\d+\)$/.test(m[1])) rest = m[1];
         return rest ? `${stem.slice(0, prefix.length)} | ${rest}` : stem;
       }
       return stem || base;
     };
     const addedText = (ms) => (ms ? fmtDate(Vault.localDay(new Date(ms))) : '—');
     const cmp = {
-      custom: (a, b) => (inOneFolder ? byCustom(a, b) : 0),
+      custom: (a, b) => byCustom(a, b), // v1.79: every view has its own order, All documents too
       name: (a, b) => a.base.localeCompare(b.base, undefined, { numeric: true }),
       type: (a, b) => docLabel(a).localeCompare(docLabel(b)) || a.base.localeCompare(b.base),
       ext: (a, b) => extOf(a.base).localeCompare(extOf(b.base)) || a.base.localeCompare(b.base),
@@ -2957,9 +2956,9 @@
     const th = (key, label, cls = '') => h('th', { class: `${cls} sortable ${sortPref.key === key ? 'sorted' : ''}`, 'aria-sort': sortPref.key === key ? (sortPref.dir > 0 ? 'ascending' : 'descending') : null },
       h('button', { type: 'button', class: 'th-btn', 'data-ro-ok': 'true', title: `Sort by ${label.toLowerCase()}`, onclick: () => setSort(key) },
         label, sortPref.key === key ? I(sortPref.dir > 0 ? 'chevron-down' : 'chevron-up', { cls: 'sort-icon' }) : null));
-    const dragRows = inOneFolder && sortPref.key === 'custom' && !archived;
+    const dragRows = sortPref.key === 'custom' && !archived;
     const saveCustom = async (list) => {
-      fileOrder[current] = list;
+      fileOrder[current || ''] = list;
       await Save.track(`file-order:${c.id}`, () => Vault.writeCaseJSON(c.id, 'file-order.json', fileOrder)).catch(() => {});
     };
 
@@ -2969,19 +2968,19 @@
         h('thead', {}, h('tr', {},
           dragRows ? h('th', { class: 'grip-cell', title: 'Your own order: drag the rows' }, h('span', { class: 'sr-only' }, 'Order')) : null,
           th('name', 'Name'), th('type', 'Document'), th('ext', 'File', 'fext-head'), th('size', 'Size', 'num'), th('added', 'Updated'),
-          h('th', { class: 'actions-head' }, inOneFolder
+          h('th', { class: 'actions-head' }, !archived
             ? h('button', { type: 'button', class: `th-btn small ${sortPref.key === 'custom' ? 'sorted' : ''}`, 'data-ro-ok': 'true', icon: 'list-check', title: 'Your own order for this folder: drag the rows to arrange them.', onclick: () => setSort('custom') }, 'Custom')
             : h('span', { class: 'sr-only' }, 'Actions')))),
         h('tbody', {}, rows.map((f) => {
           const tr = h('tr', { 'data-base': f.base, draggable: !archived ? 'true' : null },
             dragRows ? h('td', { class: 'grip-cell', title: 'Drag to reorder' }, I('grip-vertical')) : null,
             h('td', { class: 'fname' },
-              h('span', { class: `file-icon ${fileKind(f.base)}` }, I(FILE_ICONS[fileKind(f.base)])),
               h('span', { class: 'fname-text' },
                 h('button', { 'data-ro-ok': 'true', class: 'linkish fname-link', type: 'button', title: f.base, onclick: () => previewFile(c, f.name) }, ((nm) => { const i = nm.indexOf(' | '); return i < 0 ? nm : [h('span', { class: 'fn-pre' }, `${nm.slice(0, i)} |`), ` ${nm.slice(i + 3)}`]; })(nameOf(f.base, f))),
                 !inOneFolder ? h('span', { class: 'fname-folder muted small' }, (f.folder || 'Unsorted').replace('/', ' › ')) : null),
               f.folder && prefix && !CF.followsConvention(c, f.folder, f.base) ? h('span', { class: 'pill warn-pill', title: `Not named ${prefix}-<file name>` }, 'name') : null),
-            h('td', { class: 'ftype muted', title: fileTypeLabel(f.base) }, docLabel(f)),
+            // v1.79: the Document column shows the file's icon (its type in the hover box).
+            h('td', { class: 'ftype fdoc-icon', title: `${docLabel(f)} · ${fileTypeLabel(f.base)}` }, h('span', { class: `file-icon ${fileKind(f.base)}` }, I(FILE_ICONS[fileKind(f.base)])), h('span', { class: 'sr-only' }, docLabel(f))),
             h('td', { class: 'fext muted', title: fileTypeLabel(f.base) }, extOf(f.base) || '—'),
             h('td', { class: 'num muted' }, fmtSize(f.size)),
             h('td', { class: 'muted fadded', title: `Last updated ${fmtDateTime(f.modified)}` }, h('span', { class: 'fadded-day' }, addedText(f.modified)), f.modified ? h('span', { class: 'fadded-time' }, fmtTime(f.modified)) : null),
@@ -3040,11 +3039,11 @@
           h('div', { class: 'files-where-row' },
             h('p', { class: 'muted small files-where' }, `${shown.length} file${shown.length === 1 ? '' : 's'} · ${where}${dragRows ? ' · drag rows to arrange them' : ''}${!archived ? ' · drag a file onto a folder to move it' : ''}`),
             // v1.76: arrange the files of a folder (up and down buttons, or drag), like the folders.
-            inOneFolder && !archived && shown.length > 1 ? h('button', { class: 'btn small files-arrange', type: 'button', icon: 'list-ol', title: 'Put the files of this folder in your own order', onclick: async () => {
+            !archived && shown.length > 1 ? h('button', { class: 'btn small files-arrange', type: 'button', icon: 'list-ol', title: 'Put the files of this folder in your own order', onclick: async () => {
               const ordered = [...shown].sort(byCustom).map((f) => f.base);
               const byBase = new Map(shown.map((f) => [f.base, f]));
               const order = await arrangeFoldersDialog(ordered, {
-                title: 'Arrange files', note: `The order of the files in ${current.replace('/', ' › ')}. Drag a file or use the arrows.`,
+                title: 'Arrange files', note: `The order of the files in ${current ? (current === 'unsorted' ? 'Unsorted' : current === 'photos' ? 'Photos' : current.replace('/', ' › ')) : 'All documents'}. Drag a file or use the arrows.`,
                 label: (b) => nameOf(b, byBase.get(b)), icon: (b) => I(FILE_ICONS[fileKind(b)]),
                 standard: () => [...ordered].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), standardLabel: 'By name', standardTitle: 'Put the files back in name order.',
               });
@@ -3166,6 +3165,16 @@
     if (!plan) return;
     try {
       const to = await Save.track(`file-move:${c.id}:${f.name}`, () => Vault.moveFile(c.id, f.name, plan.folder, plan));
+      // v1.79: a renamed file keeps its place in your own order.
+      const newBase = String(to).split(/[\\/]/).pop();
+      if (newBase && newBase !== f.base) {
+        try {
+          const order = (await Vault.readCaseJSON(c.id, 'file-order.json')) || {};
+          let changed = false;
+          for (const k of Object.keys(order)) if (Array.isArray(order[k]) && order[k].includes(f.base)) { order[k] = order[k].map((b) => (b === f.base ? newBase : b)); changed = true; }
+          if (changed) await Vault.writeCaseJSON(c.id, 'file-order.json', order);
+        } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+      }
       toast(`Saved as ${CVFormat.pathText(to)}`, 'success', 6000);
       showCase(c.id, 'files', current || null);
     } catch (err) { if (!FS.isDisconnectError(err)) { /* reported by Save */ } }

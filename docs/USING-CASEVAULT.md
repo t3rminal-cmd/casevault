@@ -215,6 +215,14 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.79
+
+- **Files tab:** the **Document** column now shows each file's icon (hover it for the document type and file type). **Arrange** works in every view, **All documents** included, and so does dragging rows when the order is **Custom**. A file you rename keeps its place.
+- **Renaming:** a name like **Exhibit 3b** now shows as typed. Only names in the form "Type - Description" (e.g. "Supplementary Report - Purchase") leave the type out, since the Document column shows it.
+- **Timeline:** the date square is wider so the time never clips, and the date, the dot on the line and the event box are evenly spaced.
+- **Drop-down lists** fit inside the window when you make it narrower; long choices wrap.
+- **Officer's Report:** Gang Affiliations, Persons Present Not Arrested, Police Personnel on Scene, Vehicles and Notifications each sit in one grey box.
+
 ### What's new in v1.78
 
 - **Operations are now Missions.** Every label, button and message says Mission: New Mission, Mission Number, Mission Name, Mission Folder, Mission Plans, Delete Mission. Your existing Operations simply show as Missions; nothing on the SSD is renamed.

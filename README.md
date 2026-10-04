@@ -15,6 +15,14 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.79)
+
+- Files tab: the Document column shows each file's icon (its type in the hover box); files can be arranged in every view, All documents included; a renamed file keeps its place
+- Renaming "3b" to "Exhibit 3b" shows "Exhibit 3b" (only "Type - Description" names drop the type)
+- Timeline: a wider date square (the time never clips) and even spacing between the date, the dot and the event
+- Drop-down lists fit the window when it is made narrower
+- Gang Affiliations, Persons Present, Police Personnel, Vehicles and Notifications each in a grey box
+
 ## Features (v1.78)
 
 - Operations are called Missions everywhere on screen (New Mission, Mission Number, Mission Folder, Mission Plans…); nothing on the SSD is renamed
