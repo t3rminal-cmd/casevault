@@ -849,7 +849,7 @@
   const sharedOpen = {};
   // v1.78: Missions (they were Operations): the folder on the SSD keeps its name, it shows as Mission Plans.
   const opFolderLabel = (n) => (n === 'Operation Plans' ? 'Mission Plans' : n);
-  const OP_FOLDER_DESC = { Subpoenas: 'Served and returned', Affidavits: 'Search warrant affidavits', 'Operation Plans': 'Ops plans and briefings', Maps: 'Maps and aerials', 'Subject Data': 'Subject profiles and records', 'Vehicle List': 'Vehicles, owners and photos' };
+  const OP_FOLDER_DESC = { Subpoenas: 'Served and returned', Affidavits: 'Search warrant affidavits', 'Operation Plans': 'Ops plans and briefings', Maps: 'Maps and aerials', 'Subject Data': 'Demographics and photo per subject', 'Vehicle List': 'Vehicles, owners and photos' };
   const SHARED_ICONS = { 'USPIS Files': 'badge-uspis', 'DEA Files': 'badge-dea', 'INET Files': 'globe2', Training: 'book', Other: 'folder-other', Subpoenas: 'file-earmark-ruled', Affidavits: 'pencil-square', 'Operation Plans': 'card-checklist', Maps: 'map', 'Subject Data': 'person-vcard', 'Vehicle List': 'car-front' };
   // v1.71: folders are names, or { name, label, desc, custom }; getFolders() reads them each time
   // (Other Files: the built-in folders and the ones you make; New Folder adds one).
@@ -857,25 +857,46 @@
    * (Registered Owner and Address too) and, on the right, a photo of the vehicle. Kept in the
    * folder (.vehicles.json); photos are files in the same folder. */
   function opVehiclesPanel(opId) {
+    return opCardsPanel(opId, { folder: 'Vehicle List', noun: 'Vehicle', icon: 'car-front', fields: CVReportFields.LISTS.vehicles.fields,
+      summary: (v) => [v.year, v.make, v.model, v.color].filter(Boolean).join(' '), photoAlt: (v) => `Photo of vehicle ${v.plate || ''}`.trim(),
+      read: () => Vault.readOpVehicles(opId), write: (snap) => Vault.saveOpVehicles(opId, snap) });
+  }
+  // v1.80: Subject Data: a demographics sheet per subject, with a photo on the right; as many
+  // subjects as the Mission has.
+  const SUBJECT_FIELDS = (() => {
+    const P = Object.fromEntries((CVReportFields.SUSPECT_INFO || []).map((f) => [f[0], f]));
+    const pick = (k, fb) => P[k] || fb;
+    return [['name', 'Name', 'text'], ['alias', 'Alias / Moniker', 'text'], ['dob', 'Date of Birth', 'date'],
+      ...['gender', 'identity', 'race', 'complexion', 'height', 'weight', 'hair', 'hairStyle', 'eyes', 'veteran'].map((k) => pick(k, [k, k, 'text'])),
+      ['phone', 'Phone Number', 'text'], ...['irNumber', 'fbiNumber', 'idocNumber'].map((k) => pick(k, [k, k, 'text'])),
+      ['address', 'Address', 'wide'], ['marks', 'Tattoos / Scars', 'wide'], ['notes', 'Notes', 'wide']];
+  })();
+  function opSubjectsPanel(opId) {
+    return opCardsPanel(opId, { folder: 'Subject Data', noun: 'Subject', icon: 'person-plus', fields: SUBJECT_FIELDS,
+      summary: (v) => [v.name, v.dob ? `DOB ${fmtDate(v.dob)}` : ''].filter(Boolean).join(' · '), photoAlt: (v) => `Photo of ${v.name || 'the subject'}`,
+      read: () => Vault.readOpList(opId, 'Subject Data', '.subjects.json'), write: (snap) => Vault.saveOpList(opId, 'Subject Data', '.subjects.json', snap) });
+  }
+  /** v1.73 (v1.80: shared by Vehicle List and Subject Data): one card per entry with its fields on
+   * the left and a photo on the right. Kept in the folder as a hidden .json; photos are files there. */
+  function opCardsPanel(opId, { folder, noun, icon, fields, summary, photoAlt, read, write }) {
     const key = `op-${opId}`;
-    const box = h('div', { class: 'op-vehicles' });
+    const box = h('div', { class: `op-vehicles op-cards-${noun.toLowerCase()}` });
     let list = [];
-    const save = debounce(() => { const snap = structuredClone(list); Save.track(`op-vehicles:${opId}`, () => Vault.saveOpVehicles(opId, snap)).catch(() => {}); }, 500);
-    const fields = CVReportFields.LISTS.vehicles.fields;
+    const save = debounce(() => { const snap = structuredClone(list); Save.track(`op-${noun.toLowerCase()}s:${opId}`, () => write(snap)).catch(() => {}); }, 500);
     const photoBox = (v) => {
       const pick = h('input', { type: 'file', accept: 'image/*', hidden: true });
       const wrap = h('div', { class: 'op-veh-photo' });
       const show = async () => {
-        if (!v.photo) { wrap.replaceChildren(h('button', { type: 'button', class: 'op-veh-photo-add', title: 'Add a photo of this vehicle', onclick: () => pick.click() }, I('camera-fill'), h('span', {}, 'Add Photo')), pick); return; }
-        const img = h('img', { alt: `Photo of vehicle ${v.plate || ''}`.trim() });
-        try { const f = await Vault.readShared(key, 'Vehicle List', v.photo); if (f) { img.src = URL.createObjectURL(f); img.addEventListener('load', () => URL.revokeObjectURL(img.src), { once: true }); } } catch { img.alt = 'Photo not found'; }
-        wrap.replaceChildren(h('button', { type: 'button', class: 'op-veh-photo-img', title: 'View', onclick: () => previewFile({ readFile: () => Vault.readShared(key, 'Vehicle List', v.photo), where: `${key}\\Vehicle List` }, v.photo) }, img),
+        if (!v.photo) { wrap.replaceChildren(h('button', { type: 'button', class: 'op-veh-photo-add', title: `Add a photo of this ${noun.toLowerCase()}`, onclick: () => pick.click() }, I('camera-fill'), h('span', {}, 'Add Photo')), pick); return; }
+        const img = h('img', { alt: photoAlt(v) });
+        try { const f = await Vault.readShared(key, folder, v.photo); if (f) { img.src = URL.createObjectURL(f); img.addEventListener('load', () => URL.revokeObjectURL(img.src), { once: true }); } } catch { img.alt = 'Photo not found'; }
+        wrap.replaceChildren(h('button', { type: 'button', class: 'op-veh-photo-img', title: 'View', onclick: () => previewFile({ readFile: () => Vault.readShared(key, folder, v.photo), where: `${key}\\${folder}` }, v.photo) }, img),
           h('div', { class: 'op-veh-photo-acts' }, h('button', { type: 'button', class: 'btn small ghost', onclick: () => pick.click() }, 'Replace'), h('button', { type: 'button', class: 'btn small ghost', onclick: () => { v.photo = ''; save(); show(); } }, 'Remove')), pick);
       };
       pick.addEventListener('change', async () => {
         const f = pick.files[0]; pick.value = '';
         if (!f) return;
-        try { v.photo = await Save.track(`shared:${key}`, () => Vault.addShared(key, 'Vehicle List', f)); save(); show(); } catch (err) { if (FS.isDisconnectError(err)) onDriveLost(); }
+        try { v.photo = await Save.track(`shared:${key}`, () => Vault.addShared(key, folder, f)); save(); show(); } catch (err) { if (FS.isDisconnectError(err)) onDriveLost(); }
       });
       show();
       return wrap;
@@ -885,22 +906,22 @@
         ...(list.length ? list.map((v, i) => {
           const inputs = fields.map(([k, label, kind, opts]) => {
             let el;
-            if (kind === 'select') el = h('select', { 'aria-label': `Vehicle ${i + 1} ${label}` }, opts.map((o) => h('option', { value: o, selected: o === (v[k] || '') }, o || '—')));
-            else el = h('input', { value: v[k] || '', autocomplete: 'off', 'aria-label': `Vehicle ${i + 1} ${label}` });
+            if (kind === 'select') el = h('select', { 'aria-label': `${noun} ${i + 1} ${label}` }, opts.map((o) => h('option', { value: o, selected: o === (v[k] || '') }, o || '—')));
+            else el = h('input', { type: kind === 'date' ? 'date' : 'text', value: v[k] || '', autocomplete: 'off', 'aria-label': `${noun} ${i + 1} ${label}`, placeholder: kind === 'height' ? '5 ft 10 in' : kind === 'weight' ? '160 Pounds' : null });
             el.addEventListener(kind === 'select' ? 'change' : 'input', () => { v[k] = el.value; save(); });
             return field(label, el, kind === 'wide' ? 'op-veh-wide' : '');
           });
           return h('div', { class: 'op-veh-card' },
-            h('div', { class: 'op-veh-head' }, h('strong', {}, `Vehicle ${i + 1}`), h('span', { class: 'muted small' }, [v.year, v.make, v.model, v.color].filter(Boolean).join(' ') || ''), h('div', { class: 'spacer' }),
-              h('button', { type: 'button', class: 'icon-btn danger-icon', title: 'Remove this vehicle', onclick: async () => {
-                if (!(await confirmDialog({ title: `Remove Vehicle ${i + 1}?`, message: 'Its details are removed from the Vehicle List. A photo stays in the folder.', confirmText: 'Remove', danger: true }))) return;
+            h('div', { class: 'op-veh-head' }, h('strong', {}, `${noun} ${i + 1}`), h('span', { class: 'muted small' }, summary(v) || ''), h('div', { class: 'spacer' }),
+              h('button', { type: 'button', class: 'icon-btn danger-icon', title: `Remove this ${noun.toLowerCase()}`, onclick: async () => {
+                if (!(await confirmDialog({ title: `Remove ${noun} ${i + 1}?`, message: `Its details are removed from ${folder}. A photo stays in the folder.`, confirmText: 'Remove', danger: true }))) return;
                 list.splice(i, 1); save(); draw();
-              } }, I('trash3'), h('span', { class: 'sr-only' }, 'Remove vehicle'))),
+              } }, I('trash3'), h('span', { class: 'sr-only' }, `Remove ${noun.toLowerCase()}`))),
             h('div', { class: 'op-veh-body' }, h('div', { class: 'op-veh-fields' }, ...inputs), photoBox(v)));
-        }) : [h('p', { class: 'muted small' }, 'No vehicles yet.')]),
-        h('div', { class: 'op-veh-foot' }, h('button', { type: 'button', class: 'btn small', icon: 'car-front', onclick: () => { list.push({ id: Vault.newId('v') }); save(); draw(); const last = box.querySelectorAll('.op-veh-card'); if (last.length) last[last.length - 1].querySelector('input').focus(); } }, 'Add Vehicle')));
+        }) : [h('p', { class: 'muted small' }, `No ${noun.toLowerCase()}s yet.`)]),
+        h('div', { class: 'op-veh-foot' }, h('button', { type: 'button', class: 'btn small', icon, onclick: () => { list.push({ id: Vault.newId(noun[0].toLowerCase()) }); save(); draw(); const last = box.querySelectorAll('.op-veh-card'); if (last.length) last[last.length - 1].querySelector('input').focus(); } }, `Add ${noun}`)));
     };
-    Vault.readOpVehicles(opId).then((v) => { list = v; draw(); }).catch((err) => { if (FS.isDisconnectError(err)) onDriveLost(); });
+    read().then((v) => { list = v; draw(); }).catch((err) => { if (FS.isDisconnectError(err)) onDriveLost(); });
     return box;
   }
 
@@ -967,18 +988,22 @@
       allowNew ? h('button', { type: 'button', class: 'tab tab-new', title: 'Make a new folder in Other Files', onclick: newFolder }, h('span', { class: 'tab-main' }, I('folder-plus'), h('span', { class: 'tab-name' }, 'New Folder')), folders.some((f) => f.desc) ? h('span', { class: 'tab-desc' }, 'Your own folder') : '') : '') : null;
       const reader = { readFile: (name) => Vault.readShared(key, folder, name.split('/').pop()), where: `${key}${folder ? `\\${folder}` : ''}` };
       const rows = list.length ? h('table', { class: 'files shared-table' },
-        h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', { class: 'num' }, 'Size'), h('th', {}, 'Updated'), h('th', { class: 'col-actions' }, ''))),
+        h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', { class: 'num' }, 'Size'), h('th', { class: 'date-cell' }, 'Updated'), h('th', { class: 'col-actions' }, ''))),
         h('tbody', {}, list.map((f) => h('tr', {},
           h('td', {}, h('button', { type: 'button', class: 'linklike', title: 'Open', onclick: () => previewFile(reader, f.base) }, I(FILE_ICONS[fileKind(f.base)]), ' ', f.base)),
           h('td', { class: 'num muted' }, fmtSize(f.size)),
-          h('td', { class: 'muted', title: `Last updated ${fmtDateTime(f.modified)}` }, f.modified ? fmtDate(Vault.localDay(new Date(f.modified))) : '—'),
+          h('td', { class: 'muted date-cell', title: `Last updated ${fmtDateTime(f.modified)}` }, f.modified ? fmtDate(Vault.localDay(new Date(f.modified))) : '—'),
           h('td', { class: 'col-actions' }, h('button', { type: 'button', class: 'icon-btn danger-icon', title: 'Delete this file', onclick: async () => {
             if (!(await confirmDialog({ title: `Delete ${f.base}?`, message: 'The file is deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
             try { await Vault.deleteShared(key, folder, f.base); } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); toast(`Not deleted: ${err.message}`, 'error'); }
             draw();
           } }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${f.base}`))))))) : h('p', { class: 'muted small shared-empty' }, folderLabel ? `No files in ${folderLabel} yet.` : empty);
       // The vehicle cards are made once, so typing isn't lost when the file list redraws.
-      if (key.startsWith('op-') && folder === 'Vehicle List') vehEl = vehEl || opVehiclesPanel(key.slice(3)); else vehEl = null;
+      // v1.80: Subject Data opens its demographics sheet the same way.
+      const panelFor = { 'Vehicle List': opVehiclesPanel, 'Subject Data': opSubjectsPanel }[folder];
+      if (key.startsWith('op-') && panelFor) vehEl = (vehEl && vehEl.dataset.folder === folder) ? vehEl : panelFor(key.slice(3));
+      else vehEl = null;
+      if (vehEl) vehEl.dataset.folder = folder;
       const vehicles = vehEl || '';
       box.replaceChildren(...[chips, tiles ? h('div', { class: 'op-open-head shared-open-head' }, h('strong', {}, folderLabel), h('span', { class: 'muted small' }, (cur && cur.desc) || ''), h('div', { class: 'spacer' }),
         h('button', { type: 'button', class: 'btn small ghost', title: 'Close this folder', onclick: () => { folder = null; sharedOpen[key] = null; draw(); } }, 'Close')) : '', vehicles, h('div', { class: 'shared-drop', title: 'Drop files here, or click Add Files' }, rows,
@@ -1119,12 +1144,12 @@
         h('button', { class: 'btn primary', type: 'button', icon: 'plus-lg', onclick: async () => { const op = await operationDialog(); if (op) location.hash = `#/operation/${encodeURIComponent(op.id)}`; } }, 'New Mission')),
       h('p', { class: 'muted small' }, 'A Mission links cases together. The cases themselves stay in General Files; deleting a Mission never deletes a case or a file.'),
       ops.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'data-table ops-table' },
-        h('thead', {}, h('tr', {}, ['Mission', 'Status', 'Start Date', 'End Date', 'Cases'].map((x) => h('th', {}, x)))),
+        h('thead', {}, h('tr', {}, ['Mission', 'Status', 'Start Date', 'End Date', 'Cases'].map((x) => h('th', { class: /Date$/.test(x) ? 'date-cell' : '' }, x)))),
         h('tbody', {}, ops.map((op) => h('tr', {},
           h('td', {}, h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, class: 'op-row-link' }, I('op-folder'), opLabel(op))),
           h('td', {}, statusPill(op.status)),
-          h('td', { class: 'nowrap' }, op.start ? fmtDate(op.start) : '—'),
-          h('td', { class: 'nowrap' }, op.end ? fmtDate(op.end) : '—'),
+          h('td', { class: 'nowrap date-cell' }, op.start ? fmtDate(op.start) : '—'),
+          h('td', { class: 'nowrap date-cell' }, op.end ? fmtDate(op.end) : '—'),
           h('td', { class: 'num' }, String(count(op))))))))
         : h('div', { class: 'empty-state' }, h('p', {}, 'No Missions yet.'), h('p', { class: 'muted small' }, 'New Mission makes one. Then create cases inside it, or link cases from General Files.'))));
   }
@@ -1195,12 +1220,12 @@
         h('button', { class: 'btn', type: 'button', icon: 'link-45deg', onclick: async () => { if (await addExistingDialog(op)) redraw(); } }, 'Add Existing Case'),
         h('button', { class: 'btn primary', type: 'button', icon: 'plus-lg', onclick: () => newCase({ operationId: op.id }) }, 'New Case in this Mission')),
       members.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'data-table op-cases-table' },
-        h('thead', {}, h('tr', {}, ['Case Number', 'Subject Name', 'Status', 'Opened', 'Open', ''].map((x) => h('th', {}, x)))),
+        h('thead', {}, h('tr', {}, ['Case Number', 'Subject Name', 'Status', 'Opened', 'Open', ''].map((x) => h('th', { class: x === 'Opened' ? 'date-cell' : '' }, x)))),
         h('tbody', {}, members.map((c) => h('tr', { class: isArchivedEntry(c) ? 'archived-row' : '' },
           h('td', {}, h('a', { href: caseLink(c), class: 'case-num-link' }, c.number || 'No case number')),
           h('td', { class: c.subject ? '' : 'muted' }, c.subject || 'No subject yet'),
           h('td', {}, statusPill(isArchivedEntry(c) ? 'Archived' : c.status)),
-          h('td', { class: 'nowrap' }, c.opened ? fmtDate(c.opened) : '—'),
+          h('td', { class: 'nowrap date-cell' }, c.opened ? fmtDate(c.opened) : '—'),
           h('td', { class: 'nowrap' }, h('div', { class: 'op-case-links' }, OP_TABS.map(([tab, label]) => h('a', { class: 'op-tab-link', href: caseLink(c, tab) }, label)))),
           h('td', { class: 'nowrap' }, isArchivedEntry(c)
             ? h('span', { class: 'muted small', title: 'Archived cases are read-only. Restore it to unlink it.' }, 'Archived')
@@ -1264,7 +1289,7 @@
           h('td', { class: c.subject ? '' : 'muted' }, c.subject || 'No subject yet'),
           h('td', {}, op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}` }, opLabel(op)) : h('span', { class: 'muted' }, '—')),
           h('td', {}, statusPill(arch ? 'Archived' : c.status)),
-          h('td', { class: 'nowrap' }, c.opened ? fmtDate(c.opened) : '—'),
+          h('td', { class: 'nowrap date-cell' }, c.opened ? fmtDate(c.opened) : '—'),
           h('td', { class: 'nowrap' }, action));
       }) : [h('tr', {}, h('td', { colspan: 6, class: 'muted empty-cell' }, Vault.data.cases.length ? 'No cases match.' : 'No cases yet. New Case makes one.'))]));
     };
@@ -1281,7 +1306,7 @@
       dups.size ? h('p', { class: 'warn-note small', role: 'note' }, I('exclamation-triangle-fill'), ` ${plural(dups.size, 'Case Number')} ${dups.size === 1 ? 'is' : 'are'} used by more than one case (made before numbers had to be unique). They are flagged below; nothing was changed.`) : null,
       h('div', { class: 'general-tools' }, q, show, countEl),
       h('div', { class: 'table-wrap' }, h('table', { class: 'data-table general-table' },
-        h('thead', {}, h('tr', {}, ['Case Number', 'Subject Name', 'Mission', 'Status', 'Opened', ''].map((x) => h('th', {}, x)))),
+        h('thead', {}, h('tr', {}, ['Case Number', 'Subject Name', 'Mission', 'Status', 'Opened', ''].map((x) => h('th', { class: x === 'Opened' ? 'date-cell' : '' }, x)))),
         body))));
   }
 
@@ -1448,7 +1473,7 @@
       if (!clock.isConnected && clock.dataset.started) return false;
       const d = new Date();
       clock.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      dateLine.textContent = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      dateLine.textContent = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: '2-digit', year: 'numeric' });
       return true;
     };
     tick();
@@ -2967,7 +2992,7 @@
         h('colgroup', {}, dragRows ? h('col', { class: 'col-grip' }) : null, h('col', { class: 'col-name' }), h('col', { class: 'col-type' }), h('col', { class: 'col-ext' }), h('col', { class: 'col-size' }), h('col', { class: 'col-added' }), h('col', { class: 'col-actions' })),
         h('thead', {}, h('tr', {},
           dragRows ? h('th', { class: 'grip-cell', title: 'Your own order: drag the rows' }, h('span', { class: 'sr-only' }, 'Order')) : null,
-          th('name', 'Name'), th('type', 'Document'), th('ext', 'File', 'fext-head'), th('size', 'Size', 'num'), th('added', 'Updated'),
+          th('name', 'Name'), th('type', 'Document'), th('ext', 'File', 'fext-head'), th('size', 'Size', 'num'), th('added', 'Updated', 'date-cell'),
           h('th', { class: 'actions-head' }, !archived
             ? h('button', { type: 'button', class: `th-btn small ${sortPref.key === 'custom' ? 'sorted' : ''}`, 'data-ro-ok': 'true', icon: 'list-check', title: 'Your own order for this folder: drag the rows to arrange them.', onclick: () => setSort('custom') }, 'Custom')
             : h('span', { class: 'sr-only' }, 'Actions')))),
@@ -2983,11 +3008,11 @@
             h('td', { class: 'ftype fdoc-icon', title: `${docLabel(f)} · ${fileTypeLabel(f.base)}` }, h('span', { class: `file-icon ${fileKind(f.base)}` }, I(FILE_ICONS[fileKind(f.base)])), h('span', { class: 'sr-only' }, docLabel(f))),
             h('td', { class: 'fext muted', title: fileTypeLabel(f.base) }, extOf(f.base) || '—'),
             h('td', { class: 'num muted' }, fmtSize(f.size)),
-            h('td', { class: 'muted fadded', title: `Last updated ${fmtDateTime(f.modified)}` }, h('span', { class: 'fadded-day' }, addedText(f.modified)), f.modified ? h('span', { class: 'fadded-time' }, fmtTime(f.modified)) : null),
+            h('td', { class: 'muted fadded date-cell', title: `Last updated ${fmtDateTime(f.modified)}` }, h('span', { class: 'fadded-day' }, addedText(f.modified)), f.modified ? h('span', { class: 'fadded-time' }, fmtTime(f.modified)) : null),
             h('td', { class: 'actions' },
               // v1.56: a Link Chart PDF goes back to the Link Chart tab.
               f.folder === 'Link Charts' && /\.pdf$/i.test(f.base) ? h('button', { class: 'icon-btn', type: 'button', title: 'Open in Link Chart: send this chart back to the Link Chart tab to change it', onclick: async () => { if (await CVLinkChartUI.openFromFile(c, f.name)) showCase(c.id, 'linkchart'); } }, I('diagram-3-fill'), h('span', { class: 'sr-only' }, `Open ${f.base} in Link Chart`)) : null,
-              h('button', { class: 'icon-btn', type: 'button', title: f.folder ? 'Move or rename' : 'File it in a folder', onclick: () => moveFileDialog(c, f, current) }, I('arrow-left-right'), h('span', { class: 'sr-only' }, `Move or rename ${f.base}`)),
+              h('button', { class: 'icon-btn', type: 'button', title: f.folder ? 'Rename or move to another folder' : 'File it in a folder', onclick: () => moveFileDialog(c, f, current) }, I('pencil-square'), h('span', { class: 'sr-only' }, `Rename or move ${f.base}`)),
               h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Delete from the SSD', onclick: async () => {
                 if (!(await confirmDialog({ title: 'Delete this file?', message: `"${f.base}" will be permanently deleted from the SSD.`, confirmText: 'Delete', danger: true }))) return;
                 try {
@@ -3144,7 +3169,7 @@
     const CF = CVCaseFiles;
     const plan = await openDialog((close) => {
       const folder = h('select', {}, CF.FOLDERS.map((x) => h('option', { value: x, selected: x === (f.folder || CF.guessFolder(f.base)) }, x.replace('/', ' › '))));
-      const desc = h('input', { type: 'text', maxlength: 80, placeholder: 'optional' });
+      const desc = h('input', { type: 'text', maxlength: 80 });
       const keep = h('input', { type: 'checkbox' });
       const result = h('code', {});
       const show = () => { result.textContent = keep.checked ? f.base : CF.fileName(c, folder.value, f.base, desc.value); desc.disabled = keep.checked; };
@@ -3152,15 +3177,17 @@
       keep.addEventListener('change', show);
       show();
       return h('form', { onsubmit: (e) => { e.preventDefault(); close({ folder: folder.value, description: desc.value.trim(), keepName: keep.checked }); } },
-        h('h2', {}, f.folder ? 'Move or rename' : 'File this document'),
+        // v1.80: one Save for both: a new name, another folder, or both.
+        h('h2', {}, f.folder ? 'Rename or Move' : 'File This Document'),
         h('p', { class: 'muted small' }, f.base),
+        h('p', { class: 'muted small' }, 'Type a new name, pick another folder, or both, then click Save.'),
         field('Document folder', folder),
         field('File name', desc, '', 'Optional: the name after the year and case number. Empty keeps the current name.'),
         h('label', { class: 'check-row' }, keep, h('span', {}, 'Keep the current file name')),
         h('p', {}, 'New name: ', result),
         h('div', { class: 'dialog-actions' },
           h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
-          h('button', { class: 'btn primary', type: 'submit' }, 'Move')));
+          h('button', { class: 'btn primary', type: 'submit' }, 'Save')));
     });
     if (!plan) return;
     try {

@@ -118,7 +118,9 @@
     const prefix = casePrefix(c) || `${yearOf(c)}-NOCASENO`;
     const ext = extOf(originalName);
     const base = String(originalName || '').replace(/\.[^.]{1,10}$/, '');
-    const unprefixed = base.replace(/^\d{4}-[^ ]+?(?:-| (?=\S))/, (m) => (m.trim().replace(/-$/, '') === prefix ? '' : m));
+    // v1.80: the case's own prefix comes off first, whole (case numbers can have hyphens: 2026-EX-100).
+    const own = [`${prefix}-`, `${prefix} `].find((p) => base.toLowerCase().startsWith(p.toLowerCase()));
+    const unprefixed = own ? base.slice(own.length) : base.replace(/^\d{4}-[^ ]+?(?:-| (?=\S))/, (m) => (m.trim().replace(/-$/, '') === prefix ? '' : m));
     const name = (clean(description) || clean(unprefixed) || cat.label).slice(0, 100);
     return `${prefix}-${name}${ext}`;
   }

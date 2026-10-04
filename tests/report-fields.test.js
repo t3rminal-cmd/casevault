@@ -85,7 +85,7 @@ test('Report Fields v1.21: lists, parts left out, and v1.20 single entries moved
   assert.ok(!('victimName' in d) && !('vehicle' in d));
   assert.strictEqual(F.normalize(d).victimsList.length, 1, 'normalizing twice does not add again');
   d.offendersList[0].dob = '1990-01-02';
-  assert.match(F.itemLine('offendersList', d.offendersList[0]), /^DOE, John, Relation Code: X, Date of Birth: January 2, 1990/);
+  assert.match(F.itemLine('offendersList', d.offendersList[0]), /^DOE, John, Relation Code: X, Date of Birth: January 02, 1990/);
   d.hidden = ['people'];
   assert.doesNotMatch(F.asText(d), /Offender:/);
   assert.doesNotMatch(F.toMarkdown(d), /Victims and Offenders/);

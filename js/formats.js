@@ -40,7 +40,7 @@
   /** "2026-09-30" -> "September 30, 2026" (v1.32: the long date everywhere); anything else as it is. */
   function dateText(iso) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
-    return m ? `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}, ${m[1]}` : String(iso || '');
+    return m ? `${MONTHS[Number(m[2]) - 1]} ${m[3]}, ${m[1]}` : String(iso || '');
   }
 
   /** v1.69: the month whose name starts with these letters ("sep" -> "September"), or ''. */

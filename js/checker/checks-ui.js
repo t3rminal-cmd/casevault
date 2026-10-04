@@ -425,7 +425,7 @@
     const pad = (n) => String(n).padStart(2, '0');
     return [
       ...['name', 'title', 'agency', 'address', 'phone', 'email'].map((k) => a[k]).filter(Boolean),
-      `Prepared ${now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.`,
+      `Prepared ${now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: '2-digit' })}.`,
       `Dated ${pad(now.getMonth() + 1)}/${pad(now.getDate())}/${now.getFullYear()} and ${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.`,
     ];
   }

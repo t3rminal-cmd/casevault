@@ -29,7 +29,7 @@ test('status help and dispositions are complete', () => {
 test('arrest details become {{arrest.*}} template values', () => {
   const ctx = C.arrestContext(sampleArrest());
   assert.strictEqual(ctx['arrest.name'], 'Jordan Placeholder');
-  assert.strictEqual(ctx['arrest.dob'], 'April 2, 1990');
+  assert.strictEqual(ctx['arrest.dob'], 'April 02, 1990');
   assert.strictEqual(ctx['arrest.date'], 'March 14, 2026');
   assert.strictEqual(ctx['arrest.time'], '23:05');
   assert.strictEqual(ctx['arrest.description'], 'Male, Test, 5\'10", 170 lb, Brown hair, Blue eyes');
@@ -38,7 +38,7 @@ test('arrest details become {{arrest.*}} template values', () => {
   assert.strictEqual(ctx['arrest.count'], '1');
   // Filled into a template; empty fields still ask to be confirmed.
   const out = D.fillTemplate('{{arrest.name}}, DOB {{arrest.dob}}, booked {{arrest.bookingNumber}} at {{arrest.facility}}. Miranda: {{arrest.miranda}}.\n{{arrest.charges}}', D.templateContext({}, new Date(2026, 8, 29), null, ctx));
-  assert.strictEqual(out, 'Jordan Placeholder, DOB April 2, 1990, booked B-0001 at Example County Jail. Miranda: [CONFIRM: arrest.miranda].\n1. TEST 1.01 — Possession of a controlled substance (Felony, 3rd degree)\n2. TEST 2.02 — Discharge of a firearm (Misdemeanor, Class A; 2 counts)');
+  assert.strictEqual(out, 'Jordan Placeholder, DOB April 02, 1990, booked B-0001 at Example County Jail. Miranda: [CONFIRM: arrest.miranda].\n1. TEST 1.01 — Possession of a controlled substance (Felony, 3rd degree)\n2. TEST 2.02 — Discharge of a firearm (Misdemeanor, Class A; 2 counts)');
 });
 
 test('closure values and the close checklist', () => {

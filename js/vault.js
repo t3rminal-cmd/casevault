@@ -24,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.79.0';
+  const APP_VERSION = '1.80.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -1087,6 +1087,17 @@ const Vault = (() => {
     const dir = await sharedDir(`op-${opId}`, 'Vehicle List', true);
     await FS.writeJSON(dir, '.vehicles.json', list);
   }
+  // v1.80: a Mission's Subject Data sheet: [{ id, name, dob, …, photo }] as .subjects.json in the
+  // Subject Data folder (hidden from the file list); photos are files in that folder.
+  async function readOpList(opId, folder, file) {
+    const dir = await sharedDir(`op-${opId}`, folder).catch(() => null);
+    const v = dir ? await FS.readJSON(dir, file).catch(() => null) : null;
+    return Array.isArray(v) ? v : [];
+  }
+  async function saveOpList(opId, folder, file, list) {
+    const dir = await sharedDir(`op-${opId}`, folder, true);
+    await FS.writeJSON(dir, file, list);
+  }
   async function readShared(key, folder, base) { return FS.getFile(await sharedDir(key, folder), base); }
   async function deleteShared(key, folder, base) { await FS.remove(await sharedDir(key, folder), base); }
 
@@ -1578,7 +1589,7 @@ const Vault = (() => {
     createCase, getCase, saveCase, deleteCase,
     listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
     archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS,
-    OP_FOLDERS, OTHER_FOLDERS, readOpVehicles, saveOpVehicles, otherCustomFolders, addOtherFolder, removeOtherFolder, listShared, addShared, readShared, deleteShared, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
+    OP_FOLDERS, OTHER_FOLDERS, readOpVehicles, saveOpVehicles, readOpList, saveOpList, otherCustomFolders, addOtherFolder, removeOtherFolder, listShared, addShared, readShared, deleteShared, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
     getNotes, saveNotes, listChats, readChat, saveChat, deleteChat,
     getTimeline, saveTimeline, sortEvents,
     listFiles, addFile, readFile, deleteFile, moveFile, ensureFolders, renameCaseFolder, conventionalId, RENAME_MARKER,

@@ -3825,3 +3825,10 @@ html .tl-item.deadline::before { transform: none; }
 .files-table-wrap td.fdoc-icon { text-align: center; }
 .files-table-wrap td.fdoc-icon .file-icon { margin: 0; }
 .tl-modern .tl-actions { align-self: start; padding-top: .55rem; }
+
+/* v1.80: dates line up on the right in every table (Updated, Opened, Start and End Date), and in the
+   Updated column of Recently Updated. */
+:is(table) :is(td, th).date-cell { text-align: right; }
+:is(table) th.date-cell .th-btn { margin-left: auto; justify-content: flex-end; width: 100%; }
+.files-table-wrap td.fadded.date-cell .fadded-day, .files-table-wrap td.fadded.date-cell .fadded-time { text-align: right; }
+.recent-row > :last-child { text-align: right; justify-self: end; }
