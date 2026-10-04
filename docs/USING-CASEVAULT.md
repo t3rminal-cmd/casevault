@@ -215,6 +215,15 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.76
+
+- **DNA** (Does Not Apply) is offered for the **Federal Jacket Number** (new case and Details) and for the **IR, FBI and IDOC Numbers** of suspects, offenders and the Officer's Report: click the arrow in the box.
+- **Timeline:** every marker is a circle now, deadlines included.
+- **Draft:** Victim/Offender/Property/Circumstances **Verified** and **Updated** sit together in one grey box. Hover a part's checkbox to see whether it is in the report, left out, or hidden on screen. **Not in the report** has its own column, next to the green check.
+- **Files tab:** a file's name leaves out the document type, which the Document column already shows, so it reads `2026-EX-100 | Purchase`. **Updated** has the time under the date. The table text is the same size as the rest of CaseVault.
+- **Arrange files:** open a folder and click **Arrange** above the table to put its files in your own order (arrows or drag). The folder list's button is now just **Arrange**, boxed like **Discovery**.
+- **Adding files:** the File name box has no cut-off hint any more, and the boxes stay put while you type.
+
 ### What's new in v1.75
 
 - **Shield folder icons everywhere.** The new folder icons now appear wherever a folder does: the sidebar, the case page header, the Files tab, Operation folders, and the Move and New Folder buttons. Blue means an Operation (MISSION FILES), purple means General Files and ordinary folders, green means Other Files. Closed uses a muted green shield and Archived a grey one.

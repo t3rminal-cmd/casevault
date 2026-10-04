@@ -61,6 +61,12 @@
     return `${fmtDate(Vault.localDay(d))} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
+  // v1.76: the time alone, as in fmtDateTime (Files tab: the time under the date updated).
+  function fmtTime(ms) {
+    const d = new Date(ms);
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
   // Short date for tables: "09.28 22:48" this year, "09.28.2025" before.
   function fmtShortDateTime(ms) {
     const d = new Date(ms);
@@ -95,6 +101,8 @@
   // v1.62: a heading inside a popup form (a thin line with its name) and a hint box.
   const formSect = (label, icon) => h('div', { class: 'form-sect span-2' }, icon ? I(icon) : null, h('span', {}, label));
   const formHint = (...kids) => h('p', { class: 'form-hint span-2' }, I('info-circle'), h('span', {}, ...kids));
+  // v1.76: DNA (does not apply) offered on number boxes such as the Federal Jacket Number.
+  const dnaCombo = (el) => (window.CVCombo ? CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }] }) : el);
   const STATUS_ICONS = { Open: 'folder2-open', Pending: 'hourglass-split', Closed: 'lock-fill', Archived: 'archive' };
   const statusPill = (status) => h('span', { class: `pill status-${String(status).toLowerCase()}`, icon: STATUS_ICONS[status] }, status);
   const I = (name, opts) => CVIcons.icon(name, opts);
@@ -1603,7 +1611,7 @@
       opNote,
       formSect('File Details', 'folder2-open'),
       field('File Number', fileIn),
-      field('Federal Jacket Number', agencyIn),
+      field('Federal Jacket Number', dnaCombo(agencyIn)),
       fileList,
       h('div', { class: 'span-2 form-row3' }, field('Client', clientIn),
         field('Status', h('select', { name: 'status' }, Vault.STATUSES.filter((x) => x !== 'Archived').map((x) => h('option', {}, x)))),
@@ -1963,7 +1971,7 @@
       h('form', { class: 'form-grid details-grid details-row4', onsubmit: (e) => e.preventDefault() },
         field('Case Number', numberIn, '', 'Unique: no two cases, archived ones included, share a Case Number.'),
         field('File Number', bind(h('input', { value: c.fileNumber || '', maxlength: 100, title: 'The investigation file. Several cases can share one file number.' }), (v) => { c.fileNumber = v; })),
-        field('Federal Jacket Number', bind(h('input', { value: c.agencyNumber || '', maxlength: 100, title: 'The federal jacket number for this case.' }), (v) => { c.agencyNumber = v; })),
+        field('Federal Jacket Number', dnaCombo(bind(h('input', { value: c.agencyNumber || '', maxlength: 100, title: 'The federal jacket number for this case.' }), (v) => { c.agencyNumber = v; }))),
         field('Client', (() => { const sel = clientSelect(c.client); sel.addEventListener('change', () => { c.client = sel.value; save(); }); return sel; })()),
         dupNow ? h('p', { class: 'error-text span-2 small', role: 'note' }, `Another case also has Case Number ${c.number} (made before Case Numbers had to be unique). Nothing was changed; give one of them a different number.`) : null,
         h('p', { class: 'muted span-2 small' },
@@ -2061,7 +2069,7 @@
           if (kind === 'select') el = h('select', { 'aria-label': `${who} ${label}` }, opts.map((o) => h('option', { value: o, selected: o === (s.info[k] || '') }, o || '—')));
           else el = h('input', { value: s.info[k] || '', autocomplete: 'off', maxlength: 200, 'aria-label': `${who} ${label}`, type: kind === 'phone' ? 'tel' : 'text', list: kind === 'hair' ? 'suspect-hair' : kind === 'hairStyle' ? 'suspect-hairstyle' : kind === 'eyes' ? 'suspect-eyes' : null, placeholder: kind === 'height' ? '5 ft 10 in' : kind === 'weight' ? '160 Pounds' : '', ...attrs });
           el.addEventListener(kind === 'select' ? 'change' : 'input', () => { s.info[k] = el.value.trim(); save(); });
-          return field(label, el, kind === 'wide' ? 'suspect-wide' : '');
+          return field(label, ['irNumber', 'fbiNumber', 'idocNumber'].includes(k) ? dnaCombo(el) : el, kind === 'wide' ? 'suspect-wide' : '');
         };
         const demo = h('div', { class: 'suspect-demo' },
           // v1.69: the same fields as an offender on the Draft (all but Clothing Description).
@@ -2826,12 +2834,13 @@
         return h('div', { class: 'folder-parent' }, h('div', { class: 'folder-parent-row' }, btn, toggle), box);
       }),
       unsorted.length ? folderBtn('unsorted', 'Unsorted', unsorted.length) : null,
-      archived ? null : h('button', { class: 'btn small ghost folder-reset', type: 'button', icon: 'list-check', title: 'Put the folders in your own order, with up and down buttons. You can also drag a folder in this list.', onclick: async () => {
+      // v1.76: "Arrange", boxed like the Discovery button.
+      archived ? null : h('button', { class: 'btn small folder-reset folder-arrange', type: 'button', icon: 'list-ol', title: 'Put the folders in your own order, with up and down buttons. You can also drag a folder in this list.', onclick: async () => {
         const order = await arrangeFoldersDialog(ordered.filter(visible));
         if (!order) return;
         await saveFolderOrder(order);
         showCase(c.id, 'files', current || null);
-      } }, 'Arrange folders'),
+      } }, 'Arrange'),
       // v1.49: a password-protected, view-and-print-only package of chosen files, for discovery.
       archived ? null : h('button', { class: 'btn small folder-reset disc-open', type: 'button', icon: 'shield-lock-fill', title: 'Make a password-protected discovery package of chosen files, with Bates numbers, for a USB drive or a DVD.', onclick: () => CVDiscoveryUI.open(c).catch((err) => { if (FS.isDisconnectError(err)) onDriveLost(); else toast(`Could not open Discovery: ${err.message}`, 'error'); }) }, 'Discovery'));
 
@@ -2868,10 +2877,17 @@
     // v1.27: Name "2024-JH123456 | Arrest Report" (no extension), File ".docx", Added "09.30 08.57".
     const extOf = (base) => ((/(\.[a-z0-9]{1,6})$/i.exec(base) || [])[1] || '').toLowerCase();
     // v1.70: an Additional Exhibit's photos show as "Exhibit 1a" here (the file keeps its name).
-    const nameOf = (base) => {
+    // v1.76: "2026-EX-100 | Purchase": the document type is left out (the Document column shows it),
+    // unless it is all the name has.
+    const nameOf = (base, f) => {
       const stem = base.slice(0, base.length - extOf(base).length).replace(/\bAdditional (?=Exhibit\b)/g, '');
       if (prefix && stem.toLowerCase().startsWith(prefix.toLowerCase()) && stem.length > prefix.length) {
-        const rest = stem.slice(prefix.length).replace(/^[\s_-]+/, '');
+        let rest = stem.slice(prefix.length).replace(/^[\s_-]+/, '');
+        const label = f && f.folder ? docLabel(f) : '';
+        if (label && rest.toLowerCase().startsWith(label.toLowerCase())) {
+          const after = rest.slice(label.length).replace(/^[\s_-]+/, '');
+          if (after && !/^\(\d+\)$/.test(after)) rest = after;
+        }
         return rest ? `${stem.slice(0, prefix.length)} | ${rest}` : stem;
       }
       return stem || base;
@@ -2915,13 +2931,13 @@
             h('td', { class: 'fname' },
               h('span', { class: `file-icon ${fileKind(f.base)}` }, I(FILE_ICONS[fileKind(f.base)])),
               h('span', { class: 'fname-text' },
-                h('button', { 'data-ro-ok': 'true', class: 'linkish fname-link', type: 'button', title: f.base, onclick: () => previewFile(c, f.name) }, nameOf(f.base)),
+                h('button', { 'data-ro-ok': 'true', class: 'linkish fname-link', type: 'button', title: f.base, onclick: () => previewFile(c, f.name) }, ((nm) => { const i = nm.indexOf(' | '); return i < 0 ? nm : [h('span', { class: 'fn-pre' }, `${nm.slice(0, i)} |`), ` ${nm.slice(i + 3)}`]; })(nameOf(f.base, f))),
                 !inOneFolder ? h('span', { class: 'fname-folder muted small' }, (f.folder || 'Unsorted').replace('/', ' › ')) : null),
               f.folder && prefix && !CF.followsConvention(c, f.folder, f.base) ? h('span', { class: 'pill warn-pill', title: `Not named ${prefix}-<file name>` }, 'name') : null),
             h('td', { class: 'ftype muted', title: fileTypeLabel(f.base) }, docLabel(f)),
             h('td', { class: 'fext muted', title: fileTypeLabel(f.base) }, extOf(f.base) || '—'),
             h('td', { class: 'num muted' }, fmtSize(f.size)),
-            h('td', { class: 'muted fadded', title: `Last updated ${fmtDateTime(f.modified)}` }, addedText(f.modified)),
+            h('td', { class: 'muted fadded', title: `Last updated ${fmtDateTime(f.modified)}` }, h('span', { class: 'fadded-day' }, addedText(f.modified)), f.modified ? h('span', { class: 'fadded-time' }, fmtTime(f.modified)) : null),
             h('td', { class: 'actions' },
               // v1.56: a Link Chart PDF goes back to the Link Chart tab.
               f.folder === 'Link Charts' && /\.pdf$/i.test(f.base) ? h('button', { class: 'icon-btn', type: 'button', title: 'Open in Link Chart: send this chart back to the Link Chart tab to change it', onclick: async () => { if (await CVLinkChartUI.openFromFile(c, f.name)) showCase(c.id, 'linkchart'); } }, I('diagram-3-fill'), h('span', { class: 'sr-only' }, `Open ${f.base} in Link Chart`)) : null,
@@ -2974,13 +2990,31 @@
       unsorted.length && !archived ? h('p', { class: 'hint' }, `${unsorted.length} file${unsorted.length === 1 ? ' was' : 's were'} added before document folders existed. Open "Unsorted" and use "File it…" to move each into its folder with a conventional name.`) : null,
       h('div', { class: 'files-layout' }, nav,
         h('div', { class: 'files-main' }, drop, input,
-          h('p', { class: 'muted small files-where' }, `${shown.length} file${shown.length === 1 ? '' : 's'} · ${where}${dragRows ? ' · drag rows to arrange them' : ''}${!archived ? ' · drag a file onto a folder to move it' : ''}`),
+          h('div', { class: 'files-where-row' },
+            h('p', { class: 'muted small files-where' }, `${shown.length} file${shown.length === 1 ? '' : 's'} · ${where}${dragRows ? ' · drag rows to arrange them' : ''}${!archived ? ' · drag a file onto a folder to move it' : ''}`),
+            // v1.76: arrange the files of a folder (up and down buttons, or drag), like the folders.
+            inOneFolder && !archived && shown.length > 1 ? h('button', { class: 'btn small files-arrange', type: 'button', icon: 'list-ol', title: 'Put the files of this folder in your own order', onclick: async () => {
+              const ordered = [...shown].sort(byCustom).map((f) => f.base);
+              const byBase = new Map(shown.map((f) => [f.base, f]));
+              const order = await arrangeFoldersDialog(ordered, {
+                title: 'Arrange files', note: `The order of the files in ${current.replace('/', ' › ')}. Drag a file or use the arrows.`,
+                label: (b) => nameOf(b, byBase.get(b)), icon: (b) => I(FILE_ICONS[fileKind(b)]),
+                standard: () => [...ordered].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), standardLabel: 'By name', standardTitle: 'Put the files back in name order.',
+              });
+              if (!order) return;
+              await saveCustom(order);
+              if (sortPref.key !== 'custom') await Save.track('settings', () => Vault.updateSettings({ filesSort: { key: 'custom', dir: 1 } })).catch(() => {});
+              showCase(c.id, 'files', current || null);
+            } }, 'Arrange') : null),
           table))].filter(Boolean));
   }
 
   // The folder list in your own order: ↑/↓ buttons (or drag a row). Resolves the new order, or null.
-  function arrangeFoldersDialog(folders) {
+  // v1.76: the same dialog arranges the files of one folder (opts: title, note, label, icon, standard).
+  function arrangeFoldersDialog(folders, opts = {}) {
     const order = [...folders];
+    const labelOf = opts.label || ((f) => f);
+    const iconOf = opts.icon || ((f) => I(FOLDER_ICONS[f] || 'folder'));
     return openDialog((close) => {
       const list = h('ol', { class: 'arrange-list' });
       let dragging = null;
@@ -2989,10 +3023,10 @@
         list.replaceChildren(...order.map((f, i) => {
           const li = h('li', { class: 'arrange-item', draggable: 'true' },
             h('span', { class: 'grip-cell', 'aria-hidden': 'true' }, I('grip-vertical')),
-            h('span', { class: 'folder-icon' }, I(FOLDER_ICONS[f] || 'folder')),
-            h('span', { class: 'arrange-name' }, f),
-            h('button', { class: 'icon-btn', type: 'button', title: 'Move up', disabled: i === 0, 'data-dir': 'up', onclick: () => move(i, i - 1) }, I('arrow-up'), h('span', { class: 'sr-only' }, `Move ${f} up`)),
-            h('button', { class: 'icon-btn', type: 'button', title: 'Move down', disabled: i === order.length - 1, 'data-dir': 'down', onclick: () => move(i, i + 1) }, I('arrow-down'), h('span', { class: 'sr-only' }, `Move ${f} down`)));
+            h('span', { class: 'folder-icon' }, iconOf(f)),
+            h('span', { class: 'arrange-name' }, labelOf(f)),
+            h('button', { class: 'icon-btn', type: 'button', title: 'Move up', disabled: i === 0, 'data-dir': 'up', onclick: () => move(i, i - 1) }, I('arrow-up'), h('span', { class: 'sr-only' }, `Move ${labelOf(f)} up`)),
+            h('button', { class: 'icon-btn', type: 'button', title: 'Move down', disabled: i === order.length - 1, 'data-dir': 'down', onclick: () => move(i, i + 1) }, I('arrow-down'), h('span', { class: 'sr-only' }, `Move ${labelOf(f)} down`)));
           li.addEventListener('dragstart', (e) => { dragging = f; e.dataTransfer.setData('text/plain', f); e.dataTransfer.effectAllowed = 'move'; li.classList.add('dragging'); });
           li.addEventListener('dragend', () => { dragging = null; li.classList.remove('dragging'); });
           li.addEventListener('dragover', (e) => { if (dragging && dragging !== f) { e.preventDefault(); li.classList.add('drop-target'); } });
@@ -3018,11 +3052,11 @@
       }
       draw();
       return h('form', { class: 'arrange-form', onsubmit: (e) => { e.preventDefault(); close([...order]); } },
-        h('h2', { icon: 'list-check' }, 'Arrange folders'),
-        h('p', { class: 'muted small explain' }, 'The order is the same for every case. Sub-folders such as Video and Audio stay under their folder.'),
+        h('h2', { icon: 'list-ol' }, opts.title || 'Arrange folders'),
+        h('p', { class: 'muted small explain' }, opts.note || 'The order is the same for every case. Sub-folders such as Video and Audio stay under their folder.'),
         list,
         h('div', { class: 'dialog-actions' },
-          h('button', { class: 'btn ghost', type: 'button', icon: 'arrow-counterclockwise', title: 'Put the folders back in the standard order.', onclick: () => close(CVCaseFiles.ALL_FOLDERS.filter((f) => !CVCaseFiles.parentOf(f))) }, 'Standard order'),
+          h('button', { class: 'btn ghost', type: 'button', icon: 'arrow-counterclockwise', title: opts.standardTitle || 'Put the folders back in the standard order.', onclick: () => close(opts.standard ? opts.standard() : CVCaseFiles.ALL_FOLDERS.filter((f) => !CVCaseFiles.parentOf(f))) }, opts.standardLabel || 'Standard order'),
           h('div', { class: 'spacer' }),
           h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
           h('button', { class: 'btn primary', type: 'submit' }, 'Save order')));
@@ -3035,7 +3069,7 @@
       const rows = list.map((file) => {
         const folder = h('select', { 'aria-label': `Document type for ${file.name}` },
           CF.FOLDERS.map((f) => h('option', { value: f, selected: f === (preset || CF.guessFolder(file.name)) }, f.replace('/', ' › '))));
-        const desc = h('input', { type: 'text', maxlength: 80, placeholder: 'optional: a better file name', 'aria-label': `File name for ${file.name}` });
+        const desc = h('input', { type: 'text', maxlength: 80, 'aria-label': `File name for ${file.name}` }); // v1.76: no placeholder (it was cut off)
         const result = h('code', { class: 'small' });
         const show = () => { result.textContent = CF.fileName(c, folder.value, file.name, desc.value); };
         folder.addEventListener('change', show);
@@ -3049,7 +3083,9 @@
       } },
       h('h2', {}, `Add ${list.length} file${list.length === 1 ? '' : 's'} to the case`),
       h('p', { class: 'muted small explain' }, 'Each file goes into its document folder and is named ', h('code', {}, '<year>-<case no.> <document type>'), '. A number like (2) is added when the name is taken.'),
-      h('div', { class: 'table-scroll' }, h('table', { class: 'files' },
+      // v1.76: fixed column widths, so the boxes stay put while "Saved as" changes with the typing.
+      h('div', { class: 'table-scroll' }, h('table', { class: 'files type-table' },
+        h('colgroup', {}, h('col', { class: 'tt-file' }), h('col', { class: 'tt-type' }), h('col', { class: 'tt-name' }), h('col', { class: 'tt-saved' })),
         h('thead', {}, h('tr', {}, h('th', {}, 'File'), h('th', {}, 'Document type'), h('th', {}, 'File name'), h('th', {}, 'Saved as'))),
         h('tbody', {}, rows.map((r) => r.el)))),
       h('div', { class: 'dialog-actions' },

@@ -15,6 +15,14 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.76)
+
+- DNA (Does Not Apply) can be picked for the Federal Jacket Number and for IR, FBI and IDOC Numbers (suspects, offenders and the Officer's Report)
+- Timeline markers are all circles
+- Draft: the Verified and Updated ticks share one grey box; a part's checkbox explains itself in a float box on hover (in the report, left out, or hidden on screen); "Not in the report" has its own column next to the green check
+- Files tab: names read "2026-EX-100 | Purchase" (the Document column gives the type); Updated shows the time under the date; the text matches the rest of CaseVault; the files of a folder can be arranged (Arrange, above the table); the folder list's Arrange button is boxed like Discovery
+- Adding files: no cut-off hint in the file-name box, and the boxes no longer move while you type
+
 ## Features (v1.75)
 
 - The shield folder icons are used everywhere: sidebar, case pages, Files tab, Operation folders, Move and New Folder buttons. Operations are blue, General Files and ordinary folders are purple, Other Files are green, Closed is a muted green and Archived is grey
