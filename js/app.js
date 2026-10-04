@@ -167,7 +167,7 @@
     });
   }
 
-  function confirmDialog({ title, message, confirmText = 'OK', danger = false, requireText = '' }) {
+  function confirmDialog({ title, message, confirmText = 'OK', cancelText = 'Cancel', danger = false, requireText = '' }) {
     return openDialog((close) => {
       const typed = requireText ? h('input', { type: 'text', autocomplete: 'off', 'aria-label': `Type ${requireText} to confirm` }) : null;
       const ok = h('button', { class: `btn ${danger ? 'danger' : 'primary'}`, type: 'submit', disabled: !!requireText }, confirmText);
@@ -177,7 +177,7 @@
         typeof message === 'string' ? h('p', {}, message) : message,
         typed && h('label', { class: 'field' }, h('span', {}, `Type ${requireText} to confirm`), typed),
         h('div', { class: 'dialog-actions' },
-          h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'),
+          h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, cancelText),
           ok));
     });
   }
@@ -548,7 +548,7 @@
 
   // A case in the left list: [Open] Title [bell], then file | case | client. A red bell means a
   // deadline is overdue or due within a week; the details are in the hover box.
-  function caseItem(c, inGroup = false) {
+  function caseItem(c, inGroup = false, { dim = false } = {}) {
     const sol = solState(c);
     const due = sol ? { cls: 'overdue', text: sol === 'expired' ? 'statute of limitations expired' : 'statute of limitations expiring' }
       : c.nextDeadline && !isArchivedEntry(c) ? dueLabel(c.nextDeadline.date) : null;
@@ -566,14 +566,14 @@
       h('a', {
         href: `#/case/${encodeURIComponent(c.id)}`,
         // v1.60: a case with a reminder (a deadline overdue or within a week) has a thin red border.
-        class: `case-item ${c.id === state.caseId ? 'active' : ''}${due ? ` has-reminder reminder-${due.cls}` : ''}`,
+        class: `case-item ${c.id === state.caseId ? 'active' : ''}${due ? ` has-reminder reminder-${due.cls}` : ''}${dim ? ' case-dim' : ''}`,
         'aria-current': c.id === state.caseId ? 'page' : null,
         title: tip,
       },
       // Title on the left; the status and the red bell together on the right (v1.20).
       h('div', { class: 'case-item-top' },
         // v1.46: the Case Number, with the Subject Name under it.
-        h('span', { class: 'case-item-title is-number' }, c.number || 'No case number yet'),
+        h('span', { class: 'case-item-title is-number' }, dim ? h('span', { class: 'case-lock', title: 'Closed. The Mission is still going on.' }, I('lock-fill')) : null, c.number || 'No case number yet'),
         alarm ? h('span', { class: `case-bell ${due.cls}`, 'aria-label': `Deadline ${due.text}` }, I('bell-fill')) : null,
         h('span', { class: 'case-item-flags' },
           h('span', { class: `case-status status-${String(c.status).toLowerCase()}` }, c.status))),
@@ -623,9 +623,10 @@
     const open = folderOpen(group);
     const bell = cases.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date));
     const meta = opFiles ? `${cases.length} closed case${cases.length === 1 ? '' : 's'} of ongoing Missions`
+      : op && group.partial ? `${cases.length} closed · ongoing`
       : op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : `${group.total} independent case${group.total === 1 ? '' : 's'}`;
     const det = h('details', { class: `op-group${op || opFiles ? '' : ' general-group'}${opFiles ? ' opfiles-group' : ''}${bell ? ' has-reminder' : ''}`, open },
-      h('summary', { class: 'op-head', title: opFiles ? 'Closed cases whose Mission is still going on. Each is still in its Mission\'s folder above.' : op ? `${label}: open the Mission` : 'General Files: every case; these are the ones not in a Mission' },
+      h('summary', { class: 'op-head', title: opFiles ? 'Closed cases whose Mission is still going on. Each is still in its Mission\'s folder above.' : op && group.partial ? `${label}: the closed cases of this Mission, which is still going on. They stay in its folder in MISSION FILES too.` : op ? `${label}: open the Mission` : 'General Files: every case; these are the ones not in a Mission' },
         h('span', { class: `op-folder${op || opFiles ? '' : ' gf-icon'}` }, I(op || opFiles ? 'op-folder' : 'folder-fill')),
         h('span', { class: 'op-text' },
           // v1.60: an Operation's number on top, its name under it.
@@ -638,7 +639,7 @@
         // v1.83: GENERAL FILES has a + for a new case, like MISSION FILES has one for a new Mission.
         !op && !opFiles && !group.closed ? h('button', { class: 'icon-btn mission-add general-add', type: 'button', title: 'New case in General Files', onclick: (e) => { e.preventDefault(); e.stopPropagation(); newCase(); } }, I('plus-lg'), h('span', { class: 'sr-only' }, 'New case')) : null,
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
-      h('ul', { class: 'op-cases' }, cases.length ? cases.map((c) => caseItem(c, true)) : [h('li', { class: 'empty muted small' }, op ? 'No cases in this Mission yet.' : 'No independent cases.')]));
+      h('ul', { class: 'op-cases' }, cases.length ? cases.map((c) => caseItem(c, true, { dim: !!op && !group.closed && c.status === 'Closed' })) : [h('li', { class: 'empty muted small' }, op ? 'No cases in this Mission yet.' : 'No independent cases.')]));
     // A click on the folder's name opens the Operation (or General Files); the arrow folds it.
     det.querySelector('summary').addEventListener('click', (e) => {
       if (e.target.closest('.op-chev') || e.target.closest('.general-add')) return;
@@ -664,20 +665,23 @@
   function opGroups(cases, { searching = false, all = (Vault.data?.cases || []).filter((c) => !isArchivedEntry(c)) } = {}) {
     const q = $('#case-search') ? $('#case-search').value.trim().toLowerCase() : '';
     const groups = [];
-    const opFilesClosed = [];
+    const partials = [];
     for (const op of [...Vault.listOperations()].sort((a, b) => byFileNumber(a.number, b.number) || a.name.localeCompare(b.name))) {
       const total = all.filter((c) => c.operationId === op.id);
       // The Operation's own number or name matching the search shows all its cases.
       const hit = q && opLabel(op).toLowerCase().includes(q);
-      const mine = (hit ? total : cases.filter((c) => c.operationId === op.id)).sort(byNumber);
+      // v1.84: open cases first, then the closed ones (greyed, with a lock, while the Mission goes on).
+      const shut = (c) => (c.status === 'Closed' ? 1 : 0);
+      const mine = (hit ? total : cases.filter((c) => c.operationId === op.id)).sort((a, b) => shut(a) - shut(b) || byNumber(a, b));
       if (searching && q && !hit && !mine.length) continue;
       const closed = op.status === 'Closed' || (total.length > 0 && total.every((c) => c.status === 'Closed'));
       groups.push({ key: op.id, op, cases: mine, total: total.length, closed });
-      // v1.50: a closed case of an Operation that is still open stays in its folder, and shows under
-      // Closed too; v1.55: in one "Operation Files" folder, by case number, without the Operation's name.
-      if (!closed) opFilesClosed.push(...mine.filter((c) => c.status === 'Closed'));
+      // v1.50: a closed case of a Mission that is still open stays in its folder, and shows under
+      // CLOSED FILES too; v1.84: there under the Mission's own name ("OP-1 Example · 1 closed").
+      const shutNow = closed ? [] : mine.filter((c) => c.status === 'Closed');
+      if (shutNow.length) partials.push({ key: `${op.id}:closed`, op, cases: shutNow, total: total.length, closed: true, partial: true });
     }
-    if (opFilesClosed.length) groups.push({ key: 'opfiles:closed', op: null, opFiles: true, cases: opFilesClosed.sort(byNumber), total: opFilesClosed.length, closed: true, partial: true });
+    groups.push(...partials);
     const loose = cases.filter((c) => !c.operationId || !Vault.getOperation(c.operationId)).sort(byNumber);
     const looseAll = all.filter((c) => !c.operationId || !Vault.getOperation(c.operationId));
     if (loose.length || !searching || !q) {
@@ -723,7 +727,7 @@
   function renderCaseList() {
     const list = $('#case-list');
     const section = $('#archived-cases');
-    if (!Vault.data) { list.replaceChildren(); section.hidden = true; return; }
+    if (!Vault.data) { list.replaceChildren(); return; }
     const cases = filteredCases();
     const activeCount = Vault.data.cases.filter((c) => !isArchivedEntry(c)).length;
     const searching = !!$('#case-search').value.trim();
@@ -739,7 +743,7 @@
     // Closed Operations (and closed independent cases): above Archived, at the bottom (v1.42).
     const closedSec = $('#closed-cases');
     const allClosed = opGroups(Vault.data.cases.filter((c) => !isArchivedEntry(c))).filter(isClosedGroup);
-    closedSec.hidden = !allClosed.length;
+    closedSec.hidden = false; // v1.84: always at the bottom, even when empty
     // v1.83: the badge counts closed cases (as the banner does), not folders.
     $('#closed-count').textContent = String(closedGroups.reduce((t, g) => t + g.cases.length, 0));
     { const n = allClosed.reduce((t, g) => t + g.cases.length, 0); const m = $('#closed-cases .sec-meta'); if (m) m.textContent = `${n} closed case${n === 1 ? '' : 's'}`; }
@@ -750,7 +754,7 @@
     const q = $('#case-search').value.trim().toLowerCase();
     const archived = Vault.data.cases.filter(isArchivedEntry).sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
     const shown = archived.filter((c) => matchesSearch(c, q));
-    section.hidden = !archived.length;
+    section.hidden = false; // v1.84: always at the bottom, even when empty
     $('#archived-count').textContent = q ? `${shown.length} of ${archived.length}` : String(archived.length);
     { const m = $('#archived-cases .sec-meta'); if (m) m.textContent = `${archived.length} archived case${archived.length === 1 ? '' : 's'}`; }
     // v1.67: EXPIRED, NOLLE PROSEQUI and PROSECUTION sub-folders; cases without one below them.
@@ -1139,6 +1143,8 @@
     const foot = $('#ql-footer');
     if (!foot) return;
     if (footerRO) { footerRO.disconnect(); footerRO = null; }
+    const grip = document.querySelector('.ql-grip');
+    if (grip) grip.hidden = !on;
     if (!on) { foot.hidden = true; foot.replaceChildren(); document.body.style.removeProperty('--ql-dock-h'); return; }
     foot.replaceChildren(h('span', { class: 'ql-foot-title' }, I('link-45deg'), h('span', {}, 'Quick Links')), CVReferenceUI.quickLinks({ footer: true }));
     foot.hidden = false;
@@ -1351,11 +1357,18 @@
   }
 
   /** General Files: every case (archived ones too), whether or not it's in an Operation. */
+  // v1.84: General Files showing one status (from the banner's counts).
+  function showGeneralWith(show) {
+    state.generalShow = show;
+    state.generalQuery = '';
+    if (location.hash === '#/general') showGeneralFiles(); else location.hash = '#/general';
+  }
+
   function showGeneralFiles() {
     pageStart('General Files');
     const dups = CVOperation.duplicateNumbers(Vault.data.cases);
     const q = h('input', { type: 'search', placeholder: 'Search by case number, subject or Mission', 'aria-label': 'Search General Files', value: state.generalQuery || '' });
-    const show = h('select', { 'aria-label': 'Show' }, [['all', 'All cases'], ['loose', 'Independent cases'], ['linked', 'In a Mission'], ['archived', 'Archived']].map(([v, l]) => h('option', { value: v, selected: v === (state.generalShow || 'all') }, l)));
+    const show = h('select', { 'aria-label': 'Show' }, [['all', 'All cases'], ['loose', 'Independent cases'], ['linked', 'In a Mission'], ['open', 'Open'], ['pending', 'Pending'], ['closed', 'Closed'], ['overdue', 'Overdue'], ['archived', 'Archived']].map(([v, l]) => h('option', { value: v, selected: v === (state.generalShow || 'all') }, l)));
     const body = h('tbody', {});
     const countEl = h('span', { class: 'muted small' });
     const redraw = () => { renderCaseList(); showGeneralFiles(); };
@@ -1368,6 +1381,8 @@
         if (show.value === 'loose' && (op || isArchivedEntry(c))) return false;
         if (show.value === 'linked' && !op) return false;
         if (show.value === 'archived' && !isArchivedEntry(c)) return false;
+        if (['open', 'pending', 'closed'].includes(show.value) && (isArchivedEntry(c) || String(c.status).toLowerCase() !== show.value)) return false;
+        if (show.value === 'overdue' && (isArchivedEntry(c) || c.status === 'Closed' || !c.nextDeadline || dueLabel(c.nextDeadline.date).cls !== 'overdue')) return false;
         return !t || [c.number, c.subject, c.title, c.fileNumber, c.status, op ? opLabel(op) : 'general files'].join(' ').toLowerCase().includes(t);
       }).sort(byNumber);
       countEl.textContent = `${plural(list.length, 'case')}${list.length !== Vault.data.cases.length ? ` of ${Vault.data.cases.length}` : ''}`;
@@ -1574,8 +1589,14 @@
     clock.dataset.started = '1';
     const timer = setInterval(() => { if (!tick()) clearInterval(timer); }, 15000);
     // v1.61: the status counts sit in the banner (no separate row of boxes).
-    const counts = h('div', { class: 'hero-counts' }, Vault.STATUSES.map((st) => h('span', { class: `hero-count hc-${st.toLowerCase()}`, title: `${count(st)} ${st} case${count(st) === 1 ? '' : 's'}` },
-      I(STATUS_ICONS[st]), h('strong', {}, String(count(st))), h('span', {}, st))));
+    // v1.84: glass chips with a colour edge; a click opens General Files showing just those cases;
+    // Overdue counts the open cases with a deadline past due.
+    const overdue = deadlines.filter((c) => dueLabel(c.nextDeadline.date).cls === 'overdue').length;
+    const chip = (key, label, n, icon) => h('button', { type: 'button', class: `hero-count hc-${key}${key === 'overdue' && n ? ' hc-alert' : ''}`, title: `${n} ${label.toLowerCase()} case${n === 1 ? '' : 's'}: click to see them in General Files`,
+      onclick: () => showGeneralWith(key) }, I(icon), h('strong', {}, String(n)), h('span', {}, label));
+    const counts = h('div', { class: 'hero-counts' },
+      Vault.STATUSES.map((st) => chip(st.toLowerCase(), st, count(st), STATUS_ICONS[st])),
+      chip('overdue', 'Overdue', overdue, 'bell-fill'));
     return h('div', { class: 'hero hero-compact' },
       h('div', { class: 'hero-art', 'aria-hidden': 'true' }, h('span', { class: 'hero-ring r1' }), h('span', { class: 'hero-ring r2' }), h('span', { class: 'hero-ring r3' }), I('shield-lock-fill')),
       h('div', { class: 'hero-text' },
@@ -1780,7 +1801,7 @@
       field('Federal Jacket Number', dnaCombo(agencyIn)),
       fileList,
       h('div', { class: 'span-2 form-row3' }, field('Client', clientIn),
-        field('Status', h('select', { name: 'status' }, Vault.STATUSES.filter((x) => x !== 'Archived').map((x) => h('option', {}, x)))),
+        field('Status', h('select', { name: 'status' }, ['Open', 'Pending'].map((x) => h('option', {}, x)))),
         field('Opened', openedIn)),
       formHint(folderNote),
       h('div', { class: 'dialog-actions span-2' },
@@ -1989,7 +2010,8 @@
       archived ? h('div', { class: 'archived-banner', role: 'note' },
         I('archive', { cls: 'banner-icon' }),
         h('div', {}, h('strong', {}, 'Archived case'),
-          h('span', { class: 'small block' }, 'Read-only. Notes, files, drafts and checks can be opened and searched, but not changed.')),
+          h('span', { class: 'small block' }, 'Read-only. Notes, files, drafts and checks can be opened and searched, but not changed.'),
+          c.archiveReason ? h('span', { class: 'small block arch-reason' }, `Reason: ${c.archiveReason}${c.dates && c.dates.archived ? ` (${fmtDate(c.dates.archived)})` : ''}`) : null),
         h('div', { class: 'spacer' }),
         // v1.67: which Archived sub-folder it is in.
         h('label', { class: 'arch-folder-pick' }, h('span', { class: 'small' }, 'Archive Folder'),
@@ -2075,7 +2097,10 @@
     const bind = (input, apply) => { input.addEventListener('input', () => { apply(input.value); save(); }); return input; };
 
     const closedInput = h('input', { type: 'date', value: c.dates.closed || '' });
-    const statusSelect = h('select', {}, Vault.STATUSES.map((s) => h('option', { selected: s === c.status }, s)));
+    // v1.84: the drop-down offers Open and Pending; closing and archiving use their own buttons
+    // (they ask for the disposition or the reason). A closed case shows Closed, greyed.
+    const statusSelect = h('select', { title: 'Open or Pending. To close or archive the case, use the Close Case and Archive buttons.' },
+      ['Open', 'Pending', ...(['Open', 'Pending'].includes(c.status) ? [] : [c.status])].map((s) => h('option', { selected: s === c.status, disabled: !['Open', 'Pending'].includes(s) }, s)));
     statusSelect.addEventListener('change', () => {
       // "Archived" means moving the case to the archive: ask first.
       if (statusSelect.value === 'Archived' && !Vault.isArchived(c.id)) {
@@ -2097,6 +2122,7 @@
       save();
     });
     const statusNote = h('span', { class: 'muted small block status-note' }, CVClosingUI.statusLine(c));
+    const statusHint = h('span', { class: 'muted small block status-hint' }, c.status === 'Closed' ? 'Pick Open to reopen. Archive uses its button.' : 'To close or archive, use the buttons below.');
     const archived = Vault.isArchived(c.id);
 
     const members = archived ? [c] : [c, ...operationCases(c).filter((x) => x.id !== c.id)];
@@ -2127,7 +2153,7 @@
           } }, 'Move File')),
         h('form', { class: 'form-grid details-grid op-top details-row4 details-row-title', onsubmit: (e) => e.preventDefault() },
           field('Subject Name', subjectIn, '', 'The person the case is about. Shown under the Case Number. Several cases can have the same subject.'),
-          h('label', { class: 'field' }, h('span', {}, 'Status'), statusSelect, statusNote),
+          h('label', { class: 'field' }, h('span', {}, 'Status'), statusSelect, statusNote, archived ? null : statusHint),
           field('Opened', bind(h('input', { type: 'date', value: c.dates.opened || '' }), (v) => { c.dates.opened = v; })),
           field('Closed', bind(closedInput, (v) => { c.dates.closed = v; }))),
         caseTiles(c, members, archived)),
@@ -2535,26 +2561,51 @@
     // PROSECUTION, or none.
     const entry = Vault.data.cases.find((x) => x.id === c.id);
     const passed = entry && entry.sol && globalThis.CVLimits && CVLimits.state(entry.sol, today()) === 'expired';
-    const folder = await openDialog((close) => {
-      const pick = h('div', { class: 'arch-pick', role: 'radiogroup', 'aria-label': 'Archive folder' },
-        [...Vault.ARCHIVE_FOLDERS, ['', 'No Sub-folder']].map(([k, label]) => h('label', { class: 'arch-opt' },
-          h('input', { type: 'radio', name: 'arch-folder', value: k, checked: k === (passed ? 'expired' : '') }), I(k ? 'folder-archived' : 'archive'), h('span', {}, label))));
-      return h('form', { class: 'confirm', onsubmit: (e) => { e.preventDefault(); close((pick.querySelector('input:checked') || {}).value || ''); } },
+    // v1.84: a reason is required: one of the folders, or Other with the reason written in.
+    const REASONS = { expired: 'Statute of limitations passed', nolle: 'Nolle prosequi: the charges were dropped', prosecution: 'Prosecution finished', '': 'Other reason' };
+    const choice = await openDialog((close) => {
+      const note = h('textarea', { rows: 2, maxlength: 400, placeholder: 'Why the case is archived', 'aria-label': 'Reason for archiving' });
+      const ok = h('button', { class: 'btn primary', type: 'submit', disabled: true }, 'Archive Case');
+      const pick = h('div', { class: 'arch-pick', role: 'radiogroup', 'aria-label': 'Reason and archive folder' },
+        [...Vault.ARCHIVE_FOLDERS, ['', 'Other']].map(([k, label]) => h('label', { class: 'arch-opt' },
+          h('input', { type: 'radio', name: 'arch-folder', value: k, checked: passed && k === 'expired' }), I(k ? 'folder-archived' : 'archive'),
+          h('span', {}, h('strong', {}, label), h('span', { class: 'muted small block' }, REASONS[k])))));
+      const hint = h('p', { class: 'small arch-need' });
+      const sync = () => {
+        const sel = pick.querySelector('input:checked');
+        const other = !!sel && sel.value === '';
+        note.placeholder = other ? 'Required: why the case is archived' : 'Optional: more about the reason';
+        ok.disabled = !sel || (other && !note.value.trim());
+        hint.textContent = !sel ? 'Choose why the case is archived.' : other && !note.value.trim() ? 'Write the reason for Other.' : '';
+        hint.hidden = !hint.textContent;
+      };
+      pick.addEventListener('change', sync);
+      note.addEventListener('input', sync);
+      sync();
+      return h('form', { class: 'confirm arch-form', onsubmit: (e) => {
+        e.preventDefault();
+        if (ok.disabled) return;
+        const k = pick.querySelector('input:checked').value;
+        const more = note.value.trim();
+        close({ folder: k, reason: k ? `${REASONS[k]}${more ? `: ${more}` : ''}` : more });
+      } },
         h('h2', { icon: 'archive' }, 'Move this case to the archive?'),
         h('p', {}, `"${c.title || 'Untitled case'}" moves to CaseVault-Data\\archive on the SSD, with its notes, timeline, files, drafts and checks. Every file is copied and checked before the original is removed.`),
-        formSect('Archive Folder', 'folder-archived'), pick,
+        formSect('Reason', 'folder-archived'), pick,
         passed ? formHint(`The statute of limitations passed on ${fmtDate(entry.sol.expires)}, so EXPIRED is picked.`) : null,
+        field('Reason details', note), hint,
         h('p', { class: 'muted small explain' }, 'It leaves the case list and opens read-only from "Archived" at the bottom of the list. You can restore it at any time.'),
         h('div', { class: 'dialog-actions' },
           h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
-          h('button', { class: 'btn primary', type: 'submit' }, 'Archive Case')));
+          ok));
     });
-    if (folder == null) return;
+    if (choice == null) return;
+    const { folder, reason } = choice;
     await Save.flushAll();
     if (Save.failed.size) return toast('Some changes are not saved yet. Reconnect the SSD, then archive.', 'error', 8000);
     const progress = toast('Archiving: copying and checking files…', 'info', 600000);
     try {
-      await Save.track(`archive:${c.id}`, () => Vault.archiveCase(c.id, (n, name) => { progress.textContent = `Archiving: ${n} file${n === 1 ? '' : 's'} copied and checked (${name})…`; }, folder));
+      await Save.track(`archive:${c.id}`, () => Vault.archiveCase(c.id, (n, name) => { progress.textContent = `Archiving: ${n} file${n === 1 ? '' : 's'} copied and checked (${name})…`; }, folder, reason));
       progress.remove();
       state.caseObj = null;
       toast('Case archived. It opens read-only from "Archived" in the case list.', 'success', 7000);
@@ -3734,6 +3785,58 @@
       Save.track('settings', () => Vault.updateSettings({ sidebarCollapsed: collapsed })).catch(() => {});
     }
   }
+  // v1.84: a panel whose height is dragged with a bar along its top edge (double-click: back to
+  // its own height), with a padlock on the bar that keeps it as it is. Kept on this PC.
+  function heightPanel(panel, { key, label, min = 60, max = () => innerHeight * 0.7, gripParent = null }) {
+    const grip = h('div', { class: 'panel-grip', role: 'separator', 'aria-orientation': 'horizontal', 'aria-label': `${label} height`, tabindex: 0, title: `Drag up or down to make ${label} taller or shorter. Double-click to reset.` });
+    const lock = h('button', { class: 'icon-btn panel-lock', type: 'button' });
+    grip.append(h('span', { class: 'panel-grip-bar', 'aria-hidden': 'true' }), lock);
+    (gripParent || panel).prepend(grip);
+    if (gripParent) gripParent.insertBefore(grip, panel);
+    const read = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+    const write = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* this session only */ } };
+    const locked = () => panel.classList.contains('panel-locked');
+    const setLock = (on) => {
+      panel.classList.toggle('panel-locked', on); grip.classList.toggle('panel-locked', on);
+      lock.replaceChildren(I(on ? 'lock-fill' : 'unlock'), h('span', { class: 'sr-only' }, on ? `Unlock ${label}` : `Lock ${label}`));
+      lock.title = on ? `Unlock ${label} (its height can then be changed)` : `Lock ${label} at this height`;
+      lock.setAttribute('aria-pressed', String(on));
+      write(`${key}-lock`, on ? '1' : null);
+    };
+    const setH = (px, keep = true) => {
+      if (px == null) { panel.style.removeProperty('height'); panel.classList.remove('panel-sized'); if (keep) write(key, null); return; }
+      const v = Math.round(Math.min(Math.max(px, min), max()));
+      panel.style.setProperty('height', `${v}px`); panel.classList.add('panel-sized');
+      if (keep) write(key, String(v));
+    };
+    lock.addEventListener('click', (e) => { e.stopPropagation(); setLock(!locked()); });
+    lock.addEventListener('pointerdown', (e) => e.stopPropagation());
+    grip.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || locked()) return;
+      e.preventDefault();
+      grip.setPointerCapture(e.pointerId);
+      const bottom = panel.getBoundingClientRect().bottom;
+      document.body.classList.add('resizing-panel');
+      const move = (ev) => setH(bottom - ev.clientY, false);
+      const up = (ev) => { setH(bottom - ev.clientY); grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); document.body.classList.remove('resizing-panel'); };
+      grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up);
+    });
+    grip.addEventListener('dblclick', () => { if (!locked()) setH(null); });
+    grip.addEventListener('keydown', (e) => {
+      if (locked()) return;
+      const cur = panel.getBoundingClientRect().height;
+      if (e.key === 'ArrowUp') { e.preventDefault(); setH(cur + 20); } else if (e.key === 'ArrowDown') { e.preventDefault(); setH(cur - 20); }
+    });
+    const saved = Number(read(key));
+    if (saved) setH(saved, false);
+    setLock(read(`${key}-lock`) === '1');
+    return grip;
+  }
+  heightPanel($('#side-bottom'), { key: 'cv-side-bottom-h', label: 'Closed Files and Archived', min: 90, max: () => $('#sidebar-body').getBoundingClientRect().height * 0.8 });
+  const qlGrip = heightPanel($('#ql-footer'), { key: 'cv-ql-h', label: 'Quick Links', min: 70, max: () => innerHeight * 0.6, gripParent: $('#ql-footer').parentElement });
+  qlGrip.classList.add('ql-grip');
+  qlGrip.hidden = $('#ql-footer').hidden;
+
   // Lock (v1.24): the case list stays exactly as it is, shown or hidden and at its width, until
   // it's unlocked with the padlock. Remembered in vault.json.
   let setSidebarWidth = () => {};

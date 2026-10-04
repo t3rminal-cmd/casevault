@@ -76,14 +76,16 @@
         <div class="search-wrap" data-icon="search"><input id="case-search" type="search" placeholder="Search cases" aria-label="Search cases" autocomplete="off"></div>
       </div>
       <ul id="case-list" class="case-list" aria-label="Cases"></ul>
-      <details id="closed-cases" class="archived-cases closed-cases" hidden>
+      <div id="side-bottom" class="side-bottom">
+      <details id="closed-cases" class="archived-cases closed-cases">
         <summary><span class="sec-label">CLOSED FILES</span> <span class="count-pill" id="closed-count">0</span></summary>
         <ul id="closed-list" class="case-list" aria-label="Closed operations"></ul>
       </details>
-      <details id="archived-cases" class="archived-cases" hidden>
+      <details id="archived-cases" class="archived-cases">
         <summary><span class="sec-label">ARCHIVED</span> <span class="count-pill" id="archived-count">0</span></summary>
         <ul id="archived-list" class="case-list" aria-label="Archived cases"></ul>
       </details>
+      </div>
       </div>
     </aside>
 

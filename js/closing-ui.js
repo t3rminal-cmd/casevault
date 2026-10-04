@@ -347,6 +347,9 @@
     const loose = K().closeChecklist({ timeline, checks, drafts });
     const arrest = await readArrest(c);
     const named = K().peopleOf(arrest);
+    // v1.84: closing by arrest needs the arrest report: an arrestee's name and at least one charge.
+    const charged = ((arrest && arrest.arrestees) || []).some((a) => K().arresteeName(a) && K().chargesText(a.charges));
+    const arrestReady = named.length > 0 && charged;
     const RF = root.CVReportFields;
     const optsOf = (key) => ((RF && RF.FIELDS.find(([k]) => k === key)) || [, , , ['']])[3];
 
@@ -385,12 +388,15 @@
         const sel = radios.find((x) => x.r.checked);
         reasonRow.hidden = !(sel && sel.d.key === 'exceptional');
         arrestNote.hidden = !(sel && sel.d.key === 'arrest');
-        arrestNote.textContent = named.length
+        arrestNote.className = arrestReady ? 'small' : 'small arrest-required';
+        arrestNote.replaceChildren(arrestReady
           ? `Arrest details: ${named.join(', ')}. You can still change them on the Arrest details tab.`
-          : 'After closing, the Arrest details tab opens so you can fill in the arrestee, the arrest and the charges.';
+          : `Required before closing by arrest: the arrest report. ${named.length ? `Add at least one charge for ${named.join(', ')}` : 'Fill in the arrestee and at least one charge'} on the Arrest details tab, then close the case.`,
+        arrestReady ? '' : h('button', { class: 'btn small-btn', type: 'button', icon: 'person-vcard', onclick: () => close({ fillArrest: true }) }, 'Open Arrest Details'));
         const n = picks.filter((p) => p.cb.checked).length;
         ok.textContent = n > 1 ? `Close ${n} Case Numbers` : 'Close Case';
-        ok.disabled = !sel || (sel.d.key === 'exceptional' && !reason.value) || !date.value || !n || !by.value.trim();
+        ok.disabled = !sel || (sel.d.key === 'exceptional' && !reason.value) || (sel.d.key === 'arrest' && !arrestReady) || !date.value || !n || !by.value.trim();
+        ok.title = !sel ? 'Choose the disposition first.' : sel.d.key === 'arrest' && !arrestReady ? 'Fill in the arrest report first.' : '';
       };
       const codes = () => { const sel = radios.find((x) => x.r.checked); const cc = sel && CLOSE_CODES[sel.d.key]; if (cc) { status.value = cc.status; cleared.value = cc.cleared; } };
       for (const x of radios) x.r.addEventListener('change', () => { codes(); pick(); });
@@ -424,7 +430,22 @@
       h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), ok));
     });
     if (!result) return false;
+    if (result.fillArrest) {
+      if (!c.arrest || c.arrestRemoved) {
+        c.arrest = true;
+        delete c.arrestRemoved;
+        try { await Save.track(`case:${c.id}`, () => Vault.saveCase(structuredClone(c))); } catch { return false; }
+      }
+      toast('Fill in the arrestee and the charges, then Close Case again.', 'info', 6000);
+      ui.go(c.id, 'arrest');
+      return false;
+    }
     const { ids, draft, ...closure } = result;
+    const before = new Map();
+    for (const id of ids) {
+      const oc = id === c.id ? c : await Vault.getCase(id).catch(() => null);
+      if (oc) before.set(id, { status: oc.status, closed: oc.dates.closed, closure: oc.closure || null, closureHistory: oc.closureHistory, pending: oc.pending, arrest: oc.arrest, arrestRemoved: oc.arrestRemoved });
+    }
     let n = 0;
     for (const id of ids) {
       try {
@@ -441,6 +462,7 @@
         if (draft && RF) {
           let d = null;
           try { d = await Vault.readCaseJSON(oc.id, 'report-fields.json'); } catch { /* none yet */ }
+          { const b = before.get(oc.id); if (b) b.fields = d ? structuredClone(d) : null; }
           d = RF.normalize(d);
           if (!d.caseNumber && (oc.agencyNumber || oc.number)) d.caseNumber = oc.agencyNumber || oc.number;
           if (draft.status) d.status = draft.status;
@@ -451,10 +473,83 @@
         n++;
       } catch { /* reported by Save */ }
     }
-    toast(n > 1 ? `Closed ${n} case numbers: ${K().disposition(closure.disposition).label}.` : `Case closed: ${K().disposition(closure.disposition).label}.`, 'success');
-    if (ids.includes(c.id)) ui.go(c.id, closure.disposition === 'arrest' && !named.length ? 'arrest' : 'details');
+    // v1.84: Undo for a few seconds puts each case back as it was.
+    const closedOps = []; // Missions closed with it, put back by Undo too
+    const msg = n > 1 ? `Closed ${n} case numbers: ${K().disposition(closure.disposition).label}.` : `Case closed: ${K().disposition(closure.disposition).label}.`;
+    const t = toast(msg, 'success', 8000);
+    if (t && n) {
+      const undo = ui.h('button', { class: 'toast-undo', type: 'button' }, 'Undo');
+      undo.addEventListener('click', async () => {
+        t.remove();
+        for (const [id, b] of before) {
+          try {
+            const oc = id === c.id ? c : await Vault.getCase(id);
+            oc.status = b.status;
+            oc.dates.closed = b.closed;
+            oc.closure = b.closure;
+            if (b.closureHistory) oc.closureHistory = b.closureHistory; else delete oc.closureHistory;
+            oc.pending = b.pending;
+            oc.arrest = b.arrest;
+            if (b.arrestRemoved) oc.arrestRemoved = b.arrestRemoved;
+            await Save.track(`case:${oc.id}`, () => Vault.saveCase(structuredClone(oc)));
+            if (RF && 'fields' in b) await Save.track(`report-fields:${oc.id}`, () => Vault.writeCaseJSON(oc.id, 'report-fields.json', RF.normalize(b.fields)));
+          } catch { /* reported by Save */ }
+        }
+        for (const o of closedOps) await Vault.updateOperation(o.id, { status: o.status, end: o.end }).catch(() => {});
+        toast(before.size > 1 ? 'Close undone: the case numbers are back as they were.' : 'Close undone: the case is back as it was.', 'success');
+        ui.refresh();
+      });
+      t.append(' ', undo);
+    }
+    if (ids.includes(c.id)) ui.go(c.id, 'details');
     ui.refresh();
+    if (n) closedOps.push(...await missionFollowUp(c, ids, 'close', closure.date));
     return n > 0;
+  }
+
+  /** v1.84: after closing the last open case of a Mission, offer to close the Mission too; after
+   * reopening a case of a closed Mission, offer to reopen the Mission. Returns the Missions changed,
+   * with what they were before. */
+  async function missionFollowUp(c, ids, what, date = today()) {
+    const opIds = [...new Set(ids.map((id) => (id === c.id ? c : (Vault.data.cases || []).find((x) => x.id === id) || {}).operationId).filter(Boolean))];
+    const changed = [];
+    for (const opId of opIds) {
+      const op = Vault.getOperation(opId);
+      if (!op) continue;
+      const cases = (Vault.data.cases || []).filter((x) => x.operationId === opId && !Vault.isArchived(x.id));
+      const label = [op.number, op.name].filter(Boolean).join(' ') || 'this Mission';
+      if (what === 'close') {
+        if (op.status === 'Closed' || cases.some((x) => x.status !== 'Closed' && !ids.includes(x.id))) continue;
+        const ok = await ui.confirmDialog({
+          title: 'Close the Mission too?',
+          message: `Every case of ${label} is closed now. Close the Mission as well? It moves to CLOSED FILES with its cases, and can be reopened.`,
+          confirmText: 'Close Mission',
+          cancelText: 'Keep it open',
+        });
+        if (!ok) continue;
+        try {
+          changed.push({ id: op.id, status: op.status, end: op.end || '' });
+          await Vault.updateOperation(op.id, { status: 'Closed', end: op.end || date });
+          ui.toast(`Mission closed: ${label}.`, 'success');
+        } catch (e) { ui.toast(e.message || 'The Mission could not be closed.', 'error'); }
+      } else {
+        if (op.status !== 'Closed') continue;
+        const ok = await ui.confirmDialog({
+          title: 'Reopen the Mission?',
+          message: `${label} is closed. Reopen the Mission too, so it is back in MISSION FILES with this case?`,
+          confirmText: 'Reopen Mission',
+          cancelText: 'Keep it closed',
+        });
+        if (!ok) continue;
+        try {
+          changed.push({ id: op.id, status: op.status, end: op.end || '' });
+          await Vault.updateOperation(op.id, { status: 'Open', end: '' });
+          ui.toast(`Mission reopened: ${label}.`, 'success');
+        } catch (e) { ui.toast(e.message || 'The Mission could not be reopened.', 'error'); }
+      }
+    }
+    if (changed.length) ui.refresh();
+    return changed;
   }
 
   async function reopenCase(c) {
@@ -474,6 +569,7 @@
       await Save.track(`case:${c.id}`, () => Vault.saveCase(structuredClone(c)));
       toast('Case reopened.', 'success');
       ui.refresh();
+      await missionFollowUp(c, [c.id], 'reopen');
       return true;
     } catch { return false; }
   }

@@ -24,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.83.0';
+  const APP_VERSION = '1.84.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -559,12 +559,14 @@ const Vault = (() => {
    * Archive a case: status Archived, closed date filled in if empty, folder moved to archive/.
    * Returns the updated case.
    */
-  function archiveCase(id, onFile, folder = '') {
+  function archiveCase(id, onFile, folder = '', reason = '') {
     return serial(`case:${id}`, async () => {
       if (isArchived(id)) return getCase(id);
       const c = await getCase(id);
       const before = structuredClone(c);
       c.archiveFolder = ARCHIVE_FOLDERS.some(([k]) => k === folder) ? folder : '';
+      // v1.84: why it was archived.
+      c.archiveReason = String(reason || '').trim().slice(0, 500);
       if (c.status !== 'Archived') c.statusBeforeArchive = c.status;
       c.status = 'Archived';
       if (!c.dates.closed) c.dates.closed = localDay();
@@ -603,6 +605,7 @@ const Vault = (() => {
       delete c.statusBeforeArchive;
       delete c.dates.archived;
       delete c.archiveFolder;
+      delete c.archiveReason;
       // v1.46: its Operation was deleted while it was archived: it comes back as an independent case.
       if (c.operationId && !getOperation(c.operationId)) { c.operationId = ''; c.operation = null; c.title = CVOperation.caseTitle(c, null); }
       c.dates.updated = nowISO();
