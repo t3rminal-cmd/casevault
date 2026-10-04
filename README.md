@@ -15,6 +15,13 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.78)
+
+- Operations are called Missions everywhere on screen (New Mission, Mission Number, Mission Folder, Mission Plans…); nothing on the SSD is renamed
+- MISSION FILES in the sidebar holds every Mission, like GENERAL FILES, with a + to make a new Mission; New Mission is also beside All Missions on the home page
+- A Mission's page shows its Timeline (all its case numbers), between Files and the Mission Folder
+- Timeline dots sit exactly on the centre of the line
+
 ## Features (v1.77)
 
 - The sidebar folder names are in capitals: MISSION FILES (closed cases of Operations still going on), GENERAL FILES, CLOSED FILES and ARCHIVED

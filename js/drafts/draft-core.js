@@ -203,7 +203,7 @@
     const g = (title, keys) => ({ title, keys });
     return [
       g('Case', ['case.fileNumber', 'case.number', 'case.subject', 'case.agencyNumber', 'case.title', 'case.client', 'case.status', 'case.opened', 'case.closed', 'case.tags', 'case.partners']),
-      g('Operation', ['operation.number', 'operation.name']),
+      g('Mission', ['operation.number', 'operation.name']),
       g('Suspects', ['suspect.name', 'suspect.dob', 'suspect.age', 'suspect.residence', 'suspect.role', 'suspects']),
       g('Contacts', ['case.officer.name', 'case.officer.email', 'case.officer.phone', 'case.prosecutor.title', 'case.prosecutor.name', 'case.prosecutor.email', 'case.prosecutor.phone']),
       g('Date', ['today', 'today.iso']),

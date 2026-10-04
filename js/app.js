@@ -616,13 +616,13 @@
   function operationGroup(group) {
     const { key, op, cases } = group;
     const opFiles = !!group.opFiles;
-    const label = opFiles ? 'Operation Files' : op ? opLabel(op) : 'General Files';
+    const label = opFiles ? 'Mission Files' : op ? opLabel(op) : 'General Files';
     const open = folderOpen(group);
     const bell = cases.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date));
-    const meta = opFiles ? `${cases.length} closed case${cases.length === 1 ? '' : 's'} of ongoing Operations`
+    const meta = opFiles ? `${cases.length} closed case${cases.length === 1 ? '' : 's'} of ongoing Missions`
       : op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : `${group.total} independent case${group.total === 1 ? '' : 's'}`;
     const det = h('details', { class: `op-group${op || opFiles ? '' : ' general-group'}${opFiles ? ' opfiles-group' : ''}${bell ? ' has-reminder' : ''}`, open },
-      h('summary', { class: 'op-head', title: opFiles ? 'Closed cases whose Operation is still going on. Each is still in its Operation\'s folder above.' : op ? `${label}: open the Operation` : 'General Files: every case; these are the ones not in an Operation' },
+      h('summary', { class: 'op-head', title: opFiles ? 'Closed cases whose Mission is still going on. Each is still in its Mission\'s folder above.' : op ? `${label}: open the Mission` : 'General Files: every case; these are the ones not in a Mission' },
         h('span', { class: `op-folder${op || opFiles ? '' : ' gf-icon'}` }, I(op || opFiles ? 'op-folder' : 'folder-fill')),
         h('span', { class: 'op-text' },
           // v1.60: an Operation's number on top, its name under it.
@@ -633,7 +633,7 @@
           h('span', { class: 'op-meta muted' }, meta)),
         cases.length > 1 ? h('span', { class: 'op-count' }, String(cases.length)) : null,
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
-      h('ul', { class: 'op-cases' }, cases.length ? cases.map((c) => caseItem(c, true)) : [h('li', { class: 'empty muted small' }, op ? 'No cases in this Operation yet.' : 'No independent cases.')]));
+      h('ul', { class: 'op-cases' }, cases.length ? cases.map((c) => caseItem(c, true)) : [h('li', { class: 'empty muted small' }, op ? 'No cases in this Mission yet.' : 'No independent cases.')]));
     // A click on the folder's name opens the Operation (or General Files); the arrow folds it.
     det.querySelector('summary').addEventListener('click', (e) => {
       if (e.target.closest('.op-chev')) return;
@@ -685,6 +685,36 @@
   }
   const isClosedGroup = (g) => g.closed;
 
+  // v1.78: MISSION FILES in the case list: every open Mission folder inside it, a + for a new one.
+  function missionFolder(groups) {
+    const key = 'missions';
+    const searching = !!$('#case-search').value.trim();
+    const open = sideFold.has(key) && location.hash === sideFoldHash ? sideFold.get(key) : true;
+    const n = groups.filter((g) => g.op).length;
+    const bell = groups.some((g) => g.cases.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date)));
+    const add = h('button', { class: 'icon-btn mission-add', type: 'button', title: 'New Mission', onclick: async (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const op = await operationDialog();
+      if (op) { renderCaseList(); location.hash = `#/operation/${encodeURIComponent(op.id)}`; }
+    } }, I('plus-lg'), h('span', { class: 'sr-only' }, 'New Mission'));
+    const det = h('details', { class: `op-group mission-group${bell ? ' has-reminder' : ''}`, open: open || searching },
+      h('summary', { class: 'op-head', title: 'MISSION FILES: every Mission. Click to see them all; the arrow folds the folder.' },
+        h('span', { class: 'op-folder mission-icon' }, I('folder-mission')),
+        h('span', { class: 'op-text' },
+          h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, 'MISSION FILES'), bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
+          h('span', { class: 'op-meta muted' }, `${n} mission${n === 1 ? '' : 's'}`)),
+        add,
+        h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
+      h('ul', { class: 'mission-children' }, groups.length ? groups.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted small' }, 'No Missions yet. Click + to make one.')]));
+    det.querySelector('summary').addEventListener('click', (e) => {
+      if (e.target.closest('.op-chev')) { e.preventDefault(); sideFoldHash = location.hash; sideFold.set(key, !det.open); det.open = !det.open; return; }
+      if (e.target.closest('.mission-add')) return;
+      e.preventDefault();
+      location.hash = '#/operations';
+    });
+    return h('li', { class: 'op-item mission-item' }, det);
+  }
+
   function renderCaseList() {
     const list = $('#case-list');
     const section = $('#archived-cases');
@@ -696,14 +726,17 @@
     // An empty General Files folder shows only when there is nothing else to show.
     const openGroups = groups.filter((g) => !isClosedGroup(g) && !(g.key === GENERAL && !g.cases.length && groups.some((x) => x !== g && !isClosedGroup(x))));
     const closedGroups = groups.filter(isClosedGroup);
-    list.replaceChildren(...(openGroups.length ? openGroups.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted' },
-      closedGroups.length ? 'Every Operation is closed.' : activeCount ? 'No cases match.' : Vault.data.cases.length ? 'No active cases.' : 'No cases yet. Click "New case".')]));
+    // v1.78: the Missions sit inside one MISSION FILES folder, like GENERAL FILES, with New Mission.
+    const missionGroups = openGroups.filter((g) => g.op || g.opFiles);
+    const otherGroups = openGroups.filter((g) => !(g.op || g.opFiles));
+    list.replaceChildren(missionFolder(missionGroups), ...(otherGroups.length ? otherGroups.map((g) => operationGroup(g)) : missionGroups.length ? [] : [h('li', { class: 'empty muted' },
+      closedGroups.length ? 'Every Mission is closed.' : activeCount ? 'No cases match.' : Vault.data.cases.length ? 'No active cases.' : 'No cases yet. Click "New case".')]));
     // Closed Operations (and closed independent cases): above Archived, at the bottom (v1.42).
     const closedSec = $('#closed-cases');
     const allClosed = opGroups(Vault.data.cases.filter((c) => !isArchivedEntry(c))).filter(isClosedGroup);
     closedSec.hidden = !allClosed.length;
     $('#closed-count').textContent = String(closedGroups.length);
-    $('#closed-list').replaceChildren(...(closedGroups.length ? closedGroups.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted' }, 'No closed operations match.')]));
+    $('#closed-list').replaceChildren(...(closedGroups.length ? closedGroups.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted' }, 'No closed missions match.')]));
     if ((state.caseId && closedGroups.some((g) => g.cases.some((c) => c.id === state.caseId))) || ($('#case-search').value.trim() && closedGroups.length)) closedSec.open = true;
 
     // Archived cases: a collapsible section, searched with the same box.
@@ -814,6 +847,8 @@
    * folder (key 'op-<id>', with Subpoenas, Affidavits, Operation Plans, Maps, Subject Data and
    * Vehicle List). Files are kept as they are named, in CaseVault-Data\\shared. */
   const sharedOpen = {};
+  // v1.78: Missions (they were Operations): the folder on the SSD keeps its name, it shows as Mission Plans.
+  const opFolderLabel = (n) => (n === 'Operation Plans' ? 'Mission Plans' : n);
   const OP_FOLDER_DESC = { Subpoenas: 'Served and returned', Affidavits: 'Search warrant affidavits', 'Operation Plans': 'Ops plans and briefings', Maps: 'Maps and aerials', 'Subject Data': 'Subject profiles and records', 'Vehicle List': 'Vehicles, owners and photos' };
   const SHARED_ICONS = { 'USPIS Files': 'badge-uspis', 'DEA Files': 'badge-dea', 'INET Files': 'globe2', Training: 'book', Other: 'folder-other', Subpoenas: 'file-earmark-ruled', Affidavits: 'pencil-square', 'Operation Plans': 'card-checklist', Maps: 'map', 'Subject Data': 'person-vcard', 'Vehicle List': 'car-front' };
   // v1.71: folders are names, or { name, label, desc, custom }; getFolders() reads them each time
@@ -1055,10 +1090,10 @@
           close(await Save.track(op ? `op:${op.id}` : 'new-op', () => (op ? Vault.updateOperation(op.id, fields) : Vault.createOperation(fields))));
         } catch (ex) { err.hidden = false; err.textContent = ex.message; }
       } },
-      h('h2', { class: 'span-2', icon: 'op-folder' }, op ? 'Edit Operation' : 'New Operation'),
-      formSect('Operation', 'op-folder'),
-      field('Operation Number', numberIn, '', 'Unique: no two Operations share a number.'),
-      field('Operation Name', nameIn),
+      h('h2', { class: 'span-2', icon: 'op-folder' }, op ? 'Edit Mission' : 'New Mission'),
+      formSect('Mission', 'op-folder'),
+      field('Mission Number', numberIn, '', 'Unique: no two Missions share a number.'),
+      field('Mission Name', nameIn),
       formSect('Status and Dates', 'calendar-event'),
       h('div', { class: 'span-2 form-row3' }, field('Status', statusIn), field('Start Date', startIn), field('End Date', endIn)),
       formSect('Notes', 'journal-text'),
@@ -1066,7 +1101,7 @@
       err,
       h('div', { class: 'dialog-actions span-2' },
         h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
-        h('button', { class: 'btn primary', type: 'submit' }, op ? 'Save changes' : 'Create Operation')));
+        h('button', { class: 'btn primary', type: 'submit' }, op ? 'Save changes' : 'Create Mission')));
       return form;
     });
     if (saved) renderCaseList();
@@ -1075,23 +1110,23 @@
 
   /** The Operations page: every Operation with its status, dates and number of cases. */
   function showOperations() {
-    pageStart('Operations');
+    pageStart('Missions');
     const ops = [...Vault.listOperations()].sort((a, b) => byFileNumber(a.number, b.number) || a.name.localeCompare(b.name));
     const count = (op) => (Vault.data.cases || []).filter((c) => c.operationId === op.id).length;
     $('#main').replaceChildren(h('section', { class: 'ops-page' },
-      h('div', { class: 'page-head' }, h('h1', {}, 'Operations'), h('div', { class: 'spacer' }),
+      h('div', { class: 'page-head' }, h('h1', {}, 'Missions'), h('div', { class: 'spacer' }),
         h('a', { class: 'btn', href: '#/general', icon: 'folder-fill' }, 'General Files'),
-        h('button', { class: 'btn primary', type: 'button', icon: 'plus-lg', onclick: async () => { const op = await operationDialog(); if (op) location.hash = `#/operation/${encodeURIComponent(op.id)}`; } }, 'New Operation')),
-      h('p', { class: 'muted small' }, 'An Operation links cases together. The cases themselves stay in General Files; deleting an Operation never deletes a case or a file.'),
+        h('button', { class: 'btn primary', type: 'button', icon: 'plus-lg', onclick: async () => { const op = await operationDialog(); if (op) location.hash = `#/operation/${encodeURIComponent(op.id)}`; } }, 'New Mission')),
+      h('p', { class: 'muted small' }, 'A Mission links cases together. The cases themselves stay in General Files; deleting a Mission never deletes a case or a file.'),
       ops.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'data-table ops-table' },
-        h('thead', {}, h('tr', {}, ['Operation', 'Status', 'Start Date', 'End Date', 'Cases'].map((x) => h('th', {}, x)))),
+        h('thead', {}, h('tr', {}, ['Mission', 'Status', 'Start Date', 'End Date', 'Cases'].map((x) => h('th', {}, x)))),
         h('tbody', {}, ops.map((op) => h('tr', {},
           h('td', {}, h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, class: 'op-row-link' }, I('op-folder'), opLabel(op))),
           h('td', {}, statusPill(op.status)),
           h('td', { class: 'nowrap' }, op.start ? fmtDate(op.start) : '—'),
           h('td', { class: 'nowrap' }, op.end ? fmtDate(op.end) : '—'),
           h('td', { class: 'num' }, String(count(op))))))))
-        : h('div', { class: 'empty-state' }, h('p', {}, 'No Operations yet.'), h('p', { class: 'muted small' }, 'New Operation makes one. Then create cases inside it, or link cases from General Files.'))));
+        : h('div', { class: 'empty-state' }, h('p', {}, 'No Missions yet.'), h('p', { class: 'muted small' }, 'New Mission makes one. Then create cases inside it, or link cases from General Files.'))));
   }
 
   /** Pick cases from General Files to link to an Operation. Cases already in another Operation
@@ -1130,29 +1165,35 @@
   /** One Operation: its fields (edit), its Files (the linked cases) and Delete. */
   function showOperation(id) {
     const op = Vault.getOperation(id);
-    pageStart(op ? opLabel(op) : 'Operation');
+    pageStart(op ? opLabel(op) : 'Mission');
     if (!op) {
-      $('#main').replaceChildren(h('section', { class: 'ops-page' }, h('h1', {}, 'Operation not found'),
-        h('p', {}, 'This Operation was deleted. Its cases are in General Files.'), h('p', {}, h('a', { href: '#/operations' }, 'All Operations'), ' · ', h('a', { href: '#/general' }, 'General Files'))));
+      $('#main').replaceChildren(h('section', { class: 'ops-page' }, h('h1', {}, 'Mission not found'),
+        h('p', {}, 'This Mission was deleted. Its cases are in General Files.'), h('p', {}, h('a', { href: '#/operations' }, 'All Missions'), ' · ', h('a', { href: '#/general' }, 'General Files'))));
       return;
     }
     const members = (Vault.data.cases || []).filter((c) => c.operationId === op.id).sort(byNumber);
     const redraw = () => { renderCaseList(); showOperation(id); };
+    const tlCase = members.find((c) => !isArchivedEntry(c));
+    const tlPanel = h('div', { class: 'op-timeline' }, tlCase ? h('p', { class: 'muted small' }, 'Loading the timeline…') : h('p', { class: 'muted' }, 'Add a case number to this Mission to keep its timeline here.'));
+    if (tlCase) {
+      const tk = state.renderToken;
+      setTimeout(() => renderTimeline(tlPanel, tlCase, tk).catch((err) => { if (FS.isDisconnectError(err)) onDriveLost(); else tlPanel.replaceChildren(h('p', { class: 'muted' }, `Could not read the timeline: ${err.message}`)); }), 0);
+    }
     const info = (label, value) => h('div', { class: 'op-info-item' }, h('span', { class: 'op-info-label' }, label), h('span', { class: 'op-info-value' }, value || '—'));
     $('#main').replaceChildren(h('section', { class: 'ops-page op-page' },
-      h('a', { href: '#/operations', class: 'back-link' }, '← All Operations'),
+      h('a', { href: '#/operations', class: 'back-link' }, '← All Missions'),
       h('div', { class: 'page-head' },
         h('span', { class: 'page-icon' }, I('op-folder')),
         h('div', { class: 'page-title' }, h('h1', {}, opLabel(op)), h('div', { class: 'muted small' }, plural(members.length, 'case'), ' · ', statusPill(op.status))),
         h('div', { class: 'spacer' }),
-        h('button', { class: 'btn', type: 'button', icon: 'pencil', onclick: async () => { if (await operationDialog(op)) redraw(); } }, 'Edit Operation')),
+        h('button', { class: 'btn', type: 'button', icon: 'pencil', onclick: async () => { if (await operationDialog(op)) redraw(); } }, 'Edit Mission')),
       h('div', { class: 'op-info' },
-        info('Operation Number', op.number), info('Operation Name', op.name), info('Status', op.status), info('Start Date', op.start ? fmtDate(op.start) : ''), info('End Date', op.end ? fmtDate(op.end) : '')),
+        info('Mission Number', op.number), info('Mission Name', op.name), info('Status', op.status), info('Start Date', op.start ? fmtDate(op.start) : ''), info('End Date', op.end ? fmtDate(op.end) : '')),
       op.notes ? h('div', { class: 'op-notes' }, h('span', { class: 'op-info-label' }, 'Notes'), h('p', {}, op.notes)) : null,
       // v1.74: plain headers; the explanations sit under each section, small.
       h('div', { class: 'section-head op-files-head' }, h('h2', { class: 'section-title caps' }, 'Files'), h('div', { class: 'spacer' }),
         h('button', { class: 'btn', type: 'button', icon: 'link-45deg', onclick: async () => { if (await addExistingDialog(op)) redraw(); } }, 'Add Existing Case'),
-        h('button', { class: 'btn primary', type: 'button', icon: 'plus-lg', onclick: () => newCase({ operationId: op.id }) }, 'New Case in this Operation')),
+        h('button', { class: 'btn primary', type: 'button', icon: 'plus-lg', onclick: () => newCase({ operationId: op.id }) }, 'New Case in this Mission')),
       members.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'data-table op-cases-table' },
         h('thead', {}, h('tr', {}, ['Case Number', 'Subject Name', 'Status', 'Opened', 'Open', ''].map((x) => h('th', {}, x)))),
         h('tbody', {}, members.map((c) => h('tr', { class: isArchivedEntry(c) ? 'archived-row' : '' },
@@ -1163,36 +1204,39 @@
           h('td', { class: 'nowrap' }, h('div', { class: 'op-case-links' }, OP_TABS.map(([tab, label]) => h('a', { class: 'op-tab-link', href: caseLink(c, tab) }, label)))),
           h('td', { class: 'nowrap' }, isArchivedEntry(c)
             ? h('span', { class: 'muted small', title: 'Archived cases are read-only. Restore it to unlink it.' }, 'Archived')
-            : h('button', { class: 'btn small', type: 'button', icon: 'folder-symlink', title: 'Move this case to General Files or another Operation', onclick: async () => { if (await moveCaseDialog(c)) redraw(); } }, 'Move File')))))))
-        : h('div', { class: 'empty-state' }, h('p', {}, 'No cases in this Operation yet.'), h('p', { class: 'muted small' }, 'New Case in this Operation creates one; Add Existing Case links one from General Files.')),
-      h('p', { class: 'muted small op-section-note' }, 'The cases linked to this Operation. They live in General Files; nothing is copied.'),
+            : h('button', { class: 'btn small', type: 'button', icon: 'folder-symlink', title: 'Move this case to General Files or another Mission', onclick: async () => { if (await moveCaseDialog(c)) redraw(); } }, 'Move File')))))))
+        : h('div', { class: 'empty-state' }, h('p', {}, 'No cases in this Mission yet.'), h('p', { class: 'muted small' }, 'New Case in this Mission creates one; Add Existing Case links one from General Files.')),
+      h('p', { class: 'muted small op-section-note' }, 'The cases linked to this Mission. They live in General Files; nothing is copied.'),
+      // v1.78: the Mission's timeline (all its case numbers) on its main page.
+      h('div', { class: 'section-head op-tl-head', id: 'op-timeline' }, h('h2', { class: 'section-title caps' }, 'Timeline')),
+      tlPanel,
       // v1.68: the Operation's own folder, not tied to a case number.
-      h('div', { class: 'section-head op-folder-head', id: 'op-folder' }, h('h2', { class: 'section-title caps' }, 'Operation Folder')),
-      sharedFilesBox(`op-${op.id}`, { tiles: true, tileIcon: 'folder-mission', folders: Vault.OP_FOLDERS.map((n) => ({ name: n, desc: OP_FOLDER_DESC[n] || '' })) }),
-      h('p', { class: 'muted small op-section-note' }, 'For the whole Operation, not one case number. Kept on the SSD in CaseVault-Data\\shared.'),
+      h('div', { class: 'section-head op-folder-head', id: 'op-folder' }, h('h2', { class: 'section-title caps' }, 'Mission Folder')),
+      sharedFilesBox(`op-${op.id}`, { tiles: true, tileIcon: 'folder-mission', folders: Vault.OP_FOLDERS.map((n) => ({ name: n, label: opFolderLabel(n), desc: OP_FOLDER_DESC[n] || '' })) }),
+      h('p', { class: 'muted small op-section-note' }, 'For the whole Mission, not one case number. Kept on the SSD in CaseVault-Data\\shared.'),
       h('section', { class: 'case-actions op-danger', 'aria-labelledby': 'op-actions-title' },
-        h('h3', { id: 'op-actions-title', icon: 'sliders' }, 'Operation actions'),
+        h('h3', { id: 'op-actions-title', icon: 'sliders' }, 'Mission actions'),
         h('div', { class: 'case-actions-grid' },
-          h('button', { class: 'btn danger action-btn', type: 'button', icon: 'trash3', title: 'Removes the Operation only. Its cases and files stay in General Files.', onclick: async () => {
-            const ok = await confirmDialog({ title: 'Delete Operation', danger: true, confirmText: 'Delete Operation',
-              message: 'Are you sure you want to delete this Operation? The Operation and its Files folder will be removed. All associated cases and files will be preserved and will remain available in General Files as independent cases.' });
+          h('button', { class: 'btn danger action-btn', type: 'button', icon: 'trash3', title: 'Removes the Mission only. Its cases and files stay in General Files.', onclick: async () => {
+            const ok = await confirmDialog({ title: 'Delete Mission', danger: true, confirmText: 'Delete Mission',
+              message: 'Are you sure you want to delete this Mission? The Mission and its Files folder will be removed. All associated cases and files will be preserved and will remain available in General Files as independent cases.' });
             if (!ok) return;
             try {
               await Save.flushAll();
               const n = await Save.track(`op:${op.id}`, () => Vault.deleteOperation(op.id));
-              toast(`Operation deleted. ${plural(n, 'case')} kept in General Files.`, 'success', 5000);
+              toast(`Mission deleted. ${plural(n, 'case')} kept in General Files.`, 'success', 5000);
               renderCaseList();
               location.hash = '#/general';
             } catch { /* reported by Save */ }
-          } }, 'Delete Operation')))));
+          } }, 'Delete Mission')))));
   }
 
   /** General Files: every case (archived ones too), whether or not it's in an Operation. */
   function showGeneralFiles() {
     pageStart('General Files');
     const dups = CVOperation.duplicateNumbers(Vault.data.cases);
-    const q = h('input', { type: 'search', placeholder: 'Search by case number, subject or Operation', 'aria-label': 'Search General Files', value: state.generalQuery || '' });
-    const show = h('select', { 'aria-label': 'Show' }, [['all', 'All cases'], ['loose', 'Independent cases'], ['linked', 'In an Operation'], ['archived', 'Archived']].map(([v, l]) => h('option', { value: v, selected: v === (state.generalShow || 'all') }, l)));
+    const q = h('input', { type: 'search', placeholder: 'Search by case number, subject or Mission', 'aria-label': 'Search General Files', value: state.generalQuery || '' });
+    const show = h('select', { 'aria-label': 'Show' }, [['all', 'All cases'], ['loose', 'Independent cases'], ['linked', 'In a Mission'], ['archived', 'Archived']].map(([v, l]) => h('option', { value: v, selected: v === (state.generalShow || 'all') }, l)));
     const body = h('tbody', {});
     const countEl = h('span', { class: 'muted small' });
     const redraw = () => { renderCaseList(); showGeneralFiles(); };
@@ -1213,7 +1257,7 @@
         const dup = dups.has(CVOperation.normNumber(c.number));
         const arch = isArchivedEntry(c);
         // v1.50: one Move File button (it was Unlink, or an "Assign to…" list).
-        const action = arch ? null : h('button', { class: 'btn small', type: 'button', icon: 'folder-symlink', title: 'Move this case into an Operation, to another one, or back to General Files', onclick: async () => { if (await moveCaseDialog(c)) redraw(); } }, 'Move File');
+        const action = arch ? null : h('button', { class: 'btn small', type: 'button', icon: 'folder-symlink', title: 'Move this case into a Mission, to another one, or back to General Files', onclick: async () => { if (await moveCaseDialog(c)) redraw(); } }, 'Move File');
         return h('tr', { class: arch ? 'archived-row' : '' },
           h('td', {}, h('a', { href: caseLink(c), class: 'case-num-link' }, c.number || 'No case number'),
             dup ? h('span', { class: 'dup-flag', title: 'Another case has the same Case Number (made before numbers had to be unique). Nothing was changed.' }, I('exclamation-triangle-fill'), 'Duplicate') : null),
@@ -1230,14 +1274,14 @@
     $('#main').replaceChildren(h('section', { class: 'ops-page general-page' },
       h('div', { class: 'page-head' },
         h('span', { class: 'page-icon gf-icon' }, I('folder-fill')),
-        h('div', { class: 'page-title' }, h('h1', {}, 'General Files'), h('div', { class: 'muted small' }, 'Every case, in an Operation or not. An Operation only links cases; they are always kept here.')),
+        h('div', { class: 'page-title' }, h('h1', {}, 'General Files'), h('div', { class: 'muted small' }, 'Every case, in a Mission or not. A Mission only links cases; they are always kept here.')),
         h('div', { class: 'spacer' }),
-        h('a', { class: 'btn', href: '#/operations', icon: 'op-folder' }, 'Operations'),
+        h('a', { class: 'btn', href: '#/operations', icon: 'op-folder' }, 'Missions'),
         h('button', { class: 'btn primary', type: 'button', icon: 'plus-lg', onclick: () => newCase() }, 'New Case')),
       dups.size ? h('p', { class: 'warn-note small', role: 'note' }, I('exclamation-triangle-fill'), ` ${plural(dups.size, 'Case Number')} ${dups.size === 1 ? 'is' : 'are'} used by more than one case (made before numbers had to be unique). They are flagged below; nothing was changed.`) : null,
       h('div', { class: 'general-tools' }, q, show, countEl),
       h('div', { class: 'table-wrap' }, h('table', { class: 'data-table general-table' },
-        h('thead', {}, h('tr', {}, ['Case Number', 'Subject Name', 'Operation', 'Status', 'Opened', ''].map((x) => h('th', {}, x)))),
+        h('thead', {}, h('tr', {}, ['Case Number', 'Subject Name', 'Mission', 'Status', 'Opened', ''].map((x) => h('th', {}, x)))),
         body))));
   }
 
@@ -1285,7 +1329,7 @@
     const files = sharedFilesBox('other', { allowNew: true, newTile: false, tiles: true, tileIcon: 'folder-other', empty: 'No files yet. Add forms, training or reference sheets here.',
       getFolders: async () => [...Vault.OTHER_FOLDERS, ...(await Vault.otherCustomFolders()).map((n) => ({ name: n, custom: true }))] });
     return h('div', { class: 'dash-section ov-panel other-files-section' },
-      panelHead('Other Files', 'Not tied to a case number or an Operation. Kept on the SSD in CaseVault-Data\\shared\\other.',
+      panelHead('Other Files', 'Not tied to a case number or a Mission. Kept on the SSD in CaseVault-Data\\shared\\other.',
         h('button', { type: 'button', class: 'btn small ov-btn-other', icon: 'folder-other', title: 'Make a new folder in Other Files', onclick: () => files.newFolder() }, 'New Folder')),
       files);
   }
@@ -1300,7 +1344,7 @@
       const tiles = h('div', { class: 'op-folders', role: 'list' }, list.map((o) => {
         const bell = o.group.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date) && c.status !== 'Closed');
         return h('button', { type: 'button', role: 'listitem', class: `op-folder-tile year-tile ${open === o ? 'open' : ''}`, 'aria-expanded': String(open === o),
-          title: `${o.name}: ${o.group.length} case${o.group.length === 1 ? '' : 's'} not in an Operation`,
+          title: `${o.name}: ${o.group.length} case${o.group.length === 1 ? '' : 's'} not in a Mission`,
           onclick: () => { yearFolderState.open = open === o ? '' : o.k; draw(); } },
         h('span', { class: 'op-folder-art' }, I('folder-general'), o.group.length > 1 ? h('span', { class: 'op-folder-count' }, String(o.group.length)) : null),
         h('span', { class: 'op-folder-name' }, o.name, bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null));
@@ -1308,11 +1352,11 @@
       const inside = open ? h('div', { class: 'op-open' },
         h('div', { class: 'op-open-head' }, h('strong', {}, `General Files ${open.name}`), h('span', { class: 'muted small' }, `${open.group.length} case${open.group.length === 1 ? '' : 's'}`),
           h('div', { class: 'spacer' }), h('button', { type: 'button', class: 'btn small', onclick: () => newCase() }, 'New Case')),
-        h('div', { class: 'op-open-cases' }, open.op ? h('a', { class: 'op-folder-card', href: `#/operation/${encodeURIComponent(open.op.id)}`, title: 'Subpoenas, Affidavits, Operation Plans, Maps, Subject Data and the Vehicle List, for the whole Operation' },
-          I('op-folder'), h('span', { class: 'op-folder-card-text' }, h('strong', {}, 'Operation Folder'), h('span', { class: 'muted small' }, Vault.OP_FOLDERS.join(' · ')))) : null,
+        h('div', { class: 'op-open-cases' }, open.op ? h('a', { class: 'op-folder-card', href: `#/operation/${encodeURIComponent(open.op.id)}`, title: 'Subpoenas, Affidavits, Mission Plans, Maps, Subject Data and the Vehicle List, for the whole Mission' },
+          I('op-folder'), h('span', { class: 'op-folder-card-text' }, h('strong', {}, 'Mission Folder'), h('span', { class: 'muted small' }, Vault.OP_FOLDERS.map(opFolderLabel).join(' · ')))) : null,
         ...open.group.map((c) => overviewCard(c)))) : null;
-      box.replaceChildren(...[panelHead('General Files', 'Cases not in an Operation, by the year they were opened.', h('a', { class: 'btn small ov-btn-general', href: '#/general', icon: 'folder-general' }, 'All Cases')),
-        list.length ? tiles : h('p', { class: 'muted' }, 'Every case is in an Operation. Cases that aren\'t show here by the year they were opened.'), inside].filter(Boolean));
+      box.replaceChildren(...[panelHead('General Files', 'Cases not in a Mission, by the year they were opened.', h('a', { class: 'btn small ov-btn-general', href: '#/general', icon: 'folder-general' }, 'All Cases')),
+        list.length ? tiles : h('p', { class: 'muted' }, 'Every case is in a Mission. Cases that aren\'t show here by the year they were opened.'), inside].filter(Boolean));
     };
     yearFolderState.close = () => { if (yearFolderState.open && box.isConnected) { yearFolderState.open = ''; draw(); } };
     draw();
@@ -1342,9 +1386,12 @@
         h('div', { class: 'op-open-head' }, h('a', { href: open.op ? `#/operation/${encodeURIComponent(open.op.id)}` : '#/general', class: 'op-open-name' }, h('strong', {}, open.name)), h('span', { class: 'muted small' }, `${open.group.length} case number${open.group.length === 1 ? '' : 's'}`),
           h('div', { class: 'spacer' }),
           h('button', { type: 'button', class: 'btn small', onclick: () => newCase(open.op ? { operationId: open.op.id } : {}) }, open.op ? 'Add Case Number' : 'New Case')),
-        h('div', { class: 'op-open-cases' }, open.group.length ? open.group.map((c) => overviewCard(c)) : [h('p', { class: 'muted' }, open.op ? 'No cases in this Operation yet. Add Case Number creates one here.' : 'No independent cases.')])) : null;
-      box.replaceChildren(...[panelHead('Mission Files', 'Case numbers worked together as an Operation. Click a folder to open it.', h('a', { class: 'btn small ov-btn-mission', href: '#/operations', icon: 'folder-mission' }, 'All Operations')),
-        list.length ? tiles : h('p', { class: 'muted' }, 'No Operations yet. All Operations → New Operation makes one.'), opBox ? null : inside].filter(Boolean));
+        h('div', { class: 'op-open-cases' }, open.group.length ? open.group.map((c) => overviewCard(c)) : [h('p', { class: 'muted' }, open.op ? 'No cases in this Mission yet. Add Case Number creates one here.' : 'No independent cases.')])) : null;
+      box.replaceChildren(...[panelHead('Mission Files', 'Case numbers worked together as a Mission. Click a folder to open it.', h('div', { class: 'ov-head-actions' },
+          // v1.78: New Mission right here, beside All Missions.
+          h('button', { class: 'btn small ov-btn-mission', type: 'button', icon: 'plus-lg', onclick: async () => { const op = await operationDialog(); if (op) { renderCaseList(); location.hash = `#/operation/${encodeURIComponent(op.id)}`; } } }, 'New Mission'),
+          h('a', { class: 'btn small ov-btn-mission', href: '#/operations', icon: 'folder-mission' }, 'All Missions'))),
+        list.length ? tiles : h('p', { class: 'muted' }, 'No Missions yet. All Missions → New Mission makes one.'), opBox ? null : inside].filter(Boolean));
       if (opBox) { opBox.hidden = !inside; opBox.replaceChildren(...(inside ? [inside] : [])); }
       if (tlBox) drawTimeline(open);
     };
@@ -1445,7 +1492,7 @@
     const list = Vault.data.cases.filter((c) => !isArchivedEntry(c)).sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
     if (!list.length) { toast('Make a case first with New Case.', 'info'); return Promise.resolve(null); }
     return openDialog((close) => {
-      const q = h('input', { type: 'search', placeholder: 'Case number, subject or Operation', 'aria-label': 'Find a case', autofocus: true, autocomplete: 'off' });
+      const q = h('input', { type: 'search', placeholder: 'Case number, subject or Mission', 'aria-label': 'Find a case', autofocus: true, autocomplete: 'off' });
       const box = h('div', { class: 'pick-case-list', role: 'list' });
       const draw = () => {
         const t = q.value.trim().toLowerCase();
@@ -1583,7 +1630,7 @@
       const fillFrom = () => {
         const op = Vault.getOperation(opIn.value);
         const sibs = op ? operationCases(op.id) : [];
-        opNote.textContent = op ? `Adds a case to ${opLabel(op)} (${sibs.length} so far${sibs.length ? `: ${sibs.map((x) => x.number).filter(Boolean).join(', ')}` : ''}).` : 'The case goes in General Files, not in an Operation. It can be linked to one later.';
+        opNote.textContent = op ? `Adds a case to ${opLabel(op)} (${sibs.length} so far${sibs.length ? `: ${sibs.map((x) => x.number).filter(Boolean).join(', ')}` : ''}).` : 'The case goes in General Files, not in a Mission. It can be linked to one later.';
         const sib = sibs[0];
         if (!sib) return;
         if (!fileIn.value) fileIn.value = sib.fileNumber || '';
@@ -1607,7 +1654,7 @@
       field('Case Number', numberIn, '', 'Unique: no two cases, archived ones included, can share a Case Number.'),
       field('Subject Name', subjectIn, '', 'The person the case is about. Several cases can have the same subject.'),
       numberErr,
-      field('Operation', opIn, 'span-2', 'Optional. The case is always kept in General Files; an Operation only links it.'),
+      field('Mission', opIn, 'span-2', 'Optional. The case is always kept in General Files; a Mission only links it.'),
       opNote,
       formSect('File Details', 'folder2-open'),
       field('File Number', fileIn),
@@ -1671,7 +1718,7 @@
     const cur = opOf(entry);
     const ops = [...Vault.listOperations()].sort((a, b) => byFileNumber(a.number, b.number) || a.name.localeCompare(b.name));
     const choices = [['', 'General Files (independent case)', 'folder-fill'], ...ops.map((op) => [op.id, opLabel(op), 'op-folder'])].filter(([id]) => id !== (cur ? cur.id : ''));
-    if (!choices.length) { toast('There is nowhere else to move it yet. Make an Operation first.', 'info', 5000); return false; }
+    if (!choices.length) { toast('There is nowhere else to move it yet. Make a Mission first.', 'info', 5000); return false; }
     const want = await openDialog((close) => {
       let pick = choices[0][0];
       const rows = choices.map(([id, label, icon], i) => {
@@ -1868,7 +1915,7 @@
   function caseSubtitle(c) {
     // v1.27: the file and case numbers and the opened date are on the Details tab itself.
     const op = opOf(c);
-    return [op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, class: 'case-op-link', title: 'Open the Operation' }, I('op-folder'), opLabel(op)) : h('a', { href: '#/general', class: 'case-op-link gf-link', title: 'Not in an Operation: open General Files' }, I('folder-fill'), 'General Files'),
+    return [op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, class: 'case-op-link', title: 'Open the Mission' }, I('op-folder'), opLabel(op)) : h('a', { href: '#/general', class: 'case-op-link gf-link', title: 'Not in a Mission: open General Files' }, I('folder-fill'), 'General Files'),
       c.agencyNumber && `Agency ${c.agencyNumber}`, c.client, statusPill(c.status)]
       .filter(Boolean).flatMap((x, i) => (i ? [' · ', x] : [x]));
   }
@@ -1953,10 +2000,10 @@
       // ---- the operation, the same on every one of its case numbers: name, status, dates
       h('section', { class: 'op-card' },
         h('div', { class: 'case-op-bar', 'data-ro-ok': archived ? null : 'true' },
-          h('span', { class: `case-op-label${op ? '' : ' gf-link'}` }, I(op ? 'op-folder' : 'folder-fill'), op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}` }, opLabel(op)) : 'General Files: not in an Operation'),
+          h('span', { class: `case-op-label${op ? '' : ' gf-link'}` }, I(op ? 'op-folder' : 'folder-fill'), op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}` }, opLabel(op)) : 'General Files: not in a Mission'),
           h('div', { class: 'spacer' }),
           // v1.50: Move File (it was "Assign to" / "Move to" and Unlink).
-          archived ? null : h('button', { class: 'btn small', type: 'button', icon: 'folder-symlink', title: 'Move this case into an Operation, to another one, or back to General Files', onclick: async () => {
+          archived ? null : h('button', { class: 'btn small', type: 'button', icon: 'folder-symlink', title: 'Move this case into a Mission, to another one, or back to General Files', onclick: async () => {
             if (await moveCaseDialog(Vault.data.cases.find((x) => x.id === c.id) || c)) { renderCaseList(); showCase(c.id, 'details'); }
           } }, 'Move File')),
         h('form', { class: 'form-grid details-grid op-top details-row4 details-row-title', onsubmit: (e) => e.preventDefault() },
@@ -1981,7 +2028,7 @@
       // ---- Case Overview: shared by the operation's case numbers (v1.27)
       h('hr', { class: 'overview-sep' }),
       h('div', { class: 'overview-head' }, h('h2', {}, 'Case Overview'),
-        h('p', { class: 'muted small' }, members.length > 1 ? `Suspects, contacts and deconfliction for the whole Operation: the same on all ${members.length} case numbers.` : op ? 'Suspects, contacts and deconfliction. Case numbers added to this Operation share them.' : 'Suspects, contacts and deconfliction for this case.')),
+        h('p', { class: 'muted small' }, members.length > 1 ? `Suspects, contacts and deconfliction for the whole Mission: the same on all ${members.length} case numbers.` : op ? 'Suspects, contacts and deconfliction. Case numbers added to this Mission share them.' : 'Suspects, contacts and deconfliction for this case.')),
       makeFoldable(suspectsSection(c, save), 'overview-suspects'),
       makeFoldable(contactsSection(c, save), 'overview-contacts'),
       makeFoldable(deconflictionSection(c, save), 'overview-deconfliction'),
@@ -2006,7 +2053,7 @@
             ? h('button', { class: 'btn action-btn', type: 'button', icon: 'unlock', title: 'Back to Open, for new information. The closing is kept in the case\'s history.', onclick: () => CVClosingUI.reopenCase(c) }, 'Reopen case')
             : h('button', { class: 'btn primary action-btn', type: 'button', icon: 'lock-fill', title: 'When the investigation of this case number is finished: choose how it ended, such as arrest, exceptionally cleared or unfounded. Lists loose ends first.', onclick: () => CVClosingUI.closeCaseDialog(c) }, 'Close Case')) : null,
           // v1.27: close every open case number of the operation at once.
-          !archived && members.length > 1 && members.some((x) => x.status !== 'Closed') ? h('button', { class: 'btn action-btn', type: 'button', icon: 'lock-fill', title: `Closes all ${members.filter((x) => x.status !== 'Closed').length} open case numbers of this Operation with one disposition.`, onclick: () => CVClosingUI.closeCaseDialog(c, { operation: members }) }, 'Close Operation') : null,
+          !archived && members.length > 1 && members.some((x) => x.status !== 'Closed') ? h('button', { class: 'btn action-btn', type: 'button', icon: 'lock-fill', title: `Closes all ${members.filter((x) => x.status !== 'Closed').length} open case numbers of this Mission with one disposition.`, onclick: () => CVClosingUI.closeCaseDialog(c, { operation: members }) }, 'Close Mission') : null,
           !archived && !CVClosingUI.hasArrestTab(c) ? h('button', { class: 'btn action-btn', type: 'button', icon: 'person-vcard', title: 'Arrestee, arrest and charges, for the arrest report. Adds an Arrest details tab.', onclick: async () => {
             c.arrest = true;
             delete c.arrestRemoved;
@@ -2147,14 +2194,14 @@
   function caseTiles(c, members, archived) {
     const sorted = [...members].sort((a, b) => String(a.number || '').localeCompare(String(b.number || ''), undefined, { numeric: true }));
     if (!opOf(c)) return null; // v1.46: an independent case has no Operation to show
-    return h('div', { class: 'case-tiles', role: 'list', 'aria-label': 'Case numbers in this Operation' },
+    return h('div', { class: 'case-tiles', role: 'list', 'aria-label': 'Case numbers in this Mission' },
       sorted.map((x) => {
         const cur = x.id === c.id;
         // v1.37: every case number's folder opens that case's Reports tab (this one's too).
         return h('a', { class: `case-tile${cur ? ' current' : ''} status-${String(x.status).toLowerCase()}`, role: 'listitem', href: `#/case/${encodeURIComponent(x.id)}/reports`, title: `${x.number || 'No case number'} · ${x.status}${cur ? ' (this one)' : ''}: open its Reports` },
           I(cur ? 'folder2-open' : 'folder-fill'), h('span', { class: 'case-tile-num' }, x.number || 'No number'), h('span', { class: 'case-tile-status' }, x.status));
       }),
-      archived ? null : h('button', { class: 'case-tile add', type: 'button', title: 'Add a case number to this Operation: a new case in General Files, linked to it, with the same file number, federal jacket number and client', onclick: () => { Save.flushAll(); newCase({ operationId: c.operationId }); } },
+      archived ? null : h('button', { class: 'case-tile add', type: 'button', title: 'Add a case number to this Mission: a new case in General Files, linked to it, with the same file number, federal jacket number and client', onclick: () => { Save.flushAll(); newCase({ operationId: c.operationId }); } },
         I('plus-lg'), h('span', { class: 'case-tile-num' }, 'Add Case Number')));
   }
 
@@ -2605,7 +2652,7 @@
       f.title.focus();
     } },
     field('Date', f.date), field('Time', f.time), field('Type', f.kind),
-    many ? field('Case Number', f.caseSel, '', 'Which case number of the operation this belongs to') : null,
+    many ? field('Case Number', f.caseSel, '', 'Which case number of the mission this belongs to') : null,
     field('Title', f.title, 'grow'),
     field('Note', f.note, 'full'),
     h('div', { class: 'full form-actions' }, cancel, clear, submit));
@@ -2625,7 +2672,7 @@
       const keep = ({ ev }) => (filter === 'all' ? true : filter === 'deadline' ? ev.kind === 'deadline' : filter === 'upcoming' ? ev.date >= now : ev.date < now);
       const all = everything.filter(keep);
       if (!all.length) {
-        list.replaceChildren(h('li', { class: 'muted empty' }, everything.length ? 'Nothing to show with this filter.' : many ? 'No events yet for any case number of this operation. Add dates, hearings, filings, and deadlines above.' : 'No events yet. Add dates, hearings, filings, and deadlines above.'));
+        list.replaceChildren(h('li', { class: 'muted empty' }, everything.length ? 'Nothing to show with this filter.' : many ? 'No events yet for any case number of this mission. Add dates, hearings, filings, and deadlines above.' : 'No events yet. Add dates, hearings, filings, and deadlines above.'));
         return;
       }
       // Newest month first or oldest? Kept in date order (as saved); a heading for each month and a
@@ -2650,7 +2697,7 @@
             h('div', { class: 'tl-title' },
               done,
               h('span', { class: `badge ${ev.kind}` }, isDeadline ? 'Deadline' : 'Event'),
-              many ? h('span', { class: `tl-case${caseId === c.id ? ' current' : ''}`, title: caseId === c.id ? 'This case number' : 'Another case number of this operation' }, numberOf(caseId)) : null,
+              many ? h('span', { class: `tl-case${caseId === c.id ? ' current' : ''}`, title: caseId === c.id ? 'This case number' : 'Another case number of this mission' }, numberOf(caseId)) : null,
               h('strong', {}, ev.title),
               due && h('span', { class: `due ${due.cls}` }, due.text)),
             ev.note && h('div', { class: 'tl-note' }, ev.note)),
@@ -2677,7 +2724,7 @@
     }
 
     draw();
-    panel.replaceChildren(many ? h('p', { class: 'muted small tl-op-note' }, `The timeline of the whole operation: all ${tls.size} case numbers.`) : '', form, stats, filters, list);
+    panel.replaceChildren(many ? h('p', { class: 'muted small tl-op-note' }, `The timeline of the whole mission: all ${tls.size} case numbers.`) : '', form, stats, filters, list);
   }
 
   /* ---------- Files ---------- */

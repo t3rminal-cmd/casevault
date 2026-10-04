@@ -24,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.77.0';
+  const APP_VERSION = '1.78.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -338,7 +338,7 @@ const Vault = (() => {
     const dup = CVOperation.caseWithNumber(vault.cases, fields.number);
     if (dup) throw validationError(`Case Number ${String(fields.number).trim()} already exists${dup.location === 'archive' ? ' (archived)' : ''}. Case Numbers must be unique.`);
     const op = fields.operationId ? getOperation(fields.operationId) : null;
-    if (fields.operationId && !op) throw validationError('That Operation no longer exists.');
+    if (fields.operationId && !op) throw validationError('That Mission no longer exists.');
     const draft = { number: fields.number || '', dates: { opened: fields.opened || localDay() } };
     const base = CVCaseFiles.caseFolderName(draft);
     const id = base ? await freeCaseId(base) : newId();
@@ -752,7 +752,7 @@ const Vault = (() => {
 
   async function updateOperation(id, fields) {
     const prev = getOperation(id);
-    if (!prev) throw validationError('That Operation no longer exists.');
+    if (!prev) throw validationError('That Mission no longer exists.');
     const op = cleanOperation(fields, prev);
     const errs = CVOperation.validateOperation(op, vault.operations, id);
     if (errs.length) throw validationError(errs.join(' '));
@@ -772,10 +772,10 @@ const Vault = (() => {
   /** Link a case to an Operation. A case already in another Operation is refused: unlink it first. */
   async function assignCase(caseId, opId) {
     const op = getOperation(opId);
-    if (!op) throw validationError('That Operation no longer exists.');
+    if (!op) throw validationError('That Mission no longer exists.');
     const entry = vault.cases.find((c) => c.id === caseId);
     if (!entry) throw validationError('That case no longer exists.');
-    if (entry.operationId === opId) throw validationError(`Case ${entry.number || entry.title} is already in this Operation.`);
+    if (entry.operationId === opId) throw validationError(`Case ${entry.number || entry.title} is already in this Mission.`);
     const cur = getOperation(entry.operationId);
     if (cur) throw validationError(`Case ${entry.number || entry.title} is already assigned to ${CVOperation.opLabel(cur)}. Unlink it there first.`);
     assertWritable(caseId);
@@ -867,7 +867,7 @@ const Vault = (() => {
       let snap = null;
       for (const m of members) { try { const c = await FS.readJSON(await caseDir(m.id), 'case.json'); if (c && c.operation) { snap = c.operation; break; } } catch (err) { if (FS.isDisconnectError(err)) throw err; } }
       const number = snap && snap.number && !vault.operations.some((o) => CVOperation.normNumber(o.number) === CVOperation.normNumber(snap.number)) ? snap.number : CVOperation.nextOpNumber(vault.operations);
-      vault.operations.push({ id, number, name: (snap && snap.name) || members[0].title || 'Operation', status: CVOperation.statusFrom(members.map((m) => m.status)), start: members.map((m) => m.opened).filter(Boolean).sort()[0] || '', end: '', notes: '', created: now, updated: now });
+      vault.operations.push({ id, number, name: (snap && snap.name) || members[0].title || 'Mission', status: CVOperation.statusFrom(members.map((m) => m.status)), start: members.map((m) => m.opened).filter(Boolean).sort()[0] || '', end: '', notes: '', created: now, updated: now });
     }
     await saveVault();
   }

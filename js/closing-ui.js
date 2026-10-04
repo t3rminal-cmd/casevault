@@ -414,7 +414,7 @@
       h('p', { class: 'muted small explain' }, 'Close a case when the investigation is finished. Choose how it ended. A closed case stays in the list (filter: Closed) until you archive it, and can be reopened.'),
       loose.length ? h('div', { class: 'card warn-card' }, h('strong', {}, 'Before you close'), h('ul', { class: 'small' }, loose.map((x) => h('li', {}, x.text))),
         h('p', { class: 'small muted' }, 'You can still close the case; this is a reminder.')) : h('p', { class: 'small ok-text' }, '✓ No open deadlines, check flags or [CONFIRM: …] left.'),
-      members.length > 1 ? h('div', {}, h('h3', {}, 'Case numbers to close'), h('p', { class: 'muted small' }, 'Tick each case number of this operation to close with this disposition. Each can still be reopened on its own.'), h('div', { class: 'close-picks' }, picks.map((p) => p.row))) : '',
+      members.length > 1 ? h('div', {}, h('h3', {}, 'Case numbers to close'), h('p', { class: 'muted small' }, 'Tick each case number of this mission to close with this disposition. Each can still be reopened on its own.'), h('div', { class: 'close-picks' }, picks.map((p) => p.row))) : '',
       h('h3', {}, 'Disposition'),
       h('div', { class: 'radio-list' }, radios.map((x) => x.row)),
       reasonRow, arrestNote,

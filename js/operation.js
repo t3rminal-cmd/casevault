@@ -133,9 +133,9 @@
     const errs = [];
     const number = String((op && op.number) || '').trim();
     const name = String((op && op.name) || '').trim();
-    if (!number) errs.push('Operation Number is required.');
-    if (!name) errs.push('Operation Name is required.');
-    if (number && (operations || []).some((o) => o && o.id !== exceptId && normNumber(o.number) === normNumber(number))) errs.push(`Operation Number ${number} is already used by another Operation.`);
+    if (!number) errs.push('Mission Number is required.');
+    if (!name) errs.push('Mission Name is required.');
+    if (number && (operations || []).some((o) => o && o.id !== exceptId && normNumber(o.number) === normNumber(number))) errs.push(`Mission Number ${number} is already used by another Mission.`);
     if (op && op.status && !OP_STATUSES.includes(op.status)) errs.push('Status must be Open, Pending or Closed.');
     if (op && op.start && op.end && String(op.end) < String(op.start)) errs.push('End Date is before Start Date.');
     return errs;

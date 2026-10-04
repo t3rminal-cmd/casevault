@@ -13,7 +13,7 @@ test('Operation label, number and name checks', () => {
   assert.strictEqual(Op.opLabel({ number: 'OP-001', name: 'Example Sweep' }), 'OP-001 - Example Sweep');
   assert.strictEqual(Op.opLabel({ number: '', name: 'Example Sweep' }), 'Example Sweep');
   const ops = [{ id: 'a', number: 'op-001', name: 'One' }];
-  assert.deepStrictEqual(Op.validateOperation({ number: '', name: '' }, ops), ['Operation Number is required.', 'Operation Name is required.']);
+  assert.deepStrictEqual(Op.validateOperation({ number: '', name: '' }, ops), ['Mission Number is required.', 'Mission Name is required.']);
   assert.match(Op.validateOperation({ number: ' OP-001 ', name: 'Two' }, ops)[0], /already used/);
   assert.deepStrictEqual(Op.validateOperation({ number: 'OP-001', name: 'One renamed' }, ops, 'a'), [], 'its own number is fine');
   assert.match(Op.validateOperation({ number: 'OP-2', name: 'X', start: '2026-05-01', end: '2026-04-01' }, ops)[0], /End Date/);
@@ -86,7 +86,7 @@ test('a new vault has no Operations; cases are made in General Files or inside o
   assert.strictEqual(Vault.data.operationsVersion, 1);
   const op = await Vault.createOperation({ number: 'OP-100', name: 'Example Sweep', status: 'Open', start: '2026-01-02' });
   await assert.rejects(Vault.createOperation({ number: 'op-100', name: 'Again' }), { name: 'ValidationError' });
-  await assert.rejects(Vault.createOperation({ number: '', name: 'No number' }), /Operation Number is required/);
+  await assert.rejects(Vault.createOperation({ number: '', name: 'No number' }), /Mission Number is required/);
   const a = await Vault.createCase({ number: 'EX-1', subject: 'John Doe', operationId: op.id, opened: '2026-01-02' });
   const b = await Vault.createCase({ number: 'EX-2', subject: 'Mary Roe' });
   assert.strictEqual(a.title, 'Example Sweep', 'the title is the Operation name');
@@ -109,7 +109,7 @@ test('assign, block a second Operation, unlink keeps the case and its files, ren
   const c = await Vault.createCase({ number: 'EX-10', subject: 'Pat Poe' });
   await Vault.addFile(c.id, new File(['synthetic'], 'note.txt'));
   await Vault.assignCase(c.id, one.id);
-  await assert.rejects(Vault.assignCase(c.id, one.id), /already in this Operation/);
+  await assert.rejects(Vault.assignCase(c.id, one.id), /already in this Mission/);
   await assert.rejects(Vault.assignCase(c.id, two.id), /already assigned to OP-1 - First/);
   assert.strictEqual((await readCase(FS, dir, c.id)).operationId, one.id);
 
@@ -243,5 +243,5 @@ test('templates: {{case.subject}}, {{operation.number}}, {{operation.name}}', ()
   assert.deepStrictEqual([linked['case.title'], linked['case.subject'], linked['operation.number'], linked['operation.name']], ['Example Sweep', 'John Doe', 'OP-001', 'Example Sweep']);
   const loose = D.templateContext({ title: 'Mary Roe', number: 'EX-2', subject: 'Mary Roe', operation: null });
   assert.deepStrictEqual([loose['operation.number'], loose['operation.name']], ['', '']);
-  assert.ok(D.placeholderGroups().some((g) => g.title === 'Operation' && g.keys.includes('operation.name')));
+  assert.ok(D.placeholderGroups().some((g) => g.title === 'Mission' && g.keys.includes('operation.name')));
 });
