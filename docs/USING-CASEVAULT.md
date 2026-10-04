@@ -215,6 +215,23 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.85
+
+- **Back Up Everything** (⋮ → Vault → Backups): copies the whole CaseVault-Data folder to a second drive and checks every file byte for byte (Chrome or Edge; in Firefox it shows the File Explorer steps and records the date). The banner shows when the last full backup was, red after 7 days, and a reminder appears at start-up
+- Restore a vault.json backup from the Backups list (the current one is backed up first)
+- Start-up checks: today's vault.json backup, the last full backup, and free space on the SSD (Firefox)
+- A Mission is Closed only when its cases are: **Close Mission** is on the Mission page (each open case gets a disposition), with **Reopen Mission** when it is closed; the Edit form refuses Closed while a case is open
+- The sidebar's GENERAL FILES folder is now **INDEPENDENT CASES** (the cases not in a Mission); General Files is still the page with every case
+- Pending and Inactive explained where you choose them; the Closed date on the Details tab is filled in by Close Case, not typed
+- Delete Case asks twice; the last question comes with a skull and crossbones
+- **Report a Problem** (⋮ menu): the app version, browser and recent errors with case numbers, names and Missions taken out, saved to the SSD or copied, to send with Contact Dev
+- **Case History** on the Details tab: each status change, closing, reopening, archiving and Mission move, with the date and time
+- **Case Summary** (Case Actions): one PDF page for a supervisor with the case, arrestees and charges, exhibits, timeline and history; Save PDF to Case puts it in Files
+- Keyboard shortcuts: Ctrl+K search, N new case, ? the list (also in the ⋮ menu)
+- **Department letterhead**: a square for the department logo (click to add it) and the Department Header beside it, at the top of the Draft, Arrest and Link Chart tabs and across the top of their PDFs; one letterhead for every case, kept on the SSD
+- Templates, the Checks tab and the Document Anonymizer are marked Beta
+- Removed: the second Restore button on archived cases and Close Mission on each case's Details tab
+
 ### What's new in v1.84
 
 - CLOSED FILES and ARCHIVED always sit at the bottom of the sidebar; drag the bar above them to make that area taller or shorter, and lock it with the padlock (double-click the bar to reset)

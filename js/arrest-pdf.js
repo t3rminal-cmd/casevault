@@ -39,7 +39,7 @@
    * -> pages for CVReportPdf.assemble. arrest: arrest.json; opts: { agency, caseLabel, printed,
    * caseNumber, photos: { [arresteeIndex]: { jpeg, w, h, index } } }
    */
-  function layout(arrest, { agency = '', caseLabel = '', printed = '', caseNumber = '', photos = {} } = {}) {
+  function layout(arrest, { agency = '', caseLabel = '', printed = '', caseNumber = '', photos = {}, lh = null } = {}) {
     const { wrap, width, pdfString, PAGE_W, PAGE_H } = P();
     const C = K();
     const L = 24; const INNER = PAGE_W - 2 * L; // the report uses nearly the whole width, like the form
@@ -109,8 +109,10 @@
       const first = !who || pages.length === who.firstPage + 1;
       const cb = who ? clean(who.bookingNumber) : '';
       if (first) {
+        // v1.85: the department letterhead across the top of each arrestee's first page.
+        if (lh) { y -= P().letterhead(ops, lh, L, y, INNER, 'helvetica'); if (lh.logo) pages[pages.length - 1].imgs.push(lh.logo.index); }
         // The agency and ARREST REPORT on the left, the approval in the middle, the numbers on the right.
-        if (agency) text(L, y - 9, agency.toUpperCase(), 10, true);
+        if (agency && !(lh && lh.header)) text(L, y - 9, agency.toUpperCase(), 10, true);
         text(L, y - 25, 'ARREST REPORT', 17, true);
         if (caseLabel) text(L, y - 35, caseLabel, 7);
         if (who && clean(who.supervisor) && clean(who.approvalDate)) center(L + INNER * 0.35, INNER * 0.3, y - 12, 'FINAL APPROVAL', 12, true);
@@ -348,7 +350,8 @@
     const list = [];
     const photos = {};
     for (const [i, p] of Object.entries(opts.photos || {})) { if (p && p.jpeg) { photos[i] = { ...p, index: list.length }; list.push(photos[i]); } }
-    return P().assemble(layout(arrest, { ...opts, photos }), { photos: list, title: 'Arrest Report' });
+    const lh = P().withLogo(opts.letterhead, list);
+    return P().assemble(layout(arrest, { ...opts, photos, lh }), { photos: list, title: 'Arrest Report' });
   }
 
   const api = { build, layout, reportName };

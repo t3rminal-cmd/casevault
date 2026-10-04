@@ -3912,3 +3912,57 @@ body.resizing-panel, body.resizing-panel * { cursor: ns-resize !important; user-
 .hero-count.hc-overdue.hc-alert { background: rgba(255,80,80,.24); }
 @media (max-width: 1100px) { .hero-counts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .hero-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* v1.85: data safety. The whole-vault backup card, the restore list and the banner line. */
+.backup-full { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin: 0 0 10px; border: 1px solid var(--box-edge, var(--border)); border-left: 4px solid #16a34a; background: var(--surface); }
+.backup-full.backup-due { border-left-color: #dc2626; background: #fff5f5; }
+.backup-full .btn { flex: none; }
+.backup-list { margin: 0 0 10px; }
+.backup-list summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.backup-list ul { list-style: none; margin: 6px 0 0; padding: 0; max-height: 220px; overflow-y: auto; border: 1px solid var(--box-edge, var(--border)); }
+.backup-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 8px; border-bottom: 1px solid var(--border); }
+.backup-row:last-child { border-bottom: 0; }
+.backup-steps { margin: 6px 0 10px 1.2rem; padding: 0; line-height: 1.6; }
+.hero-backup { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 3px 10px; background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.28); border-left: 4px solid #6ee7b7; font: inherit; font-size: .78rem; cursor: pointer; border-radius: 0; }
+.hero-backup.due { border-left-color: #ff6b6b; background: rgba(255,80,80,.22); }
+.hero-backup:hover { background: rgba(255,255,255,.22); }
+.hero-backup .bi { width: .95rem; height: .95rem; }
+[data-theme="dark"] .backup-full.backup-due { background: #3a1616; }
+.readonly-date { background: var(--surface-2) !important; color: var(--muted); cursor: default; }
+
+/* v1.85: the last Delete Case question, over a big skull and crossbones. */
+.doom-form { position: relative; min-height: 300px; display: grid; place-items: center; overflow: hidden; padding: 18px 8px 4px; }
+.doom-skull { position: absolute; inset: 0; display: grid; place-items: center; opacity: .16; pointer-events: none; }
+.doom-skull svg, .doom-skull img, .doom-skull .bi { width: 280px; height: 280px; max-width: 90%; }
+.doom-body { position: relative; text-align: center; max-width: 30rem; }
+.doom-body h2 { margin: 0 0 4px; color: var(--danger); letter-spacing: .04em; text-transform: uppercase; }
+.doom-case { font-weight: 700; font-size: 1.1rem; margin: 0 0 10px; }
+.doom-body .dialog-actions { justify-content: center; margin-top: 14px; }
+/* v1.85: INDEPENDENT CASES (was GENERAL FILES) on one line. */
+#sidebar .ind-name { white-space: nowrap !important; font-size: .86em; letter-spacing: 0; }
+.doom-form h2 { justify-content: center; text-align: center; }
+.doom-skull { opacity: .2; }
+
+/* v1.85: the department letterhead: a square for the logo, the header text to its right. */
+.lh-editor { display: flex; align-items: stretch; gap: 12px; margin: 0 0 12px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--box-edge, var(--border)); border-left: 4px solid var(--accent); }
+.lh-square-wrap { position: relative; flex: none; }
+.lh-logo { width: 84px; height: 84px; display: grid; place-items: center; padding: 4px; background: var(--surface-2); border: 2px dashed var(--box-edge, var(--border)); cursor: pointer; border-radius: 0; color: var(--muted); font: inherit; font-size: .78rem; }
+.lh-logo:hover { border-color: var(--accent); color: var(--accent); }
+.lh-logo.has-logo { border-style: solid; background: #fff; }
+.lh-logo img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.lh-empty { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.lh-empty .bi { width: 1.6rem; height: 1.6rem; }
+.lh-remove { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; padding: 0; background: var(--surface); border: 1px solid var(--box-edge, var(--border)); }
+.lh-remove .bi { width: .7rem; height: .7rem; }
+.lh-header { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.lh-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.lh-text { width: 100%; min-height: 60px; resize: none; font-family: inherit; font-size: .88rem; line-height: 1.35; }
+.lh-text::first-line { font-weight: 700; }
+
+/* v1.85: Report a Problem and Keyboard Shortcuts. */
+.problem-preview { width: 100%; font-size: .74rem; line-height: 1.35; background: var(--surface-2); resize: vertical; }
+.shortcuts-table td:first-child { width: 8rem; }
+.shortcuts-table kbd { display: inline-block; min-width: 1.6rem; padding: 1px 7px; border: 1px solid var(--box-edge, var(--border)); border-bottom-width: 2px; background: var(--surface-2); font: inherit; font-size: .8rem; font-weight: 700; text-align: center; }
+/* v1.85: Beta tag (Templates, Checks, Document Anonymizer). */
+.beta-tag { display: inline-block; margin-left: 6px; padding: 0 5px; font-size: .62rem; font-weight: 700; line-height: 1.5; letter-spacing: .08em; text-transform: uppercase; color: #92400e; background: #fef3c7; border: 1px solid #f59e0b; vertical-align: middle; }
+[data-theme="dark"] .beta-tag { color: #fde68a; background: #3a2a05; border-color: #b45309; }

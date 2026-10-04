@@ -24,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.84.0';
+  const APP_VERSION = '1.85.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -46,6 +46,8 @@ const Vault = (() => {
   }
 
   const pad = (n) => String(n).padStart(2, '0');
+  // v1.85: a case's history (Details tab → Case History): what changed and when.
+  const logActivity = (c, what) => { c.activity = [...(Array.isArray(c.activity) ? c.activity : []), { at: new Date().toISOString(), what }].slice(-300); return c; };
   function localDay(d = new Date()) {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
@@ -166,13 +168,84 @@ const Vault = (() => {
     return name;
   }
 
+  /* v1.85: a full backup of CaseVault-Data into a folder on another drive: every file copied, read
+   * back and compared byte for byte. destParent is a folder the user picked (not inside the vault). */
+  async function fullBackup(destParent, onFile) {
+    if (!root) throw new Error('No vault is open.');
+    let inside = null;
+    try { inside = await root.resolve(destParent); } catch { /* other drive: cannot resolve */ }
+    if (inside) {
+      const err = new Error('That folder is inside the vault. Pick a folder on a different drive.');
+      err.name = 'BackupTargetError';
+      throw err;
+    }
+    let around = null;
+    try { around = await destParent.resolve(root); } catch { /* not related */ }
+    if (around) {
+      const err = new Error('That folder is on the vault\'s own drive. A backup must go on a different drive, so it survives if the SSD is lost.');
+      err.name = 'BackupTargetError';
+      throw err;
+    }
+    try { if (await destParent.isSameEntry(root)) throw Object.assign(new Error('That is the vault itself. Pick a folder on a different drive.'), { name: 'BackupTargetError' }); } catch (e) { if (e.name === 'BackupTargetError') throw e; }
+    await saveVault();
+    const d = new Date();
+    const folder = `CaseVault-Backup-${localDay(d)}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    const dst = await FS.getDir(destParent, folder, true);
+    const tally = { files: 0, bytes: 0 };
+    const copy = async (src, to, path) => {
+      for (const e of await FS.list(src)) {
+        if (e.name === MOVE_MARKER || e.name === RENAME_MARKER) continue;
+        if (e.kind === 'directory') { await copy(e.handle, await FS.getDir(to, e.name, true), `${path}${e.name}/`); continue; }
+        const file = await e.handle.getFile();
+        await FS.writeData(to, e.name, file);
+        const back = await FS.getFile(to, e.name);
+        if (!(await sameBytes(file, back))) {
+          const err = new Error(`The copy of ${path}${e.name} does not match the original. The backup is not complete; try again or use another drive.`);
+          err.name = 'BackupVerifyError';
+          throw err;
+        }
+        tally.files++;
+        tally.bytes += file.size;
+        if (onFile) onFile(tally.files, `${path}${e.name}`, tally.bytes);
+      }
+    };
+    await copy(root, dst, '');
+    const info = { app: 'CaseVault', kind: 'full-backup', appVersion: APP_VERSION, vaultId: vault.vaultId || '', at: nowISO(), files: tally.files, bytes: tally.bytes, verified: true };
+    await FS.writeJSON(dst, 'backup-info.json', info);
+    vault.settings.lastFullBackup = { at: info.at, files: tally.files, bytes: tally.bytes, folder, where: destParent.name || '', verified: true };
+    await saveVault();
+    return { folder, ...tally };
+  }
+
+  /** v1.85: helper mode cannot reach another drive; the user copies the folder and says so here. */
+  async function recordManualBackup() {
+    vault.settings.lastFullBackup = { at: nowISO(), manual: true, verified: false };
+    await saveVault();
+    return vault.settings.lastFullBackup;
+  }
+
+  /** v1.85: put a vault.json backup back. The current vault.json is backed up first. */
+  async function restoreBackup(name) {
+    if (!/^vault-[\w-]+\.json$/.test(name)) throw new Error('Not a vault backup.');
+    const backups = await FS.getDir(root, 'backups', true);
+    const text = await FS.readText(backups, name);
+    let data = null;
+    try { data = JSON.parse(text || ''); } catch { /* checked below */ }
+    if (!data || data.app !== 'CaseVault' || !Array.isArray(data.cases)) throw new Error(`${name} is not a readable vault backup.`);
+    if ((data.schema || 1) > SCHEMA) throw new Error(`${name} was saved by a newer version of CaseVault.`);
+    const safety = await backupNow();
+    await serial('vault.json', async () => { await FS.writeText(root, 'vault.json', text); });
+    await load(root);
+    return { safety, cases: vault.cases.length };
+  }
+
   async function listBackups() {
     const backups = await FS.getDir(root, 'backups', true);
     return (await FS.list(backups))
       .filter((e) => e.kind === 'file' && /^vault-.*\.json$/.test(e.name))
       .map((e) => e.name)
-      .sort()
-      .reverse();
+      // Newest first. v1.85: by the name without ".json", so vault-<day>-<time> sorts after vault-<day>.
+      .sort((a, b) => b.replace(/\.json$/, '').localeCompare(a.replace(/\.json$/, '')));
   }
 
   async function pruneBackups() {
@@ -358,6 +431,7 @@ const Vault = (() => {
       tags: fields.tags || [],
       dates: { opened: fields.opened || localDay(), closed: '', created: now, updated: now },
     };
+    logActivity(c, `Opened as ${c.status}`);
     const dir = await caseDir(id, true);
     await ensureCategoryFolders(dir);
     await FS.writeJSON(dir, 'case.json', c);
@@ -572,6 +646,7 @@ const Vault = (() => {
       if (!c.dates.closed) c.dates.closed = localDay();
       c.dates.archived = localDay();
       c.dates.updated = nowISO();
+      logActivity(c, `Archived${c.archiveReason ? `: ${c.archiveReason}` : ''}`);
       // case.json is updated first so the copy carries it. If the move fails, the case stays
       // active exactly as it was.
       const dir = await caseDir(id);
@@ -606,6 +681,7 @@ const Vault = (() => {
       delete c.dates.archived;
       delete c.archiveFolder;
       delete c.archiveReason;
+      logActivity(c, `Restored from the archive as ${c.status}`);
       // v1.46: its Operation was deleted while it was archived: it comes back as an independent case.
       if (c.operationId && !getOperation(c.operationId)) { c.operationId = ''; c.operation = null; c.title = CVOperation.caseTitle(c, null); }
       c.dates.updated = nowISO();
@@ -782,7 +858,7 @@ const Vault = (() => {
     const cur = getOperation(entry.operationId);
     if (cur) throw validationError(`Case ${entry.number || entry.title} is already assigned to ${CVOperation.opLabel(cur)}. Unlink it there first.`);
     assertWritable(caseId);
-    const c = await writeLink(caseId, (x) => { x.operationId = op.id; x.operation = { number: op.number, name: op.name }; x.title = CVOperation.caseTitle(x, op); });
+    const c = await writeLink(caseId, (x) => { x.operationId = op.id; x.operation = { number: op.number, name: op.name }; x.title = CVOperation.caseTitle(x, op); logActivity(x, `Moved into Mission ${CVOperation.opLabel(op)}`); });
     await saveVault();
     return c;
   }
@@ -792,6 +868,8 @@ const Vault = (() => {
     assertWritable(caseId);
     const c = await writeLink(caseId, (x) => {
       if (!x.operationId) return false;
+      const was = getOperation(x.operationId);
+      logActivity(x, `Taken out of Mission ${was ? CVOperation.opLabel(was) : ''}: now an independent case`.replace('Mission :', 'its Mission:'));
       x.operationId = '';
       x.operation = null;
       x.title = CVOperation.caseTitle(x, null);
@@ -1577,6 +1655,22 @@ const Vault = (() => {
 
   /* ---------- settings ---------- */
 
+  /* v1.85: the letterhead's logo (CaseVault-Data\\branding\\logo.jpg). Its header text is in settings. */
+  const BRANDING = 'branding';
+  const LOGO = 'logo.jpg';
+  async function readLetterheadLogo() {
+    if (!root) return null;
+    const dir = await FS.getDir(root, BRANDING);
+    if (!dir) return null;
+    return FS.getFile(dir, LOGO);
+  }
+  function saveLetterheadLogo(data) {
+    return serial('branding', async () => { await FS.writeData(await FS.getDir(root, BRANDING, true), LOGO, data); });
+  }
+  function deleteLetterheadLogo() {
+    return serial('branding', async () => { const dir = await FS.getDir(root, BRANDING); if (dir && (await FS.exists(dir, LOGO))) await FS.remove(dir, LOGO); });
+  }
+
   function updateSettings(patch) {
     Object.assign(vault.settings, patch);
     return saveVault();
@@ -1586,9 +1680,9 @@ const Vault = (() => {
     APP_VERSION, DATA_DIR, STATUSES,
     get root() { return root; },
     get data() { return vault; },
-    newId, localDay,
+    newId, localDay, logActivity,
     resolve, create, load, close, ping,
-    backupNow, listBackups, rebuildIndex, updateSettings,
+    backupNow, listBackups, rebuildIndex, updateSettings, fullBackup, recordManualBackup, restoreBackup, readLetterheadLogo, saveLetterheadLogo, deleteLetterheadLogo,
     createCase, getCase, saveCase, deleteCase,
     listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
     archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS,
