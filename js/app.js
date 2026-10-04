@@ -804,17 +804,70 @@
 
   /* v1.68: a folder not tied to a case number: OTHER FILES (key 'other') or an Operation's own
    * folder (key 'op-<id>', with Subpoenas, Affidavits, Operation Plans, Maps, Subject Data and
-   * Running Vehicle List). Files are kept as they are named, in CaseVault-Data\\shared. */
+   * Vehicle List). Files are kept as they are named, in CaseVault-Data\\shared. */
   const sharedOpen = {};
-  const SHARED_ICONS = { 'USPIS Files': 'badge-uspis', 'DEA Files': 'badge-dea', 'INET Files': 'globe2', Training: 'book', Other: 'folder2-open', Subpoenas: 'file-earmark-ruled', Affidavits: 'pencil-square', 'Operation Plans': 'card-checklist', Maps: 'map', 'Subject Data': 'person-vcard', 'Running Vehicle List': 'car-front' };
+  const OP_FOLDER_DESC = { Subpoenas: 'Served and returned', Affidavits: 'Search warrant affidavits', 'Operation Plans': 'Ops plans and briefings', Maps: 'Maps and aerials', 'Subject Data': 'Subject profiles and records', 'Vehicle List': 'Vehicles, owners and photos' };
+  const SHARED_ICONS = { 'USPIS Files': 'badge-uspis', 'DEA Files': 'badge-dea', 'INET Files': 'globe2', Training: 'book', Other: 'folder2-open', Subpoenas: 'file-earmark-ruled', Affidavits: 'pencil-square', 'Operation Plans': 'card-checklist', Maps: 'map', 'Subject Data': 'person-vcard', 'Vehicle List': 'car-front' };
   // v1.71: folders are names, or { name, label, desc, custom }; getFolders() reads them each time
   // (Other Files: the built-in folders and the ones you make; New Folder adds one).
+  /** v1.73: an Operation's Vehicle List: one card per vehicle with the Draft's vehicle fields
+   * (Registered Owner and Address too) and, on the right, a photo of the vehicle. Kept in the
+   * folder (.vehicles.json); photos are files in the same folder. */
+  function opVehiclesPanel(opId) {
+    const key = `op-${opId}`;
+    const box = h('div', { class: 'op-vehicles' });
+    let list = [];
+    const save = debounce(() => { const snap = structuredClone(list); Save.track(`op-vehicles:${opId}`, () => Vault.saveOpVehicles(opId, snap)).catch(() => {}); }, 500);
+    const fields = CVReportFields.LISTS.vehicles.fields;
+    const photoBox = (v) => {
+      const pick = h('input', { type: 'file', accept: 'image/*', hidden: true });
+      const wrap = h('div', { class: 'op-veh-photo' });
+      const show = async () => {
+        if (!v.photo) { wrap.replaceChildren(h('button', { type: 'button', class: 'op-veh-photo-add', title: 'Add a photo of this vehicle', onclick: () => pick.click() }, I('camera-fill'), h('span', {}, 'Add Photo')), pick); return; }
+        const img = h('img', { alt: `Photo of vehicle ${v.plate || ''}`.trim() });
+        try { const f = await Vault.readShared(key, 'Vehicle List', v.photo); if (f) { img.src = URL.createObjectURL(f); img.addEventListener('load', () => URL.revokeObjectURL(img.src), { once: true }); } } catch { img.alt = 'Photo not found'; }
+        wrap.replaceChildren(h('button', { type: 'button', class: 'op-veh-photo-img', title: 'View', onclick: () => previewFile({ readFile: () => Vault.readShared(key, 'Vehicle List', v.photo), where: `${key}\\Vehicle List` }, v.photo) }, img),
+          h('div', { class: 'op-veh-photo-acts' }, h('button', { type: 'button', class: 'btn small ghost', onclick: () => pick.click() }, 'Replace'), h('button', { type: 'button', class: 'btn small ghost', onclick: () => { v.photo = ''; save(); show(); } }, 'Remove')), pick);
+      };
+      pick.addEventListener('change', async () => {
+        const f = pick.files[0]; pick.value = '';
+        if (!f) return;
+        try { v.photo = await Save.track(`shared:${key}`, () => Vault.addShared(key, 'Vehicle List', f)); save(); show(); } catch (err) { if (FS.isDisconnectError(err)) onDriveLost(); }
+      });
+      show();
+      return wrap;
+    };
+    const draw = () => {
+      box.replaceChildren(
+        ...(list.length ? list.map((v, i) => {
+          const inputs = fields.map(([k, label, kind, opts]) => {
+            let el;
+            if (kind === 'select') el = h('select', { 'aria-label': `Vehicle ${i + 1} ${label}` }, opts.map((o) => h('option', { value: o, selected: o === (v[k] || '') }, o || '—')));
+            else el = h('input', { value: v[k] || '', autocomplete: 'off', 'aria-label': `Vehicle ${i + 1} ${label}` });
+            el.addEventListener(kind === 'select' ? 'change' : 'input', () => { v[k] = el.value; save(); });
+            return field(label, el, kind === 'wide' ? 'op-veh-wide' : '');
+          });
+          return h('div', { class: 'op-veh-card' },
+            h('div', { class: 'op-veh-head' }, h('strong', {}, `Vehicle ${i + 1}`), h('span', { class: 'muted small' }, [v.year, v.make, v.model, v.color].filter(Boolean).join(' ') || ''), h('div', { class: 'spacer' }),
+              h('button', { type: 'button', class: 'icon-btn danger-icon', title: 'Remove this vehicle', onclick: async () => {
+                if (!(await confirmDialog({ title: `Remove Vehicle ${i + 1}?`, message: 'Its details are removed from the Vehicle List. A photo stays in the folder.', confirmText: 'Remove', danger: true }))) return;
+                list.splice(i, 1); save(); draw();
+              } }, I('trash3'), h('span', { class: 'sr-only' }, 'Remove vehicle'))),
+            h('div', { class: 'op-veh-body' }, h('div', { class: 'op-veh-fields' }, ...inputs), photoBox(v)));
+        }) : [h('p', { class: 'muted small' }, 'No vehicles yet.')]),
+        h('div', { class: 'op-veh-foot' }, h('button', { type: 'button', class: 'btn small', icon: 'car-front', onclick: () => { list.push({ id: Vault.newId('v') }); save(); draw(); const last = box.querySelectorAll('.op-veh-card'); if (last.length) last[last.length - 1].querySelector('input').focus(); } }, 'Add Vehicle')));
+    };
+    Vault.readOpVehicles(opId).then((v) => { list = v; draw(); }).catch((err) => { if (FS.isDisconnectError(err)) onDriveLost(); });
+    return box;
+  }
+
   // v1.72: tiles: the folders as folder icons, like Operations and General Files; a click opens
   // one (its files show under the icons), another click closes it.
   function sharedFilesBox(key, { folders: fixed = [], getFolders = null, allowNew = false, tiles = false, empty = 'No files yet.' } = {}) {
     const box = h('div', { class: `shared-files${tiles ? ' shared-tiles' : ''}`, 'data-key': key });
     const norm = (f) => (typeof f === 'string' ? { name: f, label: f } : { ...f, label: f.label || f.name });
     let folders = fixed.map(norm);
+    let vehEl = null;
     let folder = sharedOpen[key] != null ? sharedOpen[key] : (tiles ? null : folders.length ? folders[0].name : (getFolders ? null : ''));
     const newFolder = async () => {
       const inp = h('input', { maxlength: 60, autocomplete: 'off', 'aria-label': 'Folder name', placeholder: 'ATF Files' });
@@ -859,7 +912,7 @@
         title: `${f.label}${f.desc ? `: ${f.desc}` : ''} (${counts[f.name] || 0} file${counts[f.name] === 1 ? '' : 's'})`,
         onclick: () => { folder = f.name === folder ? null : f.name; sharedOpen[key] = folder; draw(); },
       }, h('span', { class: 'op-folder-art' }, I('folder2-open'), counts[f.name] ? h('span', { class: 'op-folder-count' }, String(counts[f.name])) : null),
-      h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, f.label), h('span', { class: 'op-title' }, f.desc || 'Your own folder')))),
+      h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, f.label), (f.desc || f.custom) ? h('span', { class: 'op-title' }, f.desc || 'Your own folder') : ''))),
       allowNew ? h('button', { type: 'button', role: 'listitem', class: 'op-folder-tile shared-tile shared-tile-new', title: 'Make a new folder in Other Files', onclick: newFolder },
         h('span', { class: 'op-folder-art' }, I('folder-plus')), h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, 'New Folder'), h('span', { class: 'op-title' }, 'Make your own'))) : '') : null;
       if (tiles && folder == null) { box.replaceChildren(tileRow); return; }
@@ -881,8 +934,11 @@
             try { await Vault.deleteShared(key, folder, f.base); } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); toast(`Not deleted: ${err.message}`, 'error'); }
             draw();
           } }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${f.base}`))))))) : h('p', { class: 'muted small shared-empty' }, folderLabel ? `No files in ${folderLabel} yet.` : empty);
+      // The vehicle cards are made once, so typing isn't lost when the file list redraws.
+      if (key.startsWith('op-') && folder === 'Vehicle List') vehEl = vehEl || opVehiclesPanel(key.slice(3)); else vehEl = null;
+      const vehicles = vehEl || '';
       box.replaceChildren(...[chips, tiles ? h('div', { class: 'op-open-head shared-open-head' }, h('strong', {}, folderLabel), h('span', { class: 'muted small' }, (cur && cur.desc) || ''), h('div', { class: 'spacer' }),
-        h('button', { type: 'button', class: 'btn small ghost', title: 'Close this folder', onclick: () => { folder = null; sharedOpen[key] = null; draw(); } }, 'Close')) : '', h('div', { class: 'shared-drop', title: 'Drop files here, or click Add Files' }, rows,
+        h('button', { type: 'button', class: 'btn small ghost', title: 'Close this folder', onclick: () => { folder = null; sharedOpen[key] = null; draw(); } }, 'Close')) : '', vehicles, h('div', { class: 'shared-drop', title: 'Drop files here, or click Add Files' }, rows,
         h('div', { class: 'shared-foot' }, h('button', { type: 'button', class: 'btn small', icon: 'plus-lg', onclick: () => pick.click() }, folderLabel ? `Add Files to ${folderLabel}` : 'Add Files'), h('span', { class: 'muted small' }, 'or drop files here'),
           cur && cur.custom ? h('span', { class: 'spacer' }) : '', cur && cur.custom ? h('button', { type: 'button', class: 'btn small ghost danger', icon: 'trash3', title: 'Remove this folder (only when it is empty)', onclick: () => removeFolder(cur) }, 'Remove Folder') : ''), pick)].filter(Boolean));
     };
@@ -1104,7 +1160,7 @@
         : h('div', { class: 'empty-state' }, h('p', {}, 'No cases in this Operation yet.'), h('p', { class: 'muted small' }, 'New Case in this Operation creates one; Add Existing Case links one from General Files.')),
       // v1.68: the Operation's own folder, not tied to a case number.
       h('div', { class: 'section-head op-folder-head', id: 'op-folder' }, h('h2', { class: 'section-title caps', icon: 'op-folder' }, 'Operation Folder'), h('span', { class: 'muted small' }, 'For the whole Operation, not one case number. Kept on the SSD in CaseVault-Data\\shared.')),
-      sharedFilesBox(`op-${op.id}`, { folders: Vault.OP_FOLDERS }),
+      sharedFilesBox(`op-${op.id}`, { tiles: true, folders: Vault.OP_FOLDERS.map((n) => ({ name: n, desc: OP_FOLDER_DESC[n] || '' })) }),
       h('section', { class: 'case-actions op-danger', 'aria-labelledby': 'op-actions-title' },
         h('h3', { id: 'op-actions-title', icon: 'sliders' }, 'Operation actions'),
         h('div', { class: 'case-actions-grid' },
@@ -1234,7 +1290,7 @@
       const inside = open ? h('div', { class: 'op-open' },
         h('div', { class: 'op-open-head' }, h('strong', {}, `General Files ${open.name}`), h('span', { class: 'muted small' }, `${open.group.length} case${open.group.length === 1 ? '' : 's'}`),
           h('div', { class: 'spacer' }), h('button', { type: 'button', class: 'btn small', onclick: () => newCase() }, 'New Case')),
-        h('div', { class: 'op-open-cases' }, open.op ? h('a', { class: 'op-folder-card', href: `#/operation/${encodeURIComponent(open.op.id)}`, title: 'Subpoenas, Affidavits, Operation Plans, Maps, Subject Data and the Running Vehicle List, for the whole Operation' },
+        h('div', { class: 'op-open-cases' }, open.op ? h('a', { class: 'op-folder-card', href: `#/operation/${encodeURIComponent(open.op.id)}`, title: 'Subpoenas, Affidavits, Operation Plans, Maps, Subject Data and the Vehicle List, for the whole Operation' },
           I('op-folder'), h('span', { class: 'op-folder-card-text' }, h('strong', {}, 'Operation Folder'), h('span', { class: 'muted small' }, Vault.OP_FOLDERS.join(' · ')))) : null,
         ...open.group.map((c) => overviewCard(c)))) : null;
       box.replaceChildren(...[panelHead('General Files', 'Cases not in an Operation, by the year they were opened.', h('a', { class: 'btn small', href: '#/general', icon: 'folder2-open' }, 'All Cases')),
@@ -2464,7 +2520,12 @@
     };
     const submit = h('button', { class: 'btn primary', type: 'submit' }, 'Add to timeline');
     const cancel = h('button', { class: 'btn', type: 'button', hidden: true }, 'Cancel');
-    const list = h('ol', { class: 'timeline' });
+    const list = h('ol', { class: 'timeline tl-modern' });
+    // v1.73: a summary strip and filters above the timeline.
+    const stats = h('div', { class: 'tl-stats' });
+    let filter = 'all';
+    const filters = h('div', { class: 'tl-filters', role: 'tablist' }, ...[['all', 'All'], ['upcoming', 'Upcoming'], ['deadline', 'Deadlines'], ['past', 'Past']].map(([k, label]) =>
+      h('button', { type: 'button', class: `tl-filter${k === filter ? ' on' : ''}`, 'data-f': k, role: 'tab', onclick: () => { filter = k; filters.querySelectorAll('.tl-filter').forEach((b) => b.classList.toggle('on', b.dataset.f === k)); draw(); } }, label)));
 
     const persist = (caseId) => {
       const snapshot = structuredClone(tls.get(caseId));
@@ -2518,18 +2579,41 @@
     h('div', { class: 'full form-actions' }, cancel, clear, submit));
 
     function draw() {
-      const all = CVOperation.mergeEvents([...tls.entries()].map(([caseId, t]) => ({ caseId, number: numberOf(caseId), events: t.events })));
+      const everything = CVOperation.mergeEvents([...tls.entries()].map(([caseId, t]) => ({ caseId, number: numberOf(caseId), events: t.events })));
+      const now = today();
+      const openDl = everything.filter(({ ev }) => ev.kind === 'deadline' && !ev.done);
+      const overdue = openDl.filter(({ ev }) => ev.date < now);
+      const next = openDl.filter(({ ev }) => ev.date >= now).sort((a, b) => (a.ev.date + (a.ev.time || '')).localeCompare(b.ev.date + (b.ev.time || '')))[0];
+      const stat = (n, label, cls, sub2) => h('div', { class: `tl-stat ${cls}` }, h('span', { class: 'tl-stat-n' }, String(n)), h('span', { class: 'tl-stat-l' }, label), sub2 ? h('span', { class: 'tl-stat-s' }, sub2) : '');
+      stats.replaceChildren(
+        stat(everything.filter(({ ev }) => ev.kind !== 'deadline').length, 'Events', 'ev'),
+        stat(openDl.length, 'Open Deadlines', 'dl'),
+        stat(overdue.length, 'Overdue', overdue.length ? 'od' : 'ok'),
+        next ? stat((dueLabel(next.ev.date) || { text: fmtDate(next.ev.date) }).text, 'Next Due', 'nx', next.ev.title) : stat('—', 'Next Due', 'nx', 'Nothing due'));
+      const keep = ({ ev }) => (filter === 'all' ? true : filter === 'deadline' ? ev.kind === 'deadline' : filter === 'upcoming' ? ev.date >= now : ev.date < now);
+      const all = everything.filter(keep);
       if (!all.length) {
-        list.replaceChildren(h('li', { class: 'muted empty' }, many ? 'No events yet for any case number of this operation. Add dates, hearings, filings, and deadlines above.' : 'No events yet. Add dates, hearings, filings, and deadlines above.'));
+        list.replaceChildren(h('li', { class: 'muted empty' }, everything.length ? 'Nothing to show with this filter.' : many ? 'No events yet for any case number of this operation. Add dates, hearings, filings, and deadlines above.' : 'No events yet. Add dates, hearings, filings, and deadlines above.'));
         return;
       }
-      list.replaceChildren(...all.map(({ caseId, ev }) => {
+      // Newest month first or oldest? Kept in date order (as saved); a heading for each month and a
+      // Today line where the past ends.
+      const items = [];
+      let month = '';
+      let todayShown = false;
+      const monthName = (d) => { const [y, m] = d.split('-'); return `${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][Number(m) - 1]} ${y}`; };
+      for (const { caseId, ev } of all) {
+        if (!todayShown && ev.date >= now && all.some((x) => x.ev.date < now)) { items.push(h('li', { class: 'tl-today' }, h('span', {}, `Today · ${fmtDate(now)}`))); todayShown = true; }
+        const mk = ev.date.slice(0, 7);
+        if (mk !== month) { month = mk; items.push(h('li', { class: 'tl-month' }, monthName(ev.date))); }
         const isDeadline = ev.kind === 'deadline';
         const due = isDeadline && !ev.done ? dueLabel(ev.date) : null;
         const done = isDeadline ? h('input', { type: 'checkbox', checked: !!ev.done, 'aria-label': 'Done', title: 'Mark done' }) : null;
         if (done) done.addEventListener('change', () => { ev.done = done.checked; draw(); persist(caseId); });
-        return h('li', { class: `tl-item ${ev.kind} ${ev.done ? 'done' : ''} ${due ? due.cls : ''}` },
-          h('div', { class: 'tl-when' }, h('div', {}, fmtDate(ev.date)), ev.time && h('div', { class: 'muted small' }, ev.time)),
+        const [, , dd] = ev.date.split('-');
+        const wk = new Date(`${ev.date}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short' });
+        items.push(h('li', { class: `tl-item ${ev.kind} ${ev.done ? 'done' : ''} ${due ? due.cls : ''} ${ev.date < now ? 'past' : ''}` },
+          h('div', { class: 'tl-when', title: fmtDate(ev.date) }, h('span', { class: 'tl-day' }, String(Number(dd))), h('span', { class: 'tl-wk' }, wk), ev.time ? h('span', { class: 'tl-time' }, ev.time) : ''),
           h('div', { class: 'tl-body' },
             h('div', { class: 'tl-title' },
               done,
@@ -2554,12 +2638,14 @@
               if (editing && editing.id === ev.id) resetForm();
               draw();
               persist(caseId);
-            } }, 'Delete')));
-      }));
+            } }, 'Delete'))));
+      }
+      if (!todayShown && all.every((x) => x.ev.date < now)) items.push(h('li', { class: 'tl-today' }, h('span', {}, `Today · ${fmtDate(now)}`)));
+      list.replaceChildren(...items);
     }
 
     draw();
-    panel.replaceChildren(many ? h('p', { class: 'muted small tl-op-note' }, `The timeline of the whole operation: all ${tls.size} case numbers.`) : '', form, list);
+    panel.replaceChildren(many ? h('p', { class: 'muted small tl-op-note' }, `The timeline of the whole operation: all ${tls.size} case numbers.`) : '', form, stats, filters, list);
   }
 
   /* ---------- Files ---------- */

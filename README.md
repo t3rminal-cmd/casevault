@@ -15,6 +15,13 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.73)
+
+- The case list and Quick Links bar in a cool slate shade with white, shadowed buttons that lift on hover (light and dark)
+- Timeline redesigned: a rail with month headings, a date chip per entry, coloured markers (event, deadline, overdue, done), a Today line, a summary strip (Events, Open Deadlines, Overdue, Next Due) and All / Upcoming / Deadlines / Past filters
+- Operation Folder as folder icons (files and Add Files show when a folder is opened); Running Vehicle List is now Vehicle List, with a card per vehicle (the Draft's vehicle fields plus Registered Owner and Address) and its photo on the right
+- Draft → Vehicles: Registered Owner and Registered Owner Address
+
 ## Features (v1.72)
 
 - OTHER FILES shows its five folders (USPIS Files, DEA Files, INET Files, Training, Other) as folder icons like Operations and General Files, plus New Folder; click one to open its files below, click again (or Close) to close it

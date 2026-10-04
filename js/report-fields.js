@@ -172,7 +172,7 @@
     notArrested: { title: 'Persons Present Not Arrested', item: 'Person', fields: [['name', 'Name', 'text'], ['phone', 'Contact Number', 'phone'], ['address', 'Address', 'wide']] },
     personnel: { title: 'Police Personnel on Scene', item: 'Officer', fields: [['name', 'Name', 'text'], ['star', 'Star Number', 'text'], ['unit', 'Unit', 'text'], ['role', 'Role', 'select', ROLES]] },
     notifications: { title: 'Notifications', item: 'Notification', fields: [['date', 'Date', 'date'], ['name', 'Person Notified', 'text'], ['by', 'Notified By', 'text']] }, // v1.42: no Notes
-    vehicles: { title: 'Vehicles', item: 'Vehicle', fields: [['year', 'Year', 'text'], ['make', 'Make', 'text'], ['model', 'Model', 'text'], ['color', 'Color', 'text'], ['plate', 'License Plate', 'text'], ['state', 'Plate State', 'text'], ['vin', 'VIN', 'text'], ['disposition', 'Impound / Tow', 'select', ['', 'Impound', 'Tow', 'Other']], ['notes', 'Owner and Notes', 'wide']] },
+    vehicles: { title: 'Vehicles', item: 'Vehicle', fields: [['year', 'Year', 'text'], ['make', 'Make', 'text'], ['model', 'Model', 'text'], ['color', 'Color', 'text'], ['plate', 'License Plate', 'text'], ['state', 'Plate State', 'text'], ['vin', 'VIN', 'text'], ['disposition', 'Impound / Tow', 'select', ['', 'Impound', 'Tow', 'Other']], ['ownerName', 'Registered Owner', 'text'], ['ownerAddress', 'Registered Owner Address', 'wide'], ['notes', 'Notes', 'wide']] }, // v1.73: Registered Owner and Address
   };
   const PICKS = {
     victim: ['State of Illinois'],

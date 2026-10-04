@@ -24,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.72.0';
+  const APP_VERSION = '1.73.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -996,9 +996,9 @@ const Vault = (() => {
   /* ---------- v1.68: folders not tied to a case number ----------
    * CaseVault-Data/shared/other/                 OTHER FILES on the Overview (no sub-folders)
    * CaseVault-Data/shared/op-<id>/<Folder>/      an Operation's own folder: Subpoenas, Affidavits,
-   *                                              Operation Plans, Maps, Subject Data, Running Vehicle List
+   *                                              Operation Plans, Maps, Subject Data, Vehicle List
    */
-  const OP_FOLDERS = ['Subpoenas', 'Affidavits', 'Operation Plans', 'Maps', 'Subject Data', 'Running Vehicle List'];
+  const OP_FOLDERS = ['Subpoenas', 'Affidavits', 'Operation Plans', 'Maps', 'Subject Data', 'Vehicle List']; // v1.73: was Running Vehicle List
   const sharedKeyOk = (key) => key === 'other' || /^op-[A-Za-z0-9_-]{1,80}$/.test(key);
   // v1.71: Other Files has folders: USPIS, DEA, INET, Training, and any you make; "Other" is the
   // top of Other Files itself (where files added before v1.71 are).
@@ -1032,10 +1032,27 @@ const Vault = (() => {
     if ((await listShared('other', name)).length) throw Object.assign(new Error('Move or delete its files first.'), { name: 'TypeError' });
     await FS.remove(await sharedDir('other', ''), name, true);
   }
+  // v1.73: an Operation's "Running Vehicle List" folder becomes "Vehicle List" (its files moved).
+  const vehicleMoved = new Set();
+  async function moveOldVehicleDir(opDir, key) {
+    if (vehicleMoved.has(key)) return;
+    vehicleMoved.add(key);
+    const old = await FS.getDir(opDir, 'Running Vehicle List');
+    if (!old) return;
+    const dest = await FS.getDir(opDir, 'Vehicle List', true);
+    for (const e of await FS.list(old)) {
+      if (e.kind !== 'file') continue;
+      const f = await FS.getFile(old, e.name);
+      const name = (await FS.exists(dest, e.name)) ? await FS.uniqueName(dest, e.name) : e.name;
+      await FS.writeData(dest, name, f);
+    }
+    await FS.remove(opDir, 'Running Vehicle List', true);
+  }
   async function sharedDir(key, folder = '', create = false) {
     if (!sharedKeyOk(key) || !sharedFolderOk(key, folder)) throw Object.assign(new Error('Unknown folder.'), { name: 'TypeError' });
     let dir = await FS.getDir(root, 'shared', create);
     if (dir) dir = await FS.getDir(dir, key, create);
+    if (dir && key.startsWith('op-') && folder === 'Vehicle List') await moveOldVehicleDir(dir, key).catch(() => {});
     if (dir && folder) dir = await FS.getDir(dir, folder, create);
     return dir;
   }
@@ -1058,6 +1075,17 @@ const Vault = (() => {
     const name = await FS.uniqueName(dir, file.name);
     await FS.writeData(dir, name, file);
     return name;
+  }
+  /** v1.73: an Operation's vehicles (Vehicle List): [{ id, year, make, model, …, ownerName,
+   * ownerAddress, photo }], kept in the folder as .vehicles.json (hidden from the file list). */
+  async function readOpVehicles(opId) {
+    const dir = await sharedDir(`op-${opId}`, 'Vehicle List').catch(() => null);
+    const v = dir ? await FS.readJSON(dir, '.vehicles.json').catch(() => null) : null;
+    return Array.isArray(v) ? v : [];
+  }
+  async function saveOpVehicles(opId, list) {
+    const dir = await sharedDir(`op-${opId}`, 'Vehicle List', true);
+    await FS.writeJSON(dir, '.vehicles.json', list);
   }
   async function readShared(key, folder, base) { return FS.getFile(await sharedDir(key, folder), base); }
   async function deleteShared(key, folder, base) { await FS.remove(await sharedDir(key, folder), base); }
@@ -1550,7 +1578,7 @@ const Vault = (() => {
     createCase, getCase, saveCase, deleteCase,
     listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
     archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS,
-    OP_FOLDERS, OTHER_FOLDERS, otherCustomFolders, addOtherFolder, removeOtherFolder, listShared, addShared, readShared, deleteShared, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
+    OP_FOLDERS, OTHER_FOLDERS, readOpVehicles, saveOpVehicles, otherCustomFolders, addOtherFolder, removeOtherFolder, listShared, addShared, readShared, deleteShared, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
     getNotes, saveNotes, listChats, readChat, saveChat, deleteChat,
     getTimeline, saveTimeline, sortEvents,
     listFiles, addFile, readFile, deleteFile, moveFile, ensureFolders, renameCaseFolder, conventionalId, RENAME_MARKER,
