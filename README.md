@@ -15,6 +15,14 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.82)
+
+- Sidebar folders stay open or folded until you click them (no longer reset when you go to another page)
+- A Mission's page has All Files: every file on the SSD for that Mission (each case number's Files and the Mission Folder), newest first; click one to open it
+- Notifications have a Time; an offender's No Vehicle box hides Vehicle, VIN and Plates (and leaves them off the PDF)
+- Pre-Recorded Funds: "Electronic Funds × 2" no longer runs into the numbers
+- Timeline: Clear empties everything, an edit in progress too
+
 ## Features (v1.81)
 
 - Supplementary Report PDF laid out like the paper report: an offender sheet each (custody, name and A.K.A., description, DOB, eyes, hair, tattoos, clothing, residence, phone, IR and CB, vehicle, VIN, plates), Police Personnel as a Name / Star / Unit / Role table, each charge as its statute over its description, and each exhibit with its inventory number, type and description

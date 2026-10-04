@@ -269,9 +269,7 @@
         [col(lv('Phone', f('phones')), 0, 1)],
         [col(lv('IR', f('irNumber')), 0, 0.4), col(lv('CB', f('cbNumber')), 0.42, 0.58)],
         [col(lv('FBI', f('fbiNumber')), 0, 0.4), col(lv('IDOC', f('idocNumber')), 0.42, 0.58)],
-        [col(lv('Vehicle', f('vehicle')), 0, 1)],
-        [col(lv('Vin', f('vin')), 0, 1)],
-        [col(lv('Plates', f('plates')), 0, 1)],
+        ...(o.noVehicle ? [] : [[col(lv('Vehicle', f('vehicle')), 0, 1)], [col(lv('Vin', f('vin')), 0, 1)], [col(lv('Plates', f('plates')), 0, 1)]]), // v1.82: No Vehicle
       ].filter(Boolean);
       return { rows };
     };

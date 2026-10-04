@@ -3832,3 +3832,7 @@ html .tl-item.deadline::before { transform: none; }
 :is(table) th.date-cell .th-btn { margin-left: auto; justify-content: flex-end; width: 100%; }
 .files-table-wrap td.fadded.date-cell .fadded-day, .files-table-wrap td.fadded.date-cell .fadded-time { text-align: right; }
 .recent-row > :last-child { text-align: right; justify-self: end; }
+
+/* v1.82: a funds line is as wide as its denomination ("Electronic Funds × 2" no longer runs into the
+   reference numbers). */
+.rf-fund { grid-template-columns: minmax(6.5rem, max-content) minmax(0, 1fr) auto; }

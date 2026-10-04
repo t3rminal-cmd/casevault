@@ -600,10 +600,13 @@
   // General Files) is open; one opened or folded with its arrow stays that way until you go to
   // another page. (v1.28 to v1.49 kept which were folded in vault.json.)
   try { localStorage.removeItem('casevault-op-closed'); } catch { /* nothing kept */ }
-  const sideFold = new Map(); // folder key -> true (opened) / false (folded), until the next page
+  // v1.82: a folder you open or fold stays that way until you click it again (kept on this PC).
+  const SIDE_FOLD_KEY = 'cv-side-fold';
+  const sideFold = new Map((() => { try { return Object.entries(JSON.parse(localStorage.getItem(SIDE_FOLD_KEY) || '{}')); } catch { return []; } })());
+  const sideFoldSet = sideFold.set.bind(sideFold);
+  sideFold.set = (k, v) => { sideFoldSet(k, v); try { localStorage.setItem(SIDE_FOLD_KEY, JSON.stringify(Object.fromEntries(sideFold))); } catch { /* this session only */ } return sideFold; };
   let sideFoldHash = '';
   function folderOpen(group) {
-    if (location.hash !== sideFoldHash) { sideFold.clear(); sideFoldHash = location.hash; }
     if (sideFold.has(group.key)) return sideFold.get(group.key);
     if ($('#case-search').value.trim()) return true;
     if (state.caseId && group.cases.some((c) => c.id === state.caseId)) return true;
@@ -689,7 +692,7 @@
   function missionFolder(groups) {
     const key = 'missions';
     const searching = !!$('#case-search').value.trim();
-    const open = sideFold.has(key) && location.hash === sideFoldHash ? sideFold.get(key) : true;
+    const open = sideFold.has(key) ? sideFold.get(key) : true;
     const n = groups.filter((g) => g.op).length;
     const bell = groups.some((g) => g.cases.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date)));
     const add = h('button', { class: 'icon-btn mission-add', type: 'button', title: 'New Mission', onclick: async (e) => {
@@ -1252,6 +1255,31 @@
     }
     const members = (Vault.data.cases || []).filter((c) => c.operationId === op.id).sort(byNumber);
     const redraw = () => { renderCaseList(); showOperation(id); };
+    // v1.82: All Files: every file on the SSD tied to this Mission, in one list (each case number's
+    // files and the Mission Folder's), newest first; a click opens one.
+    const allFilesBox = h('div', { class: 'op-all-files', hidden: true });
+    const toggleAllFiles = async (btn) => {
+      if (!allFilesBox.hidden) { allFilesBox.hidden = true; btn.classList.remove('on'); return; }
+      allFilesBox.hidden = false; btn.classList.add('on');
+      allFilesBox.replaceChildren(h('p', { class: 'muted small' }, 'Reading the SSD…'));
+      const rows = [];
+      for (const c of members) {
+        try { for (const f of await Vault.listFiles(c.id)) rows.push({ where: c.number || 'No case number', folder: (f.folder || 'Unsorted').replace('/', ' › '), base: f.base, size: f.size, modified: f.modified, open: () => previewFile(c, f.name) }); } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
+      }
+      try {
+        const key = `op-${op.id}`;
+        for (const f of await Vault.listShared(key, '*')) rows.push({ where: 'Mission Folder', folder: opFolderLabel(f.folder), base: f.base, size: f.size, modified: f.modified, open: () => previewFile({ readFile: () => Vault.readShared(key, f.folder, f.base), where: `${key}\\${f.folder}` }, f.base) });
+      } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
+      rows.sort((x, y) => (y.modified || 0) - (x.modified || 0));
+      allFilesBox.replaceChildren(rows.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'data-table op-all-table' },
+        h('thead', {}, h('tr', {}, h('th', {}, 'Case / Folder'), h('th', {}, 'Name'), h('th', { class: 'num' }, 'Size'), h('th', { class: 'date-cell' }, 'Updated'))),
+        h('tbody', {}, rows.map((r) => h('tr', {},
+          h('td', {}, h('strong', {}, r.where), h('div', { class: 'muted small' }, r.folder)),
+          h('td', {}, h('button', { type: 'button', class: 'linkish', title: r.base, onclick: r.open }, r.base)),
+          h('td', { class: 'num muted' }, fmtSize(r.size || 0)),
+          h('td', { class: 'muted date-cell' }, r.modified ? fmtDate(Vault.localDay(new Date(r.modified))) : '—')))))) : h('p', { class: 'muted' }, 'No files yet for this Mission.'),
+        h('p', { class: 'muted small op-section-note' }, `${plural(rows.length, 'file')}: every case number's Files tab and the Mission Folder.`));
+    };
     const tlCase = members.find((c) => !isArchivedEntry(c));
     const tlPanel = h('div', { class: 'op-timeline' }, tlCase ? h('p', { class: 'muted small' }, 'Loading the timeline…') : h('p', { class: 'muted' }, 'Add a case number to this Mission to keep its timeline here.'));
     if (tlCase) {
@@ -1290,7 +1318,9 @@
       h('div', { class: 'section-head op-tl-head', id: 'op-timeline' }, h('h2', { class: 'section-title caps' }, 'Timeline')),
       tlPanel,
       // v1.68: the Operation's own folder, not tied to a case number.
-      h('div', { class: 'section-head op-folder-head', id: 'op-folder' }, h('h2', { class: 'section-title caps' }, 'Mission Folder')),
+      h('div', { class: 'section-head op-folder-head', id: 'op-folder' }, h('h2', { class: 'section-title caps' }, 'Mission Folder'), h('div', { class: 'spacer' }),
+        h('button', { class: 'btn small', type: 'button', icon: 'collection', title: 'Every file on the SSD for this Mission: its case numbers\' files and its Mission Folder', onclick: (e) => toggleAllFiles(e.currentTarget) }, 'All Files')),
+      allFilesBox,
       sharedFilesBox(`op-${op.id}`, { tiles: true, tileIcon: 'folder-mission', folders: Vault.OP_FOLDERS.map((n) => ({ name: n, label: opFolderLabel(n), desc: OP_FOLDER_DESC[n] || '' })) }),
       h('p', { class: 'muted small op-section-note' }, 'For the whole Mission, not one case number. Kept on the SSD in CaseVault-Data\\shared.'),
       h('section', { class: 'case-actions op-danger', 'aria-labelledby': 'op-actions-title' },
@@ -2700,9 +2730,13 @@
     cancel.addEventListener('click', resetForm);
     // v1.40: Clear empties the form (back to today, an Event) without leaving an edit in progress.
     const clear = h('button', { class: 'btn', type: 'button', title: 'Clear the form' }, 'Clear');
+    // v1.82: Clear empties everything, an edit in progress too (back to a new entry for this case).
     clear.addEventListener('click', () => {
+      resetForm();
       f.date.value = today(); f.kind.value = 'event';
       f.title.value = ''; f.note.value = ''; f.time.value = '';
+      for (const el of [f.date, f.kind, f.caseSel]) el.dispatchEvent(new Event('change', { bubbles: true }));
+      f.date.dispatchEvent(new Event('input', { bubbles: true }));
       f.title.focus();
     });
 
