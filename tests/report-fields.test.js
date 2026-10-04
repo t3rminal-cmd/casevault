@@ -345,7 +345,7 @@ test('v1.42: exhibit numbering from a start, funds without quantity, notificatio
   assert.strictEqual(F.nextFrom(20, [1, 20]), 21);
   assert.strictEqual(F.nextFrom(0, []), 1);
   assert.deepStrictEqual(F.LISTS.funds.fields.map((f) => f[0]), ['denomination', 'quantity', 'serials']); // v1.54
-  assert.deepStrictEqual(F.LISTS.notifications.fields.map((f) => f[0]), ['date', 'name', 'by']);
+  assert.deepStrictEqual(F.LISTS.notifications.fields.map((f) => f[0]), ['date', 'time', 'name', 'by']);
   const d = F.normalize({ notifications: [{ notes: 'Called the watch commander' }] });
   assert.strictEqual(d.notifications[0].name, 'Called the watch commander');
 });

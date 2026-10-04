@@ -215,6 +215,15 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.82
+
+- **Sidebar folders stay as you left them:** a folder you open or fold (MISSION FILES, a Mission, GENERAL FILES) stays that way until you click it again, even when you go to another page.
+- **All Files for a Mission:** on a Mission's page, **All Files** (beside MISSION FOLDER) lists every file on the SSD tied to that Mission: each case number's Files tab and the Mission Folder, newest first. Click a name to open it.
+- **Notifications** have a **Time** box.
+- **No Vehicle:** tick it on an offender to hide Vehicle, VIN and Plates; they are left off the PDF too.
+- **Pre-Recorded Funds:** an Electronic Funds line no longer runs into its reference numbers.
+- **Timeline:** **Clear** empties the whole form, and also stops an edit in progress.
+
 ### What's new in v1.81
 
 - **Supplementary Report PDF layout:** each offender has a sheet of their own: In Custody or Not in Custody, then Name and A.K.A., gender | race | age, height and weight, DOB, eyes and hair, complexion and tattoos/scars, what they were wearing, residence, phone, IR and CB numbers, vehicle, VIN and plates. **Police Personnel** is a table (Name, Star, Unit, Role), each **Charge** is its statute over its description, and each **Exhibit** shows its inventory number, type and description (additional exhibits as Exhibit 13a, 13b… with their photo labels).

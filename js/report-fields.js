@@ -173,7 +173,7 @@
     gangs: { title: 'Gang Affiliations', item: 'Gang', fields: [['name', 'Gang', 'gang'], ['faction', 'Faction / Set', 'text']] },
     notArrested: { title: 'Persons Present Not Arrested', item: 'Person', fields: [['name', 'Name', 'text'], ['phone', 'Contact Number', 'phone'], ['address', 'Address', 'wide']] },
     personnel: { title: 'Police Personnel on Scene', item: 'Officer', fields: [['name', 'Name', 'text'], ['star', 'Star Number', 'text'], ['unit', 'Unit', 'text'], ['role', 'Role', 'select', ROLES]] },
-    notifications: { title: 'Notifications', item: 'Notification', fields: [['date', 'Date', 'date'], ['name', 'Person Notified', 'text'], ['by', 'Notified By', 'text']] }, // v1.42: no Notes
+    notifications: { title: 'Notifications', item: 'Notification', fields: [['date', 'Date', 'date'], ['time', 'Time', 'time'], ['name', 'Person Notified', 'text'], ['by', 'Notified By', 'text']] }, // v1.42: no Notes; v1.82: Time
     vehicles: { title: 'Vehicles', item: 'Vehicle', fields: [['year', 'Year', 'text'], ['make', 'Make', 'text'], ['model', 'Model', 'text'], ['color', 'Color', 'text'], ['plate', 'License Plate', 'text'], ['state', 'Plate State', 'text'], ['vin', 'VIN', 'text'], ['disposition', 'Impound / Tow', 'select', ['', 'Impound', 'Tow', 'Other']], ['ownerName', 'Registered Owner', 'text'], ['ownerAddress', 'Registered Owner Address', 'wide'], ['notes', 'Notes', 'wide']] }, // v1.73: Registered Owner and Address
   };
   const PICKS = {
@@ -360,6 +360,8 @@
   /** The fields an entry uses. */
   function fieldsFor(list, it) {
     const all = LISTS[list].fields;
+    // v1.82: an offender ticked "No Vehicle" has no Vehicle, VIN or Plates boxes (and none on the PDF).
+    if (list === 'offendersList') return it && it.noVehicle ? all.filter(([k]) => !['vehicle', 'vin', 'plates'].includes(k)) : all;
     if (list !== 'victimsList') return all;
     return isStateVictim(list, it) ? all.filter(([k]) => k === 'name' || k === 'officer') : all.filter(([k]) => k !== 'officer');
   }

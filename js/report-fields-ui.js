@@ -369,6 +369,10 @@
               const SHORT = { 'American Indian / Alaska Native': 'Am. Indian / AK Native', 'Asian / Pacific Islander': 'Asian / Pac. Islander' };
               el = h('select', {}, opts.map((o) => h('option', { value: o, selected: o === (it[k] || ''), title: SHORT[o] ? o : null }, SHORT[o] || o || '—')));
               el.addEventListener('change', () => { it[k] = el.value; save(); });
+            } else if (kind === 'time' && root.CVTimeField) {
+              // v1.82: a notification's time, like the report's own Time box.
+              el = CVTimeField.create({ label, value: it[k] || '' });
+              el.addEventListener('input', () => { it[k] = el.value; save(); });
             } else if (kind === 'age') {
               // Worked out from the date of birth.
               el = h('input', { type: 'text', readonly: true, tabindex: -1, class: 'rf-auto', value: it[k] || '', title: 'From the date of birth' });
@@ -440,8 +444,11 @@
               if (it.unknown) { it.dob = ''; it.age = ''; }
               draw(); save();
             } }), h('span', {}, 'Unknown Offender')) : null;
+          // v1.82: No Vehicle hides the Vehicle, VIN and Plates boxes (they stay saved if filled).
+          const noVehBox = key === 'offendersList' ? h('label', { class: 'check-row small rf-unknown', title: 'No vehicle information: hide Vehicle, VIN and Plates (left off the PDF)' },
+            h('input', { type: 'checkbox', checked: !!it.noVehicle, 'aria-label': `${lab} no vehicle`, onchange: (e) => { it.noVehicle = e.target.checked; draw(); save(); } }), h('span', {}, 'No Vehicle')) : null;
           return h('div', { class: `rf-item${unknown ? ' rf-item-unknown' : ''}${stateVictim ? ' rf-item-state' : ''}` },
-            h('div', { class: 'rf-item-head' }, h('strong', {}, `${L.item} ${i + 1}`), unknownBox,
+            h('div', { class: 'rf-item-head' }, h('strong', {}, `${L.item} ${i + 1}`), unknownBox, noVehBox,
               archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: `Delete ${L.item.toLowerCase()}`, onclick: async () => {
                 if (F().filled(it) && !(await ui.confirmDialog({ title: `Delete ${L.item} ${i + 1}?`, message: 'This entry is removed from the report.', confirmText: 'Delete', danger: true }))) return;
                 data[key].splice(i, 1); draw(); save();
