@@ -20,6 +20,7 @@
     -WebLLMPath <folder> in-browser AI models (default: the webllm folder next to this helper's folder)
     -NoBrowser           do not open the browser
     -NoAI                do not start Ollama
+    -BackupTargets <a;b> offer these folders as backup drives (for testing; normally every other drive)
 #>
 [CmdletBinding()]
 param(
@@ -28,13 +29,14 @@ param(
   [string]$AppPath = '',
   [string]$WebLLMPath = '',
   [switch]$NoBrowser,
-  [switch]$NoAI
+  [switch]$NoAI,
+  [string]$BackupTargets = ''
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 
-$HelperVersion = '1.10.0'
+$HelperVersion = '1.11.0'
 $VolumeLabel   = 'CASEVAULT'
 $DataDirName   = 'CaseVault-Data'
 $AppDirName    = 'CaseVault-App'
@@ -307,6 +309,100 @@ Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
 
 $script:StopRequested = $false
 
+# ---------------------------------------------------------------------------
+# v1.11 (app 1.87): Back Up Everything. The whole CaseVault-Data folder is copied to
+# <drive>\CaseVault-Backups\CaseVault-Backup-<date>, each file read back and its SHA-256 compared
+# with the original. It runs in the background so the app keeps working; the app asks for the
+# progress with /api/backup-status.
+# ---------------------------------------------------------------------------
+
+$script:Backup = [hashtable]::Synchronized(@{ state = 'idle'; files = 0; total = 0; bytes = 0; totalBytes = 0; current = ''; folder = ''; drive = ''; message = ''; at = '' })
+$script:BackupJob = $null
+
+# Drives a backup can go to: ready drives other than the vault's own, the AI drive (a partition of
+# the same SSD) and Windows' own drive.
+function Get-BackupDrives {
+  $out = @()
+  if ($BackupTargets) {
+    foreach ($t in ($BackupTargets -split ';' | Where-Object { $_ })) {
+      if (Test-Path -LiteralPath $t -PathType Container) { $out += [pscustomobject]@{ Path = [System.IO.Path]::GetFullPath($t); Label = (Split-Path -Leaf $t); Free = 0; Total = 0; Kind = 'Folder' } }
+    }
+    return $out
+  }
+  $root = Get-DataRoot
+  $skip = @()
+  if ($root) { $skip += [System.IO.Path]::GetPathRoot($root) }
+  if ($AIRoot) { $skip += [System.IO.Path]::GetPathRoot($AIRoot) }
+  if ($env:SystemDrive) { $skip += ($env:SystemDrive.TrimEnd('\') + '\') }
+  foreach ($d in [System.IO.DriveInfo]::GetDrives()) {
+    try {
+      if (-not $d.IsReady) { continue }
+      $kind = [string]$d.DriveType
+      if (@('Removable', 'Fixed', 'Network') -notcontains $kind) { continue }
+      $p = $d.RootDirectory.FullName
+      if ($skip | Where-Object { $_ -and $_ -ieq $p }) { continue }
+      $out += [pscustomobject]@{ Path = $p; Label = [string]$d.VolumeLabel; Free = [long]$d.AvailableFreeSpace; Total = [long]$d.TotalSize; Kind = $kind }
+    } catch { }
+  }
+  return $out
+}
+
+$BackupScript = {
+  param($root, $target, $S, $helperVersion)
+  try {
+    $stamp = Get-Date -Format 'yyyy-MM-dd-HHmmss'
+    $dest = Join-Path (Join-Path $target 'CaseVault-Backups') "CaseVault-Backup-$stamp"
+    $S.folder = $dest
+    $rootFull = [System.IO.Path]::GetFullPath($root).TrimEnd([char]'\', [char]'/')
+    $rel = { param($full) $full.Substring($rootFull.Length).TrimStart([char]'\', [char]'/') }
+    $files = @([System.IO.Directory]::GetFiles($rootFull, '*', [System.IO.SearchOption]::AllDirectories) | Where-Object { $_ -notlike '*.cvtmp-*' })
+    $total = [long]0
+    foreach ($f in $files) { $total += (New-Object System.IO.FileInfo($f)).Length }
+    $S.total = $files.Count
+    $S.totalBytes = $total
+    $free = [long](New-Object System.IO.DriveInfo([System.IO.Path]::GetPathRoot([System.IO.Path]::GetFullPath($target)))).AvailableFreeSpace
+    if ($free -gt 0 -and $free -lt ($total + 50MB)) { throw ('Not enough space on the backup drive: ' + [math]::Round($total / 1MB) + ' MB needed, ' + [math]::Round($free / 1MB) + ' MB free.') }
+    [void][System.IO.Directory]::CreateDirectory($dest)
+    # Every folder, empty ones too, then every file.
+    foreach ($dir in [System.IO.Directory]::GetDirectories($rootFull, '*', [System.IO.SearchOption]::AllDirectories)) {
+      [void][System.IO.Directory]::CreateDirectory((Join-Path $dest (& $rel $dir)))
+    }
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $hash = { param($path) $fs = [System.IO.File]::OpenRead($path); try { [System.BitConverter]::ToString($sha.ComputeHash($fs)) } finally { $fs.Dispose() } }
+    foreach ($f in $files) {
+      $r = & $rel $f
+      $S.current = $r
+      $to = Join-Path $dest $r
+      [void][System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($to))
+      [System.IO.File]::Copy($f, $to, $true)
+      if ((& $hash $f) -ne (& $hash $to)) { throw "The copy of $r does not match the original. The backup is not complete; try again or use another drive." }
+      $S.files = $S.files + 1
+      $S.bytes = $S.bytes + (New-Object System.IO.FileInfo($f)).Length
+    }
+    $at = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+    $info = '{"app":"CaseVault","kind":"full-backup","by":"helper","helperVersion":"' + $helperVersion + '","at":"' + $at + '","files":' + $S.files + ',"bytes":' + $S.bytes + ',"verified":true}'
+    [System.IO.File]::WriteAllText((Join-Path $dest 'backup-info.json'), $info, (New-Object System.Text.UTF8Encoding($false)))
+    $S.at = $at
+    $S.current = ''
+    $S.state = 'done'
+  } catch {
+    $S.message = $_.Exception.Message
+    $S.state = 'error'
+  }
+}
+
+function Get-BackupStatusJson {
+  $S = $script:Backup
+  if ($script:BackupJob -and $S.state -ne 'running') {
+    try { $script:BackupJob.PS.EndInvoke($script:BackupJob.Handle) } catch { }
+    try { $script:BackupJob.PS.Dispose() } catch { }
+    $script:BackupJob = $null
+  }
+  return '{"state":' + (ConvertTo-JsonString $S.state) + ',"files":' + $S.files + ',"total":' + $S.total + ',"bytes":' + $S.bytes + ',"totalBytes":' + $S.totalBytes +
+    ',"current":' + (ConvertTo-JsonString $S.current) + ',"folder":' + (ConvertTo-JsonString $S.folder) + ',"drive":' + (ConvertTo-JsonString $S.drive) +
+    ',"message":' + (ConvertTo-JsonString $S.message) + ',"at":' + (ConvertTo-JsonString $S.at) + '}'
+}
+
 function Invoke-Api($stream, $req) {
   $op = $req.Path.Substring(5)   # after "/api/"
   $m = $req.Method
@@ -359,6 +455,40 @@ function Invoke-Api($stream, $req) {
       try { $di = New-Object System.IO.DriveInfo([System.IO.Path]::GetPathRoot($root)); $diskTotal = $di.TotalSize; $diskFree = $di.AvailableFreeSpace } catch { }
     }
     Send-Json $stream 200 ('{"ramTotal":' + $ramTotal + ',"ramFree":' + $ramFree + ',"diskTotal":' + $diskTotal + ',"diskFree":' + $diskFree + '}')
+    return
+  }
+
+  if ($op -eq 'backup-drives' -and $m -eq 'GET') {
+    $items = @()
+    foreach ($d in @(Get-BackupDrives)) {
+      $items += ('{"path":' + (ConvertTo-JsonString $d.Path) + ',"label":' + (ConvertTo-JsonString $d.Label) + ',"free":' + $d.Free + ',"total":' + $d.Total + ',"kind":' + (ConvertTo-JsonString $d.Kind) + '}')
+    }
+    Send-Json $stream 200 ('[' + ($items -join ',') + ']')
+    return
+  }
+
+  if ($op -eq 'backup-status' -and $m -eq 'GET') {
+    Send-Json $stream 200 (Get-BackupStatusJson)
+    return
+  }
+
+  if ($op -eq 'backup-start' -and $m -eq 'POST') {
+    $root = Get-DataRoot
+    if (-not $root) { Send-Error $stream 503 'NotReadableError' 'The CASEVAULT drive is not connected or is still locked.'; return }
+    if ($script:Backup.state -eq 'running') { Send-Error $stream 409 'InvalidStateError' 'A backup is already running.'; return }
+    $want = if ($req.Query.ContainsKey('drive')) { $req.Query['drive'] } else { '' }
+    # Only one of the drives offered by backup-drives: nothing else on the PC can be written to.
+    $target = @(Get-BackupDrives) | Where-Object { $_.Path -ieq $want } | Select-Object -First 1
+    if (-not $target) { Send-Error $stream 400 'SecurityError' 'That is not one of the backup drives.'; return }
+    [void](Get-BackupStatusJson)   # tidy up a finished one
+    foreach ($k in @('files', 'total', 'bytes', 'totalBytes')) { $script:Backup[$k] = 0 }
+    foreach ($k in @('current', 'folder', 'message', 'at')) { $script:Backup[$k] = '' }
+    $script:Backup.drive = $target.Path
+    $script:Backup.state = 'running'
+    $ps = [powershell]::Create()
+    [void]$ps.AddScript($BackupScript).AddArgument($root).AddArgument($target.Path).AddArgument($script:Backup).AddArgument($HelperVersion)
+    $script:BackupJob = @{ PS = $ps; Handle = $ps.BeginInvoke() }
+    Send-Json $stream 200 (Get-BackupStatusJson)
     return
   }
 

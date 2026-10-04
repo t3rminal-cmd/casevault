@@ -24,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.86.0';
+  const APP_VERSION = '1.87.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -215,6 +215,13 @@ const Vault = (() => {
     vault.settings.lastFullBackup = { at: info.at, files: tally.files, bytes: tally.bytes, folder, where: destParent.name || '', verified: true };
     await saveVault();
     return { folder, ...tally };
+  }
+
+  /** v1.87: a backup the helper made and checked (Firefox). */
+  async function recordHelperBackup({ folder = '', files = 0, bytes = 0, at = '', drive = '' } = {}) {
+    vault.settings.lastFullBackup = { at: at || nowISO(), files, bytes, folder: String(folder).split(/[\\/]/).pop(), where: drive, verified: true, by: 'helper' };
+    await saveVault();
+    return vault.settings.lastFullBackup;
   }
 
   /** v1.85: helper mode cannot reach another drive; the user copies the folder and says so here. */
@@ -1682,7 +1689,7 @@ const Vault = (() => {
     get data() { return vault; },
     newId, localDay, logActivity,
     resolve, create, load, close, ping,
-    backupNow, listBackups, rebuildIndex, updateSettings, fullBackup, recordManualBackup, restoreBackup, readLetterheadLogo, saveLetterheadLogo, deleteLetterheadLogo,
+    backupNow, listBackups, rebuildIndex, updateSettings, fullBackup, recordManualBackup, recordHelperBackup, restoreBackup, readLetterheadLogo, saveLetterheadLogo, deleteLetterheadLogo,
     createCase, getCase, saveCase, deleteCase,
     listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
     archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS,
