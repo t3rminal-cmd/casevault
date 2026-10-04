@@ -863,7 +863,7 @@
 
   // v1.72: tiles: the folders as folder icons, like Operations and General Files; a click opens
   // one (its files show under the icons), another click closes it.
-  function sharedFilesBox(key, { folders: fixed = [], getFolders = null, allowNew = false, tiles = false, empty = 'No files yet.' } = {}) {
+  function sharedFilesBox(key, { folders: fixed = [], getFolders = null, allowNew = false, newTile = true, tiles = false, tileIcon = 'folder2-open', empty = 'No files yet.' } = {}) {
     const box = h('div', { class: `shared-files${tiles ? ' shared-tiles' : ''}`, 'data-key': key });
     const norm = (f) => (typeof f === 'string' ? { name: f, label: f } : { ...f, label: f.label || f.name });
     let folders = fixed.map(norm);
@@ -911,9 +911,9 @@
         type: 'button', role: 'listitem', class: `op-folder-tile shared-tile ${f.name === folder ? 'open' : ''}`, 'aria-expanded': String(f.name === folder),
         title: `${f.label}${f.desc ? `: ${f.desc}` : ''} (${counts[f.name] || 0} file${counts[f.name] === 1 ? '' : 's'})`,
         onclick: () => { folder = f.name === folder ? null : f.name; sharedOpen[key] = folder; draw(); },
-      }, h('span', { class: 'op-folder-art' }, I('folder2-open'), counts[f.name] ? h('span', { class: 'op-folder-count' }, String(counts[f.name])) : null),
+      }, h('span', { class: 'op-folder-art' }, I(tileIcon), counts[f.name] ? h('span', { class: 'op-folder-count' }, String(counts[f.name])) : null),
       h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, f.label), (f.desc || f.custom) ? h('span', { class: 'op-title' }, f.desc || 'Your own folder') : ''))),
-      allowNew ? h('button', { type: 'button', role: 'listitem', class: 'op-folder-tile shared-tile shared-tile-new', title: 'Make a new folder in Other Files', onclick: newFolder },
+      allowNew && newTile ? h('button', { type: 'button', role: 'listitem', class: 'op-folder-tile shared-tile shared-tile-new', title: 'Make a new folder in Other Files', onclick: newFolder },
         h('span', { class: 'op-folder-art' }, I('folder-plus')), h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, 'New Folder'), h('span', { class: 'op-title' }, 'Make your own'))) : '') : null;
       if (tiles && folder == null) { box.replaceChildren(tileRow); return; }
       const chips = tiles ? tileRow : folders.length ? h('nav', { class: `tabs shared-tabs${folders.some((f) => f.desc) ? ' has-desc' : ''}`, role: 'tablist' }, ...folders.map((f) => h('button', {
@@ -945,6 +945,7 @@
     box.addEventListener('dragover', (e) => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); box.classList.add('drop-on'); } });
     box.addEventListener('dragleave', () => box.classList.remove('drop-on'));
     box.addEventListener('drop', (e) => { e.preventDefault(); box.classList.remove('drop-on'); add([...e.dataTransfer.files]); });
+    box.newFolder = newFolder; // v1.74: New Folder sits in the section's header
     draw();
     return box;
   }
@@ -975,10 +976,7 @@
       opBox,
       generalYearFolders(cases),
       // v1.68: OTHER FILES: anything not tied to a case number or an Operation.
-      h('div', { class: 'dash-section ov-panel other-files-section' },
-        panelHead('Other Files', 'Not tied to a case number or an Operation. Kept on the SSD in CaseVault-Data\\shared\\other.'),
-        sharedFilesBox('other', { allowNew: true, tiles: true, empty: 'No files yet. Add forms, training or reference sheets here.',
-          getFolders: async () => [...Vault.OTHER_FOLDERS, ...(await Vault.otherCustomFolders()).map((n) => ({ name: n, custom: true }))] })),
+      otherFilesSection(),
       // v1.71: Recently Updated as even columns, in the Quick Links' size, not bold.
       h('div', { class: 'dash-section ov-panel recent-section' }, panelHead('Recently Updated', 'The cases changed most recently. Clear empties the list.',
         recent.length ? h('button', { class: 'btn small', type: 'button', icon: 'x-circle', title: 'Empties this list. Cases you change after this show here again.', onclick: async () => {
@@ -1143,7 +1141,8 @@
       h('div', { class: 'op-info' },
         info('Operation Number', op.number), info('Operation Name', op.name), info('Status', op.status), info('Start Date', op.start ? fmtDate(op.start) : ''), info('End Date', op.end ? fmtDate(op.end) : '')),
       op.notes ? h('div', { class: 'op-notes' }, h('span', { class: 'op-info-label' }, 'Notes'), h('p', {}, op.notes)) : null,
-      h('div', { class: 'section-head op-files-head' }, h('h2', { class: 'section-title' }, 'Files'), h('span', { class: 'muted small op-files-note' }, 'The cases linked to this Operation. They live in General Files; nothing is copied.'),
+      // v1.74: plain headers; the explanations sit under each section, small.
+      h('div', { class: 'section-head op-files-head' }, h('h2', { class: 'section-title caps' }, 'Files'), h('div', { class: 'spacer' }),
         h('button', { class: 'btn', type: 'button', icon: 'link-45deg', onclick: async () => { if (await addExistingDialog(op)) redraw(); } }, 'Add Existing Case'),
         h('button', { class: 'btn primary', type: 'button', icon: 'plus-lg', onclick: () => newCase({ operationId: op.id }) }, 'New Case in this Operation')),
       members.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'data-table op-cases-table' },
@@ -1158,9 +1157,11 @@
             ? h('span', { class: 'muted small', title: 'Archived cases are read-only. Restore it to unlink it.' }, 'Archived')
             : h('button', { class: 'btn small', type: 'button', icon: 'folder-symlink', title: 'Move this case to General Files or another Operation', onclick: async () => { if (await moveCaseDialog(c)) redraw(); } }, 'Move File')))))))
         : h('div', { class: 'empty-state' }, h('p', {}, 'No cases in this Operation yet.'), h('p', { class: 'muted small' }, 'New Case in this Operation creates one; Add Existing Case links one from General Files.')),
+      h('p', { class: 'muted small op-section-note' }, 'The cases linked to this Operation. They live in General Files; nothing is copied.'),
       // v1.68: the Operation's own folder, not tied to a case number.
-      h('div', { class: 'section-head op-folder-head', id: 'op-folder' }, h('h2', { class: 'section-title caps', icon: 'op-folder' }, 'Operation Folder'), h('span', { class: 'muted small' }, 'For the whole Operation, not one case number. Kept on the SSD in CaseVault-Data\\shared.')),
-      sharedFilesBox(`op-${op.id}`, { tiles: true, folders: Vault.OP_FOLDERS.map((n) => ({ name: n, desc: OP_FOLDER_DESC[n] || '' })) }),
+      h('div', { class: 'section-head op-folder-head', id: 'op-folder' }, h('h2', { class: 'section-title caps' }, 'Operation Folder')),
+      sharedFilesBox(`op-${op.id}`, { tiles: true, tileIcon: 'folder-mission', folders: Vault.OP_FOLDERS.map((n) => ({ name: n, desc: OP_FOLDER_DESC[n] || '' })) }),
+      h('p', { class: 'muted small op-section-note' }, 'For the whole Operation, not one case number. Kept on the SSD in CaseVault-Data\\shared.'),
       h('section', { class: 'case-actions op-danger', 'aria-labelledby': 'op-actions-title' },
         h('h3', { id: 'op-actions-title', icon: 'sliders' }, 'Operation actions'),
         h('div', { class: 'case-actions-grid' },
@@ -1268,8 +1269,17 @@
    * a one-line description under it, and its button on the right. */
   function panelHead(title, desc, action = '') {
     return h('div', { class: 'section-head ov-head' },
-      h('div', { class: 'ov-head-text' }, h('h2', { class: 'section-title caps' }, title), h('span', { class: 'ov-desc muted small' }, desc)),
+      h('div', { class: 'ov-head-text' }, h('h2', { class: `section-title caps${/ Files$/i.test(title) ? ' ov-files-title' : ''}` }, h('span', { class: /^Other Files$/i.test(title) ? 'ov-title-wide' : '' }, title)), h('span', { class: 'ov-desc muted small' }, desc)),
       h('div', { class: 'spacer' }), action || h('span', { class: 'ov-action-space' }));
+  }
+  /** v1.74: OTHER FILES with New Folder in its header, like All Cases and All Operations. */
+  function otherFilesSection() {
+    const files = sharedFilesBox('other', { allowNew: true, newTile: false, tiles: true, tileIcon: 'folder-other', empty: 'No files yet. Add forms, training or reference sheets here.',
+      getFolders: async () => [...Vault.OTHER_FOLDERS, ...(await Vault.otherCustomFolders()).map((n) => ({ name: n, custom: true }))] });
+    return h('div', { class: 'dash-section ov-panel other-files-section' },
+      panelHead('Other Files', 'Not tied to a case number or an Operation. Kept on the SSD in CaseVault-Data\\shared\\other.',
+        h('button', { type: 'button', class: 'btn small ov-btn-other', icon: 'folder-other', title: 'Make a new folder in Other Files', onclick: () => files.newFolder() }, 'New Folder')),
+      files);
   }
   function generalYearFolders(cases) {
     const loose = cases.filter((c) => !isArchivedEntry(c) && (!c.operationId || !Vault.getOperation(c.operationId)));
@@ -1284,7 +1294,7 @@
         return h('button', { type: 'button', role: 'listitem', class: `op-folder-tile year-tile ${open === o ? 'open' : ''}`, 'aria-expanded': String(open === o),
           title: `${o.name}: ${o.group.length} case${o.group.length === 1 ? '' : 's'} not in an Operation`,
           onclick: () => { yearFolderState.open = open === o ? '' : o.k; draw(); } },
-        h('span', { class: 'op-folder-art' }, I('folder-fill'), o.group.length > 1 ? h('span', { class: 'op-folder-count' }, String(o.group.length)) : null),
+        h('span', { class: 'op-folder-art' }, I('folder-general'), o.group.length > 1 ? h('span', { class: 'op-folder-count' }, String(o.group.length)) : null),
         h('span', { class: 'op-folder-name' }, o.name, bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null));
       }));
       const inside = open ? h('div', { class: 'op-open' },
@@ -1293,7 +1303,7 @@
         h('div', { class: 'op-open-cases' }, open.op ? h('a', { class: 'op-folder-card', href: `#/operation/${encodeURIComponent(open.op.id)}`, title: 'Subpoenas, Affidavits, Operation Plans, Maps, Subject Data and the Vehicle List, for the whole Operation' },
           I('op-folder'), h('span', { class: 'op-folder-card-text' }, h('strong', {}, 'Operation Folder'), h('span', { class: 'muted small' }, Vault.OP_FOLDERS.join(' · ')))) : null,
         ...open.group.map((c) => overviewCard(c)))) : null;
-      box.replaceChildren(...[panelHead('General Files', 'Cases not in an Operation, by the year they were opened.', h('a', { class: 'btn small', href: '#/general', icon: 'folder2-open' }, 'All Cases')),
+      box.replaceChildren(...[panelHead('General Files', 'Cases not in an Operation, by the year they were opened.', h('a', { class: 'btn small ov-btn-general', href: '#/general', icon: 'folder-general' }, 'All Cases')),
         list.length ? tiles : h('p', { class: 'muted' }, 'Every case is in an Operation. Cases that aren\'t show here by the year they were opened.'), inside].filter(Boolean));
     };
     yearFolderState.close = () => { if (yearFolderState.open && box.isConnected) { yearFolderState.open = ''; draw(); } };
@@ -1315,7 +1325,7 @@
         return h('button', { type: 'button', role: 'listitem', class: `op-folder-tile ${open === o ? 'open' : ''}`, 'aria-expanded': String(open === o),
           title: `${o.name}: ${o.group.length} case number${o.group.length === 1 ? '' : 's'}`,
           onclick: () => { opFolderState.open = open === o ? '' : o.k; draw(); } },
-        h('span', { class: 'op-folder-art' }, I(o.op ? 'op-folder' : 'folder-fill'), o.group.length > 1 ? h('span', { class: 'op-folder-count' }, String(o.group.length)) : null),
+        h('span', { class: 'op-folder-art' }, I('folder-mission'), o.group.length > 1 ? h('span', { class: 'op-folder-count' }, String(o.group.length)) : null),
         // v1.60: Operation Number on top, name below (as in the sidebar).
         h('span', { class: 'op-folder-name op-two-line' }, ...[h('span', { class: 'op-num' }, o.op.number || 'No number', bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
           o.op.name ? h('span', { class: 'op-title' }, o.op.name) : null].filter(Boolean)));
@@ -1325,7 +1335,7 @@
           h('div', { class: 'spacer' }),
           h('button', { type: 'button', class: 'btn small', onclick: () => newCase(open.op ? { operationId: open.op.id } : {}) }, open.op ? 'Add Case Number' : 'New Case')),
         h('div', { class: 'op-open-cases' }, open.group.length ? open.group.map((c) => overviewCard(c)) : [h('p', { class: 'muted' }, open.op ? 'No cases in this Operation yet. Add Case Number creates one here.' : 'No independent cases.')])) : null;
-      box.replaceChildren(...[panelHead('Operations', 'Case numbers worked together. Click a folder to open it.', h('a', { class: 'btn small', href: '#/operations', icon: 'op-folder' }, 'All Operations')),
+      box.replaceChildren(...[panelHead('Mission Files', 'Case numbers worked together as an Operation. Click a folder to open it.', h('a', { class: 'btn small ov-btn-mission', href: '#/operations', icon: 'folder-mission' }, 'All Operations')),
         list.length ? tiles : h('p', { class: 'muted' }, 'No Operations yet. All Operations → New Operation makes one.'), opBox ? null : inside].filter(Boolean));
       if (opBox) { opBox.hidden = !inside; opBox.replaceChildren(...(inside ? [inside] : [])); }
       if (tlBox) drawTimeline(open);
@@ -1469,9 +1479,23 @@
       toast(`Statute of limitations: ${sols.map((c) => c.number || 'No case number').join(', ')}. See Needs Attention.`, 'error', 9000);
     }
     // v1.66: no count beside the heading; the list says it all.
-    const head = h('div', { class: 'section-head' }, h('h2', { class: 'section-title' }, I('bell-fill'), ' Needs Attention'));
-    if (!due.length && !solRows.length) return h('div', { class: 'dash-section attention-section' }, head, h('p', { class: 'muted attention-none' }, 'Nothing due in the next 7 days.'));
-    return h('div', { class: 'dash-section attention-section' }, head,
+    // v1.74: Needs Attention folds into one slim bar (with a short summary); remembered.
+    const overdueN = solRows.length + due.filter((c) => daysUntil(c.nextDeadline.date) < 0).length;
+    const total = solRows.length + due.length;
+    const summary = h('span', { class: `att-summary${overdueN ? ' has-overdue' : ''}` }, total ? `${total} item${total === 1 ? '' : 's'}${overdueN ? ` · ${overdueN} overdue` : ''}` : 'Nothing due in the next 7 days');
+    let folded = false;
+    try { folded = localStorage.getItem('cv-att-folded') === '1'; } catch { /* private window */ }
+    const foldBtn = h('button', { type: 'button', class: 'icon-btn att-fold', 'aria-expanded': String(!folded), title: folded ? 'Show Needs Attention' : 'Fold Needs Attention into a bar' }, I('chevron-down'), h('span', { class: 'sr-only' }, 'Fold or show'));
+    const head = h('div', { class: 'section-head att-head' }, h('h2', { class: 'section-title' }, I('bell-fill'), ' Needs Attention'), summary, h('div', { class: 'spacer' }), foldBtn);
+    const wrap = (...kids) => {
+      const sec = h('div', { class: `dash-section attention-section${folded ? ' att-folded' : ''}` }, head, ...kids);
+      const set = (f) => { folded = f; sec.classList.toggle('att-folded', f); foldBtn.setAttribute('aria-expanded', String(!f)); foldBtn.title = f ? 'Show Needs Attention' : 'Fold Needs Attention into a bar'; try { localStorage.setItem('cv-att-folded', f ? '1' : '0'); } catch { /* ignore */ } };
+      foldBtn.addEventListener('click', () => set(!folded));
+      head.addEventListener('click', (e) => { if (folded && !e.target.closest('button')) set(false); });
+      return sec;
+    };
+    if (!due.length && !solRows.length) return wrap(h('p', { class: 'muted attention-none' }, 'Nothing due in the next 7 days.'));
+    return wrap(
       h('div', { class: 'attention-list', role: 'list' }, ...solRows, ...due.slice(0, 8).map((c) => {
         const d = c.nextDeadline;
         const n = daysUntil(d.date);

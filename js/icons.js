@@ -60,6 +60,7 @@
     'badge-cbp': 'badge-cbp', 'badge-hsi': 'badge-hsi', 'badge-ice': 'badge-ice', 'badge-usss': 'badge-usss', 'badge-uspis': 'badge-uspis',
     'badge-state-pd': 'badge-state-pd', 'badge-local-pd': 'badge-local-pd', 'badge-sheriff': 'badge-sheriff',
     // v1.68
+    'folder-mission': 'folder-mission', 'folder-general': 'folder-general', 'folder-other': 'folder-other', // v1.74
     'power': 'power', 'chat-square-text': 'sms', 'images': 'photo-stack', 'table': 'bar-chart',
     'drug-powder': 'drug-powder', 'drug-syringe': 'drug-syringe', 'drug-vial': 'drug-vial', 'drug-crystal': 'drug-crystal', 'drug-pills': 'drug-pills', 'drug-mushroom': 'drug-mushroom', 'drug-steroid': 'drug-steroid', 'drug-cannabis': 'cannabis',
   };

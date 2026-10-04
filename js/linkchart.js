@@ -412,8 +412,16 @@
     }
     return best;
   }
+  // v1.74: the app's own narcotics and money icons (icons/color/cannabis.png, money.png), as data
+  // URLs so they also show in the PDF; until they're loaded the drawn badges are used.
+  let FLOW_IMG = {};
+  function setFlowImages(map) { FLOW_IMG = { ...map }; }
   function flowBadge(flow, x, y) {
     const c = FLOW_COLOR[flow];
+    if (FLOW_IMG[flow]) {
+      const r = 14;
+      return `<g class="lc-flow lc-flow-${flow}" pointer-events="none"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="#ffffff" stroke="${c}" stroke-width="2"/><image href="${FLOW_IMG[flow]}" x="${(x - 11).toFixed(1)}" y="${(y - 11).toFixed(1)}" width="22" height="22" preserveAspectRatio="xMidYMid meet"/></g>`;
+    }
     const ring = `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="10.5" fill="${c}" stroke="#ffffff" stroke-width="2"/>`;
     if (flow === 'money') return `<g class="lc-flow lc-flow-money" pointer-events="none">${ring}<text x="${x.toFixed(1)}" y="${(y + 4.6).toFixed(1)}" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#ffffff">$</text></g>`;
     return `<g class="lc-flow lc-flow-narcotics" pointer-events="none">${ring}<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(-35)"><rect x="-7" y="-3.4" width="14" height="6.8" rx="3.4" fill="#ffffff"/><rect x="0" y="-3.4" width="7" height="6.8" rx="3.4" fill="#fde2d4"/><path d="M0 -3.4 V3.4" stroke="${c}" stroke-width="1"/></g></g>`;
@@ -545,6 +553,7 @@
   }
 
   const api = {
+    setFlowImages,
     KINDS, ROLES, DIRS, FLOWS, otherFlow, PLATFORMS, PER_ROW, CARD: { W, H: H_MAX, PHOTO }, cardHeight, emptyChart, normalize, newNode, childrenOf, subtree, removeNode, clear, ordered,
     moveSibling, linkBetween, toggleLink, linkPath, linkOffsets, summaryMarkdown, iconOf, colorOf, subLine, layout, freeze, printScale, toSvg, fit, wrapLines, twoLines, embed, extract,
   };

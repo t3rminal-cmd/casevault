@@ -486,6 +486,12 @@
     drawAll();
   }
 
-  function init(kit) { ui = kit; }
+  function init(kit) {
+    ui = kit;
+    // v1.74: the narcotics and money badges use the app's colour icons.
+    const toData = async (url) => { const r = await fetch(url); if (!r.ok) throw new Error(url); const b = await r.blob(); return new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(b); }); };
+    Promise.all([toData('icons/color/cannabis.png'), toData('icons/color/money.png')])
+      .then(([narcotics, money]) => CVLinkChart.setFlowImages({ narcotics, money })).catch(() => { /* the drawn badges stay */ });
+  }
   root.CVLinkChartUI = { init, render, buildPdf, load, openFromFile };
 })(this);

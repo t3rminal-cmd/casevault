@@ -3680,3 +3680,45 @@ body .fab-dock { bottom: calc(var(--ql-dock-h, 0px) + 1.2rem); }
 .op-veh-photo-acts { display: flex; gap: .4rem; justify-content: center; }
 .op-veh-foot { display: flex; }
 @media (max-width: 760px) { .op-veh-body { grid-template-columns: 1fr; } }
+
+/* v1.74: Needs Attention folds into one slim bar. */
+.attention-section .att-head { display: flex; align-items: center; gap: .7rem; }
+.attention-section .att-summary { display: none; font-size: .82rem; color: var(--muted); }
+.attention-section .att-summary.has-overdue { color: var(--danger); font-weight: 600; }
+.attention-section .att-fold .bi { transition: transform .15s; }
+.attention-section.att-folded { padding-top: .35rem; padding-bottom: .35rem; }
+.attention-section.att-folded > :not(.att-head) { display: none !important; }
+.attention-section.att-folded .att-head { margin: 0; padding: .25rem .7rem; min-height: 0; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--danger); box-shadow: var(--lift, none); cursor: pointer; }
+.attention-section.att-folded .att-head .section-title { font-size: .92rem; }
+.attention-section.att-folded .att-summary { display: inline; }
+.attention-section.att-folded .att-fold .bi { transform: rotate(-90deg); }
+
+/* v1.74: MISSION FILES, GENERAL FILES and OTHER FILES the same width; each section's colour
+   (blue, purple, green, as its folder icon) on its edge and its header button. */
+.dashboard .ov-files-title > span { display: inline-block; white-space: nowrap; }
+.dashboard .op-folders-section:not(.general-years-section) { border-left-color: #1f6fd1; }
+.dashboard .general-years-section { border-left-color: #7b4fd8; }
+.dashboard .other-files-section { border-left-color: #2a9d8f; }
+.dashboard .ov-btn-mission { color: #1f5fb8; border-color: color-mix(in srgb, #1f6fd1 45%, var(--border)); }
+.dashboard .ov-btn-general { color: #6a3fc8; border-color: color-mix(in srgb, #7b4fd8 45%, var(--border)); }
+.dashboard .ov-btn-other { color: #1f7d72; border-color: color-mix(in srgb, #2a9d8f 45%, var(--border)); }
+.dashboard .ov-btn-mission:hover { background: color-mix(in srgb, #1f6fd1 12%, var(--surface)); }
+.dashboard .ov-btn-general:hover { background: color-mix(in srgb, #7b4fd8 12%, var(--surface)); }
+.dashboard .ov-btn-other:hover { background: color-mix(in srgb, #2a9d8f 12%, var(--surface)); }
+.op-folder-art .bi.ci { width: 3.6rem; height: 3.6rem; }
+
+/* v1.74: the Operation page: plain section headers, the explanation small under each section. */
+.op-section-note { margin: .4rem 0 1.2rem; font-size: .78rem; }
+.op-files-head .section-title, .op-folder-head .section-title { margin: 0; }
+
+/* v1.74: anything you can click shows it when the mouse is over it: links underline, buttons
+   and cards take the accent colour. */
+a[href]:not(.btn):not(.tab):not(.quick-link):not(.qa-tile):not(.case-item):not(.op-folder-card):not(.recent-row):not(.attention-row):not(.brand):not(.icon-btn):hover { text-decoration: underline; text-underline-offset: 3px; color: var(--accent-strong, var(--accent)); }
+.btn:not(:disabled):not(.primary):not(.danger):hover, a.btn:not(.primary):hover { border-color: var(--accent); color: var(--accent-strong, var(--accent)); }
+.btn.primary:not(:disabled):hover { filter: brightness(1.08); }
+.icon-btn:not(:disabled):hover { color: var(--accent-strong, var(--accent)); background: var(--accent-soft); }
+.op-folder-tile:hover, .qa-tile:hover, .attention-row:hover, .tl-filter:hover, .shared-tile:hover { border-color: var(--accent); background: var(--accent-soft); }
+.op-folder-tile:hover .op-num, .op-folder-tile:hover .op-folder-name { color: var(--accent-strong, var(--accent)); }
+a[href], button:not(:disabled), [role="button"], summary, .op-folder-tile, label.check-row { cursor: pointer; }
+/* OTHER FILES (11 letters) spaced out to the width of MISSION FILES and GENERAL FILES (13). */
+.dashboard .ov-files-title > span.ov-title-wide { letter-spacing: calc(.05em + .2ch); margin-right: -.2ch; }

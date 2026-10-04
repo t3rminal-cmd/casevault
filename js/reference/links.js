@@ -11,7 +11,7 @@
 
 (function (root) {
   const TABS = [
-    { key: 'reference', label: 'Reference', icon: 'book' },
+    { key: 'reference', label: 'REFERENCE', icon: 'book' }, // v1.74: capitals, like OSINT and LEO
     { key: 'osint', label: 'OSINT', icon: 'search' },
     { key: 'leo', label: 'LEO', icon: 'shield-lock-fill' },
   ];
