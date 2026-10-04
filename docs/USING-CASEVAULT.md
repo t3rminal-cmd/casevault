@@ -215,6 +215,18 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.74
+
+- **Needs Attention** can fold into one slim bar: click the arrow on its right. The bar still says how many items there are and how many are overdue (in red). Click the bar or the arrow to open it again. CaseVault remembers which way you left it.
+- **MISSION FILES:**
+  - The Operations section is now **MISSION FILES**. **MISSION FILES**, **GENERAL FILES** and **OTHER FILES** have headings of the same width.
+  - Their folders have new icons: blue for Mission Files (and the Operation Folder), purple for General Files, green for Other Files. Each section's edge and its header button (All Operations, All Cases, New Folder) are in the same colour.
+  - **New Folder** for Other Files is now in the section's header, top right.
+- **Quick Links:** **REFERENCE** is in capitals, like OSINT and LEO.
+- **Operation page:** **FILES** and **OPERATION FOLDER** have plain headers without the icon. The short explanation of each is now a small line under its section.
+- **Clickable things show it:** when the mouse is over a link, it underlines; buttons, folders, tiles and list rows take the accent colour.
+- **Link Chart:** a line carrying narcotics shows the cannabis icon, and one carrying money shows the money icon (also in the PDF).
+
 ### What's new in v1.73
 
 - **Easier to see:** the case list and the Quick Links bar have a cool slate shade, and their buttons (Operations, cases, links, tabs) are white with a soft shadow that lifts when you point at them. Works in dark mode too.
