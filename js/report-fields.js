@@ -93,7 +93,7 @@
       ['fundSheet', 'Pre-Recorded Fund Sheet', 'line'],
       ['evidenceOfficer', 'Evidence Officer', 'line'],
       ['proofResidence', 'Proof of Residence', 'line'],
-      ['irNumber', 'IR Number', 'line'],
+      // v1.86: no IR Number line: it is in each offender's info.
       ['cbNumber', 'CB Number', 'line'],
       // One line per narcotic (type, total weight, purchase price, street value), v1.25.
       ['narcotics', 'Narcotics Recovered', 'list'],
@@ -234,6 +234,12 @@
       d.narcotics.push({ ...blankItem('narcotics'), amount: old('totalWeight'), value: old('streetValue'), price: old('purchasePrice') });
     }
     for (const o of d.offendersList) { o.unknown = !!o.unknown; if (o.unknown && !String(o.name || '').trim()) o.name = UNKNOWN; }
+    // v1.86: the Officer's Report's own IR Number line is gone; one typed there goes to the first
+    // offender without one (it stays saved otherwise, so nothing is lost).
+    if (old('irNumber')) {
+      const o = d.offendersList.find((x) => !String(x.irNumber || '').trim());
+      if (o) { o.irNumber = old('irNumber'); delete d.irNumber; }
+    }
     for (const k of ['victimName', 'victimRelation', 'victimDetails', 'offenderName', 'offenderRelation', 'offenderDetails', 'gangAffiliation', 'vehicle', 'impound', 'lieutenant', 'lieutenantStar', 'totalWeight', 'streetValue', 'purchasePrice']) delete d[k];
     d.hidden = Array.isArray(d.hidden) ? d.hidden.filter((x) => typeof x === 'string') : [];
     // v1.68: Additional Exhibits: photographs or text-message screenshots that are not tied to an

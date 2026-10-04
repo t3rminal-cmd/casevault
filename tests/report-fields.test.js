@@ -214,7 +214,10 @@ test('v1.25: narcotics recovered, one line each; older single lines move into th
   assert.match(md, /\| 1 \| Cocaine \(Powder\) \| 28 grams \|/);
   const s = Buffer.from(P.build(d, {})).toString('latin1');
   assert.match(s, /NARCOTICS RECOVERED/);
-  assert.match(s, /Total Weight: 28 grams/);
+  // v1.86: in columns: the type, the amount, then Street Value and Purchase Price.
+  assert.match(s, /\(28 grams\)/);
+  assert.match(s, /Street Value - \$3,500\.00/);
+  assert.match(s, /Purchase Price - \$1,200\.00/);
   assert.match(s, /SUBPOENA GJ NUMBER/);
   // The four narcotic boxes share one row.
   const R = require('../js/reference/reference.js');
@@ -295,7 +298,7 @@ test('v1.27: State of Illinois victim, compact Local AI box', () => {
 test('v1.31: Officer\'s Report lines, UCO, no reclassification, and a report drawn as a PDF like the form', () => {
   const report = F.SECTIONS.find((s) => s.id === 'report').fields.map(([, l]) => l);
   assert.deepStrictEqual(report.slice(0, 16), ['Operation / Mission Number', 'Within 1000 FT Of', 'Court Branch and Court Officer', 'Court Date', 'Search Warrant Number', 'Subpoena GJ Number',
-    'ASA Approving Search Warrant', 'AUSA Approving Search Warrant', 'Judge Approving Search Warrant', 'Purchase Price', 'Pre-Recorded Funds', 'Pre-Recorded Fund Sheet', 'Evidence Officer', 'Proof of Residence', 'IR Number', 'CB Number']);
+    'ASA Approving Search Warrant', 'AUSA Approving Search Warrant', 'Judge Approving Search Warrant', 'Purchase Price', 'Pre-Recorded Funds', 'Pre-Recorded Fund Sheet', 'Evidence Officer', 'Proof of Residence', 'CB Number', 'Narcotics Recovered']); // v1.86: no IR Number line
   assert.ok(!F.FIELDS.some(([k]) => k === 'reclass' || k === 'revisedUcr'));
   assert.ok(F.ROLES.includes('UCO') && !F.ROLES.includes('UC'));
   assert.strictEqual(F.normalize({ personnel: [{ name: 'Officer Alex Sample', role: 'UC' }] }).personnel[0].role, 'UCO');

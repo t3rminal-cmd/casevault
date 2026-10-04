@@ -66,3 +66,33 @@ test('v1.85: a long timeline goes onto more pages', () => {
   assert.match(pdf, /Event 120/);
   assert.match(pdf, /continued/);
 });
+
+// v1.86: the Officer's Report on the PDF, as laid out by the user.
+const RF = require('../js/report-fields.js');
+test('v1.86: State of Illinois victim and officer on one line; narcotics in columns; funds as a table', () => {
+  const d = RF.normalize({
+    victimsList: [{ name: 'State of Illinois', officer: 'John Doe' }],
+    narcotics: [{ drug: 'Adderall', amount: '10', unit: 'pill', value: '100', price: '$100' }],
+    funds: [{ denomination: '$20', quantity: '4', serials: ['AA00000001A', 'AA00000002A', 'AA00000003A', 'AA00000004A'] }, { denomination: '$10', quantity: '1', serials: ['BB00000001A', 'BB00000002A'] }],
+    fundsRecovered: 'Not Recovered',
+  });
+  const s = text(R.build(d, {}));
+  for (const x of ['(VICTIM:)', '(State of Illinois)', '(Officer Name: John Doe)', '(Adderall)', '(10 pills)', '(Street Value - $100)', '(Purchase Price - $100)', '(QTY)', '(Denomination)', '(Serial Number)', '(04)', '($20.00)', '(01)', '($10.00)', '(AA00000004A)', '(BB00000002A)', '(Not Recovered)']) assert.ok(s.includes(x), x);
+  assert.ok(s.includes('(NARCOTICS RECOVERED \\(TOTAL WEIGHT &)') || /NARCOTICS RECOVERED/.test(s));
+});
+
+test('v1.86: no IR Number line (moved into the first offender); the secondary officer can be left out', () => {
+  assert.ok(!RF.SECTIONS.find((x) => x.id === 'report').fields.some(([k]) => k === 'irNumber'));
+  const d = RF.normalize({ irNumber: '1234567', offendersList: [{ name: 'Rick Poe' }] });
+  assert.strictEqual(d.offendersList[0].irNumber, '1234567');
+  assert.ok(!('irNumber' in d));
+  const kept = RF.normalize({ irNumber: '1234567' });
+  assert.strictEqual(kept.irNumber, '1234567', 'kept when there is no offender to move it to');
+  const withSecond = text(R.build({ secondOfficer: 'Jane Roe' }, {}));
+  assert.match(withSecond, /SECONDARY REPORTING OFFICER/);
+  assert.match(withSecond, /SecondOfficerSignature/);
+  const without = text(R.build({ secondOfficer: 'Jane Roe', hidden: ['secondOfficer'] }, {}));
+  assert.doesNotMatch(without, /SECONDARY REPORTING OFFICER/);
+  assert.doesNotMatch(without, /SecondOfficerSignature/);
+  assert.match(without, /SupervisorSignature/);
+});
