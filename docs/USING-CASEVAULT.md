@@ -215,6 +215,10 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.77
+
+- **Sidebar folder names in capitals:** **MISSION FILES** (the closed cases of Operations that are still going on; it was "Operation Files"), **GENERAL FILES**, **CLOSED FILES** (it was "Closed") and **ARCHIVED**.
+
 ### What's new in v1.76
 
 - **DNA** (Does Not Apply) is offered for the **Federal Jacket Number** (new case and Details) and for the **IR, FBI and IDOC Numbers** of suspects, offenders and the Officer's Report: click the arrow in the box.

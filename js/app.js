@@ -628,7 +628,7 @@
           // v1.60: an Operation's number on top, its name under it.
           h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, ...(op && !opFiles
             ? [h('span', { class: 'op-num' }, op.number || 'No number'), op.name ? h('span', { class: 'op-title' }, op.name) : null].filter(Boolean)
-            : [label])),
+            : [opFiles ? 'MISSION FILES' : 'GENERAL FILES'])), // v1.77: the folder names in capitals
             bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
           h('span', { class: 'op-meta muted' }, meta)),
         cases.length > 1 ? h('span', { class: 'op-count' }, String(cases.length)) : null,
