@@ -215,6 +215,20 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.73
+
+- **Easier to see:** the case list and the Quick Links bar have a cool slate shade, and their buttons (Operations, cases, links, tabs) are white with a soft shadow that lifts when you point at them. Works in dark mode too.
+- **Timeline, redesigned:**
+  - A summary strip on top: **Events**, **Open Deadlines**, **Overdue** and **Next Due** (with its name).
+  - Filters: **All**, **Upcoming**, **Deadlines**, **Past**.
+  - The entries hang on a rail under month headings, each with a date chip (day, weekday, time). The marker on the rail is blue for an event, an amber diamond for a deadline, red when overdue and green when done.
+  - A red **Today** line shows where the past ends. Edit and Delete appear when you point at an entry.
+- **Operation Folder** shows its folders as folder icons, each with what it's for. Click one to open it; its files and Add Files show only then. Click it again, or **Close**, to close it.
+- **Vehicle List** (was Running Vehicle List; files already in it are moved over):
+  - **Add Vehicle** makes a card with the Draft's vehicle fields (Year, Make, Model, Color, License Plate, Plate State, VIN, Impound / Tow), plus **Registered Owner**, **Registered Owner Address** and Notes.
+  - On the right of each card is **Add Photo** for a picture of the vehicle; click the photo to view it, or Replace / Remove it.
+- **Draft → Vehicles** also has **Registered Owner** and **Registered Owner Address** (Owner and Notes is now Notes).
+
 ### What's new in v1.72
 
 - **OTHER FILES** shows its folders as folder icons, like Operations and General Files: **USPIS Files**, **DEA Files**, **INET Files**, **Training** and **Other**, each with what it's for under its name and its file count on the icon. Click a folder to open it: its files show below, with Add Files (or drop files on it). Click the folder again, or **Close**, to close it. **New Folder** makes your own; one you made can be removed with **Remove Folder** once it's empty.
