@@ -100,7 +100,8 @@
     const z = parseFloat(doc.documentElement.style.zoom) || 1;
     const r = sel.getBoundingClientRect();
     const W = root.innerWidth / z; const H = root.innerHeight / z;
-    pop.style.minWidth = `${Math.max(r.width / z, 120)}px`;
+    pop.style.minWidth = `${Math.min(Math.max(r.width / z, 120), W - 8)}px`;
+    pop.style.maxWidth = `${Math.max(W - 8, 120)}px`; // v1.79: never wider than the window
     const w = pop.offsetWidth; const h = pop.offsetHeight;
     pop.style.left = `${Math.max(4, Math.min(r.left / z, W - w - 4))}px`;
     const below = r.bottom / z + 2;

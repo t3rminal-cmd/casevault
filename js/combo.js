@@ -74,6 +74,9 @@
       // Nothing to choose when the text already is the one match.
       const exact = !all && shown.length === 1 && shown[0].value.toLowerCase() === input.value.trim().toLowerCase();
       list.hidden = !shown.length || exact;
+      // v1.79: a list wider than the room to its right moves left, so it stays inside the window.
+      list.style.left = '';
+      if (!list.hidden) { const r = list.getBoundingClientRect(); const room = root.innerWidth - 8; if (r.right > room) list.style.left = `${Math.max(room - r.right, -r.left + 8)}px`; }
       // A hover box already showing for this box steps aside for the list (v1.38).
       if (!list.hidden) { const t = doc.getElementById('cv-tip'); if (t) t.hidden = true; }
       input.setAttribute('aria-expanded', String(!list.hidden));
