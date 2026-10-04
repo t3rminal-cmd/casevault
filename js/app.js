@@ -807,7 +807,7 @@
    * Vehicle List). Files are kept as they are named, in CaseVault-Data\\shared. */
   const sharedOpen = {};
   const OP_FOLDER_DESC = { Subpoenas: 'Served and returned', Affidavits: 'Search warrant affidavits', 'Operation Plans': 'Ops plans and briefings', Maps: 'Maps and aerials', 'Subject Data': 'Subject profiles and records', 'Vehicle List': 'Vehicles, owners and photos' };
-  const SHARED_ICONS = { 'USPIS Files': 'badge-uspis', 'DEA Files': 'badge-dea', 'INET Files': 'globe2', Training: 'book', Other: 'folder2-open', Subpoenas: 'file-earmark-ruled', Affidavits: 'pencil-square', 'Operation Plans': 'card-checklist', Maps: 'map', 'Subject Data': 'person-vcard', 'Vehicle List': 'car-front' };
+  const SHARED_ICONS = { 'USPIS Files': 'badge-uspis', 'DEA Files': 'badge-dea', 'INET Files': 'globe2', Training: 'book', Other: 'folder-other', Subpoenas: 'file-earmark-ruled', Affidavits: 'pencil-square', 'Operation Plans': 'card-checklist', Maps: 'map', 'Subject Data': 'person-vcard', 'Vehicle List': 'car-front' };
   // v1.71: folders are names, or { name, label, desc, custom }; getFolders() reads them each time
   // (Other Files: the built-in folders and the ones you make; New Folder adds one).
   /** v1.73: an Operation's Vehicle List: one card per vehicle with the Draft's vehicle fields

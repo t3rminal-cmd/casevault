@@ -27,7 +27,7 @@
     'house-door': 'home', 'safe2': 'safe', 'bookshelf': 'bookshelf', 'book': 'book', 'person-badge': 'id-card', 'person-vcard': 'id-card',
     'x-circle': 'x-circle', 'envelope': 'envelope', 'envelope-at': 'envelope', 'envelope-paper': 'envelope',
     'upload': 'cloud-upload', 'box-arrow-up-right': 'external', 'floppy': 'floppy', 'save': 'floppy',
-    'folder': 'folder-purple', 'folder2': 'folder-purple', 'folder2-open': 'folder-purple', 'folder-fill': 'folder-yellow', 'op-folder': 'folder-blue',
+    'folder': 'folder-general', 'folder2': 'folder-general', 'folder2-open': 'folder-general', 'folder-fill': 'folder-general', 'op-folder': 'folder-mission', // v1.75 shield folders
     'capsule-pill': 'cannabis', 'cash-coin': 'money', 'bank2': 'scales', 'diagram-3-fill': 'link-nodes', 'sliders2': 'wrench',
     'shield-check': 'shield-person', 'bullseye': 'target',
     // v1.53: drawn in the same style for what the artwork didn't have
@@ -41,7 +41,7 @@
     'box-arrow-left': 'logout', 'building': 'building', 'person-lines-fill': 'person-search', 'person-exclamation': 'person-alert',
     'person-circle': 'person-circle', 'clipboard2-pulse': 'clipboard-pulse', 'exclamation-triangle-fill': 'warning', 'info-circle': 'info',
     'file-earmark': 'file-blank', 'file-earmark-music': 'file-music', 'file-earmark-play': 'file-play', 'file-earmark-spreadsheet': 'file-sheet',
-    'file-earmark-zip': 'file-zip', 'fire': 'fire', 'folder-symlink': 'folder-link', 'incognito': 'incognito', 'key': 'key',
+    'file-earmark-zip': 'file-zip', 'fire': 'fire', 'folder-symlink': 'folder-link-shield', 'incognito': 'incognito', 'key': 'key',
     'moon-stars-fill': 'moon', 'sun-fill': 'sun', 'patch-check-fill': 'verified', 'plug': 'plug', 'shield-fill': 'shield',
     'shield-fill-check': 'shield-ok', 'shield-shaded': 'shield', 'star-fill': 'star', 'terminal': 'terminal', 'zoom-in': 'zoom-in',
     'clock-history': 'clock', 'copy': 'files', 'card-checklist': 'list-check', 'sliders': 'wrench',
@@ -51,11 +51,11 @@
     'clipboard2-check': 'clipboard-check', 'download': 'download', 'pencil-square': 'pencil-square', 'pencil': 'pencil', 'pencil-fill': 'pencil',
     'files': 'files', 'file-earmark-text': 'file-text', 'file-earmark-ruled': 'file-ruled', 'file-earmark-plus': 'file-plus', 'collection': 'collection',
     'journal-richtext': 'notebook', 'flag': 'flag', 'journal-bookmark': 'journal-bookmark', 'signpost-split': 'signpost', 'box-seam': 'box', 'inbox': 'inbox',
-    'mic': 'mic', 'car-front': 'car', 'check-circle-fill': 'check-circle', 'list-check': 'list-check', 'folder-plus': 'folder-plus', 'pc-display': 'pc',
+    'mic': 'mic', 'car-front': 'car', 'check-circle-fill': 'check-circle', 'list-check': 'list-check', 'folder-plus': 'folder-plus-shield', 'pc-display': 'pc',
     'bookmark-plus': 'bookmark-plus', 'camera-video': 'camera-video', 'camera': 'camera', 'camera-fill': 'camera', 'printer': 'printer', 'clock': 'clock',
     'person-plus': 'person-plus', 'people': 'people', 'shield-exclamation': 'shield-alert', 'bar-chart-line-fill': 'bar-chart', 'arrow-counterclockwise': 'undo',
     // colour only
-    'folder-closed': 'folder-green', 'folder-archived': 'folder-dark', 'link-chart': 'doc-network', 'target': 'target', 'shield-person': 'shield-person',
+    'folder-closed': 'folder-closed-shield', 'folder-archived': 'folder-archived-shield', 'link-chart': 'doc-network', 'target': 'target', 'shield-person': 'shield-person',
     'badge-dea': 'badge-dea', 'badge-fbi': 'badge-fbi', 'badge-atf': 'badge-atf', 'badge-usms': 'badge-usms', 'badge-irs': 'badge-irs',
     'badge-cbp': 'badge-cbp', 'badge-hsi': 'badge-hsi', 'badge-ice': 'badge-ice', 'badge-usss': 'badge-usss', 'badge-uspis': 'badge-uspis',
     'badge-state-pd': 'badge-state-pd', 'badge-local-pd': 'badge-local-pd', 'badge-sheriff': 'badge-sheriff',
