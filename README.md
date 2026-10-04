@@ -15,6 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.75)
+
+- The shield folder icons are used everywhere: sidebar, case pages, Files tab, Operation folders, Move and New Folder buttons. Operations are blue, General Files and ordinary folders are purple, Other Files are green, Closed is a muted green and Archived is grey
+
 ## Features (v1.74)
 
 - Needs Attention folds into one slim bar (with how many items and how many overdue); it stays folded until opened

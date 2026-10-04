@@ -215,6 +215,10 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.75
+
+- **Shield folder icons everywhere.** The new folder icons now appear wherever a folder does: the sidebar, the case page header, the Files tab, Operation folders, and the Move and New Folder buttons. Blue means an Operation (MISSION FILES), purple means General Files and ordinary folders, green means Other Files. Closed uses a muted green shield and Archived a grey one.
+
 ### What's new in v1.74
 
 - **Needs Attention** can fold into one slim bar: click the arrow on its right. The bar still says how many items there are and how many are overdue (in red). Click the bar or the arrow to open it again. CaseVault remembers which way you left it.
