@@ -679,8 +679,26 @@
       }
       return out;
     }
+    // v1.86: the secondary reporting officer (name, star, date, time and signature) can be left out.
+    const SECOND = ['secondOfficer', 'secondStar', 'secondDate', 'secondTime'];
+    function approvalFields(s) {
+      const els = s.fields.map(([k, label, kind, opts]) => { const el = input(k, label, kind, opts); if (SECOND.includes(k)) el.classList.add('rf-second'); return el; });
+      const on = !F().isHidden(data, 'secondOfficer');
+      const cb = h('input', { type: 'checkbox', checked: on, 'aria-label': 'Include a secondary reporting officer' });
+      const row = h('label', { class: 'check-row span-all rf-second-toggle' }, cb, h('span', {}, h('strong', {}, 'Secondary Reporting Officer'), h('span', { class: 'muted small' }, ': untick when there is none. The name, star and signature boxes then come off the PDF.')));
+      const show = () => { for (const el of els) if (el.classList.contains('rf-second')) el.hidden = !cb.checked; };
+      cb.addEventListener('change', () => {
+        data.hidden = data.hidden.filter((x) => x !== 'secondOfficer');
+        if (!cb.checked) data.hidden.push('secondOfficer');
+        show();
+        save();
+      });
+      show();
+      const at = s.fields.findIndex(([k]) => k === 'secondOfficer');
+      return [...els.slice(0, at), row, ...els.slice(at)];
+    }
     const sections = F().SECTIONS.map((s) => part(s.id, s.title, s.icon,
-      h('div', { class: s.id === 'report' ? 'rf-lines' : `rf-grid${s.id === 'update' || s.id === 'people' ? ' rf-grid-4' : s.id === 'approval' ? ' rf-grid-officers' : s.id === 'assignment' ? ' rf-grid-assign' : ''}` }, s.id === 'report' ? reportLines(s) : s.id === 'update' ? updateFields(s) : s.fields.map(([k, label, kind, opts]) => input(k, label, kind, opts))),
+      h('div', { class: s.id === 'report' ? 'rf-lines' : `rf-grid${s.id === 'update' || s.id === 'people' ? ' rf-grid-4' : s.id === 'approval' ? ' rf-grid-officers' : s.id === 'assignment' ? ' rf-grid-assign' : ''}` }, s.id === 'report' ? reportLines(s) : s.id === 'update' ? updateFields(s) : s.id === 'approval' ? approvalFields(s) : s.fields.map(([k, label, kind, opts]) => input(k, label, kind, opts))),
       ...(s.lists || []).map(listEditor)));
 
     // ---- evidence inventoried: one card per exhibit (number given automatically)

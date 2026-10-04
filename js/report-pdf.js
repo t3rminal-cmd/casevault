@@ -281,6 +281,39 @@
       return { rows: [row(['Name:', 'Star:', 'Unit:', 'Role:'], true), ...list.map((p) => row([p.name, p.star, p.unit, p.role].map((x) => String(x || '').trim()), false))] };
     };
     const chargeBlock = (c) => ({ rows: [[col(String(c.statute || '').trim(), 0, 1)], [col(String(c.description || '').trim(), 0, 1)]] });
+    // v1.86: money with a dollar sign ("100" -> "$100"); a whole-dollar bill as "$20.00".
+    const money = (v) => { const t = String(v || '').trim(); return /^\d/.test(t) ? `$${t}` : t; };
+    const bill = (v) => { const t = String(v || '').trim(); return /^\$\d+$/.test(t) ? `${t}.00` : t; };
+    // A State of Illinois victim and the officer on one line; any other victim, the name in bold
+    // and the details under it.
+    const victimBlock = (v, line) => (RF.isStateVictim('victimsList', v)
+      ? { rows: [[col(String(v.name || '').trim(), 0, 0.42), col(lv('Officer Name', String(v.officer || '').trim()), 0.44, 0.56)]] }
+      : line);
+    // A narcotic: the type, the amount, then Street Value and Purchase Price under each other.
+    const narcoticBlock = (n) => {
+      const value = money(n.value); const price = money(n.price);
+      return { rows: [
+        [col(String(n.drug || '').trim(), 0, 0.34), col(vt('narcotics', n, 'amount'), 0.35, 0.22), col(value ? `Street Value - ${value}` : '', 0.58, 0.42)],
+        price ? [col(`Purchase Price - ${price}`, 0.58, 0.42)] : [],
+      ] };
+    };
+    // Pre-Recorded Funds as a table: QTY (two digits), Denomination, then each serial number on
+    // its own line; Recovered or Not Recovered once at the end.
+    const fundsBlock = () => {
+      const gs = d.funds.filter(RF.filled);
+      if (!gs.length) return null;
+      const C = [[0, 0.16], [0.18, 0.3], [0.5, 0.5]];
+      const row = (vals, bold) => vals.map((v, i) => col(v, C[i][0], C[i][1], bold));
+      const rows = [row(['QTY', 'Denomination', gs.some((g) => g.denomination === 'Electronic Funds') ? 'Serial / Reference Number' : 'Serial Number'], true)];
+      for (const g of gs) {
+        const serials = (g.serials || []).map((x) => String(x || '').trim()).filter(Boolean);
+        const n = String(g.quantity || '').trim() || (serials.length ? String(serials.length) : '');
+        rows.push(row([/^\d$/.test(n) ? `0${n}` : n, bill(g.denomination), serials[0] || '']));
+        for (const x of serials.slice(1)) rows.push(row(['', '', x]));
+      }
+      if (d.fundsRecovered) rows.push(row(['', d.fundsRecovered, '']));
+      return { rows };
+    };
     const exhibitBlock = (head, inv, type, desc) => ({ rows: [[col(head, 0, 0.46, true), col('Description', 0.48, 0.52, true)], [col(inv, 0, 0.21), col(type, 0.22, 0.25), col(desc || '—', 0.48, 0.52)]] });
     const exhibits = () => {
       const out = d.evidence.map((e) => {
@@ -386,17 +419,24 @@
       list1('notArrested', 'Person(s) Present Not Arrested');
       done.add('personnel');
       if (!RF.isHidden(d, 'personnel')) { const ps = d.personnel.filter(RF.filled); if (ps.length) labelled('Police Personnel', [personnelBlock(ps)]); }
-      if (people) list1('victimsList', 'Victim(s)');
+      // v1.86: "Victim: State of Illinois   Officer Name: …" on one line.
+      done.add('victimsList');
+      if (people && !RF.isHidden(d, 'victimsList')) {
+        const vs = d.victimsList.filter(RF.filled);
+        const lines = items('victimsList');
+        if (vs.length) labelled(vs.length === 1 ? 'Victim' : 'Victim(s)', vs.map((v, i) => victimBlock(v, lines[i])));
+      }
       groupGap();
       if (on('evidence')) { const ex = exhibits(); if (ex.length) blocks('Evidence Inventoried', ex); else labelled('Evidence Inventoried', ''); }
-      list1('narcotics', 'Narcotics Recovered (Total Weight & Street Value)');
+      // v1.86: narcotics in columns, and Pre-Recorded Funds as a QTY / Denomination / Serial table.
+      done.add('narcotics');
+      if (!RF.isHidden(d, 'narcotics')) { const ns = d.narcotics.filter(RF.filled); if (ns.length) labelled('Narcotics Recovered (Total Weight & Value)', ns.map(narcoticBlock)); }
       line1('buyFunds');
-      // v1.54: one line per denomination, then Recovered or Not Recovered once.
       done.add('funds');
-      if (!RF.isHidden(d, 'funds')) labelled('Pre-Recorded Funds', RF.fundsLines(d));
+      if (!RF.isHidden(d, 'funds')) { const fb = fundsBlock(); if (fb) labelled('Pre-Recorded Funds', [fb]); }
       ['fundSheet', 'evidenceOfficer'].forEach(line1);
       groupGap();
-      ['proofResidence', 'irNumber', 'cbNumber'].forEach(line1);
+      ['proofResidence', 'cbNumber'].forEach(line1); // v1.86: the IR Number is in the offender's info
       groupGap();
       list1('vehicles', 'Vehicle(s) Impounded / Towed');
       list1('notifications', 'Notifications');
@@ -446,13 +486,17 @@
       pair(M + 2 * cw, y, ['SUPERVISOR APPROVAL', val('supervisor')], ['STAR', val('supervisorStar')]);
       y -= rowH;
       { const rH = rowH * 2; fill(M, y - 10.5, cw, 10.5, 0.9); rect(M, y - rH, cw, rH, 0.6); text(M + 3, y - 8, 'SIGNATURE', 7); sigs.push({ name: 'ReportingOfficerSignature', rect: [M + 2, y - rH + 2, M + cw - 2, y - 10] }); }
-      pair(M + cw, y, ['SECONDARY REPORTING OFFICER', val('secondOfficer')], ['STAR', val('secondStar')]);
+      // v1.86: with no secondary officer, the middle column under Date Submitted is left empty.
+      const second = !RF.isHidden(d, 'secondOfficer');
+      if (second) pair(M + cw, y, ['SECONDARY REPORTING OFFICER', val('secondOfficer')], ['STAR', val('secondStar')]);
       cellT(M + 2 * cw, y, cw, 'SIGNATURE', '', 'SupervisorSignature');
       y -= rowH;
-      cellT(M + cw, y, cw, 'SIGNATURE', '', 'SecondOfficerSignature');
-      // The secondary officer's date and time, small, in the corner of the signature box.
-      if (val('secondDate')) text(M + 2 * cw - 4 - tw(val('secondDate'), 7), y - 8, val('secondDate'), 7);
-      if (val('secondTime')) text(M + 2 * cw - 4 - tw(val('secondTime'), 7), y - 26, val('secondTime'), 7);
+      if (second) {
+        cellT(M + cw, y, cw, 'SIGNATURE', '', 'SecondOfficerSignature');
+        // The secondary officer's date and time, small, in the corner of the signature box.
+        if (val('secondDate')) text(M + 2 * cw - 4 - tw(val('secondDate'), 7), y - 8, val('secondDate'), 7);
+        if (val('secondTime')) text(M + 2 * cw - 4 - tw(val('secondTime'), 7), y - 26, val('secondTime'), 7);
+      }
       pair(M + 2 * cw, y, ['DATE APPROVED', val('dateApproved')], ['TIME', val('timeApproved')]);
       y -= rowH;
       rect(M, y, INNER, top - y, 1.6);

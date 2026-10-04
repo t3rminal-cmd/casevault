@@ -15,6 +15,15 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.86)
+
+- Supplementary Report PDF, Officer's Report:
+  - **Victim**: a State of Illinois victim and the Officer Name on one line
+  - **Narcotics Recovered (Total Weight & Value)**: the narcotic, the amount, then Street Value and Purchase Price under each other
+  - **Pre-Recorded Funds**: a table with QTY (two digits), Denomination ($20.00) and each Serial Number on its own line, then Recovered or Not Recovered
+- The Officer's Report has no IR Number line any more: the IR Number is in each offender's info (one typed there before goes to the first offender without one)
+- Submission and Approval: untick **Secondary Reporting Officer** when there is none; the name, star and signature boxes then come off the PDF
+
 ## Features (v1.85)
 
 - **Back Up Everything** (⋮ → Vault → Backups): copies the whole CaseVault-Data folder to a second drive and checks every file byte for byte (Chrome or Edge; in Firefox it shows the File Explorer steps and records the date). The banner shows when the last full backup was, red after 7 days, and a reminder appears at start-up
