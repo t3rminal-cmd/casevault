@@ -15,6 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.88)
+
+- Quick Links and the CLOSED FILES / ARCHIVED area: one fixed height, five Quick Links tiles high; the drag bars and padlocks are gone
+- CLOSED FILES and ARCHIVED scroll as one list, and when the scrolling stops the top card is shown whole (never cut off at the top); the headings scroll with their lists
+
 ## Features (v1.87)
 
 - **Back Up Everything in Firefox** (needs helper 1.11): CaseVault lists the other drives (not the SSD's own partitions or the Windows drive), the helper copies the whole CaseVault-Data folder to `<drive>\CaseVault-Backups\CaseVault-Backup-<date>` and checks every file's SHA-256 against the original, in the background with a progress count; the banner then shows the backup as checked. With an older helper the File Explorer steps still show

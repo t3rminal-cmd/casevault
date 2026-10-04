@@ -3867,18 +3867,6 @@ html .tl-item.deadline::before { transform: none; }
    keeps the height as it is. */
 .side-bottom { flex: none; display: flex; flex-direction: column; min-height: 0; max-height: 80%; overflow-y: auto; padding-bottom: .55rem; border-top: 1px solid var(--chrome-edge, var(--border)); }
 #sidebar .side-bottom .archived-cases { max-height: none; flex: none; overflow: visible; }
-.panel-grip { position: relative; flex: none; display: flex; align-items: center; justify-content: center; height: 14px; cursor: ns-resize; user-select: none; touch-action: none; }
-.panel-grip-bar { width: 2.8rem; height: 4px; background: var(--border); transition: background .15s; }
-.panel-grip:hover .panel-grip-bar, .panel-grip:focus-visible .panel-grip-bar { background: var(--accent); }
-.panel-grip .panel-lock { position: absolute; right: .45rem; top: 50%; transform: translateY(-50%); width: 1.35rem; height: 1.35rem; padding: 0; cursor: pointer; }
-.panel-grip .panel-lock .bi { width: .8rem; height: .8rem; }
-.panel-grip.panel-locked { cursor: default; }
-.panel-grip.panel-locked .panel-grip-bar { opacity: .35; }
-.side-bottom > .panel-grip { position: sticky; top: 0; z-index: 2; background: var(--chrome, var(--surface-2)); }
-.ql-grip { background: var(--chrome, var(--surface-2)); border-top: 1px solid var(--chrome-edge, var(--border)); }
-.ql-grip[hidden] { display: none; }
-#ql-footer.panel-sized { overflow-y: auto; }
-body.resizing-panel, body.resizing-panel * { cursor: ns-resize !important; user-select: none !important; }
 .side-bottom { scrollbar-gutter: stable; scrollbar-width: thin; }
 
 /* v1.84: closing by arrest needs the arrest report; archiving needs a reason; Undo in the toast. */
@@ -3967,3 +3955,14 @@ body.resizing-panel, body.resizing-panel * { cursor: ns-resize !important; user-
 .beta-tag { display: inline-block; margin-left: 6px; padding: 0 5px; font-size: .62rem; font-weight: 700; line-height: 1.5; letter-spacing: .08em; text-transform: uppercase; color: #92400e; background: #fef3c7; border: 1px solid #f59e0b; vertical-align: middle; }
 [data-theme="dark"] .beta-tag { color: #fde68a; background: #3a2a05; border-color: #b45309; }
 .backup-drives { grid-template-columns: minmax(0, 1fr); }
+
+/* v1.88: Quick Links and CLOSED FILES / ARCHIVED: one fixed height, five Quick Links tiles high
+   (--cv-panel-h is measured from a tile). The bottom area eases to whole cards when it stops
+   scrolling (js/app.js), so the top one is never left cut in half. */
+#ql-footer.ql-footer { height: var(--cv-panel-h, 14rem); overflow-y: auto; box-sizing: border-box; }
+#sidebar .side-bottom { height: var(--cv-panel-h, 14rem); max-height: none; box-sizing: border-box; overscroll-behavior: contain; }
+/* One scroll box for the whole bottom area (the lists inside used to scroll on their own). */
+#sidebar .side-bottom > details, #sidebar .side-bottom .case-list { flex: none; max-height: none; min-height: 0; overflow: visible; }
+.side-bottom-spacer { flex: none; }
+/* The headings scroll with their lists here (a pinned heading left cards half hidden under it). */
+#sidebar .side-bottom > .archived-cases > summary { position: static; }

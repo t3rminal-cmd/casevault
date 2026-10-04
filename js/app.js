@@ -1289,11 +1289,10 @@
     const foot = $('#ql-footer');
     if (!foot) return;
     if (footerRO) { footerRO.disconnect(); footerRO = null; }
-    const grip = document.querySelector('.ql-grip');
-    if (grip) grip.hidden = !on;
     if (!on) { foot.hidden = true; foot.replaceChildren(); document.body.style.removeProperty('--ql-dock-h'); return; }
     foot.replaceChildren(h('span', { class: 'ql-foot-title' }, I('link-45deg'), h('span', {}, 'Quick Links')), CVReferenceUI.quickLinks({ footer: true }));
     foot.hidden = false;
+    requestAnimationFrame(panelHeight);
     const setH = () => document.body.style.setProperty('--ql-dock-h', foot.hidden ? '0px' : `${Math.ceil(foot.getBoundingClientRect().height)}px`);
     if (typeof ResizeObserver === 'function') { footerRO = new ResizeObserver(setH); footerRO.observe(foot); }
     setH();
@@ -4129,57 +4128,62 @@
       Save.track('settings', () => Vault.updateSettings({ sidebarCollapsed: collapsed })).catch(() => {});
     }
   }
-  // v1.84: a panel whose height is dragged with a bar along its top edge (double-click: back to
-  // its own height), with a padlock on the bar that keeps it as it is. Kept on this PC.
-  function heightPanel(panel, { key, label, min = 60, max = () => innerHeight * 0.7, gripParent = null }) {
-    const grip = h('div', { class: 'panel-grip', role: 'separator', 'aria-orientation': 'horizontal', 'aria-label': `${label} height`, tabindex: 0, title: `Drag up or down to make ${label} taller or shorter. Double-click to reset.` });
-    const lock = h('button', { class: 'icon-btn panel-lock', type: 'button' });
-    grip.append(h('span', { class: 'panel-grip-bar', 'aria-hidden': 'true' }), lock);
-    (gripParent || panel).prepend(grip);
-    if (gripParent) gripParent.insertBefore(grip, panel);
-    const read = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
-    const write = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* this session only */ } };
-    const locked = () => panel.classList.contains('panel-locked');
-    const setLock = (on) => {
-      panel.classList.toggle('panel-locked', on); grip.classList.toggle('panel-locked', on);
-      lock.replaceChildren(I(on ? 'lock-fill' : 'unlock'), h('span', { class: 'sr-only' }, on ? `Unlock ${label}` : `Lock ${label}`));
-      lock.title = on ? `Unlock ${label} (its height can then be changed)` : `Lock ${label} at this height`;
-      lock.setAttribute('aria-pressed', String(on));
-      write(`${key}-lock`, on ? '1' : null);
-    };
-    const setH = (px, keep = true) => {
-      if (px == null) { panel.style.removeProperty('height'); panel.classList.remove('panel-sized'); if (keep) write(key, null); return; }
-      const v = Math.round(Math.min(Math.max(px, min), max()));
-      panel.style.setProperty('height', `${v}px`); panel.classList.add('panel-sized');
-      if (keep) write(key, String(v));
-    };
-    lock.addEventListener('click', (e) => { e.stopPropagation(); setLock(!locked()); });
-    lock.addEventListener('pointerdown', (e) => e.stopPropagation());
-    grip.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || locked()) return;
-      e.preventDefault();
-      grip.setPointerCapture(e.pointerId);
-      const bottom = panel.getBoundingClientRect().bottom;
-      document.body.classList.add('resizing-panel');
-      const move = (ev) => setH(bottom - ev.clientY, false);
-      const up = (ev) => { setH(bottom - ev.clientY); grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); document.body.classList.remove('resizing-panel'); };
-      grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up);
-    });
-    grip.addEventListener('dblclick', () => { if (!locked()) setH(null); });
-    grip.addEventListener('keydown', (e) => {
-      if (locked()) return;
-      const cur = panel.getBoundingClientRect().height;
-      if (e.key === 'ArrowUp') { e.preventDefault(); setH(cur + 20); } else if (e.key === 'ArrowDown') { e.preventDefault(); setH(cur - 20); }
-    });
-    const saved = Number(read(key));
-    if (saved) setH(saved, false);
-    setLock(read(`${key}-lock`) === '1');
-    return grip;
+  // v1.88: Quick Links and the CLOSED FILES / ARCHIVED area have one fixed height, five Quick Links
+  // tiles high (v1.84's drag bars and padlocks are gone). Measured from a tile, so it follows the zoom.
+  try { for (const k of ['cv-side-bottom-h', 'cv-side-bottom-h-lock', 'cv-ql-h', 'cv-ql-h-lock']) localStorage.removeItem(k); } catch { /* nothing kept */ }
+  function panelHeight() {
+    const foot = $('#ql-footer');
+    const tile = foot && !foot.hidden ? foot.querySelector('.quick-link') : null;
+    if (!tile) return;
+    const grid = tile.parentElement;
+    const gap = parseFloat(getComputedStyle(grid).rowGap) || 0;
+    const fcs = getComputedStyle(foot);
+    const pad = (parseFloat(fcs.paddingTop) || 0) + (parseFloat(fcs.paddingBottom) || 0) + (parseFloat(fcs.borderTopWidth) || 0);
+    const px = Math.ceil(tile.getBoundingClientRect().height * 5 + gap * 4 + pad);
+    if (px > 40) document.body.style.setProperty('--cv-panel-h', `${px}px`);
   }
-  heightPanel($('#side-bottom'), { key: 'cv-side-bottom-h', label: 'Closed Files and Archived', min: 90, max: () => $('#sidebar-body').getBoundingClientRect().height * 0.8 });
-  const qlGrip = heightPanel($('#ql-footer'), { key: 'cv-ql-h', label: 'Quick Links', min: 70, max: () => innerHeight * 0.6, gripParent: $('#ql-footer').parentElement });
-  qlGrip.classList.add('ql-grip');
-  qlGrip.hidden = $('#ql-footer').hidden;
+  window.addEventListener('resize', debounce(panelHeight, 150));
+  // The CLOSED FILES / ARCHIVED heading stays at the top while its list scrolls. When the scrolling
+  // stops with a card half hidden behind the heading (or the top edge), the list eases to show it
+  // whole, or on to the next card when most of it had already gone by.
+  {
+    const sb = $('#side-bottom');
+    const spacer = h('div', { class: 'side-bottom-spacer', 'aria-hidden': 'true' });
+    if (sb) sb.append(spacer);
+    // Opening or folding a folder changes the list: the extra space starts again from none.
+    if (sb) sb.addEventListener('toggle', () => spacer.style.removeProperty('height'), true);
+    let easing = false;
+    const settle = () => {
+      if (easing || !sb) return;
+      const r = sb.getBoundingClientRect();
+      const pinned = [...sb.querySelectorAll(':scope > details > summary')].find((x) => Math.abs(x.getBoundingClientRect().top - r.top) < 2);
+      const line = pinned ? pinned.getBoundingClientRect().bottom : r.top;
+      const cards = [...sb.querySelectorAll(':scope > details > summary, .op-head, .case-item, .arch-sub-head')].filter((x) => x !== pinned && x.getClientRects().length);
+      let cut = cards.find((x) => { const b = x.getBoundingClientRect(); return b.top < line - 1 && b.bottom > line + 1; });
+      // Only the bottom edge of a folder or section box left showing counts as cut too.
+      let sliver = false;
+      if (!cut) {
+        cut = [...sb.querySelectorAll('.op-group, :scope > details')].find((x) => { const b = x.getBoundingClientRect(); return b.top < line - 1 && b.bottom > line + 1.5 && b.bottom - line < 18; });
+        sliver = !!cut;
+      }
+      if (!cut) return;
+      const b = cut.getBoundingClientRect();
+      // At the end of the list there may be no room to move on to the next card: a little empty
+      // space below makes the room, so the last cards can still be read whole.
+      const room = sb.scrollHeight - sb.clientHeight - sb.scrollTop;
+      const forward = sliver || (line - b.top) > b.height / 2 || room < 1;
+      if (forward && room < b.bottom - line) spacer.style.setProperty('height', `${Math.ceil((parseFloat(spacer.style.height) || 0) + (b.bottom - line) - room + 1)}px`);
+      // Forward: on to the top of the next card (past any gap); back: to the cut card's own top.
+      const next = forward ? cards.map((x) => x.getBoundingClientRect().top).filter((t) => t >= b.bottom - 0.5).sort((x, y) => x - y)[0] : null;
+      const delta = forward ? (next != null && next - line <= room + (b.bottom - line) ? next - line : b.bottom - line) : b.top - line;
+      if (Math.abs(delta) < 1) return;
+      easing = true;
+      sb.scrollBy({ top: delta, behavior: 'smooth' });
+      setTimeout(() => { easing = false; settle(); }, 450);
+    };
+    // When the scrolling has stopped (scrollend in Chrome, Edge and Firefox; a short pause elsewhere).
+    if (sb) sb.addEventListener('onscrollend' in window ? 'scrollend' : 'scroll', 'onscrollend' in window ? () => setTimeout(settle, 30) : debounce(settle, 160));
+  }
 
   // Lock (v1.24): the case list stays exactly as it is, shown or hidden and at its width, until
   // it's unlocked with the padlock. Remembered in vault.json.
