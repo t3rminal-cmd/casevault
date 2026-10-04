@@ -191,26 +191,43 @@
 
     // "LABEL:  value" lines of the officer's report; the value wraps on the right, over a light rule.
     const LW = (INNER / 8) * 3; // v1.45: the label column is three grid columns wide
+    const VW = INNER - LW - 8; // v1.81: the value column's width
     const labelled = (label, value) => {
       // A value is text, or a list of entries; an entry { head, tail } has its name in bold on a
       // line of its own and the details under it, with a little space between entries (v1.44).
       const vals = Array.isArray(value) ? value : [value || ''];
       const rows = [];
       vals.forEach((v, n) => {
-        if (n) rows.push({ gap: 4 });
+        if (n && !(v && v.noGap)) rows.push({ gap: 4 });
+        // v1.81: rows laid out in columns: { rows: [[{ t, x, w, bold }, …], …] } (x and w are
+        // fractions of the value column); each cell wraps in its own width.
+        if (v && Array.isArray(v.rows)) {
+          for (const cells of v.rows) {
+            if (cells.gap) { rows.push({ gap: cells.gap }); continue; }
+            const laid = cells.filter((c) => c && String(c.t || '').trim()).map((c) => ({ ...c, lines: twrap(String(c.t), c.size || 10, Math.max(20, (c.w || 1) * VW - 6), !!c.bold) }));
+            if (!laid.length) continue;
+            const n2 = Math.max(...laid.map((c) => c.lines.length));
+            for (let j = 0; j < n2; j++) rows.push({ cells: laid.map((c) => ({ t: c.lines[j] || '', x: c.x || 0, bold: !!c.bold, size: c.size || 10 })) });
+          }
+          return;
+        }
         if (v && typeof v === 'object') {
           for (const l of twrap(v.head || '', 10, INNER - LW - 8, true)) rows.push({ t: l, bold: true });
           for (const l of twrap(v.tail || '', 10, INNER - LW - 18)) rows.push({ t: l, indent: 8 });
         } else for (const l of twrap(v, 10, INNER - LW - 8)) rows.push({ t: l });
       });
-      const labels = twrap(`${label.toUpperCase()}:`, 8.5, LW - 14);
+      const labels = label ? twrap(`${label.toUpperCase()}:`, 8.5, LW - 14) : []; // v1.81: '' continues the block above
       const bodyH = rows.reduce((n, r) => n + (r.gap || 12), 0);
       const h = Math.max(17, 5 + Math.max(bodyH, labels.length * 10));
       ensure(h);
       fill(M + LW, y - h + 2, INNER - LW, h - 3, 0.93);
       labels.forEach((l, j) => text(M + 2, y - 11 - j * 10, l, 8.5));
       let yy = y - 11;
-      for (const r of rows) { if (r.gap) { yy -= r.gap; continue; } text(M + LW + 4 + (r.indent || 0), yy, r.t, 10, !!r.bold); yy -= 12; }
+      for (const r of rows) {
+        if (r.gap) { yy -= r.gap; continue; }
+        if (r.cells) { for (const c of r.cells) text(M + LW + 4 + c.x * VW, yy, c.t, c.size, c.bold); yy -= 12; continue; }
+        text(M + LW + 4 + (r.indent || 0), yy, r.t, 10, !!r.bold); yy -= 12;
+      }
       y -= h;
     };
     // A group of lines ends with a little space, so the report reads in blocks.
@@ -226,6 +243,60 @@
       }
       return line;
     });
+
+    // v1.81: the report's own layouts (offender sheet, personnel table, charges, exhibits), in columns.
+    const kindIn = (list, k) => ((RF.LISTS[list].fields.find(([key]) => key === k) || [])[2]);
+    const vt = (list, it, k) => RF.valueText(list, it, k, kindIn(list, k));
+    const col = (t, x, w, bold = false) => ({ t, x, w, bold });
+    const lv = (label, v) => (v ? `${label}: ${v}` : '');
+    const today0 = new Date().toISOString().slice(0, 10);
+    const offenderBlock = (o) => {
+      const f = (k) => vt('offendersList', o, k);
+      const lab = (k, l) => RF.labelFor(o, k, l);
+      const age = f('age') || (o.dob && RF.ageOn ? String(RF.ageOn(o.dob, /^\d{4}-\d{2}-\d{2}$/.test(d.date || '') ? d.date : today0) || '') : '');
+      const aka = (Array.isArray(o.socials) ? o.socials : []).map((x) => String((x && x.name) || '').trim()).filter(Boolean).join(', ');
+      const hair = [f('hair'), f('hairStyle')];
+      const rows = [
+        o.custody ? [col(o.custody, 0, 1, true)] : null,
+        [col(lv('Name', f('name')), 0, 0.55), col(lv('A.K.A', aka), 0.56, 0.44)],
+        [col([f('gender'), f('race'), age ? (o.unknown ? `Age Range: ${age}` : `${age} years`) : ''].filter(Boolean).join(' | '), 0, 1)],
+        [col(lv(lab('height', 'Height'), f('height')), 0, 0.4), col(lv(lab('weight', 'Weight'), f('weight')), 0.42, 0.58)],
+        [col(lv('DOB', f('dob')), 0, 0.4), col(lv('Eyes', f('eyes')), 0.42, 0.24), col(lv(hair[0] && hair[1] ? 'Hair|Style' : hair[1] ? 'Hair Style' : 'Hair', hair.filter(Boolean).join('|')), 0.66, 0.34)],
+        [col(lv('Complexion', f('complexion')), 0, 0.4), col(lv('Tattoos|Scars', f('marks')), 0.42, 0.58)],
+        [col(lv('Gender Identity', f('identity')), 0, 0.4), col(lv('Relation', f('relation')), 0.42, 0.24), col(lv('Veteran', f('veteran')), 0.66, 0.34)],
+        [col(lv('Wearing', f('clothing')), 0, 1)],
+        [col(lv('Residence', f('address')), 0, 1)],
+        [col(lv('Phone', f('phones')), 0, 1)],
+        [col(lv('IR', f('irNumber')), 0, 0.4), col(lv('CB', f('cbNumber')), 0.42, 0.58)],
+        [col(lv('FBI', f('fbiNumber')), 0, 0.4), col(lv('IDOC', f('idocNumber')), 0.42, 0.58)],
+        [col(lv('Vehicle', f('vehicle')), 0, 1)],
+        [col(lv('Vin', f('vin')), 0, 1)],
+        [col(lv('Plates', f('plates')), 0, 1)],
+      ].filter(Boolean);
+      return { rows };
+    };
+    const personnelBlock = (list) => {
+      const C = [[0, 0.45], [0.47, 0.14], [0.62, 0.14], [0.77, 0.23]];
+      const row = (vals, bold) => vals.map((v, i) => col(v, C[i][0], C[i][1], bold));
+      return { rows: [row(['Name:', 'Star:', 'Unit:', 'Role:'], true), ...list.map((p) => row([p.name, p.star, p.unit, p.role].map((x) => String(x || '').trim()), false))] };
+    };
+    const chargeBlock = (c) => ({ rows: [[col(String(c.statute || '').trim(), 0, 1)], [col(String(c.description || '').trim(), 0, 1)]] });
+    const exhibitBlock = (head, inv, type, desc) => ({ rows: [[col(head, 0, 0.46, true), col('Description', 0.48, 0.52, true)], [col(inv, 0, 0.21), col(type, 0.22, 0.25), col(desc || '—', 0.48, 0.52)]] });
+    const exhibits = () => {
+      const out = d.evidence.map((e) => {
+        const drug = e.type === 'Narcotics' ? [e.drug, e.weight].filter(Boolean).join(', ') : '';
+        const desc = [String(e.description || '').trim(), drug && !String(e.description || '').toLowerCase().includes(String(e.drug || '').toLowerCase()) ? drug : ''].filter(Boolean).join(' - ');
+        return exhibitBlock(`Exhibit ${e.number}`, e.inventory || '', e.type || '', desc);
+      });
+      for (const x of d.extraExhibits || []) {
+        const kind = x.kind === 'texts' ? 'Text Messages' : 'Photograph';
+        if (!x.photos.length) out.push(exhibitBlock(`Exhibit ${x.number}`, '', kind, [x.title, x.description].filter(Boolean).join('. ')));
+        x.photos.forEach((_, j) => out.push(exhibitBlock(`Exhibit ${RF.photoLabel(x.number, j)}`, '', kind, String((x.photoLabels || [])[j] || '').trim() || [x.title, x.description].filter(Boolean).join('. '))));
+      }
+      return out;
+    };
+    // A block per entry, so a long list carries over to the next page; the label shows on the first.
+    const blocks = (label, list) => list.forEach((b, i) => { if (i) y -= 3; labelled(i ? '' : label, [b]); });
 
     newPage();
 
@@ -275,7 +346,7 @@
         list.forEach((o, i) => {
           const lab = RF.shortCode(o).replace(/ - /, '-'); // v1.48: the form's short codes
           center(x + i * cw, cw, y - 20, lab, 7.5);
-          circle(x + i * cw + cw / 2, y - 28, 3, d[k] === o);
+          tick(x + i * cw + cw / 2 - 3.5, y - 31.5, d[k] === o); // v1.81: a square with an X, like Update Information
         });
       }
       y -= 34;
@@ -303,17 +374,21 @@
       // v1.44: in blocks with a little space between them: who; the court and the warrant; who else
       // was there; the evidence and the money; the record numbers; vehicles and notifications.
       line1('operation');
-      if (people) list1('offendersList', 'Offender(s)');
+      // v1.81: an offender sheet each: custody, name and A.K.A., description, residence, numbers, vehicle.
+      done.add('offendersList');
+      if (people && !RF.isHidden(d, 'offendersList')) d.offendersList.filter(RF.filled).forEach((o) => { labelled('Offender', [offenderBlock(o)]); y -= 3; });
       list1('gangs', 'Gang Affiliation(s)');
-      list1('charges', 'Charge(s)');
+      done.add('charges');
+      if (!RF.isHidden(d, 'charges')) { const cs = d.charges.filter(RF.filled); if (cs.length) labelled('Charges', cs.map(chargeBlock)); }
       groupGap();
       ['within1000', 'courtBranch', 'searchWarrant', 'subpoenaGJ', 'asa', 'ausa', 'judge'].forEach(line1);
       groupGap();
       list1('notArrested', 'Person(s) Present Not Arrested');
-      list1('personnel', 'Police Personnel on Scene');
+      done.add('personnel');
+      if (!RF.isHidden(d, 'personnel')) { const ps = d.personnel.filter(RF.filled); if (ps.length) labelled('Police Personnel', [personnelBlock(ps)]); }
       if (people) list1('victimsList', 'Victim(s)');
       groupGap();
-      if (on('evidence')) labelled('Evidence Inventoried', [...d.evidence.map((e) => RF.exhibitLine(e)), ...(d.extraExhibits || []).map((x) => RF.extraLine(x))]);
+      if (on('evidence')) { const ex = exhibits(); if (ex.length) blocks('Evidence Inventoried', ex); else labelled('Evidence Inventoried', ''); }
       list1('narcotics', 'Narcotics Recovered (Total Weight & Street Value)');
       line1('buyFunds');
       // v1.54: one line per denomination, then Recovered or Not Recovered once.

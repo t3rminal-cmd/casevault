@@ -157,13 +157,15 @@
   const shortCode = (v) => Object.keys(SPELLED).find((k) => SPELLED[k] === v) || v;
   // Units the narcotic calculator prices by (js/reference).
   const NARCOTIC_UNITS = ['', 'gram', 'ounce', 'pound', 'kilogram', 'pill', 'mL'];
+  const CUSTODY = ['', 'In Custody', 'Not in Custody']; // v1.81
   const DENOMINATIONS = ['', '$1', '$2', '$5', '$10', '$20', '$50', '$100', 'Electronic Funds']; // v1.80: Electronic Funds
   const RECOVERED = ['', 'Recovered', 'Not Recovered'];
   const LISTS = {
     narcotics: { title: 'Narcotics Recovered', item: 'Narcotic', fields: [['drug', 'Narcotics Type Recovered', 'narcotic'], ['amount', 'Total Weight', 'text'], ['unit', 'Unit', 'select', NARCOTIC_UNITS], ['price', 'Purchase Price', 'money'], ['value', 'Street Value', 'money']] },
     victimsList: { title: 'Victims', item: 'Victim', fields: [['name', 'Name', 'victim'], ['officer', 'Officer Name', 'text'], ...PERSON.slice(1)] },
     // v1.39: an offender's phone numbers and monikers (with the social media app each is used on).
-    offendersList: { title: 'Offenders', item: 'Offender', fields: [...PERSON, ...RECORD_NUMBERS, ['phones', 'Phone Numbers', 'phones'], ['socials', 'Monikers / Social Media', 'socials']] },
+    // v1.81: In Custody / Not in Custody, the residence, the CB number and the vehicle (as on the report).
+    offendersList: { title: 'Offenders', item: 'Offender', fields: [PERSON[0], ['custody', 'Custody', 'select', CUSTODY], ...PERSON.slice(1), ...RECORD_NUMBERS, ['cbNumber', 'CB Number', 'text'], ['address', 'Residence', 'wide'], ['phones', 'Phone Numbers', 'phones'], ['socials', 'Monikers / Social Media', 'socials'], ['vehicle', 'Vehicle', 'text'], ['vin', 'VIN', 'text'], ['plates', 'Plates', 'text']] },
     // v1.54: one entry per denomination, with how many bills and their serial numbers; one Recovered
     // or Not Recovered for all of them (fundsRecovered).
     funds: { title: 'Pre-Recorded Funds', item: 'Denomination', fields: [['denomination', 'Denomination', 'select', DENOMINATIONS], ['quantity', 'Quantity', 'text'], ['serials', 'Serial Numbers', 'serials']] },
@@ -593,7 +595,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

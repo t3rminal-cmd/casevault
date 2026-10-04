@@ -15,6 +15,14 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.81)
+
+- Supplementary Report PDF laid out like the paper report: an offender sheet each (custody, name and A.K.A., description, DOB, eyes, hair, tattoos, clothing, residence, phone, IR and CB, vehicle, VIN, plates), Police Personnel as a Name / Star / Unit / Role table, each charge as its statute over its description, and each exhibit with its inventory number, type and description
+- Status and How Cleared on the PDF are square boxes with an X, like Update Information
+- Offenders have Custody (In Custody / Not in Custody), Residence, CB Number, Vehicle, VIN and Plates
+- Subject Data suggests the suspects and offenders already in the Mission's cases and fills a subject in from them; Add From Reports adds them all
+- An Other folder in each Mission Folder, next to Vehicle List
+
 ## Features (v1.80)
 
 - Mission Folder → Subject Data opens a demographics sheet per subject (name, alias, date of birth, description, record numbers, address, notes) with a photo on the right; Add Subject for as many as needed

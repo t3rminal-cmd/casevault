@@ -24,7 +24,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.80.0';
+  const APP_VERSION = '1.81.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -998,7 +998,7 @@ const Vault = (() => {
    * CaseVault-Data/shared/op-<id>/<Folder>/      an Operation's own folder: Subpoenas, Affidavits,
    *                                              Operation Plans, Maps, Subject Data, Vehicle List
    */
-  const OP_FOLDERS = ['Subpoenas', 'Affidavits', 'Operation Plans', 'Maps', 'Subject Data', 'Vehicle List']; // v1.73: was Running Vehicle List
+  const OP_FOLDERS = ['Subpoenas', 'Affidavits', 'Operation Plans', 'Maps', 'Subject Data', 'Vehicle List', 'Other']; // v1.73: was Running Vehicle List
   const sharedKeyOk = (key) => key === 'other' || /^op-[A-Za-z0-9_-]{1,80}$/.test(key);
   // v1.71: Other Files has folders: USPIS, DEA, INET, Training, and any you make; "Other" is the
   // top of Other Files itself (where files added before v1.71 are).

@@ -849,7 +849,7 @@
   const sharedOpen = {};
   // v1.78: Missions (they were Operations): the folder on the SSD keeps its name, it shows as Mission Plans.
   const opFolderLabel = (n) => (n === 'Operation Plans' ? 'Mission Plans' : n);
-  const OP_FOLDER_DESC = { Subpoenas: 'Served and returned', Affidavits: 'Search warrant affidavits', 'Operation Plans': 'Ops plans and briefings', Maps: 'Maps and aerials', 'Subject Data': 'Demographics and photo per subject', 'Vehicle List': 'Vehicles, owners and photos' };
+  const OP_FOLDER_DESC = { Subpoenas: 'Served and returned', Affidavits: 'Search warrant affidavits', 'Operation Plans': 'Ops plans and briefings', Maps: 'Maps and aerials', 'Subject Data': 'Demographics and photo per subject', 'Vehicle List': 'Vehicles, owners and photos', Other: 'Anything else for the Mission' };
   const SHARED_ICONS = { 'USPIS Files': 'badge-uspis', 'DEA Files': 'badge-dea', 'INET Files': 'globe2', Training: 'book', Other: 'folder-other', Subpoenas: 'file-earmark-ruled', Affidavits: 'pencil-square', 'Operation Plans': 'card-checklist', Maps: 'map', 'Subject Data': 'person-vcard', 'Vehicle List': 'car-front' };
   // v1.71: folders are names, or { name, label, desc, custom }; getFolders() reads them each time
   // (Other Files: the built-in folders and the ones you make; New Folder adds one).
@@ -871,14 +871,48 @@
       ['phone', 'Phone Number', 'text'], ...['irNumber', 'fbiNumber', 'idocNumber'].map((k) => pick(k, [k, k, 'text'])),
       ['address', 'Address', 'wide'], ['marks', 'Tattoos / Scars', 'wide'], ['notes', 'Notes', 'wide']];
   })();
+  // v1.81: the people already written up in the Mission's cases: Details suspects and Draft
+  // offenders, one per name (an offender's details fill what the suspect lacks).
+  async function missionPeople(opId) {
+    const keyOf = (n) => String(n || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    const out = new Map();
+    const put = (p, where) => {
+      const k = keyOf(p.name);
+      if (!k || k === 'unknown offender') return;
+      const cur = out.get(k) || { name: String(p.name).trim(), from: [] };
+      for (const [f, v] of Object.entries(p)) if (f !== 'from' && String(v || '').trim() && !String(cur[f] || '').trim()) cur[f] = String(v).trim();
+      if (!cur.from.includes(where)) cur.from.push(where);
+      out.set(k, cur);
+    };
+    for (const e of (Vault.data.cases || []).filter((x) => x.operationId === opId)) {
+      try {
+        const c = await Vault.getCase(e.id);
+        for (const s of (c && c.suspects) || []) {
+          if (s.notIdentified) continue;
+          const i = s.info || {};
+          put({ name: s.name, dob: s.dob, alias: i.moniker, phone: i.phone, ...Object.fromEntries(['gender', 'identity', 'race', 'complexion', 'height', 'weight', 'hair', 'hairStyle', 'eyes', 'veteran', 'irNumber', 'fbiNumber', 'idocNumber', 'marks'].map((k) => [k, i[k]])) }, `Suspect, ${e.number || 'case'}`);
+        }
+      } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+      try {
+        const d = await Vault.readCaseJSON(e.id, 'report-fields.json');
+        for (const o of (d && Array.isArray(d.offendersList) ? d.offendersList : [])) {
+          if (o.unknown) continue;
+          const socials = Array.isArray(o.socials) ? o.socials.map((x) => x && x.name).filter(Boolean).join(', ') : '';
+          const phones = Array.isArray(o.phones) ? o.phones.filter(Boolean).join(', ') : '';
+          put({ name: o.name, dob: o.dob, alias: socials, phone: phones, address: o.address, ...Object.fromEntries(['gender', 'identity', 'race', 'complexion', 'height', 'weight', 'hair', 'hairStyle', 'eyes', 'veteran', 'irNumber', 'fbiNumber', 'idocNumber', 'marks'].map((k) => [k, o[k]])) }, `Offender, ${e.number || 'case'}`);
+        }
+      } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+    }
+    return [...out.values()];
+  }
   function opSubjectsPanel(opId) {
-    return opCardsPanel(opId, { folder: 'Subject Data', noun: 'Subject', icon: 'person-plus', fields: SUBJECT_FIELDS,
+    return opCardsPanel(opId, { folder: 'Subject Data', noun: 'Subject', icon: 'person-plus', fields: SUBJECT_FIELDS, suggest: () => missionPeople(opId),
       summary: (v) => [v.name, v.dob ? `DOB ${fmtDate(v.dob)}` : ''].filter(Boolean).join(' · '), photoAlt: (v) => `Photo of ${v.name || 'the subject'}`,
       read: () => Vault.readOpList(opId, 'Subject Data', '.subjects.json'), write: (snap) => Vault.saveOpList(opId, 'Subject Data', '.subjects.json', snap) });
   }
   /** v1.73 (v1.80: shared by Vehicle List and Subject Data): one card per entry with its fields on
    * the left and a photo on the right. Kept in the folder as a hidden .json; photos are files there. */
-  function opCardsPanel(opId, { folder, noun, icon, fields, summary, photoAlt, read, write }) {
+  function opCardsPanel(opId, { folder, noun, icon, fields, summary, photoAlt, read, write, suggest = null }) {
     const key = `op-${opId}`;
     const box = h('div', { class: `op-vehicles op-cards-${noun.toLowerCase()}` });
     let list = [];
@@ -909,6 +943,15 @@
             if (kind === 'select') el = h('select', { 'aria-label': `${noun} ${i + 1} ${label}` }, opts.map((o) => h('option', { value: o, selected: o === (v[k] || '') }, o || '—')));
             else el = h('input', { type: kind === 'date' ? 'date' : 'text', value: v[k] || '', autocomplete: 'off', 'aria-label': `${noun} ${i + 1} ${label}`, placeholder: kind === 'height' ? '5 ft 10 in' : kind === 'weight' ? '160 Pounds' : null });
             el.addEventListener(kind === 'select' ? 'change' : 'input', () => { v[k] = el.value; save(); });
+            // v1.81: a subject's name suggests the suspects and offenders already in the Mission's
+            // reports; picking one fills the boxes that are still empty.
+            if (suggest && k === 'name' && window.CVCombo) {
+              const box2 = CVCombo.attach(el, { items: () => people.map((p) => ({ value: p.name, label: p.name, hint: p.from.join('; ') })), onPick: (it) => {
+                const p = people.find((x) => x.name === it.value);
+                if (p) { for (const [f] of fields) if (p[f] && !String(v[f] || '').trim()) v[f] = p[f]; save(); draw(); }
+              } });
+              return field(label, box2, '');
+            }
             return field(label, el, kind === 'wide' ? 'op-veh-wide' : '');
           });
           return h('div', { class: 'op-veh-card' },
@@ -919,8 +962,19 @@
               } }, I('trash3'), h('span', { class: 'sr-only' }, `Remove ${noun.toLowerCase()}`))),
             h('div', { class: 'op-veh-body' }, h('div', { class: 'op-veh-fields' }, ...inputs), photoBox(v)));
         }) : [h('p', { class: 'muted small' }, `No ${noun.toLowerCase()}s yet.`)]),
-        h('div', { class: 'op-veh-foot' }, h('button', { type: 'button', class: 'btn small', icon, onclick: () => { list.push({ id: Vault.newId(noun[0].toLowerCase()) }); save(); draw(); const last = box.querySelectorAll('.op-veh-card'); if (last.length) last[last.length - 1].querySelector('input').focus(); } }, `Add ${noun}`)));
+        h('div', { class: 'op-veh-foot' }, h('button', { type: 'button', class: 'btn small', icon, onclick: () => { list.push({ id: Vault.newId(noun[0].toLowerCase()) }); save(); draw(); const last = box.querySelectorAll('.op-veh-card'); if (last.length) last[last.length - 1].querySelector('input').focus(); } }, `Add ${noun}`),
+          // v1.81: every suspect and offender of the Mission's reports not on the sheet yet, filled in.
+          suggest ? h('button', { type: 'button', class: 'btn small', icon: 'people', title: 'Add every suspect (Details) and offender (Draft) of this Mission\'s cases that is not on this sheet yet', onclick: async () => {
+            people = await suggest().catch(() => people);
+            const have = new Set(list.map((x) => String(x.name || '').trim().toLowerCase()));
+            const add = people.filter((p) => !have.has(p.name.toLowerCase()));
+            if (!add.length) { toast('Everyone in the reports is already on this sheet.', 'info'); return; }
+            for (const p of add) list.push({ id: Vault.newId('s'), ...Object.fromEntries(fields.map(([f]) => [f, p[f] || '']).filter(([, x]) => x)) });
+            save(); draw(); toast(`${add.length} added from the reports.`, 'success');
+          } }, 'Add From Reports') : ''));
     };
+    let people = [];
+    if (suggest) suggest().then((p) => { people = p; }).catch(() => {});
     read().then((v) => { list = v; draw(); }).catch((err) => { if (FS.isDisconnectError(err)) onDriveLost(); });
     return box;
   }
