@@ -15,6 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.77)
+
+- The sidebar folder names are in capitals: MISSION FILES (closed cases of Operations still going on), GENERAL FILES, CLOSED FILES and ARCHIVED
+
 ## Features (v1.76)
 
 - DNA (Does Not Apply) can be picked for the Federal Jacket Number and for IR, FBI and IDOC Numbers (suspects, offenders and the Officer's Report)
