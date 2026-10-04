@@ -3861,3 +3861,54 @@ html .tl-item.deadline::before { transform: none; }
 /* v1.83: Recently Updated: every status box the same width (Open, Pending, Closed, Archived). */
 .recent-grid .recent-row .pill { display: inline-flex; justify-content: center; align-items: center; width: 6.6rem; box-sizing: border-box; }
 #sidebar .general-group > .op-head .op-name { white-space: nowrap; }
+
+/* v1.84: CLOSED FILES and ARCHIVED always sit at the bottom of the case list, in a panel whose
+   height is dragged with the bar on its top edge; Quick Links has the same bar. A padlock on the bar
+   keeps the height as it is. */
+.side-bottom { flex: none; display: flex; flex-direction: column; min-height: 0; max-height: 80%; overflow-y: auto; padding-bottom: .55rem; border-top: 1px solid var(--chrome-edge, var(--border)); }
+#sidebar .side-bottom .archived-cases { max-height: none; flex: none; overflow: visible; }
+.panel-grip { position: relative; flex: none; display: flex; align-items: center; justify-content: center; height: 14px; cursor: ns-resize; user-select: none; touch-action: none; }
+.panel-grip-bar { width: 2.8rem; height: 4px; background: var(--border); transition: background .15s; }
+.panel-grip:hover .panel-grip-bar, .panel-grip:focus-visible .panel-grip-bar { background: var(--accent); }
+.panel-grip .panel-lock { position: absolute; right: .45rem; top: 50%; transform: translateY(-50%); width: 1.35rem; height: 1.35rem; padding: 0; cursor: pointer; }
+.panel-grip .panel-lock .bi { width: .8rem; height: .8rem; }
+.panel-grip.panel-locked { cursor: default; }
+.panel-grip.panel-locked .panel-grip-bar { opacity: .35; }
+.side-bottom > .panel-grip { position: sticky; top: 0; z-index: 2; background: var(--chrome, var(--surface-2)); }
+.ql-grip { background: var(--chrome, var(--surface-2)); border-top: 1px solid var(--chrome-edge, var(--border)); }
+.ql-grip[hidden] { display: none; }
+#ql-footer.panel-sized { overflow-y: auto; }
+body.resizing-panel, body.resizing-panel * { cursor: ns-resize !important; user-select: none !important; }
+.side-bottom { scrollbar-gutter: stable; scrollbar-width: thin; }
+
+/* v1.84: closing by arrest needs the arrest report; archiving needs a reason; Undo in the toast. */
+.close-form .arrest-required { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px; border: 1px solid #e0a43a; border-left: 4px solid #d97706; background: #fff7e6; color: #6b4300; }
+.close-form .arrest-required .btn { margin-left: auto; }
+.arch-form .arch-need { color: #9a3412; margin: 4px 0 0; }
+.arch-form .arch-opt strong { display: block; }
+.archived-banner .arch-reason { margin-top: 2px; font-weight: 600; }
+.toast .toast-undo { margin-left: 8px; padding: 2px 10px; border: 1px solid currentColor; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; border-radius: 0; }
+.toast .toast-undo:hover { background: rgba(255,255,255,.18); }
+[data-theme="dark"] .close-form .arrest-required { background: #3a2a10; color: #ffd9a0; border-color: #a86b12; }
+
+/* v1.84: a closed case stays in its Mission's folder, greyed with a lock, under the open ones. */
+.op-cases .case-item.case-dim { opacity: .62; }
+.op-cases .case-item.case-dim:hover, .op-cases .case-item.case-dim.active { opacity: 1; }
+.case-item .case-lock { display: inline-flex; vertical-align: -2px; margin-right: 5px; color: var(--muted); }
+.case-item .case-lock .bi { width: .85rem; height: .85rem; }
+.status-hint { margin-top: .15rem; font-weight: 400; font-style: italic; }
+
+/* v1.84: the banner's counts are glass chips with a colour edge, and open General Files. */
+.hero-counts { grid-template-columns: repeat(5, minmax(0, 7.5rem)); }
+.hero-count { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.28); border-left: 4px solid var(--hc-edge, #cbd5e1); font: inherit; font-size: .8rem; cursor: pointer; text-align: left; border-radius: 0; }
+.hero-count:hover { background: rgba(255,255,255,.22); }
+.hero-count:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+.hero-count .bi { color: var(--hc-edge, #fff); }
+.hero-count.hc-open { --hc-edge: #7cc4ff; }
+.hero-count.hc-pending { --hc-edge: #ffd166; }
+.hero-count.hc-closed { --hc-edge: #6ee7b7; }
+.hero-count.hc-archived { --hc-edge: #cbd5e1; }
+.hero-count.hc-overdue { --hc-edge: #ff6b6b; }
+.hero-count.hc-overdue.hc-alert { background: rgba(255,80,80,.24); }
+@media (max-width: 1100px) { .hero-counts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .hero-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

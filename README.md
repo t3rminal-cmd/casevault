@@ -15,6 +15,18 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.84)
+
+- CLOSED FILES and ARCHIVED always sit at the bottom of the sidebar; drag the bar above them to make that area taller or shorter, and lock it with the padlock (double-click the bar to reset)
+- Quick Links: drag the bar above them to change their height, and lock it
+- Closing needs a disposition; closing by arrest needs the arrest report (an arrestee and at least one charge) first, with a button to open the Arrest details tab
+- Archiving needs a reason: EXPIRED, NOLLE PROSEQUI, PROSECUTION, or Other with the reason written in; the reason shows on the archived case
+- After closing, the message has Undo for a few seconds
+- Closing the last open case of a Mission asks whether to close the Mission too; reopening a case of a closed Mission asks whether to reopen the Mission
+- A closed case stays in its Mission's folder, greyed with a padlock, under the open ones; in CLOSED FILES it is listed under the Mission's own name
+- The Status drop-down offers Open and Pending; closing and archiving use their buttons
+- Banner: glass status boxes with a colour edge, a red Overdue count, and each count opens General Files showing just those cases
+
 ## Features (v1.83)
 
 - CLOSED FILES and ARCHIVED in the sidebar look like MISSION FILES and GENERAL FILES (a card with the folder icon, the name, a line under it, the count and the arrow); the CLOSED FILES count is the number of closed cases, as on the banner
