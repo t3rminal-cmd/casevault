@@ -15,6 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.87)
+
+- **Back Up Everything in Firefox** (needs helper 1.11): CaseVault lists the other drives (not the SSD's own partitions or the Windows drive), the helper copies the whole CaseVault-Data folder to `<drive>\CaseVault-Backups\CaseVault-Backup-<date>` and checks every file's SHA-256 against the original, in the background with a progress count; the banner then shows the backup as checked. With an older helper the File Explorer steps still show
+- Helper 1.11: new `backup-drives`, `backup-start` and `backup-status` calls; a backup can only go to one of the drives it lists
+
 ## Features (v1.86)
 
 - Supplementary Report PDF, Officer's Report:
@@ -548,7 +553,7 @@ CaseVault-Data/
 | `js/ai/ollama-shim.js` | Answers Ollama-style API calls from the in-browser engine |
 | `vendor/` | Bundled pdf.js, Tesseract.js, SheetJS, WebLLM, the Bootstrap Icons license and the Poppins font (see `vendor/README.md` for versions, licenses and provenance) |
 | `tools/Start-CaseVault.bat` | Launcher for the CV-AI partition: starts the helper and Ollama |
-| `tools/casevault-helper/` | The Firefox helper (Windows PowerShell 5.1, 127.0.0.1 only); also serves in-browser models from `W:\webllm`, holds `Get-WebLLM-Model.ps1`, opens `.eml` mail drafts from a case's Email folder in Outlook, and reports RAM and disk space for the memory indicator |
+| `tools/casevault-helper/` | The Firefox helper (Windows PowerShell 5.1, 127.0.0.1 only); also serves in-browser models from `W:\webllm`, holds `Get-WebLLM-Model.ps1`, opens `.eml` mail drafts from a case's Email folder in Outlook, and reports RAM and disk space for the memory indicator, and (1.11) copies and checks Back Up Everything onto another drive |
 | `tools/Get-WebLLM-Model.bat` | One-time download of an in-browser model onto the CV-AI drive |
 | `tests/` | Unit tests (`node --test tests/*.test.js`) and a mock Ollama server |
 | `scripts/check-no-case-data.sh` | CI guard: fails if anything resembling case data is committed |

@@ -171,5 +171,19 @@ const HelperFS = (() => {
     return res.json();
   }
 
-  return { servedByHelper, DEFAULT_URL, info, root, openFile, sysinfo, shutdown };
+  // v1.87 (helper 1.11): Back Up Everything in Firefox. The helper lists the other drives, copies
+  // CaseVault-Data to the one picked and checks every file, in the background.
+  // backupDrives() -> [{ path, label, free, total, kind }], or null with an older helper.
+  async function backupDrives() {
+    try { return await (await call('GET', 'backup-drives', '')).json(); } catch (err) { if (err && err.name === 'NotFoundError') return null; throw err; }
+  }
+  // -> { state: idle | running | done | error, files, total, bytes, totalBytes, current, folder, drive, message, at }
+  async function backupStart(drive) {
+    return (await call('POST', 'backup-start', '', { query: `&drive=${encodeURIComponent(drive)}` })).json();
+  }
+  async function backupStatus() {
+    return (await call('GET', 'backup-status', '')).json();
+  }
+
+  return { servedByHelper, DEFAULT_URL, info, root, openFile, sysinfo, shutdown, backupDrives, backupStart, backupStatus };
 })();

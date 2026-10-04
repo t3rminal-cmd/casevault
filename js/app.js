@@ -532,17 +532,74 @@
     if (warn.length) toast(h('span', {}, ...warn.flatMap((w, i) => [i ? h('br') : null, w])), 'error', 12000);
   }
 
+  // v1.87: in Firefox the helper (1.11 or later) copies and checks the vault on another drive.
+  async function helperBackup() {
+    let drives;
+    try { drives = await HelperFS.backupDrives(); } catch (err) { toast(`The helper did not answer: ${err.message}`, 'error'); return false; }
+    if (!drives) return null; // an older helper: copy by hand
+    const pick = await openDialog((close) => {
+      const list = h('div', { class: 'arch-pick backup-drives', role: 'radiogroup', 'aria-label': 'Backup drive' });
+      const go = h('button', { class: 'btn primary', type: 'submit', icon: 'hdd-fill', disabled: true }, 'Back Up to This Drive');
+      const draw = (items) => {
+        list.replaceChildren(...(items.length ? items.map((d) => h('label', { class: 'arch-opt' },
+          h('input', { type: 'radio', name: 'backup-drive', value: d.path }), I('hdd-fill'),
+          h('span', {}, h('strong', {}, `${d.label || 'Drive'} (${d.path.replace(/[\\/]+$/, '')})`),
+            h('span', { class: 'muted small block' }, d.total ? `${fmtSize(d.free)} free of ${fmtSize(d.total)}${d.kind === 'Removable' ? ' · removable' : ''}` : d.kind)))) : [h('p', { class: 'muted' }, 'No other drive found. Plug in the backup drive and unlock it, then click Look Again.')]));
+        go.disabled = true;
+      };
+      list.addEventListener('change', () => { go.disabled = !list.querySelector('input:checked'); });
+      draw(drives);
+      return h('form', { class: 'backup-form', onsubmit: (e) => { e.preventDefault(); const c = list.querySelector('input:checked'); if (c) close(c.value); } },
+        h('h2', { icon: 'hdd-fill' }, 'Back Up the Whole Vault'),
+        h('p', {}, 'Every case, file, report, template and setting in CaseVault-Data is copied to the drive you pick, into CaseVault-Backups, then read back and checked file by file. You can keep working while it runs.'),
+        h('p', { class: 'muted small' }, 'Pick an encrypted drive that is not part of this SSD. The SSD\'s own partitions and the PC\'s Windows drive are not listed.'),
+        list,
+        h('div', { class: 'dialog-actions' },
+          h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
+          h('button', { class: 'btn', type: 'button', icon: 'arrow-repeat', onclick: async () => { try { draw((await HelperFS.backupDrives()) || []); } catch (err) { toast(err.message, 'error'); } } }, 'Look Again'),
+          go));
+    });
+    if (!pick) return false;
+    await Save.flushAll();
+    if (Save.failed.size) { toast('Some changes are not saved yet. Reconnect the SSD, then back up.', 'error', 8000); return false; }
+    const progress = toast('Backing up: starting…', 'info', 24 * 3600000);
+    try {
+      let st = await HelperFS.backupStart(pick);
+      while (st.state === 'running') {
+        await new Promise((r) => setTimeout(r, 800));
+        st = await HelperFS.backupStatus();
+        progress.textContent = st.total ? `Backing up: ${st.files} of ${st.total} files copied and checked (${fmtSize(st.bytes)} of ${fmtSize(st.totalBytes)})` : 'Backing up: counting the files…';
+      }
+      progress.remove();
+      if (st.state !== 'done') { toast(`The backup did not finish: ${st.message || 'unknown error'}`, 'error', 15000); return false; }
+      await Save.track('settings', () => Vault.recordHelperBackup(st));
+      await openDialog((close) => h('div', { class: 'backup-form' },
+        h('h2', { icon: 'check-circle-fill' }, 'Full Backup Done'),
+        h('p', {}, `${st.files} file${st.files === 1 ? '' : 's'} (${fmtSize(st.bytes)}) copied to ${CVFormat.pathText(st.folder)} and checked file by file.`),
+        h('p', { class: 'muted small' }, 'Keep the backup drive somewhere other than where the SSD is kept. To restore, copy the backup folder\'s contents into an empty CaseVault-Data folder and open it.'),
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
+      if (location.hash === '#/' || location.hash === '') route();
+      return true;
+    } catch (err) {
+      progress.remove();
+      toast(`The backup did not finish: ${err.message}`, 'error', 15000);
+      return false;
+    }
+  }
+
   async function fullBackupDialog() {
     if (MODE !== 'direct') {
+      const done = await helperBackup();
+      if (done !== null) return done;
       const ok = await openDialog((close) => h('div', { class: 'backup-form' },
         h('h2', { icon: 'hdd-fill' }, 'Back Up the Whole Vault'),
-        h('p', {}, 'In this browser CaseVault cannot reach a second drive itself. Copy the folder with File Explorer:'),
+        h('p', {}, 'This helper is older than 1.11, so CaseVault cannot reach a second drive itself. Update W:\\casevault-helper to back up with one click, or copy the folder with File Explorer:'),
         h('ol', { class: 'backup-steps' },
           h('li', {}, 'Close CaseVault (⋮ → Power Off) so nothing is being saved.'),
           h('li', {}, 'Plug in the backup drive (an encrypted drive, not this PC).'),
           h('li', {}, h('span', {}, 'Copy the whole ', h('strong', {}, 'CaseVault-Data'), ' folder from the SSD to the backup drive.')),
           h('li', {}, 'Open the copy\'s vault.json to check it is there, then come back here.')),
-        h('p', { class: 'muted small' }, 'In Chrome or Edge, CaseVault copies and checks every file for you.'),
+        h('p', { class: 'muted small' }, 'With helper 1.11 or later, or in Chrome or Edge, CaseVault copies and checks every file for you.'),
         h('div', { class: 'dialog-actions' },
           h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'),
           h('button', { class: 'btn primary', type: 'button', icon: 'check-circle-fill', onclick: () => close(true) }, 'I Copied It Today'))));

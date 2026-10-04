@@ -3966,3 +3966,4 @@ body.resizing-panel, body.resizing-panel * { cursor: ns-resize !important; user-
 /* v1.85: Beta tag (Templates, Checks, Document Anonymizer). */
 .beta-tag { display: inline-block; margin-left: 6px; padding: 0 5px; font-size: .62rem; font-weight: 700; line-height: 1.5; letter-spacing: .08em; text-transform: uppercase; color: #92400e; background: #fef3c7; border: 1px solid #f59e0b; vertical-align: middle; }
 [data-theme="dark"] .beta-tag { color: #fde68a; background: #3a2a05; border-color: #b45309; }
+.backup-drives { grid-template-columns: minmax(0, 1fr); }
