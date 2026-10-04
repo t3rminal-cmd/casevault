@@ -462,7 +462,7 @@
     const d = c.closure && K().disposition(c.closure.disposition);
     const ok = await ui.confirmDialog({
       title: 'Reopen this case?',
-      message: `It goes back to Open${d ? `. The closing (${d.label}${c.closure.date ? `, ${c.closure.date}` : ''}) is kept in the case's history` : ''}. Arrest details, files and drafts stay as they are.`,
+      message: `It goes back to Open${d ? `. The closing (${d.label}${c.closure.date ? `, ${root.CVFormat ? CVFormat.dateText(c.closure.date) : c.closure.date}` : ''}) is kept in the case's history` : ''}. Arrest details, files and drafts stay as they are.`,
       confirmText: 'Reopen case',
     });
     if (!ok) return false;

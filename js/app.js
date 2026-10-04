@@ -635,11 +635,13 @@
             bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
           h('span', { class: 'op-meta muted' }, meta)),
         cases.length > 1 ? h('span', { class: 'op-count' }, String(cases.length)) : null,
+        // v1.83: GENERAL FILES has a + for a new case, like MISSION FILES has one for a new Mission.
+        !op && !opFiles && !group.closed ? h('button', { class: 'icon-btn mission-add general-add', type: 'button', title: 'New case in General Files', onclick: (e) => { e.preventDefault(); e.stopPropagation(); newCase(); } }, I('plus-lg'), h('span', { class: 'sr-only' }, 'New case')) : null,
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
       h('ul', { class: 'op-cases' }, cases.length ? cases.map((c) => caseItem(c, true)) : [h('li', { class: 'empty muted small' }, op ? 'No cases in this Mission yet.' : 'No independent cases.')]));
     // A click on the folder's name opens the Operation (or General Files); the arrow folds it.
     det.querySelector('summary').addEventListener('click', (e) => {
-      if (e.target.closest('.op-chev')) return;
+      if (e.target.closest('.op-chev') || e.target.closest('.general-add')) return;
       if (opFiles) return; // just folds
       e.preventDefault();
       location.hash = op ? `#/operation/${encodeURIComponent(op.id)}` : '#/general';
@@ -738,7 +740,9 @@
     const closedSec = $('#closed-cases');
     const allClosed = opGroups(Vault.data.cases.filter((c) => !isArchivedEntry(c))).filter(isClosedGroup);
     closedSec.hidden = !allClosed.length;
-    $('#closed-count').textContent = String(closedGroups.length);
+    // v1.83: the badge counts closed cases (as the banner does), not folders.
+    $('#closed-count').textContent = String(closedGroups.reduce((t, g) => t + g.cases.length, 0));
+    { const n = allClosed.reduce((t, g) => t + g.cases.length, 0); const m = $('#closed-cases .sec-meta'); if (m) m.textContent = `${n} closed case${n === 1 ? '' : 's'}`; }
     $('#closed-list').replaceChildren(...(closedGroups.length ? closedGroups.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted' }, 'No closed missions match.')]));
     if ((state.caseId && closedGroups.some((g) => g.cases.some((c) => c.id === state.caseId))) || ($('#case-search').value.trim() && closedGroups.length)) closedSec.open = true;
 
@@ -748,6 +752,7 @@
     const shown = archived.filter((c) => matchesSearch(c, q));
     section.hidden = !archived.length;
     $('#archived-count').textContent = q ? `${shown.length} of ${archived.length}` : String(archived.length);
+    { const m = $('#archived-cases .sec-meta'); if (m) m.textContent = `${archived.length} archived case${archived.length === 1 ? '' : 's'}`; }
     // v1.67: EXPIRED, NOLLE PROSEQUI and PROSECUTION sub-folders; cases without one below them.
     const subs = Vault.ARCHIVE_FOLDERS.map(([k, label]) => {
       const inIt = shown.filter((c) => c.archiveFolder === k);
@@ -771,6 +776,11 @@
   for (const sec of ['#closed-cases', '#archived-cases']) {
     const sum = $(`${sec} > summary`);
     sum.prepend(h('span', { class: 'sec-folder' }, I(sec === '#closed-cases' ? 'folder-closed' : 'folder-archived')));
+    // v1.83: the name and a line under it, like the MISSION FILES and GENERAL FILES folders.
+    const label = sum.querySelector('.sec-label');
+    const text = h('span', { class: 'sec-text' });
+    label.before(text);
+    text.append(label, h('span', { class: 'sec-meta muted' }));
     sum.append(h('span', { class: 'sec-chev' }, I('chevron-down')));
   }
 

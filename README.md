@@ -15,6 +15,13 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.83)
+
+- CLOSED FILES and ARCHIVED in the sidebar look like MISSION FILES and GENERAL FILES (a card with the folder icon, the name, a line under it, the count and the arrow); the CLOSED FILES count is the number of closed cases, as on the banner
+- GENERAL FILES has a + for a new case
+- Recently Updated: every status box is the same width
+- Reopening a case shows the closing date written out
+
 ## Features (v1.82)
 
 - Sidebar folders stay open or folded until you click them (no longer reset when you go to another page)

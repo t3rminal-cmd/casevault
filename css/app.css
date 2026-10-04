@@ -3836,3 +3836,28 @@ html .tl-item.deadline::before { transform: none; }
 /* v1.82: a funds line is as wide as its denomination ("Electronic Funds × 2" no longer runs into the
    reference numbers). */
 .rf-fund { grid-template-columns: minmax(6.5rem, max-content) minmax(0, 1fr) auto; }
+
+/* v1.83: CLOSED FILES and ARCHIVED look like the MISSION FILES and GENERAL FILES folders: a card
+   with a coloured left edge, the folder icon in a box, the name in capitals with a line under it,
+   the count and the arrow. */
+#sidebar .archived-cases { margin: .45rem .55rem 0; border: 1px solid var(--chrome-edge, var(--border)); border-left: 3px solid #8a94a6; background: var(--surface); box-shadow: var(--lift, var(--shadow)); max-height: 34%; }
+#sidebar .closed-cases { border-left-color: #5f9e8f; }
+#sidebar .closed-cases + .archived-cases { border-top: 1px solid var(--chrome-edge, var(--border)); margin-bottom: .55rem; }
+#sidebar .archived-cases:last-child { margin-bottom: .55rem; }
+#sidebar .archived-cases > summary { padding: .55rem .6rem .55rem .55rem; gap: .5rem; font-size: inherit; text-transform: none; letter-spacing: 0; background: var(--surface); position: sticky; top: 0; z-index: 1; }
+#sidebar .archived-cases > summary .sec-folder { width: 2rem; height: 2rem; border: 1px solid var(--border); background: var(--surface); margin: 0; }
+#sidebar .archived-cases > summary .sec-folder svg { width: 1.3rem; height: 1.3rem; }
+#sidebar .archived-cases > summary .sec-text { display: grid; gap: .05rem; min-width: 0; flex: 1; }
+#sidebar .archived-cases > summary .sec-label { font-size: .93rem; font-weight: 700; letter-spacing: .04em; color: var(--text); }
+#sidebar .archived-cases > summary .sec-meta { font-size: .72rem; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#sidebar .archived-cases:not([open]) > summary .sec-meta { display: none; }
+#sidebar .archived-cases > summary .count-pill { margin-left: 0; }
+#sidebar .archived-cases > .case-list { padding: .1rem .45rem .45rem; border-top: 1px solid var(--border); }
+#sidebar .archived-cases:hover { box-shadow: var(--lift-hover, var(--shadow-lg)); }
+.general-group > .op-head .general-add { flex: none; width: 1.7rem; height: 1.7rem; border: 1px solid var(--border); background: var(--surface); color: #7b4fd8; }
+.general-group > .op-head .general-add:hover { background: color-mix(in srgb, #7b4fd8 12%, var(--surface)); border-color: #7b4fd8; }
+.general-group > .op-head .general-add .bi { width: .85rem; height: .85rem; }
+
+/* v1.83: Recently Updated: every status box the same width (Open, Pending, Closed, Archived). */
+.recent-grid .recent-row .pill { display: inline-flex; justify-content: center; align-items: center; width: 6.6rem; box-sizing: border-box; }
+#sidebar .general-group > .op-head .op-name { white-space: nowrap; }
