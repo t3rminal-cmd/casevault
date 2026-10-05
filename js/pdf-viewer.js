@@ -103,6 +103,9 @@
         doc = await task.promise;
         pageInfo.textContent = `${doc.numPages} page${doc.numPages === 1 ? '' : 's'}`;
         await draw();
+        // v1.89: opts.page starts on that page (a Files preview from a check result).
+        const start = Number(opts.page) || 0;
+        if (start > 1) { const cv = pages.children[Math.min(start, pages.children.length) - 1]; if (cv) pages.scrollTop = cv.offsetTop - pages.offsetTop - 8; }
       } catch (err) {
         fallback('Use the printer button above the page to print, or the download button to save a PDF.');
       }

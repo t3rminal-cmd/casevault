@@ -67,13 +67,6 @@
     return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
-  // Short date for tables: "09.28 22:48" this year, "09.28.2025" before.
-  function fmtShortDateTime(ms) {
-    const d = new Date(ms);
-    const day = `${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
-    return d.getFullYear() === new Date().getFullYear() ? `${day} ${pad(d.getHours())}:${pad(d.getMinutes())}` : `${day}.${d.getFullYear()}`;
-  }
-
   function fmtSize(n) {
     if (n < 1024) return `${n} B`;
     const units = ['KB', 'MB', 'GB', 'TB'];
@@ -141,7 +134,7 @@
     ['panel', '.vault-panel'],
     ['form', '.op-form, .new-case-form'],
     ['full', '.preview, .doc-view, .lib-preview, .pdf-view, .word-view, .disc'],
-    ['wide', '.problem-form, .shortcuts-form, .type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
+    ['wide', '.problem-form, .type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
   ];
 
   function openDialog(build) {
@@ -2338,7 +2331,7 @@
       makeFoldable(suspectsSection(c, save), 'overview-suspects'),
       makeFoldable(contactsSection(c, save), 'overview-contacts'),
       makeFoldable(deconflictionSection(c, save), 'overview-deconfliction'),
-      makeFoldable(caseHistorySection(c), 'case-history'),
+      makeFoldable(caseHistorySection(c, archived ? null : save), 'case-history'),
       // Everything saves by itself as you type; the button saves now and says so.
       // (An archived case gets an empty string here: a null would show as the word "null".)
       archived ? '' : h('div', { class: 'details-save' },
@@ -2706,8 +2699,18 @@
   /* v1.85: Case History: each status change and move, newest first. Cases from before v1.85 show
    * what their dates and closing history tell. */
   function historyOf(c) {
-    const rows = Array.isArray(c.activity) && c.activity.length ? c.activity.map((a) => ({ at: a.at, what: a.what })) : [];
-    if (!rows.length) {
+    const act = Array.isArray(c.activity) ? c.activity : [];
+    // v1.89: "Opened as Open" was the day the case was put in CaseVault: it says so now. Your own
+    // notes (a case migrated from before CaseVault, a transfer…) carry the day you give them.
+    const rows = act.map((a, i) => {
+      const m = /^Opened as (.+)$/.exec(a.what || '');
+      return { at: a.day ? null : a.at, day: a.day || null, what: m ? `Added to CaseVault (${m[1]})` : a.what, note: !!a.note, index: i };
+    });
+    if (rows.length) {
+      const added = act.find((a) => /^Opened as /.test(a.what || ''));
+      const addedDay = added && added.at ? Vault.localDay(new Date(added.at)) : '';
+      if (c.dates && c.dates.opened && c.dates.opened !== addedDay) rows.push({ day: c.dates.opened, what: 'Case opened (the Opened date on this tab)', derived: true });
+    } else {
       if (c.dates && c.dates.opened) rows.push({ day: c.dates.opened, what: 'Opened' });
       for (const x of c.closureHistory || []) {
         const d = CVClosing.disposition(x.disposition);
@@ -2717,16 +2720,40 @@
       if (c.closure) { const d = CVClosing.disposition(c.closure.disposition); rows.push({ day: c.closure.date, at: c.closure.date ? null : c.closure.at, what: `Closed: ${d ? d.label : ''}` }); }
       if (c.dates && c.dates.archived) rows.push({ day: c.dates.archived, what: `Archived${c.archiveReason ? `: ${c.archiveReason}` : ''}` });
     }
-    const key = (r) => r.at || `${r.day}T12:00:00`;
+    const key = (r) => (r.at ? new Date(r.at).toISOString() : `${r.day}T12:00:00`);
     return rows.sort((a, b) => key(b).localeCompare(key(a)));
   }
-  function caseHistorySection(c) {
-    const rows = historyOf(c);
+  function caseHistorySection(c, save = null) {
+    const list = h('ol', { class: 'history-list' });
+    const draw = () => {
+      const rows = historyOf(c);
+      list.replaceChildren(...(rows.length ? rows.map((r) => h('li', { class: r.note ? 'history-note' : r.derived ? 'history-derived' : '' },
+        h('span', { class: 'history-when' }, r.at ? fmtDateTime(Date.parse(r.at)) : r.day ? fmtDate(r.day) : ''),
+        h('span', { class: 'history-what' }, r.note ? h('span', { class: 'history-tag' }, 'Note') : null, r.what),
+        r.note && save ? h('button', { class: 'icon-btn history-del', type: 'button', title: 'Delete this note', onclick: () => {
+          c.activity.splice(r.index, 1);
+          save();
+          draw();
+        } }, I('x-lg'), h('span', { class: 'sr-only' }, 'Delete note')) : h('span'))) : [h('li', { class: 'muted small' }, 'Nothing yet.')]));
+    };
+    draw();
+    // v1.89: add a note with its own date, e.g. "Case opened on paper; migrated to CaseVault".
+    const day = h('input', { type: 'date', value: (c.dates && c.dates.opened) || today(), 'aria-label': 'Note date' });
+    const text = h('input', { type: 'text', maxlength: 200, placeholder: 'Case opened before CaseVault; migrated from the paper file', 'aria-label': 'Note' });
+    const add = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', onclick: () => {
+      const what = text.value.trim();
+      if (!what) { text.focus(); return; }
+      const d = day.value || today();
+      c.activity = [...(Array.isArray(c.activity) ? c.activity : []), { day: d, what, note: true, added: new Date().toISOString() }];
+      text.value = '';
+      save();
+      draw();
+    } }, 'Add Note');
+    text.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add.click(); } });
     return h('section', { class: 'contacts case-history cv-boxed', 'aria-labelledby': 'history-title' },
-      h('h3', { id: 'history-title', icon: 'clock-history', title: 'Each change of status, closing, reopening, archiving and Mission move, newest first.' }, 'Case History'),
-      rows.length ? h('ol', { class: 'history-list' }, rows.map((r) => h('li', {},
-        h('span', { class: 'history-when muted small nowrap' }, r.at ? fmtDateTime(Date.parse(r.at)) : r.day ? fmtDate(r.day) : ''),
-        h('span', { class: 'history-what' }, r.what)))) : h('p', { class: 'muted small' }, 'Nothing yet.'));
+      h('h3', { id: 'history-title', icon: 'clock-history', title: 'Each change of status, closing, reopening, archiving and Mission move, newest first, and your own dated notes.' }, 'Case History'),
+      list,
+      save ? h('div', { class: 'history-add' }, field('Date', day), field('Note', text), add) : null);
   }
 
   /* v1.85: Case Summary: one page for a supervisor, as a PDF (the letterhead on top). */
@@ -2741,7 +2768,7 @@
     } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
     const op = opOf(c);
     const lh = await CVLetterhead.forPdf().catch(() => null);
-    const bytes = CVCaseSummary.build({ c, op, arrest, fields, timeline: tl, history: historyOf(c), fmtDate }, { letterhead: lh, printed: fmtDate(today()) });
+    const bytes = CVCaseSummary.build({ c, op, arrest, fields, timeline: tl, history: historyOf(c).map((r) => (r.note ? { ...r, what: `Note: ${r.what}` } : r)), fmtDate }, { letterhead: lh, printed: fmtDate(today()) });
     const name = `Case Summary ${c.number || 'case'}.pdf`.replace(/[\\/:*?"<>|]/g, '');
     const viewer = CVPdfViewer.create(bytes, { h, icon: I, title: 'Case Summary', fileName: name });
     await openDialog((done) => h('div', { class: 'pdf-view' }, h('h2', {}, 'Case Summary'), viewer,
@@ -3628,6 +3655,7 @@
     const urls = [];
     const blobUrl = (blob) => { const u = URL.createObjectURL(blob); urls.push(u); return u; };
     const typed = MIME[ext] ? new Blob([file], { type: MIME[ext] }) : file;
+    let viewer = null; let pdfBytes = null;
 
     await openDialog((close) => {
       let body;
@@ -3635,9 +3663,14 @@
         // XFA forms (Adobe LiveCycle) only say "Please wait..." in the browser's PDF viewer, so
         // CaseVault draws them itself; ordinary PDFs use the browser's viewer.
         body = h('div', { class: 'xfa-preview' }, h('p', { class: 'muted' }, 'Opening…'));
-        const pdfFrame = () => h('iframe', { class: 'preview-frame', src: blobUrl(typed) + (page ? `#page=${page}` : ''), title: name });
+        // v1.89: CaseVault's own viewer (square, like the report PDFs), not the browser's.
+        const pdfFrame = () => {
+          viewer = CVPdfViewer.create(new Uint8Array(pdfBytes), { h, icon: I, title: name, fileName: name, page });
+          return h('div', { class: 'pdf-view preview-pdf' }, viewer);
+        };
         file.arrayBuffer().then(async (buf) => {
           const data = new Uint8Array(buf);
+          pdfBytes = buf.slice(0);
           const fields = await CVExtract.readXfaFields(data);
           if (!fields.xfa) return body.replaceWith(pdfFrame());
           const view = h('div', { class: 'xfa-view' });
@@ -3701,6 +3734,7 @@
         body);
     });
     urls.forEach((u) => URL.revokeObjectURL(u));
+    if (viewer) viewer.destroy();
   }
 
   /* =====================================================================

@@ -15,6 +15,17 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
+## Features (v1.89)
+
+- Send to Files clears the Draft by itself once the PDF is saved; the toast has an Undo button that brings the Draft back
+- The floating Draft bar (Send to Files, PDF View...) now sits right under the top toolbar, with no gap
+- Case History: the date and the entry have their own columns, so nothing runs together. "Opened as Open" now reads "Added to CaseVault (Open)", and when the Opened date on the Details tab is earlier there is a "Case opened" row on that date
+- Case History: **Add Note** with its own date (for example "Case started on paper; migrated to CaseVault"); notes sort by their date, show on the Case Summary PDF, and can be deleted with ×
+- Details: the Case Officer name in Contacts uses the same font size as the other boxes
+- Files preview of a PDF uses CaseVault's own square viewer (zoom % and page boxes square, no rounded browser controls)
+- Keyboard shortcuts: every key box is the same width and height
+- Clean-up: about 60 unused style rules and an unused date function removed
+
 ## Features (v1.88)
 
 - Quick Links and the CLOSED FILES / ARCHIVED area: one fixed height, five Quick Links tiles high; the drag bars and padlocks are gone

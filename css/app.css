@@ -971,7 +971,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .save-status .bi, .net-status .bi, .engine-status .bi { width: .95em; height: .95em; }
 .save-status.saving .bi { animation: cv-spin 1s linear infinite; }
 @keyframes cv-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .save-status.saving .bi, .flow-node.current .flow-dot .bi { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .save-status.saving .bi { animation: none; } }
 .theme-toggle { width: 2.3rem; height: 2.3rem; border-radius: 50%; border: 1px solid var(--border); color: var(--text); background: var(--surface); }
 .theme-toggle:hover { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-soft); }
 .theme-toggle .bi { width: 1.05rem; height: 1.05rem; }
@@ -1023,7 +1023,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .quick-link:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: var(--shadow-lg); }
 .quick-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ql-icon { display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: .9rem; background: var(--accent-soft); color: var(--accent); font-size: 1.4rem; flex-shrink: 0; }
-.ql-dui { background: var(--warn-soft); color: var(--warn); }
 .ql-incident { background: var(--ok-soft); color: var(--ok); }
 .ql-ucr { background: var(--danger-soft); color: var(--danger); }
 .ql-text { display: grid; gap: .1rem; flex: 1; min-width: 0; }
@@ -1135,24 +1134,8 @@ table.files { border-radius: var(--radius); overflow: hidden; }
 .value-table .warn-pill { margin-left: .3rem; }
 
 .ref-seg { margin-bottom: 1rem; }
-.report-details { border: 1px solid var(--border); border-radius: .8rem; padding: .7rem .9rem .9rem; margin: .4rem 0 1rem; }
-.report-details legend { padding: 0 .35rem; font-size: .82rem; font-weight: 600; color: var(--muted); }
 .report-grid { display: grid; grid-template-columns: 2fr 1fr 1.2fr 1.5fr; gap: .6rem; }
 @media (max-width: 760px) { .report-grid { grid-template-columns: 1fr 1fr; } }
-.sfst-phase { border: 1px solid var(--border); border-radius: .9rem; margin-bottom: .7rem; background: var(--surface); overflow: hidden; }
-.sfst-phase > summary { display: flex; align-items: center; gap: .7rem; padding: .7rem .9rem; cursor: pointer; list-style: none; font-weight: 600; }
-.sfst-phase > summary::-webkit-details-marker { display: none; }
-.sfst-phase[open] > summary { border-bottom: 1px solid var(--border); background: var(--bg); }
-.sfst-phase > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.phase-num { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--accent); color: var(--accent-text); font-size: .85rem; flex-shrink: 0; }
-.phase-title { flex: 1; }
-.sfst-body { padding: .6rem 1rem 1rem; }
-.sfst-body h4 { margin: .8rem 0 .3rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
-.sfst-score { display: inline-flex; align-items: center; gap: .55rem; padding: .25rem .7rem .25rem .3rem; border-radius: 999px; font-weight: 500; font-size: .85rem; line-height: 1.2; }
-.sfst-score .block { font-weight: 400; }
-.sfst-num { display: grid; place-items: center; min-width: 2.6rem; height: 1.9rem; border-radius: 999px; font-weight: 700; background: var(--surface); }
-.sfst-score.under { background: var(--ok-soft); color: var(--ok); }
-.sfst-score.over { background: var(--danger-soft); color: var(--danger); }
 table.sided { border-collapse: collapse; width: 100%; max-width: 560px; }
 table.sided th, table.sided td { padding: .3rem .5rem; border-bottom: 1px solid var(--border); text-align: left; font-weight: 400; }
 table.sided thead th { font-size: .75rem; text-transform: uppercase; color: var(--muted); font-weight: 600; }
@@ -1166,18 +1149,6 @@ table.sided td { width: 4.5rem; text-align: center; }
 
 .flow { list-style: none; margin: .4rem 0 0; padding: 0 0 0 .2rem; position: relative; }
 .flow::before { content: ""; position: absolute; left: 1.15rem; top: .6rem; bottom: .6rem; width: 2px; background: var(--border); }
-.flow-node { position: relative; display: grid; grid-template-columns: 2.3rem 1fr; gap: .8rem; margin-bottom: .8rem; }
-.flow-dot { position: relative; z-index: 1; display: grid; place-items: center; width: 2rem; height: 2rem; margin-top: .6rem; border-radius: 50%; background: var(--surface); border: 2px solid var(--border); color: var(--muted); }
-.flow-node.on .flow-dot { border-color: var(--accent); background: var(--accent); color: var(--accent-text); }
-.flow-node.current .flow-dot { background: var(--surface); color: var(--accent); box-shadow: 0 0 0 .3rem var(--accent-soft); }
-.flow-node.current .flow-dot .bi { animation: cv-spin 2.5s linear infinite; }
-.flow-node.end .flow-dot { background: var(--warn); border-color: var(--warn); color: #fff; }
-.flow-card { border: 1px solid var(--border); border-radius: .9rem; padding: .7rem .9rem; background: var(--surface); }
-.flow-node.current .flow-card { border-color: var(--accent); box-shadow: var(--shadow); }
-.flow-node.off .flow-card { opacity: .6; }
-.flow-node.end .flow-card { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
-.flow-card h3 { margin: 0 0 .15rem; font-size: 1rem; }
-.flow-card p { margin: 0 0 .5rem; }
 .flow-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .6rem .9rem; }
 .flow-checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 1rem; margin-top: .7rem; padding-top: .6rem; border-top: 1px solid var(--border); }
 .segmented.choice { display: flex; flex-wrap: wrap; gap: .3rem; }
@@ -1363,7 +1334,6 @@ tr.drop-after td { box-shadow: inset 0 -2px 0 var(--accent); }
 .recent-row > :last-child { text-align: right; }
 
 /* v1.11.1: an ⓘ after a heading marks its hover box */
-.tip-icon { width: .85em; height: .85em; color: var(--muted) !important; margin-left: .1rem; }
 .vault-card h3[data-tip] { cursor: help; }
 .count-pill { display: inline-block; min-width: 1.4rem; padding: 0 .4rem; margin-left: .35rem; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: .75rem; font-weight: 600; text-align: center; }
 
@@ -1379,10 +1349,6 @@ tr.drop-after td { box-shadow: inset 0 -2px 0 var(--accent); }
 .docx-table td { overflow-wrap: anywhere; }
 .sheet-preview, .docx-preview, .doc-view { min-width: 0; }
 .preview-head h2 { word-break: normal; overflow-wrap: anywhere; }
-.tip-btn { display: inline-grid; place-items: center; width: 1.25em; height: 1.25em; margin-left: .35em; vertical-align: middle; color: var(--muted); border-radius: 50%; cursor: help; font-weight: 400; }
-.tip-btn .bi { width: .85em; height: .85em; }
-.tip-btn:hover, .tip-btn:focus-visible { color: var(--accent); background: var(--accent-soft); outline: none; }
-.tip-line { margin: .2rem 0 .4rem; }
 
 /* v1.12: inline boxes keep their size (the Subject marking box spilled over its neighbours), and
    button rows in the Vault wrap with room above them instead of running into the box above. */
@@ -1544,8 +1510,6 @@ html.bright-adjusted dialog[open] { filter: brightness(var(--cv-brightness, 1));
 /* v1.14: case list: [bell] [status] title, then File · Case · Client. */
 .case-item .case-item-top { justify-content: flex-start; gap: .45rem; }
 .case-item .case-item-title { flex: 1; min-width: 0; }
-.case-dot { display: inline-grid; place-items: center; width: 1.45rem; height: 1.45rem; border-radius: 50%; flex-shrink: 0; }
-.case-dot .bi { width: .8rem; height: .8rem; }
 .case-bell { display: inline-flex; color: var(--danger); flex-shrink: 0; animation: cv-ring 2.4s ease-in-out infinite; transform-origin: 50% 10%; }
 .case-bell .bi { width: .95rem; height: .95rem; }
 @keyframes cv-ring { 0%, 86%, 100% { transform: rotate(0); } 89% { transform: rotate(14deg); } 93% { transform: rotate(-12deg); } 97% { transform: rotate(6deg); } }
@@ -1612,16 +1576,6 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 .template-actions, .links-save { margin-top: 1rem; gap: .5rem; flex-wrap: wrap; }
 
 /* v1.15: Quick links at the bottom of the Overview as a slim strip, not a third of the page. */
-.dash-quick h2 { font-size: 1rem; margin: 1rem 0 .45rem; }
-.dash-quick .quick-links-box { gap: .5rem; }
-.dash-quick .ql-tabs .btn { min-width: 0; padding: .2rem .75rem; font-size: .8rem; }
-.dash-quick .ql-head .btn { font-size: .8rem; }
-.dash-quick .quick-links { grid-template-columns: repeat(auto-fill, minmax(min(225px, 100%), 1fr)); gap: .45rem; }
-.dash-quick .quick-link { min-height: 0; padding: .4rem .65rem; gap: .55rem; box-shadow: none; border-radius: var(--radius-sm); }
-.dash-quick .quick-link:hover { transform: none; box-shadow: var(--shadow); }
-.dash-quick .ql-icon { width: 1.75rem; height: 1.75rem; font-size: .9rem; border-radius: .45rem; }
-.dash-quick .ql-name { font-size: .88rem; }
-.dash-quick .ql-note { font-size: .78rem; }
 
 /* v1.15: "Add another AI model" in the AI engine window. */
 .more-models { margin: .8rem 0; border: 1px solid var(--border); border-radius: var(--radius); padding: .6rem .8rem; background: var(--surface); }
@@ -1820,7 +1774,7 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 /* v1.21: icons on the right of the words, also where the icon comes first in the markup. */
 :where(button, a, h1, h2, h3, h4, h5, summary, label, .menu-item, .tab, .pill, .tb-status) > svg.bi:not(:only-child) { order: 99; }
 /* Reference, OSINT and LEO: three equal buttons. */
-.ql-tabs .btn, .dash-quick .ql-tabs .btn { width: 7.5rem; min-width: 7.5rem; justify-content: center; }
+.ql-tabs .btn { width: 7.5rem; min-width: 7.5rem; justify-content: center; }
 
 /* v1.21: the case tabs are a straight strip across the page, no rounded ends. */
 .tabs { width: 100%; border-radius: 0; border: 0; border-bottom: 1px solid var(--border); box-shadow: none; padding: 0; background: transparent; gap: 0; }
@@ -1845,17 +1799,7 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 .hero-text { position: relative; z-index: 1; min-width: 0; }
 .hero-date { font-size: .9rem; opacity: .85; letter-spacing: .02em; }
 .hero-title { margin: .15rem 0 .25rem; font-size: clamp(1.5rem, 2.calc(6vw / var(--z, 1)), 2.2rem); line-height: 1.15; color: #fff; }
-.hero-sub { margin: 0 0 .9rem; opacity: .92; }
 .hero-clock { position: relative; z-index: 1; font-size: clamp(1.8rem, 3.calc(6vw / var(--z, 1)), 3rem); font-weight: 600; letter-spacing: .02em; line-height: 1; opacity: .95; font-variant-numeric: tabular-nums; }
-.hero-next { display: inline-flex; align-items: center; gap: .6rem; max-width: 100%; margin-bottom: 1rem; padding: .45rem .8rem; border-radius: 999px; background: rgba(255, 255, 255, .16); color: #fff; text-decoration: none; border: 1px solid rgba(255, 255, 255, .28); }
-.hero-next:hover { background: rgba(255, 255, 255, .26); color: #fff; }
-.hero-next > span:nth-child(2) { overflow-wrap: anywhere; }
-.hero-next-label { flex-shrink: 0; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: .15rem .5rem; border-radius: 999px; background: #fff; color: #0b3d91; }
-.hero-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
-.hero-actions .btn.primary { background: #fff; color: #0b3d91; border-color: #fff; }
-.hero-actions .btn.primary:hover { background: #e7f0ff; }
-.hero .hero-btn { background: rgba(255, 255, 255, .12); color: #fff; border: 1px solid rgba(255, 255, 255, .35); }
-.hero .hero-btn:hover { background: rgba(255, 255, 255, .24); color: #fff; }
 .hero .btn .bi { color: inherit; }
 .hero-art { position: absolute; right: -40px; bottom: -60px; width: 300px; height: 300px; pointer-events: none; }
 .hero-art > .bi { position: absolute; right: 90px; bottom: 100px; width: 90px; height: 90px; color: rgba(255, 255, 255, .14); }
@@ -1866,7 +1810,7 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 @media (max-width: 700px) { .hero { flex-direction: column-reverse; padding: 1.2rem; } .hero-clock { font-size: 1.6rem; } }
 .stats .stat { transition: transform .15s, box-shadow .15s; }
 .stats .stat:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0, 0, 0, .08); }
-:where(h1, h2, h3, h4, label) > .tip-btn { order: 100; }
+
 
 /* ---------- v1.22: searchable lists, optional lines, photo labels ---------- */
 .combo { position: relative; display: flex; align-items: stretch; min-width: 0; }
@@ -2199,7 +2143,7 @@ body.gated .fab-dock { display: none; }
 /* Case search: a rectangle with slightly rounded corners. */
 .sidebar-tools .search-wrap input { border-radius: var(--radius-sm); }
 /* Quick link tabs fit their words and icon (nothing cut off at any zoom or font). */
-.ql-tabs .btn, .dash-quick .ql-tabs .btn { width: auto; min-width: 7.5rem; padding: .2rem .9rem; white-space: nowrap; overflow: visible; }
+.ql-tabs .btn { width: auto; min-width: 7.5rem; padding: .2rem .9rem; white-space: nowrap; overflow: visible; }
 .ql-tabs .btn svg { flex: 0 0 auto; }
 /* Operation folders: a quieter blue. */
 .op-folder-art { color: color-mix(in srgb, var(--accent) 52%, #8a94a6); }
@@ -2234,7 +2178,6 @@ body.gated .fab-dock { display: none; }
 .charges-table .combo { width: 100%; }
 /* Explanations (v1.29): no ⓘ; the heading or label shows it when pointed at. */
 .has-tip { cursor: help; }
-.tip-icon, .tip-btn { display: none !important; }
 
 /* v1.30: the Arrest details tab, laid out like the Arrest Report. */
 .arrest-toolbar { flex-wrap: wrap; gap: .5rem; }
@@ -2370,7 +2313,7 @@ body *:not(svg):not(svg *):not(.textLayer *):not(.xfaLayer *):not(.textLayer):no
 @media (max-width: 1100px) { .files-table-wrap col.col-type { width: 8.5rem; } }
 /* Quick links: the tabs size to their words and icon with room on both sides, so the icon is never cut. */
 .ql-tabs { flex-wrap: wrap; overflow: visible; }
-.ql-tabs .btn, .dash-quick .ql-tabs .btn { width: auto; min-width: 8rem; padding: .3rem 1.1rem; gap: .5em; overflow: visible; line-height: 1.3; }
+.ql-tabs .btn { width: auto; min-width: 8rem; padding: .3rem 1.1rem; gap: .5em; overflow: visible; line-height: 1.3; }
 .ql-tabs .btn svg { flex: 0 0 auto; width: 1.05em; height: 1.05em; overflow: visible; }
 /* Officer's Report (v1.34): every line has its tick box, and every label looks the same: the
    words as written (not all capitals), one size and weight. */
@@ -2501,7 +2444,7 @@ input[list]::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
 @media (max-width: 600px) { .rf-item-grid .field:has(select[aria-label$=" Race"]) { grid-column: auto; } }
 /* Square corners everywhere (v1.36): boxes, buttons, cards, tabs, menus, dialogs, tags and badges,
    for clean symmetric edges. Only true dots and rings (a spinner, status dots, timeline dots) stay round. */
-*:not(.spinner):not(.key-dot):not(.phase-num):not(.flow-dot):not(.case-dot):not(.hero-ring):not(.htl-dot):not(.mini-tl-dot),
+*:not(.spinner):not(.key-dot):not(.hero-ring):not(.htl-dot):not(.mini-tl-dot),
 *::before, *::after { border-radius: 0 !important; }
 :root { --radius: 0; --radius-sm: 0; }
 /* No clipped words (v1.36): long operation names wrap in the sidebar, the Timeline's date box fits a
@@ -3083,9 +3026,7 @@ svg.ci > image { transform: scale(1.12); transform-origin: 50% 50%; }
 .btn.primary:disabled, .btn.danger:disabled { opacity: .55; }
 .btn.primary .bi, .btn.danger .bi { color: inherit; }
 /* The Overview banner: white buttons with the colour icons, like New Case. */
-.hero .hero-btn, .hero .hero-btn:hover { background: #fff; color: #0b3d91; border: 1px solid #fff; }
-.hero .hero-btn:hover, .hero-actions .btn.primary:hover { background: #e7f0ff; }
-.hero-actions .btn.primary { background: #fff; color: #0b3d91; border-color: #fff; box-shadow: none; }
+
 .hero-art svg.ci:not(.ci-only) > :not(image) { display: inline !important; }
 .hero-art svg.ci:not(.ci-only) > image { display: none !important; }
 /* The deadline bell is red. */
@@ -3294,7 +3235,6 @@ section.foldable.folded > .fold-head { margin-bottom: 0; }
 .hero-compact .hero-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem 1rem; }
 .hero-compact .hero-title { margin: 0; font-size: 1.35rem; }
 .hero-compact .hero-date { font-size: .85rem; }
-.hero-compact .hero-sub { margin: .2rem 0 .7rem; font-size: .9rem; }
 .hero-compact .hero-clock { font-size: 1.9rem; }
 .hero-compact .hero-art { transform: scale(.7); transform-origin: right bottom; }
 .hero-counts { display: grid; grid-template-columns: repeat(4, minmax(0, 7.5rem)); gap: .5rem; }
@@ -3966,3 +3906,31 @@ html .tl-item.deadline::before { transform: none; }
 .side-bottom-spacer { flex: none; }
 /* The headings scroll with their lists here (a pinned heading left cards half hidden under it). */
 #sidebar .side-bottom > .archived-cases > summary { position: static; }
+
+/* v1.89: the Draft's floating bar sits right under the top toolbar (no gap the height of the
+   page's top padding). */
+.main { --main-pt: 1.6rem; }
+@media (max-width: 620px) { .main { --main-pt: 1rem; } }
+.main .rf-actions { top: calc(-1 * var(--main-pt)); }
+
+/* v1.89: Case History: the date and time in their own column, then what happened; your notes
+   are tagged and can be deleted. The Case Officer role reads like the boxes next to it. */
+.history-list { list-style: none; margin: 0 0 .6rem; padding: 0; }
+.history-list li { display: grid; grid-template-columns: 13.5rem minmax(0, 1fr) 1.6rem; align-items: center; gap: 1rem; padding: .45rem .2rem; border-bottom: 1px solid var(--border); }
+.history-list li:last-child { border-bottom: 0; }
+.history-when { color: var(--muted); font-size: .82rem; white-space: nowrap; }
+.history-what { min-width: 0; overflow-wrap: anywhere; }
+.history-tag { display: inline-block; margin-right: .5rem; padding: 0 .4rem; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; border: 1px solid var(--accent); color: var(--accent); }
+.history-derived .history-what { color: var(--muted); font-style: italic; }
+.history-del { width: 1.5rem; height: 1.5rem; padding: 0; }
+.history-del .bi { width: .7rem; height: .7rem; }
+.history-add { display: grid; grid-template-columns: 13rem minmax(0, 1fr) auto; gap: .6rem; align-items: end; }
+@media (max-width: 700px) { .history-list li { grid-template-columns: minmax(0, 1fr) 1.6rem; } .history-when { grid-column: 1 / -1; } .history-add { grid-template-columns: minmax(0, 1fr); } }
+.cv-boxed .field .contact-fixed { font-size: .9rem; font-weight: 400; }
+/* v1.89: PDFs in the Files preview use CaseVault's own viewer (square controls). */
+.preview-pdf { display: flex; flex-direction: column; height: calc(84vh / var(--z, 1)); min-height: 20rem; }
+.preview-pdf .pv { flex: 1; min-height: 0; }
+.pdf-view .pv, .pv-bar .btn, .pv-bar .icon-btn { border-radius: 0; }
+/* v1.89: every key in Keyboard Shortcuts is the same size. */
+.shortcuts-table td:first-child { width: 7rem; }
+.shortcuts-table kbd { display: inline-flex; align-items: center; justify-content: center; width: 5.4rem; min-width: 0; height: 1.75rem; padding: 0; box-sizing: border-box; }
