@@ -279,9 +279,10 @@ test('v1.27: operations share one Case Overview and one Timeline', () => {
 
 test('v1.27: State of Illinois victim, compact Local AI box', () => {
   const d = F.normalize({ victimsList: [{ name: 'State of Illinois', officer: 'P.O. Example #1234', race: 'White' }, { name: 'Jane Example', race: 'Black', officer: 'left over' }] });
-  assert.deepStrictEqual(F.fieldsFor('victimsList', d.victimsList[0]).map(([k]) => k), ['name', 'officer']);
+  // v1.93: and Relation Code 024 between them.
+  assert.deepStrictEqual(F.fieldsFor('victimsList', d.victimsList[0]).map(([k]) => k), ['name', 'relation', 'officer']);
   assert.ok(!F.fieldsFor('victimsList', d.victimsList[1]).some(([k]) => k === 'officer'));
-  assert.strictEqual(F.itemLine('victimsList', d.victimsList[0]), 'State of Illinois, Officer Name: P.O. Example #1234');
+  assert.strictEqual(F.itemLine('victimsList', d.victimsList[0]), 'State of Illinois, Relation Code: 024, Officer Name: P.O. Example #1234');
   assert.strictEqual(F.itemLine('victimsList', d.victimsList[1]), 'Jane Example, Race: Black');
   const s = Buffer.from(P.build(d, {})).toString('latin1');
   assert.match(s, /Officer Name: P.O. Example/);

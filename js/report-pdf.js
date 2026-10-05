@@ -284,10 +284,10 @@
     // v1.86: money with a dollar sign ("100" -> "$100"); a whole-dollar bill as "$20.00".
     const money = (v) => { const t = String(v || '').trim(); return /^\d/.test(t) ? `$${t}` : t; };
     const bill = (v) => { const t = String(v || '').trim(); return /^\$\d+$/.test(t) ? `${t}.00` : t; };
-    // A State of Illinois victim and the officer on one line; any other victim, the name in bold
+    // A State of Illinois victim, its Relation Code (024, v1.93) and the officer on one line; any other victim, the name in bold
     // and the details under it.
     const victimBlock = (v, line) => (RF.isStateVictim('victimsList', v)
-      ? { rows: [[col(String(v.name || '').trim(), 0, 0.42), col(lv('Officer Name', String(v.officer || '').trim()), 0.44, 0.56)]] }
+      ? { rows: [[col(String(v.name || '').trim(), 0, 0.21), col(lv('Relation Code', String(v.relation || '').trim()), 0.23, 0.27), col(lv('Officer Name', String(v.officer || '').trim()), 0.52, 0.48)]] }
       : line);
     // A narcotic: the type, the amount, then Street Value and Purchase Price under each other.
     const narcoticBlock = (n) => {
