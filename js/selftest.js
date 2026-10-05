@@ -122,15 +122,11 @@
         if (extra.length) return fail('A matching address (Ave. / Avenue) was wrongly flagged.');
         return ok(`All ${EXPECT.length} planted errors flagged (time, plate, count, amount, name spelling); the matching address was not.`);
       }],
-      ['Privacy: personal details hidden before going online', async () => {
+      ['Privacy: personal details found and replaced (mail check, Anonymizer)', async () => {
         const known = root.CVPii.knownTerms({ affiant: { name: 'Detective Casey Example', email: 'casey.example@agency.example' } });
         const r = root.CVPii.redact(PII_TEXT, root.CVPii.scan(PII_TEXT, { known }));
         const leaked = PII_SECRETS.filter((s) => r.text.includes(s));
-        return leaked.length ? fail(`Would have been sent: ${leaked.join(', ')}`) : ok(`All ${PII_SECRETS.length} kinds of detail replaced: ${r.text}`);
-      }],
-      ['Online state', async () => {
-        const on = root.CVOutbound && root.CVOutbound.isOnline();
-        return on ? warn('CaseVault is online right now. It goes offline by itself after the idle time.') : ok('Offline: nothing can leave this computer.');
+        return leaked.length ? fail(`Not replaced: ${leaked.join(', ')}`) : ok(`All ${PII_SECRETS.length} kinds of detail replaced: ${r.text}`);
       }],
       ['AI engine and model for this PC', async () => {
         await Engine.refresh();
@@ -143,7 +139,7 @@
       }],
       ['Passage search model', async () => {
         const d = Engine.detected || {};
-        if (d.status !== 'connected' || d.engine === 'webllm') return warn('Only checked when Ollama is running.');
+        if (d.status !== 'connected') return warn('Only checked when Ollama is running.');
         return d.embed ? ok(`${d.embed} is installed.`) : warn('Not installed. Click "AI:" in the header for the one-line install.');
       }],
       ['AI answers, short live test', async (progress) => {

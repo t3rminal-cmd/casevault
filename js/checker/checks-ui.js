@@ -48,29 +48,20 @@
       return this.choice() ? 'connected' : 'offline';
     },
 
-    // Ollama first; if it isn't running, the in-browser engine (WebLLM) when it's switched on and
-    // a model is on the SSD. this.detected.fetchImpl routes AI calls to whichever engine was found.
+    // The local Ollama engine (v1.91: the in-browser WebLLM fallback is gone).
     refresh() {
       if (!this.busy) {
         this.busy = (async () => {
-          let d = await CVAI.detect().catch(() => null);
-          if ((!d || d.status !== 'connected') && this.webllmAllowed() && typeof CVWebLLM !== 'undefined') {
-            const w = await CVWebLLM.detect(Vault.data && Vault.data.settings.webllmModel).catch(() => null);
-            if (w && w.status === 'connected') d = w;
-          }
+          const d = await CVAI.detect().catch(() => null);
           this.detected = d || { status: 'offline', models: [], chat: [], profiles: {} };
         })().finally(() => { this.busy = null; renderPill(); });
       }
       return this.busy;
     },
 
-    webllmAllowed() {
-      return !(Vault.data && Vault.data.settings.webllm === false);
-    },
-
     /**
-     * fetch for AI calls: Ollama over HTTP, or the in-browser engine (no network). Wrapped so the
-     * header's activity indicator sees every request.
+     * fetch for AI calls to Ollama on this PC. Wrapped so the header's activity indicator sees
+     * every request.
      */
     fetchImpl() {
       const raw = (this.detected && this.detected.fetchImpl) || null;
@@ -78,25 +69,10 @@
       return this.wrapped.fetch;
     },
 
-    inBrowser() {
-      return !!(this.detected && this.detected.engine === 'webllm');
-    },
   };
-
-  // First use of the in-browser model loads it from the SSD: show progress, since it takes a while.
-  let loadToast = null;
-  function showLoadProgress(p) {
-    if (!ui) return;
-    if (p.done) { if (loadToast) { loadToast.remove(); loadToast = null; } renderPill(); return; }
-    const pct = Math.round((p.progress || 0) * 100);
-    const text = `Loading the in-browser AI model (${p.id}) from the SSD… ${pct}%`;
-    if (!loadToast || !loadToast.isConnected) loadToast = ui.toast(text, 'info', 3600000);
-    else loadToast.textContent = text;
-  }
 
   function profileLabel(choice) {
     if (!choice) return '';
-    if (Engine.inBrowser()) return `In-browser · ${CVAI.modelName(choice.model.replace(/-q4f16_1-MLC$|-MLC$/, ''))}`;
     const p = CVAI.PROFILES[choice.profile];
     return `${p ? p.label : 'Custom'} · ${CVAI.modelName(choice.model)}`;
   }
@@ -116,9 +92,7 @@
     // Every AI icon in CaseVault is the same robot: blue when the AI is running, red when it isn't.
     el.replaceChildren(CVIcons.icon('robot'), text);
     el.title = {
-      connected: Engine.inBrowser()
-        ? 'Ollama is not running, so CaseVault uses the in-browser AI model on this PC\'s graphics chip. Click for AI settings.'
-        : 'The local AI engine is running. Click for AI settings.',
+      connected: 'The local AI engine is running. Click for AI settings.',
       offline: 'The local AI engine (Ollama) is not running. Checks will use rules only. Click for help.',
       'rules-only': 'AI review is switched off. Checks use rules only. Click to change.',
       checking: 'Looking for the local AI engine…',
@@ -136,11 +110,8 @@
       const current = Engine.setting();
       const firstAuto = (CVAI.PROFILES[(Engine.autoOrder() || [])[0]] || CVAI.PROFILES.quick).label;
       const options = [['auto', 'Auto', `Picks for this PC: ${firstAuto} first here. ${CVHardware.explain(CVHardware.state)}`]];
-      // Quick/Thorough/Light describe Ollama models; the in-browser engine has just its one model.
-      if (d.engine !== 'webllm') {
-        for (const [key, p] of Object.entries(CVAI.PROFILES)) {
-          if (d.profiles[key]) options.push([key, p.label, `${p.hint}. Uses ${CVAI.modelName(d.profiles[key])}.`]);
-        }
+      for (const [key, p] of Object.entries(CVAI.PROFILES)) {
+        if (d.profiles[key]) options.push([key, p.label, `${p.hint}. Uses ${CVAI.modelName(d.profiles[key])}.`]);
       }
       options.push(['rules-only', 'Rules-only', 'No AI. Only the rule-based checks run. Always available.']);
       const radios = options.map(([value, label, hint]) => {
@@ -155,24 +126,20 @@
       const choice = Engine.choice();
       return h('div', { class: 'engine-panel' },
         h('h2', {}, 'AI engine'),
-        d.status === 'connected' && d.engine === 'webllm'
-          ? h('p', {}, h('span', { class: 'pill status-closed' }, 'Connected'), ' Ollama is not running, so CaseVault uses the ', h('strong', {}, 'in-browser engine'),
-            ` with ${CVAI.modelName(d.webllm.model)}. It runs on this PC's graphics chip; the first use loads it from the SSD, which can take a minute.`)
-          : d.status === 'connected'
+        d.status === 'connected'
           ? h('p', {}, h('span', { class: 'pill status-closed' }, 'Connected'), ' Ollama is running on this computer',
             choice ? ['. Checks will use ', h('strong', {}, profileLabel(choice)), choice.fallback ? ' (the chosen profile has no model installed)' : '', '.'] : ', but no chat model is installed.')
           : h('div', {},
             h('p', {}, h('span', { class: 'pill status-pending' }, 'Offline'), ' The local AI engine is not running, so checks use the rule-based layer only.'),
             h('p', { class: 'muted small explain' }, 'To use AI review, double-click Start-CaseVault.bat on the CV-AI drive (for example W:\\) and click "Check again". See docs/AI-SETUP.md.')),
-        d.status === 'connected' && d.engine !== 'webllm' && h('p', { class: 'muted small' },
+        d.status === 'connected' && h('p', { class: 'muted small' },
           `Installed models: ${d.models.map((m) => m.name).join(', ') || 'none'}.`),
-        d.status === 'connected' && d.engine !== 'webllm' && embedStatus(d),
+        d.status === 'connected' && embedStatus(d),
         moreModels(d),
         h('h3', {}, 'Profile on this PC'),
         h('p', { class: 'muted small explain' }, 'Remembered by this PC\'s browser, not on the SSD, so the Beelink and the L14 can each use the model that suits them.'),
         h('div', { class: 'radio-list' }, radios),
-        webllmSection(),
-        h('p', { class: 'muted small explain' }, 'Privacy: CaseVault only talks to the AI engine on this computer (127.0.0.1:11434), or runs the in-browser model inside this tab. Nothing is sent anywhere else.'),
+        h('p', { class: 'muted small explain' }, 'Privacy: CaseVault only talks to the AI engine on this computer (127.0.0.1:11434). Nothing is sent anywhere else.'),
         h('div', { class: 'dialog-actions' },
           h('button', { class: 'btn', type: 'button', onclick: async () => { close(); await Engine.refresh(); showEngineDialog(); } }, 'Check again'),
           h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done')));
@@ -226,42 +193,6 @@
             try { await navigator.clipboard.writeText(cmd); toast('Command copied.', 'success'); } catch { toast('Select the command and press Ctrl+C.', 'error'); }
           } }, 'Copy')),
         h('li', {}, 'Come back here and click "Check again".')));
-  }
-
-  // In-browser engine settings, inside the AI engine dialog.
-  function webllmSection() {
-    const { h, Save, toast } = ui;
-    const box = h('div', {}, h('p', { class: 'muted small' }, 'Looking for in-browser models…'));
-    const allowed = h('input', { type: 'checkbox', checked: Engine.webllmAllowed() });
-    allowed.addEventListener('change', async () => {
-      try {
-        await Save.track('settings', () => Vault.updateSettings({ webllm: allowed.checked }));
-        if (!allowed.checked) await CVWebLLM.unload();
-        await Engine.refresh();
-      } catch { /* reported by Save */ }
-    });
-    CVWebLLM.available().then((a) => {
-      if (!a.ok) { box.replaceChildren(h('p', { class: 'muted small' }, a.reason)); return; }
-      const current = (Vault.data.settings.webllmModel) || (Engine.detected && Engine.detected.webllm && Engine.detected.webllm.model) || '';
-      const select = h('select', { 'aria-label': 'In-browser model' }, a.models.map((m) => h('option', { value: m.id, selected: m.id === current }, `${CVAI.modelName(m.id)} · ${(m.bytes / 1e9).toFixed(1)} GB`)));
-      select.addEventListener('change', async () => {
-        try {
-          await Save.track('settings', () => Vault.updateSettings({ webllmModel: select.value }));
-          await CVWebLLM.unload();
-          await Engine.refresh();
-          toast(`In-browser model: ${select.value}`, 'success');
-        } catch { /* reported */ }
-      });
-      box.replaceChildren(...[
-        h('label', { class: 'inline' }, 'Model: ', select),
-        CVWebLLM.loadedId ? h('button', { class: 'btn small', type: 'button', onclick: async () => { await CVWebLLM.unload(); toast('In-browser model unloaded from the graphics chip.'); } }, 'Unload') : null,
-        CVWebLLM.lastError ? h('p', { class: 'error-text small' }, CVWebLLM.lastError.message) : null].filter(Boolean));
-    });
-    return h('section', {},
-      h('h3', { title: 'Used when Ollama is not running.' }, 'In-browser AI'),
-      h('label', { class: 'check-row' }, allowed, h('span', {}, 'Use the in-browser AI when Ollama isn\'t running')),
-      h('p', { class: 'muted small explain' }, 'Runs a small model (models in W:\\webllm) on this PC\'s graphics chip with WebGPU. Slower and less capable than Ollama, but needs nothing installed. Only available when CaseVault is opened through Start-CaseVault.bat.'),
-      box);
   }
 
   /* =====================================================================
@@ -809,7 +740,6 @@
 
   function init(kit) {
     ui = kit;
-    if (typeof CVWebLLM !== 'undefined') CVWebLLM.onProgress(showLoadProgress);
     const pill = document.getElementById('engine-status');
     if (pill) pill.addEventListener('click', () => { if (Vault.data) showEngineDialog(); });
     setInterval(() => { if (!document.hidden && Vault.data) Engine.refresh(); }, 60000);

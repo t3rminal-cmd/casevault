@@ -4,11 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Privacy lock: the page may load only its own files, and may only ever talk to
-       localhost (the local Ollama AI engine) and, only when the user goes online for research
-       and drafting, api.anthropic.com, generativelanguage.googleapis.com (Gemini) or openrouter.ai. Every online request also passes the outbound gate
-       (js/secure/outbound.js): reviewed, redacted, logged. -->
+       localhost (the local Ollama AI engine). CaseVault never connects to the internet. -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; font-src 'self'; connect-src 'self' http://localhost:11434 http://127.0.0.1:11434 https://api.anthropic.com https://generativelanguage.googleapis.com https://openrouter.ai; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; font-src 'self'; connect-src 'self' http://localhost:11434 http://127.0.0.1:11434; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#ffffff">
@@ -125,8 +123,6 @@
   <script src="js/checker/ai.js"></script>
   <script src="js/ai/activity.js"></script>
   <script src="js/ai/hardware.js"></script>
-  <script src="js/ai/ollama-shim.js"></script>
-  <script src="js/ai/webllm.js"></script>
   <script src="js/checker/checks-ui.js"></script>
   <script src="js/drafts/draft-core.js"></script>
   <script src="js/drafts/docx.js"></script>
@@ -137,9 +133,6 @@
   <script src="js/secure/pii.js"></script>
   <script src="js/secure/outbound.js"></script>
   <script src="js/secure/mail.js"></script>
-  <script src="js/secure/apikey.js"></script>
-  <script src="js/secure/apikey-ui.js"></script>
-  <script src="js/secure/online-ui.js"></script>
   <script src="js/secure/mail-ui.js"></script>
   <script src="js/secure/settings-ui.js"></script>
   <script src="js/ai/memory.js"></script>

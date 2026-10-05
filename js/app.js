@@ -489,12 +489,14 @@
     setSidebarLock(!!(Vault.data.settings && Vault.data.settings.sidebarLocked), { save: false });
     Save.render();
     if (sameVault) await Save.retryFailed();
-    else { state.caseId = null; state.caseObj = null; CVOutbound.goOffline('vault changed'); CVOnlineUI.reset(); CVApiKey.forget(); }
+    else { state.caseId = null; state.caseObj = null; }
     renderNetStatus();
     renderCaseList();
     route();
     CVChecks.onVaultOpen();
     if (!sameVault) safetyChecks();
+    // v1.91: a saved online AI key from an older version was deleted from the SSD.
+    if (Vault.lastCleanup && Vault.lastCleanup.keys) toast('Online AI is no longer part of CaseVault. The saved online AI key was deleted from the SSD (CaseVault-Data\\secrets).', 'info', 10000);
   }
 
   /* v1.85: data safety. How long since the last full backup (to another drive), and whether the
@@ -637,8 +639,6 @@
     if (!state.connected) return;
     state.connected = false;
     quickFooter(false);
-    CVOutbound.goOffline('drive disconnected');
-    CVApiKey.forget();
     CVChatUI.reset();
     CVNotesFloat.reset();
     renderNetStatus();
@@ -941,7 +941,8 @@
     if (!state.connected) return;
     // v1.69: the Quick Links footer stays on every page, like the case list.
     if (!$('#ql-footer').childElementCount) quickFooter(true);
-    if (/^#\/online\b/.test(location.hash)) return showOnline();
+    // v1.91: the online page is gone; old #/online links open the overview.
+    if (/^#\/online\b/.test(location.hash)) history.replaceState(null, '', '#/');
     // Old #/chat links open the floating Ask AI box over the overview.
     if (/^#\/chat\b/.test(location.hash)) { history.replaceState(null, '', '#/'); CVChatUI.toggle(true); }
     const ref = location.hash.match(/^#\/reference(?:\/([\w-]+))?/);
@@ -958,21 +959,6 @@
 
   window.addEventListener('hashchange', () => { Save.flushAll(); route(); });
 
-  /* =====================================================================
-   * Online research & drafting (#/online), and the header's Online/Offline button
-   * ===================================================================== */
-
-  function showOnline() {
-    state.caseId = null;
-    state.caseObj = null;
-    renderCaseList();
-    CVOnlineUI.render($('#main')).catch((err) => {
-      if (FS.isDisconnectError(err)) return onDriveLost();
-      console.error(err);
-      toast(`Could not open online AI: ${err.message}`, 'error');
-    });
-  }
-
   function showReference(section) {
     state.caseId = null;
     state.caseObj = null;
@@ -984,18 +970,15 @@
     });
   }
 
+  // The header's Offline badge (v1.91: CaseVault never goes online, so it only says so).
   function renderNetStatus() {
     const el = $('#net-status');
     if (!state.connected) { el.hidden = true; return; }
-    const on = CVOutbound.isOnline();
     el.hidden = false;
-    el.className = `net-status ${on ? 'on' : 'off'}`;
-    el.replaceChildren(I(on ? 'globe2' : 'shield-lock-fill'), on ? `Online · ${CVOutbound.minutesLeft()} min` : 'Offline');
-    el.title = on
-      ? `Online (${CVOutbound.minutesLeft()} min left). Online AI is on: CaseVault may reach ${CVOutbound.ALLOWED_HOSTS.join(', ')} with text you review. Click to manage or go offline.`
-      : 'Offline: nothing leaves this computer. Click for online research & drafting.';
+    el.className = 'net-status off';
+    el.replaceChildren(I('shield-lock-fill'), 'Offline');
+    el.title = 'Offline: CaseVault never connects to the internet. It only talks to the AI engine on this PC.';
   }
-  $('#net-status').addEventListener('click', () => { location.hash = '#/online'; });
 
   /* =====================================================================
    * Dashboard
@@ -3842,9 +3825,9 @@
           } }, 'Disconnect')));
 
       // Each section is a card; the list on the left jumps to it and follows the scrolling.
-      const SECTION_ICONS = { vault: 'safe2', backups: 'save', privacy: 'eye-slash', affiant: 'person-badge', templates: 'file-earmark-ruled', library: 'bookshelf', behavior: 'robot', links: 'link-45deg', online: 'globe2', pii: 'fingerprint', mail: 'envelope-at', log: 'list-check', maintenance: 'tools' };
+      const SECTION_ICONS = { vault: 'safe2', backups: 'save', privacy: 'eye-slash', affiant: 'person-badge', templates: 'file-earmark-ruled', library: 'bookshelf', behavior: 'robot', links: 'link-45deg', pii: 'fingerprint', mail: 'envelope-at', log: 'list-check', maintenance: 'tools' };
       const sections = [info, backupsSec, privacySettings(v), affiantSettings(v), CVDraftsUI.templateSettings(), CVLibraryUI.librarySection(), CVLibraryUI.behaviorSection(), CVReferenceUI.linksSection(),
-        CVSecureSettings.onlineSection(), CVSecureSettings.watchSection(), CVSecureSettings.mailSection(), CVSecureSettings.logSection(), maintenance];
+        CVSecureSettings.watchSection(), CVSecureSettings.mailSection(), CVSecureSettings.logSection(), maintenance];
       const scroller = h('div', { class: 'vault-content' });
       // Scroll only the sections' own box. scrollIntoView would also scroll the panel itself,
       // which pushed the Done button off the top.
@@ -4392,16 +4375,13 @@
   window.CaseVaultUI = { h, icon: I, betaTag, $, toast, openDialog, confirmDialog, field, fmtDate, fmtDateTime, fmtSize, Save, state, go, refresh: () => route(), previewFile, onDriveLost, showVaultPanel, makeFoldable };
   CVChecks.init(window.CaseVaultUI);
   CVOutbound.init(window.CaseVaultUI);
-  CVOutbound.onChange(renderNetStatus);
-  CVApiKey.init(window.CaseVaultUI);
-  CVOnlineUI.init(window.CaseVaultUI);
   CVMailUI.init(window.CaseVaultUI);
   CVDiscoveryUI.init(window.CaseVaultUI);
   CVLinkChartUI.init(window.CaseVaultUI);
   CVSecureSettings.init(window.CaseVaultUI);
   CVMemory.mount($('#mem-status'), {
     isHelper: () => MODE === 'helper',
-    engineConnected: () => CVChecks.Engine.status() === 'connected' && !CVChecks.Engine.inBrowser(),
+    engineConnected: () => CVChecks.Engine.status() === 'connected',
   });
   CVActivityLib.mount(CVActivity, $('#ai-activity'));
   CVDraftsUI.init(window.CaseVaultUI);

@@ -75,7 +75,7 @@ The header has three parts:
 
 - **Left:** the CaseVault logo and, under it, where your data is being saved (for example `W:\CaseVault-Data` in Firefox, or `CaseVault-Data` in Chrome and Edge, which don't tell CaseVault the drive letter). Click it for the Overview.
 - **Middle:** status icons. Point at one for the details.
-  - **Shield or globe:** green shield means offline (nothing leaves the computer). A red globe means online AI is on, and CaseVault may send reviewed text to the internet. Click it for online research.
+  - **Shield:** green means offline. CaseVault never connects to the internet (v1.91), so it always shows Offline.
   - **Robot:** the AI engine. Blue means it's running, and pointing at it shows the model, for example *AI: Quick · Qwen2.5:7b* (model names are shown with a capital first letter everywhere). Red means it isn't running. Click it for AI settings.
   - Moving bars show while the AI is working, and a **memory** icon turns amber or red when memory runs short.
   - **Drive:** green means everything is saved to the SSD, amber means saving, and red with words means something isn't saved (reconnect the SSD).
@@ -95,7 +95,7 @@ The header has three parts:
 - The **Overview** shows your case counts, then, each under a line: **Operations** (a blue folder for each), the open operation's **Timeline**, **Upcoming deadlines**, **Recently updated** (with **Clear**, which empties the list until a case changes again), and **Quick links** (see below).
 - On a narrow window the header buttons shrink to their icons.
 - **Hide the case list** is the button at the top of the list (or Ctrl+\\). The list shrinks to a thin strip with the same button to bring it back. On a phone-width window the list hides completely and the button moves to the header.
-- **Vault** opens the settings. The list on its left (This vault, Backups, Privacy screen, My Profile, Templates, Library, AI writing behavior, Quick links, Online features, Always hide, Department mail, Outbound log, Maintenance) jumps to each section, and follows along as you scroll. **Done** is at the top right.
+- **Vault** opens the settings. The list on its left (This vault, Backups, Privacy screen, My Profile, Templates, Library, AI writing behavior, Quick links, Always hide, Department mail, Outbound log, Maintenance) jumps to each section, and follows along as you scroll. **Done** is at the top right.
 
 ### Quick links
 
@@ -214,6 +214,15 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 **Resize** the case list by dragging its right edge (double-click the edge to go back to the normal width). **Lock** it with the padlock next to the hide button: the list then stays exactly as it is, shown or hidden and at its width, and can't be hidden, resized or toggled with `Ctrl + \` until you click the padlock again. The width and the lock are kept in `vault.json` on the SSD, so they stay the same in Edge and Firefox and on another PC.
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
+
+### What's new in v1.91
+
+- **CaseVault is offline only.** The optional online AI (Claude, Gemini and OpenRouter: the Online button in the header, the online research page and the API keys in the Vault) is gone. The page may now only talk to the AI engine on this PC
+- **No in-browser AI.** The small fallback model that ran in the browser (WebLLM) is gone. Start CaseVault with `W:\Start-CaseVault.bat` so the local AI engine (Ollama) runs; without it, Checks still run their rule-based checks
+- If an older version saved an online AI key on the SSD (`CaseVault-Data\secrets`), it is deleted the first time v1.91 opens the vault, and a message says so once
+- The header's green **Offline** shield stays, as a reminder that nothing leaves the PC
+- Department mail is unchanged: the review screen before an Outlook draft, and the Outbound Log
+- **Helper 1.12** (copy `tools\casevault-helper\` to `W:\casevault-helper\`): no longer serves in-browser models. You can delete `W:\webllm` and `W:\Get-WebLLM-Model.bat` to free the space
 
 ### What's new in v1.90
 
@@ -951,10 +960,10 @@ Some agency forms are *XFA* PDFs, made with Adobe LiveCycle Designer. In Chrome,
 
 ## Ask AI
 
-**Ask AI** in the header opens a chat, like claude.ai, with the AI **on this computer**: nothing you type leaves the PC, and it works offline. It opens in a **floating box** in the corner, so you can keep writing a draft or your notes, or move between tabs and cases, while it answers.
+**Ask AI** in the header opens a chat with the AI **on this computer**: nothing you type leaves the PC, and it works offline. It opens in a **floating box** in the corner, so you can keep writing a draft or your notes, or move between tabs and cases, while it answers.
 
 - **The box:** drag its title bar to move it and its bottom-right corner to resize it. The buttons on the title bar are **New chat**, **History** (your saved chats: open one to carry on, or delete it; **Delete all** asks twice), **Clear** (the fire icon: empties this chat and deletes its saved copy), **Save to case**, **Bigger** (a large box in the middle of the screen; click again for the normal size), **Minimize** (just the title bar; Esc does the same) and **Close**. Closing keeps the conversation; **Ask AI** brings it back.
-- **Model:** every AI model installed in Ollama on W: (and the in-browser model, if that's what's running). Your choice is remembered in the vault. See *Other models* in [AI-SETUP.md](AI-SETUP.md) to add one, including a less-filtered model.
+- **Model:** every AI model installed in Ollama on W:. Your choice is remembered in the vault. See *Other models* in [AI-SETUP.md](AI-SETUP.md) to add one, including a less-filtered model.
 - **Case:** until you ask your first question, it follows the case you have open. Or pick any case, or *No case* for general questions. The case's details, contacts, timeline and notes go with each question, and the AI is told to answer from them and say where each fact comes from. **Search the case files** also reads the case's documents and sends the passages that answer your question (slower the first time a document is read).
 - Type and press **Enter** (Shift+Enter for a new line). **Stop** ends an answer early and keeps what's written. Earlier questions and answers go along, so you can ask follow-ups; the oldest drop off when the AI's window is full.
 - Answers are formatted (lists, tables). Under each answer: **Copy**, and **Insert**, which puts the answer where your cursor was in the draft or notes you were last typing in (click in it first). It saves like your own typing.
@@ -1094,82 +1103,6 @@ Every hand-off is listed under **Mail prepared from this case** (saved in `mail-
 - **Discard draft** clears the message you're writing (after asking, if you typed anything).
 - **Delete draft** next to an Outlook draft in the list deletes its `.eml` file from the Email folder. The line stays in the list as *Draft deleted*, so the record of what was prepared is kept. Mail already sent from Outlook isn't affected.
 
-## Online research & drafting (optional)
-
-CaseVault is offline by default. If your agency allows it, you can ask Claude research and drafting questions, with personal details hidden first.
-
-1. **Vault → Online features → Allow Going Online** (one time).
-2. Click **Offline** in the header (it becomes **Online · 15 min** once you go online). CaseVault goes offline again after 15 minutes without use (changeable), whenever it starts, and when the SSD is unplugged.
-3. Choose the **service**, the **purpose** (Research or Drafting) and, optionally, the **case**. With a case, its client, number and drafts are available: **Insert a draft from this case**.
-
-**Services:**
-
-- **claude.ai (my Claude subscription)**: a Claude Pro/Max subscription can't be connected to other apps, so CaseVault does it the safe manual way. It hides the details, copies the result, and opens claude.ai in a new tab. Paste it there, then paste Claude's answer back into CaseVault, which puts the real names back on this computer.
-- **Anthropic API** (optional): Claude's answers appear inside CaseVault. Needs an API key, **billed separately** from a subscription. See *Setting up the API key* below.
-- **Google Gemini** (optional, **free tier**): Gemini's answers appear inside CaseVault. Needs a free API key from Google AI Studio. See *Free API keys: Gemini and OpenRouter* below.
-- **OpenRouter** (optional, **free models**): one key for many AI models, including free ones (names ending in `:free`). See below.
-
-**What happens to your text:** every message goes through the same review screen. Names, SSNs, dates of birth, IDs, phone numbers, emails, addresses, plates, VINs, case numbers and card/bank numbers are replaced with placeholders like `[NAME_1]` and `[PHONE_1]`. Those can't be un-ticked. Possible names found by pattern can be un-ticked (for example a court's name). **Hide this too** adds anything the scan missed. The box *Exactly what will be sent* shows the final text. The same person keeps the same placeholder for the whole conversation, and answers are shown with the real values put back (untick *Show real names* to see what Claude saw). **Save to case as draft** keeps an answer in the case's Drafts, marked AI-assisted.
-
-Phone numbers are found with or without the area code (`555-0142`), and plates with or without the word "plate" (`TST-1284`). When details overlap, for example your own surname inside a street address or an email, the whole address or email is hidden, not just the name (v1.9.1).
-
-Detection is a safety net, not a guarantee. Always read the text before you send it, and add names CaseVault should always hide to **Vault → Always hide**: subjects, informants, nicknames, street names.
-
-Only `api.anthropic.com`, `generativelanguage.googleapis.com` (Gemini) and `openrouter.ai` can ever be reached (the page's security policy blocks every other address), only with text you reviewed, and each review allows one request. Case files are never sent automatically.
-
-### Setting up the API key (optional)
-
-The same steps are shown inside CaseVault: **Research & drafting (online)** → Service **Anthropic API** → **Add API key…** (or **Vault → Online features → Anthropic API key**). The links there open the right Console pages in a new tab.
-
-1. **Open the Claude Console** at [platform.claude.com](https://platform.claude.com/). It is Anthropic's site for developers, separate from claude.ai. The old address, console.anthropic.com, goes to the same place.
-2. **Sign in or create an account** with your email, Google or single sign-on. Your Claude Pro login works, but a Pro subscription does **not** include API credit. If your agency has an organisation account, ask its administrator to invite you instead.
-3. **Add credit.** Go to **Settings → Billing**, add a payment method and buy credit (the minimum is small, about $5). Until there is credit, every request is refused.
-4. **Set a spending limit** (recommended). In **Settings → Limits**, set a monthly limit and an email alert. Leave auto-reload off unless you need it.
-5. **Create the key.** Go to **Settings → API keys → Create Key**. Name it after the PC, for example `CaseVault - Beelink` or `CaseVault - L14`, so you can switch one off without touching the other. Keep the Default workspace.
-6. **Copy it now.** It starts with `sk-ant-api03-` and is about 100 characters long. The Console shows it **only once**. Don't paste it into email, chat, notes or a document.
-7. **Add it to CaseVault.** Click **Add API key…**, paste it (Ctrl+V) and choose where to keep it:
-   - **This session only**: the safest choice. The key is gone when you close CaseVault, and you paste it again next time.
-   - **Save on the SSD, locked with a passphrase**: encrypted (AES-256) in `CaseVault-Data\secrets\anthropic.json`. CaseVault asks for the passphrase once per session (**Unlock…**). If you forget the passphrase, remove the key and add it again.
-   - **Save on the SSD without a passphrase**: protected only by BitLocker on the CASEVAULT drive.
-
-   Tick that you understand the billing, then click **Save key**. CaseVault checks the format and catches the usual mistakes: an incomplete copy, an Admin key (`sk-ant-admin…`), or a subscription token (`sk-ant-oat…`).
-8. **Test it.** Click **Go online**, then **Test key**. CaseVault asks Anthropic for its list of models, which contains no case data. *Key works* means you're ready. *Refused* means it was mistyped or revoked.
-9. **To stop using it**, click **Remove API key…**. This removes it from CaseVault and deletes it from the SSD. Then **revoke** it in the Console: **Settings → API keys**, open the key's menu, choose Delete. Revoking takes effect immediately everywhere. Do it straight away if the SSD or a PC is lost.
-
-**Replace…** swaps in a new key (for example after revoking the old one). The key is only ever sent to `api.anthropic.com`, in the request header. It is never written to vault.json, the browser's storage or the outbound log. CaseVault forgets it from memory when the SSD is unplugged or another vault is opened.
-
-### Free API keys: Gemini and OpenRouter (optional)
-
-Both work like the Anthropic key: **Add API key…**, where to keep it (session, locked with a passphrase, or plain on the SSD), **Test key**, **Remove API key…**. They're in **Vault → Online features → API keys**, and on the online page when you pick that service. Each card has **How to get … API key, step by step**, with links that open in a new tab.
-
-> **What "free" costs.** On Gemini's free tier, Google may use what you send to improve its products, and human reviewers may read it. Free OpenRouter models are run by other companies, and some log or train on what you send. CaseVault hides names and numbers before anything goes, but only send what your agency's policy allows. For case work, prefer the local AI (Ask AI) or a paid API.
-
-**Google Gemini (free tier):**
-
-1. Open [aistudio.google.com](https://aistudio.google.com/) and sign in with a Google account your agency allows. Accept the Gemini API terms, and read the free-tier part.
-2. Go to **Get API key** → **Create API key**. If it asks for a Google Cloud project, let it create one. Name it after the PC, for example `CaseVault - L14`.
-3. Copy the key. It starts with `AIza` and is 39 characters long.
-4. In CaseVault, click **Add API key…** on the Gemini card, paste it, tick that you understand the free-tier terms, and click **Save key**.
-5. Go online and click **Test key**. It lists the Gemini models. Flash models (for example `gemini-2.5-flash`, the default) have the most free use. Pick one in the **Model** box on the online page.
-6. The free tier has limits per minute and per day. When you reach one, CaseVault shows the error: wait a minute, or try tomorrow.
-7. To stop, click **Remove API key…**, then delete the key in AI Studio under **API keys**.
-
-**OpenRouter (free models):**
-
-1. Open [openrouter.ai](https://openrouter.ai/) and sign in with Google, GitHub or an email address.
-2. Recommended: in **Settings → Privacy**, turn off providers that may train on your data. Fewer free models are then available, but those left don't keep what you send for training.
-3. Go to **Settings → Keys → Create Key**. Name it after the PC, and set a **credit limit** (0 if you only want free models).
-4. Copy the key. It starts with `sk-or-v1-`, and OpenRouter shows it only once.
-5. Add it on the OpenRouter card in CaseVault, tick the box, and click **Save key**.
-6. Go online and click **Test key**. It lists the free models (names ending in `:free`). Type or pick one in the **Model** box. The default is `meta-llama/llama-3.3-70b-instruct:free`. Free models have a daily limit, higher once your account has bought some credit.
-7. To stop, click **Remove API key…**, then delete the key in **Settings → Keys**.
-
-Model names change over time. If one stops working, click **List models** on the online page and pick another.
-
-### Outbound log
-
-**Vault → Outbound log** lists every online AI request and mail hand-off of the last two months: when, where, why, what kinds of details were found, and how many were hidden. Never the text itself. The logs are in `CaseVault-Data\logs\outbound-YYYY-MM.json`.
-
 ## Options
 
 **Menu → Options** has two tabs:
@@ -1203,8 +1136,7 @@ Model names change over time. If one stops working, click **List models** on the
 | Word, PDF, XFA form, spreadsheet readers | Documents of each kind can be read for checks |
 | OCR | Scanned pages and photos can be read |
 | Consistency rules on a mini case | Five planted errors (time, plate, count, amount, a misspelled name) are all flagged, and a matching address is not |
-| Privacy | Every kind of personal detail is hidden before anything could go online |
-| Online state | CaseVault is offline |
+| Privacy | Every kind of personal detail is found and replaced (used by the mail check and the Document Anonymizer) |
 | AI engine and model for this PC | Which model checks use here, and why (see *Profile on this PC* in [AI-SETUP.md](AI-SETUP.md)) |
 | Passage search model | Whether `nomic-embed-text` is installed |
 | AI answers | A one-word test answer, with the time it took and the speed |
@@ -1305,7 +1237,7 @@ Read an AI draft as a starting point. It can still misstate things, so check eve
 - Each directive has **Always use**: ticked directives go with every Draft with AI.
 - The eye button shows the text the AI reads from the file. Move a file between parts with its list, or delete it.
 - Only the AI on this computer reads the Library; it's never sent online. Long files are shortened to fit the AI's window, so short, typical samples work best (two or three good DEA-6s beat twenty).
-- **Real forms with PII are fine.** Library files stay on the encrypted SSD, and only the AI on this computer (Ollama at 127.0.0.1, or the in-browser engine) reads them. They're never sent online: the online research page doesn't use the Library. The one thing to watch is the output: the AI is told never to copy names or facts from examples, but a small model can slip, so read every draft for names that belong to another case. If you'd rather not rely on that, black out or replace names in the samples first (*SUBJECT 1*, *SA EXAMPLE*); the AI learns the format just as well.
+- **Real forms with PII are fine.** Library files stay on the encrypted SSD, and only the AI on this computer (Ollama at 127.0.0.1) reads them. They're never sent anywhere. The one thing to watch is the output: the AI is told never to copy names or facts from examples, but a small model can slip, so read every draft for names that belong to another case. If you'd rather not rely on that, black out or replace names in the samples first (*SUBJECT 1*, *SA EXAMPLE*); the AI learns the format just as well.
 
 ### AI writing behavior
 
@@ -1383,17 +1315,17 @@ A placeholder with no value (for example a case without a client) becomes `[CONF
 
 | Where | What |
 |---|---|
-| **SSD, `V:\CaseVault-Data\`** | All case data: details, notes, timelines, files (in their document folders), drafts, consistency checks and the text read from documents, mail logs, templates, the **Library** for the AI (`library\`), settings (including the AI writing behaviors and Quick links, (including the privacy-screen PIN hash, **My details**, mail settings and the PII watch list), backups, the outbound log (`logs\`) and, only if you ask, the online AI key (`secrets\`). Active cases are in `cases\<case>\`, archived cases in `archive\<case>\` (same contents). |
+| **SSD, `V:\CaseVault-Data\`** | All case data: details, notes, timelines, files (in their document folders), drafts, consistency checks and the text read from documents, mail logs, templates, the **Library** for the AI (`library\`), settings (including the AI writing behaviors and Quick links, (including the privacy-screen PIN hash, **My details**, mail settings and the PII watch list), backups and the outbound log (`logs\`). Active cases are in `cases\<case>\`, archived cases in `archive\<case>\` (same contents). |
 | **SSD, `W:\`** | The launcher, the helper, the AI engine and its models. No case data. |
 | **The browser on this PC** | The CaseVault app files (so it opens offline), in Chrome/Edge a *pointer* to the vault folder so it can offer **Reconnect**, and display preferences (theme, zoom, brightness, time format, the AI profile). No case data. (Which operations are folded in the case list is kept in `vault.json` on the SSD, since v1.28.) |
 | **GitHub** | Only the app's code. Case data can never be committed; the repository blocks it. |
-| **The internet** | Nothing, unless you go online. Normally CaseVault only talks to the AI engine (and, in Firefox, the helper) on this same computer, at `127.0.0.1`. When you go online for research or drafting, reviewed and redacted text goes to `api.anthropic.com` (API), or you paste it into claude.ai yourself. Department mail is sent by Outlook, not by CaseVault. |
+| **The internet** | Nothing. CaseVault only talks to the AI engine (and, in Firefox, the helper) on this same computer, at `127.0.0.1`. Department mail is sent by Outlook, not by CaseVault. |
 
 To make a PC forget the vault folder, open **Vault → Disconnect**.
 
 ### What deleting leaves behind
 
-- **Delete a file, draft or case:** it's removed from `CaseVault-Data`; a deleted case also leaves the older `vault.json` copies in `backups\` and its Ask AI chats. Nothing is kept in a trash or a log of what was in it. The **outbound log** (`logs\`) keeps a line for each online AI request (when, which service, a fingerprint of the text), not the text itself.
+- **Delete a file, draft or case:** it's removed from `CaseVault-Data`; a deleted case also leaves the older `vault.json` copies in `backups\` and its Ask AI chats. Nothing is kept in a trash or a log of what was in it. The **outbound log** (`logs\`) keeps a line for each department mail hand-off (when, to whom, a fingerprint of the text), not the text itself.
 - **On the SSD itself:** like any file deleted in Windows, the space is marked free, not overwritten, and an SSD decides on its own when to erase it. No app can guarantee it's gone. What protects it is **BitLocker** on V:: everything left in that free space is encrypted, and unreadable without your BitLocker password. To retire the SSD completely, use **Emergency Purge**, then format the drive with BitLocker turned on (or have IT wipe it).
 - **The AI engine** (`W:\logs\ollama.log`) logs that a request was made and how long it took, not what was asked.
 - **The PC:** CaseVault keeps no case data there (see the table above). Windows itself may: a file you opened in Word or Acrobat can leave a recent-files entry or a temporary copy, and a file you downloaded or exported sits in the PC's Downloads folder until you delete it.
@@ -1425,8 +1357,4 @@ To make a PC forget the vault folder, open **Vault → Disconnect**.
 
 ## When Ollama isn't running
 
-If Ollama isn't running, CaseVault can use a small **in-browser AI model** instead, if one is on the SSD and CaseVault was opened through `W:\Start-CaseVault.bat`. The header then shows **AI: In-browser · …**. The first AI request loads the model from the SSD, with a progress message, which can take a minute. See [AI-SETUP.md](AI-SETUP.md), section 8.
-
-Without Ollama or an in-browser model, the consistency checker uses its rule-based layer only, and Draft with AI and suggestions are unavailable.
-
-**Not built yet:** using the in-browser AI from the hosted/installed app *without* the launcher (it needs a way to read the models from W: directly).
+Without Ollama, the consistency checker uses its rule-based layer only, and Ask AI, Draft with AI and suggestions are unavailable. Start CaseVault with `W:\Start-CaseVault.bat` (it starts Ollama), then click the **AI:** pill → **Check again**.

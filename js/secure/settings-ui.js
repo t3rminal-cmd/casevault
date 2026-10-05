@@ -1,5 +1,5 @@
-/* CaseVault — Vault panel sections for the v1.9 safeguards: online features, department mail,
- * the PII watch list, and the outbound log. All stored in vault.json on the SSD.
+/* CaseVault — Vault panel sections for the safeguards: department mail, the PII watch list, and
+ * the outbound log. All stored in vault.json on the SSD. (v1.91: the online features are gone.)
  */
 'use strict';
 
@@ -8,29 +8,6 @@
   let ui = null;
 
   const save = (patch, msg) => ui.Save.track('settings', () => V().updateSettings(patch)).then(() => { if (msg) ui.toast(msg, 'success'); }).catch(() => {});
-
-  function onlineSection() {
-    const { h } = ui;
-    const cur = CVOutbound.onlineSettings();
-    const allowed = h('input', { type: 'checkbox', checked: !!cur.allowed });
-    const idle = h('select', { 'aria-label': 'Go offline after' }, [5, 10, 15, 30, 60].map((m) => h('option', { value: m, selected: Number(cur.idleMinutes) === m }, `${m} minutes`)));
-    allowed.addEventListener('change', () => {
-      if (!allowed.checked) CVOutbound.goOffline('turned off');
-      save({ online: { ...CVOutbound.onlineSettings(), allowed: allowed.checked } }, allowed.checked ? 'Online features allowed. Use "Go online" when you need them.' : 'Online features turned off.');
-    });
-    idle.addEventListener('change', () => save({ online: { ...CVOutbound.onlineSettings(), idleMinutes: Number(idle.value) } }));
-    return h('section', { 'data-section': 'online' },
-      h('h3', { title: 'Research & drafting AI' }, 'Online features'),
-      h('p', { class: 'muted small explain' }, 'Off by default. When allowed, the ', h('strong', {}, 'Online'), ' button in the header lets you go online for a while to ask Claude, Gemini or an OpenRouter model research and drafting questions. Personal details are replaced with placeholders and you see exactly what is sent. CaseVault only ever connects to ',
-        h('code', {}, CVOutbound.ALLOWED_HOSTS.join(', ')), '.'),
-      h('label', { class: 'check-row' }, allowed, h('span', {}, 'Allow Going Online')),
-      h('div', { class: 'row' }, h('label', { class: 'inline' }, 'Go offline again after ', idle, ' without use')),
-      h('h4', { title: 'Optional. Only needed to get answers inside CaseVault. With your Claude subscription (claude.ai, copy & paste) no key is needed. Gemini and OpenRouter have free tiers; read what they do with what you send.' }, 'API keys'),
-      CVApiKey.card({ compact: false }),
-      CVApiKeys.gemini.card({ compact: false }),
-      CVApiKeys.openrouter.card({ compact: false }),
-      h('p', { class: 'hint' }, 'Check your agency\'s policy on cloud AI before turning this on.'));
-  }
 
   function watchSection() {
     const { h } = ui;
@@ -43,7 +20,7 @@
     });
     return h('section', { 'data-section': 'pii' },
       h('h3', { title: 'PII watch list' }, 'Always hide'),
-      h('p', { class: 'muted small explain' }, 'Besides the patterns CaseVault finds by itself (names after a title, SSNs, dates of birth, phones, addresses, plates, VINs, case numbers…), these words are always hidden from online AI and flagged in mail. Each case\'s client and case number, and your own details, are included automatically.'),
+      h('p', { class: 'muted small explain' }, 'Besides the patterns CaseVault finds by itself (names after a title, SSNs, dates of birth, phones, addresses, plates, VINs, case numbers…), these words are always flagged when department mail is checked. Each case\'s client and case number, and your own details, are included automatically.'),
       ta);
   }
 
@@ -137,22 +114,21 @@
       const rows = entries.filter((e) => e.channel !== 'session').slice(0, 40);
       box.replaceChildren(rows.length
         ? h('div', { class: 'table-scroll' }, h('table', { class: 'files' },
-          h('thead', {}, h('tr', {}, h('th', {}, 'When'), h('th', {}, 'Where'), h('th', {}, 'Why'), h('th', {}, 'Details found'), h('th', {}, 'Hidden'))),
+          h('thead', {}, h('tr', {}, h('th', {}, 'When'), h('th', {}, 'Where'), h('th', {}, 'Why'), h('th', {}, 'Details found'))),
           h('tbody', {}, rows.map((e) => h('tr', {},
             h('td', { class: 'muted small' }, fmtDateTime(Date.parse(e.at))),
             h('td', { class: 'small' }, `${(CVOutbound.CHANNELS[e.channel] || { label: e.channel }).label}${e.destination ? ` → ${e.destination}` : ''}`),
             h('td', { class: 'small' }, e.purpose || ''),
-            h('td', { class: 'small' }, Object.entries(e.found || {}).map(([t, n]) => `${n} ${(CVPii.TYPES[t] || { tag: t }).tag.toLowerCase()}`).join(', ') || 'none'),
-            h('td', { class: 'small num' }, e.mode === 'redact' ? String(e.redacted || 0) : '—'))))))
+            h('td', { class: 'small' }, Object.entries(e.found || {}).map(([t, n]) => `${n} ${(CVPii.TYPES[t] || { tag: t }).tag.toLowerCase()}`).join(', ') || 'none'))))))
         : h('p', { class: 'muted small' }, 'Nothing has left this computer through CaseVault in the last two months.'));
     }).catch(() => box.replaceChildren(h('p', { class: 'muted small' }, 'Could not read the log.')));
     return h('section', { 'data-section': 'log' },
       h('h3', {}, 'Outbound log'),
-      h('p', { class: 'muted small explain' }, 'Every online AI request and mail hand-off, saved in CaseVault-Data\\logs on the SSD. It records where, when and what kind of details were found, never the text itself.'),
+      h('p', { class: 'muted small explain' }, 'Every department mail hand-off, saved in CaseVault-Data\\logs on the SSD. It records where, when and what kind of details were found, never the text itself.'),
       box, sizeLine, actions);
   }
 
   function init(kit) { ui = kit; }
 
-  root.CVSecureSettings = { init, onlineSection, watchSection, mailSection, logSection };
+  root.CVSecureSettings = { init, watchSection, mailSection, logSection };
 })(this);

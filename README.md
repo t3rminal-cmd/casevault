@@ -4,7 +4,7 @@ An offline, browser-based case file manager that stores everything on your own e
 
 - **Your data stays on your SSD.** CaseVault reads and writes the vault folder directly through the browser's File System Access API. The browser remembers only *which folder* to reconnect to, never its contents.
 - **Works offline.** Install it as an app from GitHub Pages, or run the copy on the SSD. There's no build step and nothing to download at runtime; every library is bundled in `vendor/`.
-- **Private by design.** No CDNs, web fonts, analytics, or network calls. A Content-Security-Policy restricts the page to its own files, the local AI engine on `127.0.0.1:11434` and, only when you choose to go online for research and drafting, `api.anthropic.com`, and only with text you reviewed and that had personal details replaced by placeholders.
+- **Private by design.** No CDNs, web fonts, analytics, or network calls. A Content-Security-Policy restricts the page to its own files and the local AI engine on `127.0.0.1:11434`. CaseVault never connects to the internet.
 
 **Open it:** https://t3rminal-cmd.github.io/casevault/ (Chrome or Edge on desktop), or `W:\Start-CaseVault.bat` (Firefox, or any browser).
 
@@ -15,13 +15,14 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.90
+## What's New in v1.91
 
-- **Back up before Power Off:** when the vault hasn't had a full backup in over a week (or ever), Power Off asks first: **Back Up First**, **Power Off Anyway** or Cancel
-- **Undo after Clear All** on the Draft, as after Send to Files: the toast's Undo puts the form back
-- **Change a Case History note:** the pencil opens the note's date and words in place (Enter saves, Esc cancels); × still deletes it
-- **Search finds Case History notes:** the case list search (Ctrl+K) matches the words in a case's notes, e.g. "migrated"
-- README shows the current version only; the earlier versions are in [previous-versions/](previous-versions/README.md)
+- **CaseVault is offline only.** The optional online AI (Claude, Gemini, OpenRouter: the Online button, the online page and the API keys) is gone. The page's security policy now allows nothing but the AI engine on this PC (`127.0.0.1:11434`)
+- **No in-browser AI fallback (WebLLM).** The local AI engine (Ollama, started by `Start-CaseVault.bat`) does all the AI work; when it isn't running, the Consistency Checker still runs its rule-based checks
+- An online AI key saved on the SSD by an older version (`CaseVault-Data\secrets`) is deleted the first time v1.91 opens the vault, with a one-time message; the old online and in-browser settings are dropped
+- The header's **Offline** badge stays, as a reminder that nothing leaves the PC
+- Department mail keeps its review screen (recipients, attachments, personal details) and the Outbound Log
+- **Helper 1.12:** no longer serves in-browser models (`/webllm/`); `W:\webllm` and `W:\Get-WebLLM-Model.bat` can be deleted
 
 ## What CaseVault Does
 
@@ -48,7 +49,7 @@ The app detects the browser and picks the mode by itself. The data format on the
 - Privacy screen with a PIN and an idle timer; Power Off saves, closes and ejects the drives
 
 **AI (on this PC)**
-- Ask AI, Draft with AI and the Consistency Checker run on the local AI engine (Ollama, or WebLLM on the graphics chip); nothing leaves the PC unless you turn on going online, and then only text you reviewed with personal details replaced
+- Ask AI, Draft with AI and the Consistency Checker run on the local AI engine (Ollama, started by `Start-CaseVault.bat`); nothing leaves the PC. Quick (7–8B) on a PC with a graphics card, Light (3–4B) on one without; when the engine isn't running, the Checker's rule-based checks still run
 
 ## Beta Status and Known Issues
 
@@ -92,7 +93,6 @@ CaseVault-Data/
   backups/                   dated snapshots of vault.json
   exports/                   Report a Problem files
   logs/                      outbound-YYYY-MM.json: what left this PC, when and where (never the text)
-  secrets/                   the online AI key, only if you chose "Remember on SSD"
 ```
 
 ## Code layout
@@ -103,12 +103,10 @@ CaseVault-Data/
 | `css/app.css` | Styles (square corners, off-white palette, light/dark) |
 | `js/fs.js` | Folder-handle storage (IndexedDB, handle only) and SSD file helpers |
 | `js/casefiles.js` | Document folders and the `2026-<CaseNo> <Type>` naming convention |
-| `js/secure/pii.js` | PII scanner, redaction to placeholders, and putting the real values back |
-| `js/secure/outbound.js` | The outbound gate: review screen, one-time tickets, host allow-list, leak check, outbound log |
-| `js/secure/apikey.js`, `js/secure/apikey-ui.js` | Anthropic API key: format check, masking, passphrase lock (AES-GCM), and the Add / Unlock / Test / Remove card with the step-by-step guide |
-| `js/secure/online-ui.js` | Online research & drafting page (claude.ai copy & paste, or Anthropic API) |
+| `js/secure/pii.js` | PII scanner (mail check, Document Anonymizer) and redaction to placeholders |
+| `js/secure/outbound.js` | Department mail check: the review screen (recipients, attachments, personal details) and the outbound log |
 | `js/secure/mail.js`, `js/secure/mail-ui.js` | Department mail: domain rules, `.eml` Outlook draft builder, the Mail tab |
-| `js/secure/settings-ui.js` | Vault panel: online features, PII watch list, department mail, outbound log |
+| `js/secure/settings-ui.js` | Vault panel: PII watch list, department mail, outbound log |
 | `js/ai/memory.js` | Memory indicator (app, Ollama model GPU/RAM, PC RAM and disk) |
 | `js/vault.js` | Vault data model: cases, notes, timeline, files, index, backups, archive (verified folder moves) |
 | `js/ai/activity.js` | AI activity tracker: header indicator, shared AI queue, tokens/s |
@@ -155,12 +153,9 @@ CaseVault-Data/
 | `js/drafts/ghost.js` | Inline suggestion (ghost text) logic |
 | `js/drafts/copilot.js` | Local-AI calls for suggestions and Draft with AI |
 | `js/drafts/drafts-ui.js` | Drafts tab, editor, export, template settings |
-| `js/ai/webllm.js`, `js/ai/webllm-worker.js` | In-browser AI fallback: availability, lazy loading, cache cleanup; the worker that runs WebLLM |
-| `js/ai/ollama-shim.js` | Answers Ollama-style API calls from the in-browser engine |
-| `vendor/` | Bundled pdf.js, Tesseract.js, SheetJS, WebLLM, the Bootstrap Icons license and the Poppins font (see `vendor/README.md` for versions, licenses and provenance) |
+| `vendor/` | Bundled pdf.js, Tesseract.js, SheetJS, the Bootstrap Icons license and the Poppins font (see `vendor/README.md` for versions, licenses and provenance) |
 | `tools/Start-CaseVault.bat` | Launcher for the CV-AI partition: starts the helper and Ollama |
-| `tools/casevault-helper/` | The Firefox helper (Windows PowerShell 5.1, 127.0.0.1 only); also serves in-browser models from `W:\webllm`, holds `Get-WebLLM-Model.ps1`, opens `.eml` mail drafts from a case's Email folder in Outlook, and reports RAM and disk space for the memory indicator, and (1.11) copies and checks Back Up Everything onto another drive |
-| `tools/Get-WebLLM-Model.bat` | One-time download of an in-browser model onto the CV-AI drive |
+| `tools/casevault-helper/` | The Firefox helper (Windows PowerShell 5.1, 127.0.0.1 only); also opens `.eml` mail drafts from a case's Email folder in Outlook, and reports RAM and disk space for the memory indicator, and (1.11) copies and checks Back Up Everything onto another drive |
 | `tests/` | Unit tests (`node --test tests/*.test.js`) and a mock Ollama server |
 | `scripts/check-no-case-data.sh` | CI guard: fails if anything resembling case data is committed |
 

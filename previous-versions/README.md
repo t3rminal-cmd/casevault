@@ -4,6 +4,14 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.90)
+
+- **Back up before Power Off:** when the vault hasn't had a full backup in over a week (or ever), Power Off asks first: **Back Up First**, **Power Off Anyway** or Cancel
+- **Undo after Clear All** on the Draft, as after Send to Files: the toast's Undo puts the form back
+- **Change a Case History note:** the pencil opens the note's date and words in place (Enter saves, Esc cancels); × still deletes it
+- **Search finds Case History notes:** the case list search (Ctrl+K) matches the words in a case's notes, e.g. "migrated"
+- README shows the current version only; the earlier versions are in [previous-versions/](README.md)
+
 ## Features (v1.89)
 
 - Send to Files clears the Draft by itself once the PDF is saved; the toast has an Undo button that brings the Draft back
