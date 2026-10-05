@@ -215,6 +215,11 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.92
+
+- **Draft → Court Date → Pending:** ticking Pending no longer unticks the Court Date line itself (it happened in Firefox)
+- **CB Number can be DNA** (Does Not Apply): pick it from the arrow on an offender's CB Number on the Draft tab, or on the Arrest tab's CB # and IR #
+
 ### What's new in v1.91
 
 - **CaseVault is offline only.** The optional online AI (Claude, Gemini and OpenRouter: the Online button in the header, the online research page and the API keys in the Vault) is gone. The page may now only talk to the AI engine on this PC

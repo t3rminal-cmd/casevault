@@ -239,8 +239,8 @@
       // The input keeps its own listeners; a searchable list wraps it (box), not replaces it.
       let box = el;
       // v1.44: Method Code and Safe Method offer DNA (does not apply); anything else can be typed.
-      // v1.76: the IR Number can be DNA as well.
-      if (['methodCode', 'safeMethod', 'arrestUnit', 'residence', 'irNumber'].includes(key)) box = CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }], onPick: () => save() });
+      // v1.76: the IR Number can be DNA as well; v1.92: and the CB Number.
+      if (['methodCode', 'safeMethod', 'arrestUnit', 'residence', 'irNumber', 'cbNumber'].includes(key)) box = CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }], onPick: () => save() });
       // v1.69: Court Branch and Court Officer can be Pending, and so can the Court Date.
       if (key === 'courtBranch') box = CVCombo.attach(el, { items: () => [{ value: 'Pending', label: 'Pending', hint: 'Not set yet' }], onPick: () => save() });
       if (key === 'courtDate') {
@@ -268,7 +268,12 @@
       if (F().OPTIONAL_LINES.includes(key)) {
         const on = !F().isHidden(data, key);
         const cb = h('input', { type: 'checkbox', checked: on, 'aria-label': `Include ${label}`, title: 'Untick if this line doesn\'t apply' });
-        const row = ui.field(label, box, `span-all rf-line rf-optional${on ? '' : ' rf-line-off'}`);
+        // v1.92: a row that holds its own tick box (Court Date's Pending) is not a <label>: a label
+        // inside a label made Firefox also untick the row's Include box when Pending was clicked.
+        const rowCls = `span-all rf-line rf-optional${on ? '' : ' rf-line-off'}`;
+        const row = box.classList && box.classList.contains('rf-date-pending')
+          ? h('div', { class: `field ${rowCls}` }, h('span', {}, label), box)
+          : ui.field(label, box, rowCls);
         row.prepend(cb);
         cb.addEventListener('change', () => {
           data.hidden = data.hidden.filter((x) => x !== key);
@@ -398,8 +403,8 @@
             if (key === 'victimsList' && k === 'name') el.addEventListener('input', redrawIfState);
             if (F().PICKS[kind]) box = CVCombo.attach(el, { items: () => pickItems(F().PICKS[kind]), onPick: () => { if (key === 'victimsList') redrawIfState(); } });
             else if (kind === 'narcotic') box = CVCombo.attach(el, { items: () => NARCOTIC_ITEMS });
-            // v1.76: IR, FBI and IDOC Numbers can be DNA (does not apply).
-            else if (['irNumber', 'fbiNumber', 'idocNumber'].includes(k)) box = CVCombo.attach(el, { items: () => DNA_ITEMS });
+            // v1.76: IR, FBI and IDOC Numbers can be DNA (does not apply); v1.92: and the CB Number.
+            else if (['irNumber', 'fbiNumber', 'idocNumber', 'cbNumber'].includes(k)) box = CVCombo.attach(el, { items: () => DNA_ITEMS });
             else if (key === 'narcotics' && k === 'value') {
               // Street value from the narcotic calculator (Reference): type, amount and unit.
               const calc = h('button', { class: 'btn small rf-calc', type: 'button', icon: 'calculator', title: 'Work out the street value with the narcotic calculator (Reference → Narcotic calculator)', onclick: () => {
