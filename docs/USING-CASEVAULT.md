@@ -215,6 +215,14 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.93
+
+- **Victim: State of Illinois** gets Relation Code **024** by itself (you can change it); the PDF line reads *State of Illinois · Relation Code: 024 · Officer Name*
+- **Offense Classification** takes the exact wording of the first charge's **Statute Description** when you pick or type the charge; picking an IUCR code no longer replaces it, and the box's arrow lists every charge's Statute Description. Your own wording is never overwritten
+- **Officer's Report green check:** an empty list that is still ticked in (no Police Personnel, no charges…) stops the check; untick the list when it doesn't apply
+- **Details → Suspects** stay in order: Primary, then Secondary, then Other. Change a role and the card moves; a new suspect lands in its role's place
+- **Draft → Offenders → Add From Suspects** opens a list: tick the suspects for this report (Primary ones start ticked; ones already in the report are marked), then **Add to Offenders**
+
 ### What's new in v1.92
 
 - **Draft → Court Date → Pending:** ticking Pending no longer unticks the Court Date line itself (it happened in Firefox)

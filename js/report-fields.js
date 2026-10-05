@@ -214,6 +214,8 @@
     // A v1.21 single Notifications line becomes the first notification.
     if (typeof src.notifications === 'string') d.notifications = String(src.notifications).trim() ? [{ name: String(src.notifications).trim() }] : [];
     for (const k of Object.keys(LISTS)) d[k] = (Array.isArray(d[k]) ? d[k] : []).map((it) => ({ ...blankItem(k), ...(it && typeof it === 'object' ? it : {}) }));
+    // v1.93: the State of Illinois as victim gets Relation Code 024 when none is entered.
+    for (const v of d.victimsList) if (isStateVictim('victimsList', v) && !String(v.relation || '').trim()) v.relation = STATE_RELATION;
     // v1.42: Notifications have no Notes box; notes without a name become the name.
     for (const n of d.notifications) if (n.notes && !String(n.name || '').trim()) n.name = n.notes;
     // v1.21's "Unit / Role" text goes to Unit when it isn't one of the roles.
@@ -362,6 +364,8 @@
   // v1.27: a victim that is the State of Illinois has only an officer's name; everyone else has no
   // officer box. isStateVictim is also used by the screen and the PDF.
   const STATE_VICTIM = 'State of Illinois';
+  // v1.93: the State of Illinois as victim has Relation Code 024.
+  const STATE_RELATION = '024';
   const isStateVictim = (list, it) => list === 'victimsList' && String((it && it.name) || '').trim().toLowerCase() === STATE_VICTIM.toLowerCase();
   /** The fields an entry uses. */
   function fieldsFor(list, it) {
@@ -369,7 +373,8 @@
     // v1.82: an offender ticked "No Vehicle" has no Vehicle, VIN or Plates boxes (and none on the PDF).
     if (list === 'offendersList') return it && it.noVehicle ? all.filter(([k]) => !['vehicle', 'vin', 'plates'].includes(k)) : all;
     if (list !== 'victimsList') return all;
-    return isStateVictim(list, it) ? all.filter(([k]) => k === 'name' || k === 'officer') : all.filter(([k]) => k !== 'officer');
+    // The State of Illinois: name, Relation Code (024) and the officer, in that order.
+    return isStateVictim(list, it) ? ['name', 'relation', 'officer'].map((k) => all.find(([x]) => x === k)).filter(Boolean) : all.filter(([k]) => k !== 'officer');
   }
 
   /** One list entry as text: "DOE, John, DOB 01.02.1990, 5'10\", 180 lbs, Black hair…" */
@@ -603,7 +608,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, STATE_RELATION, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

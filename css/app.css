@@ -3900,3 +3900,8 @@ html .tl-item.deadline::before { transform: none; }
 
 /* v1.91: the Offline badge only informs (CaseVault never goes online). */
 .net-status { cursor: default; }
+
+/* v1.93: pick which suspects go into the report (Draft → Offenders → Add From Suspects). */
+.suspect-pick-form { max-width: 34rem; }
+.suspect-pick-list { display: grid; gap: .35rem; margin: .6rem 0 .2rem; }
+.suspect-pick-list .rf-suspect-pick { padding: .45rem .6rem; border: 1px solid var(--border); background: var(--surface); }

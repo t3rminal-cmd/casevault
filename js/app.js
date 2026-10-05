@@ -2374,7 +2374,18 @@
   function suspectsSection(c, save) {
     if (!Array.isArray(c.suspects)) c.suspects = [];
     const rows = h('div', { class: 'suspect-rows' });
+    // v1.93: Primary first, then Secondary, then Other (in the order added within each role).
+    const RANK = { Primary: 0, Main: 0, Secondary: 1 };
+    const rank = (s) => (s && s.role in RANK ? RANK[s.role] : s && s.role ? 2 : 0);
+    const sortSuspects = () => {
+      const sorted = c.suspects.map((s, i) => [s, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(([s]) => s);
+      const moved = sorted.some((s, i) => s !== c.suspects[i]);
+      if (moved) c.suspects.splice(0, c.suspects.length, ...sorted);
+      return moved;
+    };
+    const cardOf = (s) => rows.children[c.suspects.indexOf(s)];
     const draw = () => {
+      sortSuspects();
       rows.replaceChildren(...(c.suspects.length ? c.suspects.map((s, i) => {
         const who = `Suspect ${i + 1}`;
         const input = (key, attrs) => { const el = h('input', { value: s[key] || '', autocomplete: 'off', ...attrs }); el.addEventListener('input', () => { s[key] = el.value.trim(); save(); }); return el; };
@@ -2384,7 +2395,11 @@
         dob.addEventListener('input', showAge);
         showAge();
         const role = h('select', { 'aria-label': `${who} role` }, CVDraft.SUSPECT_ROLES.map((r) => h('option', { value: r, selected: r === (s.role || 'Primary') }, r)));
-        role.addEventListener('change', () => { s.role = role.value; save(); });
+        role.addEventListener('change', () => {
+          s.role = role.value;
+          if (sortSuspects()) { draw(); const card0 = cardOf(s); const sel = card0 && card0.querySelector(`select[aria-label$="role"]`); if (sel) { sel.focus(); card0.scrollIntoView({ block: 'nearest' }); } }
+          save();
+        });
         if (!s.role || s.role === 'Main') s.role = 'Primary'; // "Main" before v1.36
         // Demographics (v1.34), kept in s.info: Add From Suspects on the Draft tab copies them into Offenders.
         if (!s.info || typeof s.info !== 'object') s.info = {};
@@ -2427,10 +2442,13 @@
       h('datalist', { id: 'suspect-eyes' }, CVReportFields.PICKS.eyes.map((x) => h('option', { value: x }))),
       rows,
       h('div', { class: 'contact-add' }, h('button', { class: 'btn small', type: 'button', icon: 'person-plus', onclick: () => {
-        c.suspects.push({ name: '', dob: '', residence: '', info: {}, role: c.suspects.some((x) => x.role === 'Primary' || x.role === 'Main') ? 'Secondary' : 'Primary' });
+        const added = { name: '', dob: '', residence: '', info: {}, role: c.suspects.some((x) => x.role === 'Primary' || x.role === 'Main') ? 'Secondary' : 'Primary' };
+        c.suspects.push(added);
         draw();
-        const last = rows.lastElementChild && rows.lastElementChild.querySelector('input');
-        if (last) last.focus();
+        // The new card sits in its role's place (a Secondary goes before the Others).
+        const card0 = cardOf(added);
+        const first = card0 && (card0.querySelector('input[aria-label$=" name"]') || card0.querySelector('input'));
+        if (first) { first.focus(); card0.scrollIntoView({ block: 'nearest' }); }
       } }, 'Add suspect')));
   }
 

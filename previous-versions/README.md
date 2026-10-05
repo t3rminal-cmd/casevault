@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.92)
+
+- **Court Date → Pending** no longer unticks the Court Date line in Firefox. The row held a tick box inside another tick box's label, so Firefox clicked both; it is now built so each tick box only answers to itself
+- **CB Number can be DNA** (Does Not Apply): on each offender on the Draft tab, and on the Arrest tab's CB # (and IR #), from the arrow on the box, like the IR, FBI and IDOC Numbers
+
 ## Features (v1.91)
 
 - **CaseVault is offline only.** The optional online AI (Claude, Gemini, OpenRouter: the Online button, the online page and the API keys) is gone. The page's security policy now allows nothing but the AI engine on this PC (`127.0.0.1:11434`)

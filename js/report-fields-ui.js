@@ -211,6 +211,15 @@
       return Number.isFinite(n) ? `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : String(v || '').trim();
     };
     const els = {}; // the Report Fields inputs by key, for fields filled from a pick
+    // v1.93: Offense Classification uses the exact wording of the first charge's Statute Description.
+    const chargeDescs = () => [...new Set((data.charges || []).map((x) => String(x.description || '').trim()).filter(Boolean))];
+    const offenseFromCharge = (desc, prev = null) => {
+      const cur = String(data.offense || '').trim();
+      // Only over an empty box, the previous charge wording, or a UCR group's wording; never over your own.
+      if (cur && cur !== prev && !UCR_ITEMS.some((u) => u.desc === cur)) return;
+      data.offense = desc;
+      if (els.offense) els.offense.value = desc;
+    };
     const input = (key, label, kind, opts) => {
       if (kind === 'list') { const el = listEditor(key); el.classList.add('span-all'); return el; }
       let el;
@@ -241,6 +250,8 @@
       // v1.44: Method Code and Safe Method offer DNA (does not apply); anything else can be typed.
       // v1.76: the IR Number can be DNA as well; v1.92: and the CB Number.
       if (['methodCode', 'safeMethod', 'arrestUnit', 'residence', 'irNumber', 'cbNumber'].includes(key)) box = CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }], onPick: () => save() });
+      // v1.93: Offense Classification offers the Statute Descriptions of the charges entered below.
+      if (key === 'offense') box = CVCombo.attach(el, { label: 'The charges\' Statute Descriptions', items: () => chargeDescs().map((d0) => ({ value: d0, label: d0, hint: 'Statute Description' })), onPick: () => save() });
       // v1.69: Court Branch and Court Officer can be Pending, and so can the Court Date.
       if (key === 'courtBranch') box = CVCombo.attach(el, { items: () => [{ value: 'Pending', label: 'Pending', hint: 'Not set yet' }], onPick: () => save() });
       if (key === 'courtDate') {
@@ -254,7 +265,8 @@
         // From Common UCR; an empty Offense Classification takes the UCR group (Narcotics…).
         // v1.39: picking an IUCR code puts its description in Offense Classification (for 2170:
         // "Delv: Synthetic Drugs"); so does typing a code that's in the list.
-        const fillOffense = (it) => { if (key === 'ucr' && it) { setField('offense', it.desc); save(); } };
+        // v1.93: when a charge is entered, its Statute Description wins over the UCR wording.
+        const fillOffense = (it) => { if (key === 'ucr' && it) { setField('offense', chargeDescs()[0] || it.desc); save(); } };
         box = CVCombo.attach(el, { items: () => UCR_ITEMS, onPick: (it) => { fillOffense(it); save(); } });
         el.addEventListener('change', () => {
           const v = el.value.trim().toLowerCase();
@@ -396,6 +408,8 @@
             // under a click); the cursor stays in the name box.
             const redrawIfState = () => {
               if (F().isStateVictim(key, it) === stateVictim) return;
+              // v1.93: becoming the State of Illinois fills Relation Code 024 (when it's empty).
+              if (!stateVictim && !String(it.relation || '').trim()) it.relation = F().STATE_RELATION;
               draw(); save();
               const again = box.querySelector(`[aria-label="${L.item} ${i + 1} Name"]`);
               if (again) { again.focus(); const n = again.value.length; try { again.setSelectionRange(n, n); } catch { /* not a text box */ } }
@@ -426,11 +440,22 @@
             else if (kind === 'charge' || kind === 'chargeWide') {
               // Search the charges by statute or wording; picking fills both boxes.
               box = CVCombo.attach(el, { items: () => CHARGE_ITEMS.map((c) => ({ ...c, value: kind === 'charge' ? c.statute : c.desc })), onPick: (c) => {
+                const prev = String(it.description || '').trim();
                 it.statute = c.statute; it.description = c.desc;
                 if (inputs.statute) inputs.statute.value = c.statute;
                 if (inputs.description) inputs.description.value = c.desc;
+                if (key === 'charges' && data.charges[0] === it) offenseFromCharge(c.desc, prev);
                 save();
               } });
+              // Typed by hand: Offense Classification follows the first charge's wording too.
+              if (kind === 'chargeWide' && key === 'charges') {
+                let prev = String(it.description || '').trim();
+                el.addEventListener('input', () => {
+                  const now = String(it.description || '').trim();
+                  if (data.charges[0] === it) { offenseFromCharge(now, prev); save(); }
+                  prev = now;
+                });
+              }
             }
             return ui.field(label, box, kind === 'wide' || kind === 'chargeWide' ? 'rf-wide' : '');
           });
@@ -468,12 +493,35 @@
         if (last) last.focus();
       } }, `Add ${L.item}`);
       // Offenders can be filled from Details → Suspects (name, date of birth, age); the description is entered here.
-      const fromSuspects = key === 'offendersList' && !archived ? h('button', { class: 'btn small', type: 'button', icon: 'person-exclamation', title: 'Adds each suspect from Details (or updates the offender with the same name). The description of the day is entered here.', onclick: () => {
+      const fromSuspects = key === 'offendersList' && !archived ? h('button', { class: 'btn small', type: 'button', icon: 'person-exclamation', title: 'Pick which suspects from Details to add as offenders (or update the offender with the same name). The description of the day is entered here.', onclick: async () => {
         const list = (c.suspects || []).map((s) => (s && s.notIdentified ? { ...s, name: 'Not Identified' } : s)).filter((s) => s && String(s.name || '').trim());
         if (!list.length) { toast('No named suspects on the Details tab yet.'); return; }
-        for (const s of list) F().suspectToOffender(data, s, Vault.localDay());
+        // v1.93: pick which suspects go into this report (the Primary ones are ticked to start with).
+        const already = new Set(data.offendersList.map((o) => String(o.name || '').trim().toLowerCase()).filter(Boolean));
+        const picked = await ui.openDialog((close) => {
+          const boxes = list.map((s) => {
+            const inReport = already.has(String(s.name).trim().toLowerCase());
+            const cb = h('input', { type: 'checkbox', checked: !inReport && (s.role || 'Primary') === 'Primary' });
+            return [s, cb, h('label', { class: 'check-row rf-suspect-pick' }, cb,
+              h('span', {}, h('strong', {}, s.name), h('span', { class: 'muted small' }, ` · ${s.role || 'Primary'}${inReport ? ' · already in this report (updated if ticked)' : ''}`)))];
+          });
+          const go = h('button', { class: 'btn primary', type: 'submit', icon: 'person-plus' }, 'Add to Offenders');
+          const sync = () => { go.disabled = !boxes.some(([, cb]) => cb.checked); };
+          boxes.forEach(([, cb]) => cb.addEventListener('change', sync));
+          sync();
+          return h('form', { class: 'suspect-pick-form', onsubmit: (e) => { e.preventDefault(); close(boxes.filter(([, cb]) => cb.checked).map(([x]) => x)); } },
+            h('h2', { icon: 'person-exclamation' }, 'Add Suspects to This Report'),
+            h('p', { class: 'muted small' }, 'Tick the suspects from the Details tab who are offenders in this report. Their name, date of birth and description are filled in.'),
+            h('div', { class: 'suspect-pick-list' }, boxes.map(([, , row]) => row)),
+            h('div', { class: 'dialog-actions' },
+              h('button', { class: 'btn', type: 'button', onclick: () => { boxes.forEach(([, cb]) => { cb.checked = true; }); sync(); } }, 'Tick All'),
+              h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
+              go));
+        });
+        if (!picked || !picked.length) return;
+        for (const s of picked) F().suspectToOffender(data, s, Vault.localDay());
         draw(); save();
-        toast(`${list.length} suspect${list.length === 1 ? '' : 's'} filled into Offenders.`, 'success');
+        toast(`${picked.length} suspect${picked.length === 1 ? '' : 's'} filled into Offenders.`, 'success');
       } }, 'Add From Suspects') : null;
       const wrap = h('div', { class: `rf-list rf-list-${key}` });
       let head = h('h4', {}, L.title);
@@ -529,6 +577,9 @@
             && !el.closest('.combo-list, datalist, .rf-multi, .rf-line-off, .rf-extras, .rf-photo-label, .rf-start-at') && (() => { const hid = el.parentElement && el.parentElement.closest('[hidden]'); return !hid || hid === inner; })());
           const offLines = inner.querySelectorAll('.rf-line-off').length;
           complete = (boxes.length || offLines) ? boxes.every((el) => String(el.value || '').trim()) : false;
+          // v1.93: a list still ticked in with nothing added (no Police Personnel, no charges…) isn't
+          // filled in; tick it off when it doesn't apply.
+          if (complete && inner.querySelector('.rf-list:not(.rf-line-off) .rf-none')) complete = false;
         }
         done.classList.toggle('on', complete);
         done.setAttribute('aria-hidden', String(!complete));
