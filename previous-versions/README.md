@@ -4,6 +4,15 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.91)
+
+- **CaseVault is offline only.** The optional online AI (Claude, Gemini, OpenRouter: the Online button, the online page and the API keys) is gone. The page's security policy now allows nothing but the AI engine on this PC (`127.0.0.1:11434`)
+- **No in-browser AI fallback (WebLLM).** The local AI engine (Ollama, started by `Start-CaseVault.bat`) does all the AI work; when it isn't running, the Consistency Checker still runs its rule-based checks
+- An online AI key saved on the SSD by an older version (`CaseVault-Data\secrets`) is deleted the first time v1.91 opens the vault, with a one-time message; the old online and in-browser settings are dropped
+- The header's **Offline** badge stays, as a reminder that nothing leaves the PC
+- Department mail keeps its review screen (recipients, attachments, personal details) and the Outbound Log
+- **Helper 1.12:** no longer serves in-browser models (`/webllm/`); `W:\webllm` and `W:\Get-WebLLM-Model.bat` can be deleted
+
 ## Features (v1.90)
 
 - **Back up before Power Off:** when the vault hasn't had a full backup in over a week (or ever), Power Off asks first: **Back Up First**, **Power Off Anyway** or Cancel

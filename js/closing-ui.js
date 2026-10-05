@@ -108,6 +108,10 @@
       else el = h('input', { type: f.type || 'text', autocomplete: 'off', 'data-format': f.format || null, maxlength: f.format === 'ssn' ? 11 : null });
       if (f.type !== 'select' && f.type !== 'yn') el.value = obj[f.key] || '';
       el.addEventListener(f.type === 'select' || f.type === 'yn' ? 'change' : 'input', () => { obj[f.key] = el.value; changed(); if (onChange) onChange(); });
+      // v1.92: CB # and IR # can be DNA (does not apply), as on the Draft tab.
+      if ((f.key === 'bookingNumber' || f.key === 'irNumber') && root.CVCombo) {
+        return CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }] });
+      }
       return el;
     };
     const fieldset = (obj, fields, onChange, cls = '') => h('div', { class: `form-grid arrest-grid${cls ? ` ${cls}` : ''}` }, fields.map((f) => ui.field(f.label, input(obj, f, onChange), f.type === 'textarea' ? 'span-2' : '')));
