@@ -1,22 +1,19 @@
 /* CaseVault — PII scanner and redactor.
  *
- * Runs entirely on this computer, before anything is allowed to leave it (online AI, department
- * mail). It finds personal and case-identifying details with patterns and with the names CaseVault
- * already knows (the case's client, number and title, "My details", and the watch list in
- * Settings), then either reports them (mail: warn) or swaps them for placeholders (online AI:
- * redact), e.g. "[NAME_1]", "[PHONE_2]". The placeholder map never leaves this computer, and
- * rehydrate() puts the real values back into an answer that comes back.
+ * Runs entirely on this computer. It finds personal and case-identifying details with patterns and
+ * with the names CaseVault already knows (the case's client, number and title, "My details", and
+ * the watch list in Settings), then either reports them (department mail is checked before it is
+ * handed to Outlook) or swaps them for placeholders, e.g. "[NAME_1]", "[PHONE_2]" (redact()), and
+ * rehydrate() can put the real values back.
  *
- * Detection is a safety net, not a guarantee: names in particular can be missed. The review screen
- * always shows the exact text that will be sent.
+ * Detection is a safety net, not a guarantee: names in particular can be missed.
  *
  * Plain logic with no DOM, so the tests run it under Node.
  */
 'use strict';
 
 (function (root) {
-  // type -> label, placeholder tag, and how serious it is. "locked" types are always redacted for
-  // online AI and can't be un-ticked on the review screen.
+  // type -> label, placeholder tag, and how serious it is. "locked" types are always redacted.
   const TYPES = {
     ssn: { label: 'Social Security number', tag: 'SSN', level: 'critical', locked: true },
     card: { label: 'Payment card number', tag: 'CARD', level: 'critical', locked: true },

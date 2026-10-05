@@ -16,7 +16,6 @@
  *   chats/                Ask AI conversations you keep (delete them in Ask AI → History)
  *   backups/              dated snapshots of vault.json
  *   logs/                 outbound-YYYY-MM.json: everything that left this computer (never its content)
- *   secrets/              optional online AI key (only if the user ticks "Remember on SSD")
  *
  * case.json and timeline.json are the source of truth. The index inside vault.json is
  * a fast lookup that gets rebuilt from them every time the vault is opened.
@@ -24,12 +23,12 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.90.0';
+  const APP_VERSION = '1.91.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
   const STATUSES = ['Open', 'Pending', 'Closed', 'Archived'];
-  const DEFAULT_SETTINGS = { backupsToKeep: 30, aiProfile: 'auto', privacyPin: null, privacyIdleMinutes: 15, webllm: true, webllmModel: '', affiant: null, sidebarCollapsed: false, mail: null, online: null, piiWatchlist: [] };
+  const DEFAULT_SETTINGS = { backupsToKeep: 30, aiProfile: 'auto', privacyPin: null, privacyIdleMinutes: 15, affiant: null, sidebarCollapsed: false, mail: null, online: null, piiWatchlist: [] };
 
   let root = null;   // handle to CaseVault-Data
   let vault = null;  // parsed vault.json
@@ -113,6 +112,7 @@ const Vault = (() => {
     await FS.getDir(root, 'cases', true);
     await FS.getDir(root, 'backups', true);
     await dailyBackup();
+    await removeOnlineLeftovers();
     await rebuildIndex();
     if ((vault.operationsVersion || 0) < OPERATIONS_VERSION) await migrateOperations();
     else await reconcileOperations();
@@ -1278,7 +1278,7 @@ const Vault = (() => {
     return dir ? FS.getFile(dir, name) : null;
   }
 
-  /* ---------- logs/ and secrets/ (vault level) ---------- */
+  /* ---------- logs/ (vault level) ---------- */
 
   /** Append an entry to logs/<name>-YYYY-MM.json (a JSON array). */
   function appendLog(name, entry) {
@@ -1328,16 +1328,21 @@ const Vault = (() => {
     return n;
   }
 
-  async function readSecret(name) {
-    const dir = await FS.getDir(root, 'secrets');
-    if (!dir) return null;
-    try { return await FS.readJSON(dir, `${name}.json`); } catch { return null; }
-  }
-
-  async function writeSecret(name, value) {
-    const dir = await FS.getDir(root, 'secrets', true);
-    if (value == null) { if (await FS.exists(dir, `${name}.json`)) await FS.remove(dir, `${name}.json`); return; }
-    await FS.writeJSON(dir, `${name}.json`, value);
+  /* v1.91: the online AI features and the in-browser AI are gone. Any online AI key saved on the
+   * SSD (secrets/) is deleted, and their settings dropped. lastCleanup says what was removed. */
+  let lastCleanup = null;
+  async function removeOnlineLeftovers() {
+    lastCleanup = null;
+    let keys = 0;
+    const dir = await FS.getDir(root, 'secrets').catch(() => null);
+    if (dir) {
+      keys = (await FS.list(dir).catch(() => [])).filter((e) => e.kind === 'file').length;
+      await FS.remove(root, 'secrets', true).catch(() => {});
+    }
+    const stale = ['online', 'webllm', 'webllmModel'].filter((k) => k in vault.settings);
+    for (const k of stale) delete vault.settings[k];
+    if (stale.length) await saveVault();
+    if (keys) lastCleanup = { keys };
   }
 
   /* ---------- Ask AI conversations (CaseVault-Data/chats/<id>.json, v1.18) ---------- */
@@ -1689,6 +1694,7 @@ const Vault = (() => {
     APP_VERSION, DATA_DIR, STATUSES,
     get root() { return root; },
     get data() { return vault; },
+    get lastCleanup() { return lastCleanup; },
     newId, localDay, logActivity,
     resolve, create, load, close, ping,
     backupNow, listBackups, rebuildIndex, updateSettings, fullBackup, recordManualBackup, recordHelperBackup, restoreBackup, readLetterheadLogo, saveLetterheadLogo, deleteLetterheadLogo,
@@ -1699,7 +1705,7 @@ const Vault = (() => {
     getNotes, saveNotes, listChats, readChat, saveChat, deleteChat,
     getTimeline, saveTimeline, sortEvents,
     listFiles, addFile, readFile, deleteFile, moveFile, ensureFolders, renameCaseFolder, conventionalId, RENAME_MARKER,
-    readCaseJSON, writeCaseJSON, saveDiscoveryFile, readDiscoveryFile, appendLog, readLogs, logFiles, deleteLogs, readSecret, writeSecret,
+    readCaseJSON, writeCaseJSON, saveDiscoveryFile, readDiscoveryFile, appendLog, readLogs, logFiles, deleteLogs,
     listChecks, newCheckName, readCheck, saveCheck, deleteCheck, readTextCache, writeTextCache,
     listDrafts, readDraft, newDraftSlug, saveDraft, deleteDraft,
     listTemplates, readTemplate, saveTemplate, deleteTemplate, addStarterTemplates, purgeAll,

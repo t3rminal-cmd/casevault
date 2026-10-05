@@ -181,64 +181,22 @@ test('memory: summary of app, AI model, RAM and disk', () => {
   assert.strictEqual(Mem.summarize({}).text, 'Memory');
 });
 
-/* ---------- the outbound gate ---------- */
+/* ---------- no way online (v1.91) ---------- */
 
-test('outbound: nothing goes out offline, without a review, or to another host', async () => {
+test('outbound: mail review only; nothing in CaseVault can go online (v1.91)', () => {
   const { load, get } = require('./helpers/load-app.js');
   globalThis.CVPii = P;
   load('js/secure/outbound.js');
   const O = get('CVOutbound');
-  const calls = [];
-  const realFetch = globalThis.fetch;
-  globalThis.fetch = async (...a) => { calls.push(a); return new Response('{}'); };
-  try {
-    assert.strictEqual(O.isOnline(), false, 'offline at start');
-    await assert.rejects(O.send('no-ticket', 'https://api.anthropic.com/v1/messages', { body: '{}' }), /offline/);
-    assert.throws(() => O.goOnline(), /turned off/, 'needs "Allow going online" first');
-    await assert.rejects(O.sendMeta('https://api.anthropic.com/v1/models'), /offline/);
-    assert.deepStrictEqual(O.leaks('{"content":"Call [PHONE_1] about DOE, Jane"}', ['(804) 555-0142', 'DOE, Jane']), ['DOE, Jane']);
-    assert.deepStrictEqual(O.leaks('{"content":"all [NAME_1]"}', ['Jane Doe']), []);
-    assert.deepStrictEqual(O.ALLOWED_HOSTS, ['api.anthropic.com', 'generativelanguage.googleapis.com', 'openrouter.ai']);
-    assert.strictEqual(calls.length, 0, 'no request was made');
-  } finally {
-    globalThis.fetch = realFetch;
-  }
-});
-
-/* ---------- API key ---------- */
-
-test('API key: accepts a real-looking key, explains the usual mistakes', () => {
-  const K = require('../js/secure/apikey.js');
-  const good = `sk-ant-api03-${'aB3_-x'.repeat(15)}AAAA`;
-  assert.deepStrictEqual(K.check(`  "${good}"\n`), { ok: true, key: good, problem: '' }, 'spaces and quotes are trimmed');
-  assert.match(K.check('').problem, /Paste/);
-  assert.match(K.check('sk-ant-admin01-abcdefghijklmnopqrstuvwxyz').problem, /Admin key/);
-  assert.match(K.check('sk-ant-oat01-abcdefghijklmnopqrstuvwxyz').problem, /subscription/);
-  assert.match(K.check('sk-proj-abcdefghijklmnop').problem, /starts with "sk-ant-api"/);
-  assert.match(K.check('sk-ant-api03-short').problem, /complete/);
-  assert.strictEqual(K.mask(good), 'sk-ant-api03-…AAAA');
-  assert.ok(!K.mask(good).includes('aB3_'), 'the mask never shows the middle');
-});
-
-test('API key: locked with a passphrase on the SSD, never stored readable', async () => {
-  const K = require('../js/secure/apikey.js');
-  const key = `sk-ant-api03-${'Zq9'.repeat(30)}wXyZ`;
-  const rec = await K.lock(key, 'correct horse battery');
-  const text = JSON.stringify(rec);
-  assert.ok(!text.includes(key) && !text.includes('Zq9Zq9'), 'no readable key in the record');
-  assert.strictEqual(rec.kind, 'locked');
-  assert.strictEqual(rec.masked, 'sk-ant-api03-…wXyZ');
-  assert.strictEqual(rec.kdf.iterations, K.ITERATIONS);
-  assert.strictEqual(await K.unlock(rec, 'correct horse battery'), key);
-  await assert.rejects(K.unlock(rec, 'wrong horse battery'), /Wrong passphrase/);
-  await assert.rejects(K.lock(key, 'short'), /at least 8/);
-  const again = await K.lock(key, 'correct horse battery');
-  assert.notStrictEqual(again.data, rec.data, 'fresh salt and IV each time');
-
-  assert.deepStrictEqual(K.describe(rec), { kind: 'locked', masked: 'sk-ant-api03-…wXyZ', saved: rec.saved });
-  assert.strictEqual(K.describe(K.plainRecord(key)).kind, 'plain');
-  assert.strictEqual(K.describe({ key }).kind, 'plain', 'a v1.9 record still reads');
-  assert.strictEqual(K.describe(null).kind, null);
+  for (const gone of ['send', 'sendMeta', 'goOnline', 'isOnline', 'ALLOWED_HOSTS']) assert.ok(!(gone in O), `${gone} is gone`);
+  assert.strictEqual(typeof O.review, 'function');
+  assert.strictEqual(O.CHANNELS.mail.label, 'Department mail');
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const root = path.join(__dirname, '..');
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  assert.strictEqual(/connect-src[^;]*/.exec(html)[0], "connect-src 'self' http://localhost:11434 http://127.0.0.1:11434", 'the page may only reach the AI engine on this PC');
+  for (const f of ['js/secure/online-ui.js', 'js/secure/apikey.js', 'js/secure/apikey-ui.js', 'js/ai/webllm.js', 'js/ai/ollama-shim.js', 'vendor/webllm']) assert.ok(!fs.existsSync(path.join(root, f)), `${f} removed`);
 });
 
 test('case contacts are known terms for redaction', () => {
@@ -247,15 +205,3 @@ test('case contacts are known terms for redaction', () => {
   for (const v of ['Det. Alex Sample', '555-0100', 'Jordan Example', 'jordan@sao.example', 'Pat Placeholder']) assert.ok(values.includes(v), v);
 });
 
-test('API keys are checked for the service they are pasted under (v1.15)', () => {
-  const K = require('../js/secure/apikey.js');
-  const gem = `AIza${'Sy0123456789abcdefghijklmnopqrstu'.slice(0, 35)}`;
-  const orKey = `sk-or-v1-${'0123456789abcdef'.repeat(4)}`;
-  assert.ok(K.check(gem, 'gemini').ok);
-  assert.ok(K.check(orKey, 'openrouter').ok);
-  assert.match(K.check(orKey, 'gemini').problem, /OpenRouter key/);
-  assert.match(K.check(gem, 'anthropic').problem, /Google Gemini key/);
-  assert.match(K.check('AIzaShort', 'gemini').problem, /39 characters/);
-  assert.strictEqual(K.mask(orKey), `sk-or-v1-…${orKey.slice(-4)}`);
-  assert.strictEqual(K.mask(gem), `AIza…${gem.slice(-4)}`);
-});

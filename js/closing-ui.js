@@ -83,7 +83,7 @@
     const writeNow = async () => {
       const snapshot = structuredClone(arrest);
       await Vault.writeCaseJSON(c.id, 'arrest.json', snapshot);
-      // The arrestees' names are always hidden from online AI and flagged in mail (js/secure/pii.js).
+      // The arrestees' names are known terms: flagged when mail is checked (js/secure/pii.js).
       const people = K().peopleOf(snapshot);
       if (!c.arrest || c.arrestRemoved || JSON.stringify(people) !== JSON.stringify(c.people || [])) {
         c.arrest = true;

@@ -1,4 +1,4 @@
-/* CaseVault — Ask AI: a chat with the AI on this computer, like claude.ai but offline, in a
+/* CaseVault — Ask AI: a chat with the AI on this computer, offline, in a
  * floating box. It stays open while you move around CaseVault, so you can keep writing a draft or
  * notes next to it; "Insert" puts an answer where your cursor was.
  *

@@ -17,7 +17,6 @@
     -Port 8517           port to listen on
     -DataPath <folder>   use this CaseVault-Data folder instead of searching the drives
     -AppPath <folder>    serve the app from this folder
-    -WebLLMPath <folder> in-browser AI models (default: the webllm folder next to this helper's folder)
     -NoBrowser           do not open the browser
     -NoAI                do not start Ollama
     -BackupTargets <a;b> offer these folders as backup drives (for testing; normally every other drive)
@@ -27,7 +26,6 @@ param(
   [int]$Port = 8517,
   [string]$DataPath = '',
   [string]$AppPath = '',
-  [string]$WebLLMPath = '',
   [switch]$NoBrowser,
   [switch]$NoAI,
   [string]$BackupTargets = ''
@@ -36,7 +34,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 
-$HelperVersion = '1.11.0'
+$HelperVersion = '1.12.0'
 $VolumeLabel   = 'CASEVAULT'
 $DataDirName   = 'CaseVault-Data'
 $AppDirName    = 'CaseVault-App'
@@ -45,7 +43,6 @@ $MaxHeaderBytes = 65536
 
 $Sep      = [System.IO.Path]::DirectorySeparatorChar
 $AIRoot   = Split-Path -Parent $PSScriptRoot      # e.g. W:\  (the folder holding Start-CaseVault.bat)
-$WebLLMRoot = if ($WebLLMPath) { [System.IO.Path]::GetFullPath($WebLLMPath) } else { Join-Path $AIRoot 'webllm' }
 $Origins  = @("http://127.0.0.1:$Port", "http://localhost:$Port")
 $Hosts    = @("127.0.0.1:$Port", "localhost:$Port")
 $Utf8     = New-Object System.Text.UTF8Encoding($false)
@@ -492,11 +489,6 @@ function Invoke-Api($stream, $req) {
     return
   }
 
-  if ($op -eq 'webllm' -and $m -eq 'GET') {
-    Send-Json $stream 200 (Get-WebLLMModelsJson)
-    return
-  }
-
   $root = Get-DataRoot
   if (-not $root) { Send-Error $stream 503 'NotReadableError' 'The CASEVAULT drive is not connected or is still locked.'; return }
   $rel = if ($req.Query.ContainsKey('p')) { $req.Query['p'] } else { '' }
@@ -581,45 +573,6 @@ function Invoke-Api($stream, $req) {
   }
 }
 
-# ---------------------------------------------------------------------------
-# In-browser AI models (WebLLM), read-only from <CV-AI drive>\webllm\<model>\
-# ---------------------------------------------------------------------------
-
-# Installed models: folders with mlc-chat-config.json and a compiled model library (*.wasm).
-function Get-WebLLMModels {
-  $out = @()
-  if (-not (Test-Path -LiteralPath $WebLLMRoot -PathType Container)) { return $out }
-  foreach ($d in (New-Object System.IO.DirectoryInfo($WebLLMRoot)).EnumerateDirectories()) {
-    if (-not (Test-Path -LiteralPath (Join-Path $d.FullName 'mlc-chat-config.json'))) { continue }
-    $wasm = $d.EnumerateFiles('*.wasm') | Select-Object -First 1
-    if (-not $wasm) { continue }
-    $bytes = [long]0
-    foreach ($f in $d.EnumerateFiles('*', [System.IO.SearchOption]::AllDirectories)) { $bytes += $f.Length }
-    $out += @{ Id = $d.Name; Wasm = $wasm.Name; Bytes = $bytes }
-  }
-  return $out
-}
-
-function Get-WebLLMModelsJson {
-  $items = @()
-  foreach ($mdl in (Get-WebLLMModels)) {
-    $items += '{"id":' + (ConvertTo-JsonString $mdl.Id) + ',"wasm":' + (ConvertTo-JsonString $mdl.Wasm) + ',"bytes":' + $mdl.Bytes + '}'
-  }
-  return '[' + ($items -join ',') + ']'
-}
-
-# WebLLM asks for <model>/resolve/main/<file> (the Hugging Face layout); the files sit in <model>\<file>.
-function Invoke-WebLLM($stream, $req) {
-  if ($req.Method -ne 'GET' -and $req.Method -ne 'HEAD') { Send-Bytes $stream 405 'text/plain' ([Text.Encoding]::ASCII.GetBytes('Method not allowed')) $false; return }
-  $rel = $req.Path.Substring(8) -replace '/resolve/[^/]+/', '/'
-  $full = $null
-  if (Test-Path -LiteralPath $WebLLMRoot -PathType Container) { $full = Resolve-SafePath $WebLLMRoot $rel }
-  if (-not $full -or -not (Test-Path -LiteralPath $full -PathType Leaf)) { Send-Bytes $stream 404 'text/plain' ([Text.Encoding]::ASCII.GetBytes('Not found')) $false; return }
-  $ext = [System.IO.Path]::GetExtension($full).ToLowerInvariant()
-  $type = switch ($ext) { '.json' { 'application/json; charset=utf-8' } '.wasm' { 'application/wasm' } default { 'application/octet-stream' } }
-  Send-FileBody $stream $full $type $false ($req.Method -eq 'HEAD')
-}
-
 function Invoke-Static($stream, $req) {
   if ($req.Method -ne 'GET' -and $req.Method -ne 'HEAD') { Send-Bytes $stream 405 'text/plain' ([Text.Encoding]::ASCII.GetBytes('Method not allowed')) $false; return }
   $app = Find-AppRoot
@@ -647,9 +600,7 @@ function Invoke-Client($client) {
     if (-not $req.Headers.ContainsKey('host') -or ($Hosts -notcontains $req.Headers['host'].ToLowerInvariant())) {
       Send-Bytes $stream 421 'text/plain' ([Text.Encoding]::ASCII.GetBytes('Wrong host')) $false; return
     }
-    if ($req.Path.StartsWith('/webllm/')) {
-      Invoke-WebLLM $stream $req
-    } elseif ($req.Path.StartsWith('/api/')) {
+    if ($req.Path.StartsWith('/api/')) {
       if ($req.Method -eq 'OPTIONS' -or -not (Test-SameOrigin $req)) { Send-Error $stream 403 'SecurityError' 'Only the CaseVault page may use this.'; return }
       try { Invoke-Api $stream $req }
       catch {
@@ -716,8 +667,6 @@ if ($root) { Write-Info "Vault     : $root" } else { Write-Warn 'Vault     : CAS
 $app = Find-AppRoot
 if ($app) { Write-Info "App       : $app" } else { Write-Warn "App       : not found. Copy the app into $AppDirName on the CASEVAULT drive." }
 $ollama = Start-Ollama
-$webModels = @(Get-WebLLMModels)
-if ($webModels.Count) { Write-Info ("In-browser: " + $webModels.Count + " model(s) in $WebLLMRoot") }
 Write-Info "Address   : http://127.0.0.1:$Port/  (this computer only)"
 Write-Host ''
 Write-Host '  Leave this window open while you use CaseVault. Close it to stop.' -ForegroundColor Green

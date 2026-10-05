@@ -9,25 +9,20 @@ The **CV-AI (W:)** partition holds everything CaseVault runs *next to* your data
 | `ollama\` | Portable [Ollama](https://ollama.com), the local AI engine | AI review in the Consistency Checker |
 | `models\` | AI model files | AI review |
 | `logs\` | Ollama's log files (created automatically) | — |
-| `webllm\` | Models for the in-browser AI fallback (optional, see section 8) | AI when Ollama isn't running |
-| `Get-WebLLM-Model.bat` | Downloads an in-browser model into `webllm\` (one time) | Section 8 |
 
 When everything is in place, W: looks like this:
 
 ```
 W:\
   Start-CaseVault.bat        <- double-click this to start CaseVault
-  Get-WebLLM-Model.bat       <- optional: downloads an in-browser model (section 8)
   casevault-helper\
     casevault-helper.ps1
-    Get-WebLLM-Model.ps1     <- Get-WebLLM-Model.bat runs this, so keep the folder next to it
   ollama\                    portable Ollama
   models\                    Ollama's models (created by "ollama pull")
   logs\                      created automatically
-  webllm\                    created by Get-WebLLM-Model.bat
 ```
 
-Both `.bat` files go in the **root of W:**, next to the `casevault-helper` folder, not inside it. They find everything else relative to where they are, so the drive letter doesn't matter.
+`Start-CaseVault.bat` goes in the **root of W:**, next to the `casevault-helper` folder, not inside it. It finds everything else relative to where they are, so the drive letter doesn't matter.
 
 Everything runs on your own computer and **listens on 127.0.0.1 only**, so nothing on the network can connect to it. Nothing needs installing, and nothing needs admin rights.
 
@@ -41,7 +36,6 @@ From this repository (download it with **Code → Download ZIP** and extract it)
 
 1. Copy `tools\Start-CaseVault.bat` to **`W:\Start-CaseVault.bat`**.
 2. Copy the folder `tools\casevault-helper` to **`W:\casevault-helper`**.
-3. Optional, for the in-browser AI (section 8): copy `tools\Get-WebLLM-Model.bat` to **`W:\Get-WebLLM-Model.bat`**.
 
 The helper also serves the CaseVault app itself, from **`V:\CaseVault-App`**. If you haven't copied the app there yet, do that now (see [USING-CASEVAULT.md](USING-CASEVAULT.md), *Offline copy on the SSD*).
 
@@ -224,13 +218,13 @@ While the AI is working, a small moving waveform appears next to **AI:** in the 
 - **Beelink GTi12** (i9-12900HK, 32 GB, RTX 3050 6 GB): Quick for everyday checks, Thorough for important documents. Ollama uses the NVIDIA GPU automatically. Keep the NVIDIA driver up to date.
 - **Lenovo L14 vPro** (no NVIDIA GPU): Light, or Rules-only. Quick also runs on the CPU, but expect it to be several times slower.
 
-### Local AI vs. online AI
+### Local AI only
 
-Everything on this page is the **local** AI: it runs on this PC and nothing leaves it. CaseVault 1.9 also has an optional **online** research & drafting page (Claude via claude.ai or the Anthropic API). It is off by default, never used by the consistency checker or the drafting copilot, and every message is reviewed and redacted first. See *Online research & drafting* in [USING-CASEVAULT.md](USING-CASEVAULT.md). If your policy is local-only, simply leave **Vault → Online features → Allow going online** unticked.
+All of CaseVault's AI is the **local** AI on this page: it runs on this PC and nothing leaves it. CaseVault has no online AI (v1.91 removed the optional online research page) and no in-browser fallback: when Ollama isn't running, the Consistency Checker uses its rule-based checks, and Ask AI and Draft with AI wait until you start the launcher.
 
 ## 5. Local network access prompt
 
-When a CaseVault page first contacts the engine, Chrome/Edge may ask whether the site may **access other apps and services on this device**. Choose **Allow**. It covers this computer only. The page's built-in security policy still blocks every address except `127.0.0.1:11434` (and `api.anthropic.com`, used only after you choose to go online).
+When a CaseVault page first contacts the engine, Chrome/Edge may ask whether the site may **access other apps and services on this device**. Choose **Allow**. It covers this computer only. The page's built-in security policy still blocks every address except `127.0.0.1:11434`.
 
 ## 6. Keep it offline (optional hardening)
 
@@ -245,48 +239,10 @@ Temporarily disable that rule (Windows Security → Firewall → Advanced settin
 
 ## 7. Updating
 
-- **Helper and launcher:** copy the new `tools\Start-CaseVault.bat`, `tools\Get-WebLLM-Model.bat` and `tools\casevault-helper\` over the old ones on W:.
-- **In-browser models:** keep them unless the release notes say the bundled WebLLM changed version; then run `Get-WebLLM-Model.bat` again for your model.
+- **Helper and launcher:** copy the new `tools\Start-CaseVault.bat` and `tools\casevault-helper\` over the old ones on W:.
+- **Left over from before v1.91:** `W:\webllm\` and `W:\Get-WebLLM-Model.bat` (the in-browser AI) are no longer used. Delete them to free the space.
 - **Ollama:** close the launcher window, download the newer `ollama-windows-amd64.zip`, and replace the contents of `W:\ollama\`. Your models in `W:\models\` are untouched.
 - **Models:** `W:\ollama\ollama.exe pull <model>` fetches the newest version. `W:\ollama\ollama.exe rm <model>` deletes one.
-
-## 8. In-browser AI (fallback, no Ollama needed)
-
-If Ollama isn't running (or isn't installed on a PC), CaseVault can still do AI review, suggestions and Draft with AI with a **small model that runs inside the browser** on the PC's graphics chip, using WebGPU and [WebLLM](https://github.com/mlc-ai/web-llm). It's the fallback, not a replacement. It's slower and less capable than Ollama, but needs nothing installed. It's handy on the **Lenovo L14**, whose Intel graphics usually run a 1.5B model faster than Ollama does on the CPU.
-
-### What it needs
-
-- CaseVault opened **through the launcher** (`W:\Start-CaseVault.bat`, address `http://127.0.0.1:8517/`), in any browser: Chrome, Edge or Firefox. The helper serves the model files from the SSD. The hosted/installed app opened *without* the launcher can't use the in-browser engine yet.
-- A browser with **WebGPU**: a current Chrome or Edge, or Firefox 141 or newer on Windows, with an up-to-date graphics driver.
-- A model on **W:** (next step).
-
-### Download a model to W: (one time, needs internet)
-
-1. Copy `tools\Get-WebLLM-Model.bat` to **`W:\Get-WebLLM-Model.bat`**, and make sure `W:\casevault-helper\` is up to date (it contains `Get-WebLLM-Model.ps1`).
-2. On a PC with internet, double-click **`W:\Get-WebLLM-Model.bat`**. It downloads the default model into `W:\webllm\Qwen2.5-1.5B-Instruct-q4f16_1-MLC\`, with its files from Hugging Face and its compiled library from GitHub. If the download is interrupted, run it again: finished files are skipped.
-3. For a different model, open a Command Prompt and run, for example:
-
-   ```bat
-   W:\Get-WebLLM-Model.bat -Model Qwen2.5-0.5B-Instruct-q4f16_1-MLC
-   ```
-
-| Model | Download | Graphics memory | Use it when |
-|---|---|---|---|
-| `Qwen2.5-1.5B-Instruct-q4f16_1-MLC` *(default)* | ~1 GB | ~1.6 GB | Most PCs, including the L14's Intel graphics |
-| `Qwen2.5-0.5B-Instruct-q4f16_1-MLC` | ~0.3 GB | ~1 GB | Older or weak graphics; lowest quality |
-| `Llama-3.2-1B-Instruct-q4f16_1-MLC` | ~0.7 GB | ~0.9 GB | An alternative small model |
-| `Qwen2.5-3B-Instruct-q4f16_1-MLC` / `Llama-3.2-3B-Instruct-q4f16_1-MLC` | ~1.7 GB | ~2.3–2.5 GB | Better answers, if the graphics chip has the memory |
-
-### How it's used
-
-- CaseVault always prefers **Ollama**. When Ollama isn't reachable and a model is in `W:\webllm`, the header shows **AI: In-browser · Qwen2.5-1.5B-Instruct**.
-- The model loads from the SSD on the first AI request (a check, a suggestion, or Draft with AI). A progress message shows while it loads, which takes up to a minute or two. It then stays in graphics memory until you close the tab.
-- Click the **AI:** pill → **In-browser AI (fallback)** to switch it off, pick another installed model, or unload it.
-- Retrieval uses keyword search (no embedding model in the browser), and the model's context is shorter (4,096 tokens), so very long drafts use fewer report passages.
-
-### Privacy and the PC's disk
-
-The model files are read from the SSD through the helper, on this computer only. The browser engine insists on copying what it loads into the browser's own storage, so CaseVault **deletes that copy as soon as the model is loaded**. The files are only on the PC's disk for the minute it takes to load. Case data never goes into that storage. As with Ollama, nothing is sent anywhere.
 
 ## Troubleshooting
 
@@ -299,8 +255,5 @@ The model files are read from the SSD through the helper, on this computer only.
 | *AI engine: not started* | `W:\ollama\ollama.exe` is missing. Extract the Ollama zip there. CaseVault still works, with rule-based checks only. |
 | *Ollama is already running* | Quit the tray Ollama app (or end `ollama.exe` in Task Manager) and start the launcher again. |
 | `pull` saves models to `C:\Users\…\.ollama` | The engine was started some other way. Close it and use the launcher. |
-| Header says *AI: Offline* | Start the launcher, then click the pill → **Check again**. If Ollama isn't installed, add an in-browser model (section 8). |
-| *In-browser AI could not start* | The model's files in `W:\webllm\<model>` are incomplete: run `Get-WebLLM-Model.bat` again. *Ran out of memory*: pick a smaller model under AI pill → In-browser AI. |
-| In-browser section says *no WebGPU* | Update the browser and the graphics driver. In Firefox, WebGPU needs version 141 or newer on Windows. |
-| In-browser section says *Open CaseVault through Start-CaseVault.bat* | The in-browser engine needs the launcher's address `http://127.0.0.1:8517/`. |
+| Header says *AI: Offline* | Start the launcher, then click the pill → **Check again**. Until Ollama runs, checks use rules only. |
 | Very slow on the Beelink | Run `W:\ollama\ollama.exe ps`. The *Processor* column should show GPU. Update the NVIDIA driver. Thorough is *meant* to be partly on the CPU. |

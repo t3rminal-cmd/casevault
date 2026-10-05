@@ -785,7 +785,6 @@ input.pin { width: 6.5em; letter-spacing: .2em; }
 
 .net-status { font: inherit; font-size: .82rem; padding: .25em .75em; border-radius: 999px; border: 1px solid transparent; cursor: pointer; white-space: nowrap; }
 .net-status.off { background: var(--ok-soft); color: var(--ok); }
-.net-status.on { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); font-weight: 600; }
 .mem-status { position: relative; display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; color: var(--muted); padding: .2em .55em; border-radius: 999px; white-space: nowrap; cursor: default; background: var(--surface-2); }
 .mem-status.warn { color: var(--warn); background: var(--warn-soft); }
 .mem-status.high { color: var(--danger); background: var(--danger-soft); font-weight: 600; }
@@ -815,8 +814,6 @@ input.pin { width: 6.5em; letter-spacing: .2em; }
 .pii-type { font-size: .82rem; font-weight: 600; }
 .pii-ctx { color: var(--muted); overflow-wrap: anywhere; }
 .pii-ctx mark { background: var(--warn-soft); color: var(--text); padding: 0 .15em; border-radius: 2px; }
-.review-preview summary { cursor: pointer; font-weight: 600; font-size: .9rem; }
-.review-preview pre { max-height: 16rem; overflow: auto; }
 .block-list, .warn-list, .ok-list { list-style: none; margin: .3rem 0; padding: 0; font-size: .9rem; }
 .block-list li { color: var(--danger); font-weight: 600; }
 .warn-list li { color: var(--warn); }
@@ -828,24 +825,7 @@ input.narrow-wide { width: 12rem; }
 
 /* ---------- v1.9: online research & drafting ---------- */
 
-.online-page { max-width: 980px; }
-.online-status { display: flex; align-items: center; gap: 1rem; padding: .8rem 1rem; border-radius: var(--radius); margin-bottom: 1rem; flex-wrap: wrap; }
-.online-status.off { background: var(--ok-soft); color: var(--ok); }
-.online-status.on { background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn); }
-.online-status .small { color: var(--text); opacity: .85; }
-.online-settings { flex-wrap: wrap; align-items: flex-end; }
-.online-settings .field { min-width: 12rem; }
-.online-api { border: 1px solid var(--border); border-radius: var(--radius); padding: .6rem .9rem; margin: .6rem 0 1rem; background: var(--surface); }
-.online-api .row { flex-wrap: wrap; align-items: flex-end; }
-.online-convo { display: grid; gap: .8rem; margin-bottom: 1rem; }
 .turn { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
-.turn-sent { padding: .6rem .8rem; background: var(--surface-2); }
-.turn-sent pre { margin: 0; max-height: 14rem; overflow: auto; }
-.turn-answer { padding: .6rem .8rem; }
-.turn-answer textarea { width: 100%; }
-.turn-label { font-size: .78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; margin-bottom: .3rem; }
-.online-compose textarea { width: 100%; }
-.online-compose .row { margin-top: .4rem; }
 
 /* ---------- v1.9: department mail ---------- */
 
@@ -859,36 +839,16 @@ input.narrow-wide { width: 12rem; }
 .attach-list .check-row { font-size: .85rem; padding: .1rem 0 .1rem .8rem; overflow-wrap: anywhere; }
 .mail-history { margin-top: 1.5rem; }
 @media (max-width: 1000px) { .mail-layout { grid-template-columns: 1fr; } }
-.notes-preview.answer-md { min-height: 0; }
 table.files td.fname .linkish { word-break: normal; overflow-wrap: anywhere; }
 table.files td.fname { min-width: 14rem; }
 
 /* ---------- v1.9: API key ---------- */
 
-.key-card { border: 1px solid var(--border); border-radius: var(--radius); padding: .7rem .9rem; background: var(--surface); margin: .4rem 0 .8rem; }
-.key-status { display: flex; gap: .6rem; align-items: flex-start; }
-.key-dot { width: .7rem; height: .7rem; border-radius: 50%; margin-top: .4rem; flex: none; background: var(--muted); }
-.key-card.ok .key-dot { background: var(--ok); }
-.key-card.locked .key-dot { background: var(--warn); }
-.key-actions { flex-wrap: wrap; gap: .4rem; margin-top: .6rem; }
 .btn.danger-ghost { color: var(--danger); border-color: var(--danger); background: transparent; }
 .btn.danger-ghost:hover { background: var(--danger-soft); }
-.key-guide { margin-top: .6rem; }
-.key-guide summary { cursor: pointer; font-weight: 600; }
-.key-steps { margin: .5rem 0; padding-left: 1.4rem; display: grid; gap: .45rem; font-size: .92rem; }
-.key-steps li::marker { font-weight: 700; color: var(--accent); }
-.key-steps .linkish { word-break: normal; }
-.key-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.4rem; align-items: start; }
-.key-guide-col { max-height: calc(62vh / var(--z, 1)); overflow: auto; padding-right: .4rem; }
-.key-paste-col .row { gap: .4rem; }
-.key-input { flex: 1; min-width: 0; font-family: var(--mono); }
-.plain-fieldset { border: 1px solid var(--border); border-radius: 6px; padding: .4rem .7rem .6rem; margin: .6rem 0; }
-.plain-fieldset legend { font-weight: 600; font-size: .9rem; padding: 0 .3rem; }
-.plain-fieldset .row input { flex: 1; min-width: 0; }
-@media (max-width: 860px) { .key-layout { grid-template-columns: 1fr; } .key-guide-col { max-height: none; } }
+
 .radio-row + .radio-row { margin-top: .35rem; }
 .vault-panel h4 { margin: 1rem 0 .3rem; font-size: .95rem; }
-.pass-row { margin: .35rem 0 0 1.8rem; }
 .nowrap { white-space: nowrap; }
 .list-none { list-style: none; margin-left: -1.2em; }
 
@@ -1170,8 +1130,8 @@ table.sided td { width: 4.5rem; text-align: center; }
    hover boxes; case actions as same-size buttons.
    ===================================================================== */
 
-.case, .dashboard, .reference, .online-page { width: 100%; max-width: 1360px; margin-inline: auto; }
-@media (min-width: 2200px) { .case, .dashboard, .reference, .online-page { max-width: 1680px; } }
+.case, .dashboard, .reference { width: 100%; max-width: 1360px; margin-inline: auto; }
+@media (min-width: 2200px) { .case, .dashboard, .reference { max-width: 1680px; } }
 .main { padding: 1.6rem clamp(1rem, calc(3vw / var(--z, 1)), 3rem) 3rem; }
 .form-grid { max-width: none; }
 .tabs { width: 100%; display: flex; }
@@ -1453,7 +1413,6 @@ body.chat-open .toasts { right: auto; left: 1rem; }
 .tb-status .bi { width: 1.05rem; height: 1.05rem; }
 .tb-status .save-status:empty { display: none; }
 .tb-status .net-status.off { background: var(--ok-soft); color: var(--ok); }
-.tb-status .net-status.on { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
 .tb-status .engine-status.offline { background: var(--danger-soft); color: var(--danger); }
 .tb-status .save-status.error { font-size: .78rem; width: auto; padding: 0 .7rem; border-radius: 999px; gap: .35rem; }
 .tb-status .mem-status .mem-label, .tb-status .ai-activity-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -1583,7 +1542,6 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 .models-table { width: 100%; border-collapse: collapse; margin: .5rem 0; }
 .models-table th, .models-table td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .models-table code { font-size: .78rem; word-break: break-all; }
-.online-api .model-input { width: min(26rem, 100%); }
 
 /* v1.16 */
 /* The selected case: grey only, no blue bar. */
@@ -1810,7 +1768,6 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 @media (max-width: 700px) { .hero { flex-direction: column-reverse; padding: 1.2rem; } .hero-clock { font-size: 1.6rem; } }
 .stats .stat { transition: transform .15s, box-shadow .15s; }
 .stats .stat:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0, 0, 0, .08); }
-
 
 /* ---------- v1.22: searchable lists, optional lines, photo labels ---------- */
 .combo { position: relative; display: flex; align-items: stretch; min-width: 0; }
@@ -2444,7 +2401,7 @@ input[list]::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
 @media (max-width: 600px) { .rf-item-grid .field:has(select[aria-label$=" Race"]) { grid-column: auto; } }
 /* Square corners everywhere (v1.36): boxes, buttons, cards, tabs, menus, dialogs, tags and badges,
    for clean symmetric edges. Only true dots and rings (a spinner, status dots, timeline dots) stay round. */
-*:not(.spinner):not(.key-dot):not(.hero-ring):not(.htl-dot):not(.mini-tl-dot),
+*:not(.spinner):not(.hero-ring):not(.htl-dot):not(.mini-tl-dot),
 *::before, *::after { border-radius: 0 !important; }
 :root { --radius: 0; --radius-sm: 0; }
 /* No clipped words (v1.36): long operation names wrap in the sidebar, the Timeline's date box fits a
@@ -3011,7 +2968,7 @@ svg.ci > image { transform: scale(1.12); transform-origin: 50% 50%; }
 .op-head > .op-folder:has(> svg.ci), .stat-pending .stat-icon:has(> svg.ci), .stat-closed .stat-icon:has(> svg.ci) { background: var(--surface); border: 1px solid var(--border); }
 .closed-cases .op-head > .op-folder:has(> svg.ci), .op-head > .op-folder.gf-icon:has(> svg.ci) { background: var(--surface); }
 .tb-status .tb-square:has(> svg.ci), .tb-status .net-status, .tb-status .engine-status, .tb-status .mem-status { background: var(--surface) !important; border: 1px solid var(--border); box-shadow: inset 0 -3px 0 var(--state, transparent); }
-.tb-status .net-status.off { --state: var(--ok); } .tb-status .net-status.on { --state: var(--danger); }
+.tb-status .net-status.off { --state: var(--ok); }
 .tb-status .engine-status.offline { --state: var(--danger); } .tb-status .engine-status.connected { --state: var(--ok); }
 .tb-status .mem-status:not(.warn):not(.high) { --state: var(--ok); } .tb-status .mem-status.warn { --state: var(--warn); } .tb-status .mem-status.high { --state: var(--danger); }
 /* v1.57: the blue and red buttons are tinted, not filled: a light tint, a coloured border and
@@ -3940,3 +3897,6 @@ html .tl-item.deadline::before { transform: none; }
 .history-list li.history-editing { display: block; padding: .5rem .2rem; }
 .history-edit-actions { display: inline-flex; gap: .4rem; }
 .power-backup-form { max-width: 34rem; }
+
+/* v1.91: the Offline badge only informs (CaseVault never goes online). */
+.net-status { cursor: default; }

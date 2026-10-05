@@ -2,14 +2,13 @@
  * Caches the app's own files so CaseVault opens with no internet connection.
  * It never stores case data: in direct mode that is read from the SSD by the page, and in helper
  * mode the helper's /api/ requests are passed through untouched and never cached.
- * Requests to any other origin (the local Ollama engine, or api.anthropic.com when the user goes
- * online) are not touched, and never cached.
+ * Requests to any other origin (the local Ollama engine) are not touched, and never cached.
  */
 'use strict';
 
 // VERSION is bumped with each release; BUILD is replaced with the commit SHA by the GitHub Pages
 // workflow. Either change gives a new cache, so the installed app picks up the update.
-const VERSION = '1.90.0';
+const VERSION = '1.91.0';
 const BUILD = 'dev';
 const CACHE = `casevault-${VERSION}-${BUILD}`;
 
@@ -46,9 +45,6 @@ const APP_FILES = [
   './js/checker/ai.js',
   './js/ai/activity.js',
   './js/ai/hardware.js',
-  './js/ai/ollama-shim.js',
-  './js/ai/webllm.js',
-  './js/ai/webllm-worker.js',
   './js/checker/checks-ui.js',
   './js/drafts/draft-core.js',
   './js/drafts/docx.js',
@@ -59,9 +55,6 @@ const APP_FILES = [
   './js/secure/pii.js',
   './js/secure/outbound.js',
   './js/secure/mail.js',
-  './js/secure/apikey.js',
-  './js/secure/apikey-ui.js',
-  './js/secure/online-ui.js',
   './js/secure/mail-ui.js',
   './js/secure/settings-ui.js',
   './js/ai/memory.js',
@@ -313,8 +306,6 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
   // Helper mode: /api/ carries case data. Never cache it; let it go straight to the helper.
   if (url.pathname.includes('/api/')) return;
-  // In-browser AI model files (gigabytes) come from the SSD through the helper: never cache them.
-  if (url.pathname.includes('/webllm/')) return;
 
   // Cache first for the app's own files only. Anything else goes to the network uncached.
   event.respondWith((async () => {

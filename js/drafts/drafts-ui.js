@@ -594,11 +594,11 @@
     const stopOnLeave = () => { if (genCtrl) genCtrl.abort(); window.removeEventListener('hashchange', stopOnLeave); };
     window.addEventListener('hashchange', stopOnLeave);
 
-    // Every installed chat model is under 5B parameters (and it isn't the in-browser engine's own choice).
+    // Every installed chat model is under 5B parameters.
     function onlySmallModels() {
       const det = Engine().detected;
       const chat = (det && det.chat) || [];
-      return !Engine().inBrowser() && chat.length > 0 && chat.every((m) => m.size != null && m.size < 5);
+      return chat.length > 0 && chat.every((m) => m.size != null && m.size < 5);
     }
 
     // Export → Save as a template: this report's text becomes a template in Vault → Templates.

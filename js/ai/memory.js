@@ -21,7 +21,7 @@
 
   /**
    * Turn raw readings into what the indicator shows.
-   * r = { heap: { used, limit } | null, models: [{ name, size, size_vram }] | null, webllm: id | null,
+   * r = { heap: { used, limit } | null, models: [{ name, size, size_vram }] | null,
    *       sys: { ramTotal, ramFree, diskTotal, diskFree } | null, deviceMemory: GB | null }
    * -> { text, level: 'ok'|'warn'|'high', lines: [..] }
    */
@@ -49,7 +49,6 @@
     } else if (r.models) {
       lines.push('Local AI: no model loaded');
     }
-    if (r.webllm) { bits.push('AI in-browser'); lines.push(`In-browser AI model loaded: ${r.webllm}`); }
 
     if (r.sys && r.sys.ramTotal) {
       const used = r.sys.ramTotal - r.sys.ramFree;
@@ -153,8 +152,7 @@
         }
       }
       if (isHelper() && Date.now() - sysAt > 15000) { sys = await HelperFS.sysinfo(); sysAt = Date.now(); }
-      const webllm = (typeof CVWebLLM !== 'undefined' && CVWebLLM.loadedId) || null;
-      const s = summarize({ heap, models, webllm, sys, deviceMemory: navigator.deviceMemory || null });
+      const s = summarize({ heap, models, sys, deviceMemory: navigator.deviceMemory || null });
       label.textContent = s.text;
       el.className = `mem-status ${s.level}`;
       const rows = compact({ ramTotal: sys && sys.ramTotal, ramFree: sys && sys.ramFree, diskFree: sys && sys.diskTotal ? sys.diskFree : null, deviceMemory: navigator.deviceMemory || null });

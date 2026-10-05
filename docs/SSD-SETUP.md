@@ -82,8 +82,6 @@ W:\
   Start-CaseVault.bat       ← launcher (helper for Firefox + AI engine)
   casevault-helper\         ← the helper script
   logs\                     ← created automatically
-  webllm\                   ← optional: in-browser AI models (Get-WebLLM-Model.bat)
-  Get-WebLLM-Model.bat      ← downloads an in-browser model (one time)
 ```
 
 ## 5. Look after the drive
