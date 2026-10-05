@@ -971,13 +971,29 @@
           const old = pdfPathOf(c, prevTitle);
           if (old !== r.path) await Vault.deleteFile(c.id, old).catch(() => {});
         }
-        toast(`Sent: Reports → ${title}, and Files → ${r.path.split('/').pop()}`, 'success', 7000);
+        // v1.89: the Draft empties once the report is sent, ready for the next one. Undo puts it back;
+        // so does Send Back to Draft on the report under Reports.
+        const before = structuredClone(data);
+        await clearForm();
+        const t = toast(`Sent: Reports → ${title}, and Files → ${r.path.split('/').pop()}. The Draft is empty for the next report.`, 'success', 9000);
+        if (t) {
+          const undo = h('button', { class: 'toast-undo', type: 'button' }, 'Undo');
+          undo.addEventListener('click', async () => {
+            t.remove();
+            for (const k of Object.keys(data)) delete data[k];
+            Object.assign(data, before);
+            save(0);
+            await Save.flushAll();
+            toast('The sent draft is back on the form.', 'success', 4000);
+            ui.refresh();
+          });
+          t.append(' ', undo);
+        }
+        ui.refresh();
       } catch { /* reported by Save */ }
     } }, 'Send Draft to Reports');
-    // Clear All (v1.33): an empty form, to draft another report. What was sent stays in Reports and
-    // Files; the next send makes a new report.
-    const clearBtn = h('button', { class: 'btn danger-ghost', type: 'button', title: 'Empties the form to draft another report. Reports and Files keep what was already sent.', onclick: async () => {
-      if (!(await ui.confirmDialog({ title: 'Clear the whole draft?', message: 'Every entry on this form is emptied, to draft another report. What you already sent stays under Reports and Files. A draft not sent yet is lost.', confirmText: 'Clear All', danger: true }))) return;
+    // An empty form (Clear All, and after Send Draft to Reports).
+    async function clearForm() {
       const fresh = F().normalize({});
       for (const k of Object.keys(data)) delete data[k];
       Object.assign(data, fresh);
@@ -985,6 +1001,12 @@
       data.sentSlug = '';
       save(0);
       await Save.flushAll();
+    }
+    // Clear All (v1.33): an empty form, to draft another report. What was sent stays in Reports and
+    // Files; the next send makes a new report.
+    const clearBtn = h('button', { class: 'btn danger-ghost', type: 'button', title: 'Empties the form to draft another report. Reports and Files keep what was already sent.', onclick: async () => {
+      if (!(await ui.confirmDialog({ title: 'Clear the whole draft?', message: 'Every entry on this form is emptied, to draft another report. What you already sent stays under Reports and Files. A draft not sent yet is lost.', confirmText: 'Clear All', danger: true }))) return;
+      await clearForm();
       toast('The form is empty: ready for another report.', 'success', 4000);
       ui.refresh();
     } }, 'Clear All');
