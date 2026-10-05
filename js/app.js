@@ -675,7 +675,9 @@
 
   const isArchivedEntry = (c) => c.location === 'archive';
   // v1.46: the subject and the Operation's number and name are searched too.
-  const matchesSearch = (c, q) => !q || [c.title, c.subject, c.fileNumber, c.number, c.agencyNumber, c.client, c.status, CVOperation.opLabel(Vault.operationOf(c)), ...(c.tags || [])].join(' ').toLowerCase().includes(q);
+  // v1.90: Case History notes are searched too.
+  const notesOf = (c) => (c.notes ? [c.notes] : Array.isArray(c.activity) ? c.activity.filter((a) => a.note).map((a) => a.what) : []);
+  const matchesSearch = (c, q) => !q || [c.title, c.subject, c.fileNumber, c.number, c.agencyNumber, c.client, c.status, CVOperation.opLabel(Vault.operationOf(c)), ...(c.tags || []), ...notesOf(c)].join(' ').toLowerCase().includes(q);
 
   // Cases in cases/ (the archive has its own section below the list): open and pending first,
   // then closed, each most recently changed first. Typing a status in the search box finds those.
@@ -2725,21 +2727,44 @@
   }
   function caseHistorySection(c, save = null) {
     const list = h('ol', { class: 'history-list' });
-    const draw = () => {
+    // v1.90: a note can be changed (its date and its words) with the pencil, or deleted with ×.
+    const editRow = (r) => {
+      const a = c.activity[r.index];
+      const day = h('input', { type: 'date', value: a.day || today(), 'aria-label': 'Note date' });
+      const text = h('input', { type: 'text', maxlength: 200, value: a.what || '', 'aria-label': 'Note' });
+      const done = () => {
+        const what = text.value.trim();
+        if (!what) { text.focus(); return; }
+        c.activity[r.index] = { ...a, day: day.value || a.day || today(), what, edited: new Date().toISOString() };
+        save();
+        draw();
+      };
+      text.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); done(); } if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); draw(); } });
+      const li = h('li', { class: 'history-note history-editing' },
+        h('div', { class: 'history-add' }, field('Date', day), field('Note', text),
+          h('span', { class: 'history-edit-actions' },
+            h('button', { class: 'btn small', type: 'button', onclick: () => draw() }, 'Cancel'),
+            h('button', { class: 'btn small primary', type: 'button', icon: 'check-circle-fill', onclick: done }, 'Save'))));
+      setTimeout(() => text.focus(), 0);
+      return li;
+    };
+    const draw = (editing = -1) => {
       const rows = historyOf(c);
-      list.replaceChildren(...(rows.length ? rows.map((r) => h('li', { class: r.note ? 'history-note' : r.derived ? 'history-derived' : '' },
+      list.replaceChildren(...(rows.length ? rows.map((r) => (r.note && save && r.index === editing ? editRow(r) : h('li', { class: r.note ? 'history-note' : r.derived ? 'history-derived' : '' },
         h('span', { class: 'history-when' }, r.at ? fmtDateTime(Date.parse(r.at)) : r.day ? fmtDate(r.day) : ''),
         h('span', { class: 'history-what' }, r.note ? h('span', { class: 'history-tag' }, 'Note') : null, r.what),
-        r.note && save ? h('button', { class: 'icon-btn history-del', type: 'button', title: 'Delete this note', onclick: () => {
-          c.activity.splice(r.index, 1);
-          save();
-          draw();
-        } }, I('x-lg'), h('span', { class: 'sr-only' }, 'Delete note')) : h('span'))) : [h('li', { class: 'muted small' }, 'Nothing yet.')]));
+        r.note && save ? h('span', { class: 'history-btns' },
+          h('button', { class: 'icon-btn history-edit', type: 'button', title: 'Change this note', onclick: () => draw(r.index) }, I('pencil-fill'), h('span', { class: 'sr-only' }, 'Change note')),
+          h('button', { class: 'icon-btn history-del', type: 'button', title: 'Delete this note', onclick: () => {
+            c.activity.splice(r.index, 1);
+            save();
+            draw();
+          } }, I('x-lg'), h('span', { class: 'sr-only' }, 'Delete note'))) : h('span')))) : [h('li', { class: 'muted small' }, 'Nothing yet.')]));
     };
     draw();
     // v1.89: add a note with its own date, e.g. "Case opened on paper; migrated to CaseVault".
     const day = h('input', { type: 'date', value: (c.dates && c.dates.opened) || today(), 'aria-label': 'Note date' });
-    const text = h('input', { type: 'text', maxlength: 200, placeholder: 'Case opened before CaseVault; migrated from the paper file', 'aria-label': 'Note' });
+    const text = h('input', { type: 'text', maxlength: 200, placeholder: 'e.g. Case opened before CaseVault', 'aria-label': 'Note' });
     const add = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', onclick: () => {
       const what = text.value.trim();
       if (!what) { text.focus(); return; }
@@ -4244,6 +4269,19 @@
   // v1.68: Power Off (next to the SSD icon): saves everything, then the helper stops itself, the
   // browser window, Ollama, and locks and ejects the V: and W: drives.
   $('#btn-power').addEventListener('click', async () => {
+    // v1.90: no full backup for over a week: offer one before the SSD goes in the drawer.
+    const age = fullBackupAge();
+    if (age == null || age > FULL_BACKUP_DAYS) {
+      const pick = await openDialog((close) => h('form', { class: 'power-backup-form', onsubmit: (e) => { e.preventDefault(); close('backup'); } },
+        h('h2', { icon: 'exclamation-triangle-fill' }, 'Back Up Before Powering Off?'),
+        h('p', {}, `${fullBackupText()}. A copy on a second drive is what saves your cases if this SSD is lost or fails.`),
+        h('div', { class: 'dialog-actions' },
+          h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
+          h('button', { class: 'btn', type: 'button', onclick: () => close('off') }, 'Power Off Anyway'),
+          h('button', { class: 'btn primary', type: 'submit', icon: 'hdd-fill' }, 'Back Up First'))));
+      if (!pick) return;
+      if (pick === 'backup') { showVaultPanel('backups'); return; }
+    }
     const ok = await confirmDialog({ title: 'Power Off CaseVault', message: 'Saves your work, then closes CaseVault, this browser window, the CaseVault helper and the AI engine, and locks and ejects the V: and W: drives. Unplug the SSD once Windows says it is safe.', confirmText: 'Power Off', danger: true });
     if (!ok) return;
     try { await Save.flushAll(); } catch { /* reported by Save */ }

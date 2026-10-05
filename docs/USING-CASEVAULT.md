@@ -215,6 +215,14 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.90
+
+- **Back up before Power Off:** when the vault hasn't had a full backup in over a week (or ever), Power Off asks first: **Back Up First** opens ⋮ → Vault → Backups, **Power Off Anyway** carries on
+- **Undo after Clear All** on the Draft tab, as after Send to Files
+- **Change a Case History note:** click the pencil beside it to change its date or words (Enter saves, Esc cancels); × deletes it
+- **Search finds Case History notes:** Ctrl+K and type a word from a note, e.g. "migrated"
+- The README shows the current version only; earlier versions are listed in the `previous-versions` folder
+
 ### What's new in v1.89
 
 - Send to Files clears the Draft by itself once the PDF is saved; the toast has an Undo button that brings the Draft back

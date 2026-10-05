@@ -975,20 +975,7 @@
         // so does Send Back to Draft on the report under Reports.
         const before = structuredClone(data);
         await clearForm();
-        const t = toast(`Sent: Reports → ${title}, and Files → ${r.path.split('/').pop()}. The Draft is empty for the next report.`, 'success', 9000);
-        if (t) {
-          const undo = h('button', { class: 'toast-undo', type: 'button' }, 'Undo');
-          undo.addEventListener('click', async () => {
-            t.remove();
-            for (const k of Object.keys(data)) delete data[k];
-            Object.assign(data, before);
-            save(0);
-            await Save.flushAll();
-            toast('The sent draft is back on the form.', 'success', 4000);
-            ui.refresh();
-          });
-          t.append(' ', undo);
-        }
+        undoToast(`Sent: Reports → ${title}, and Files → ${r.path.split('/').pop()}. The Draft is empty for the next report.`, before, 'The sent draft is back on the form.');
         ui.refresh();
       } catch { /* reported by Save */ }
     } }, 'Send Draft to Reports');
@@ -1002,12 +989,29 @@
       save(0);
       await Save.flushAll();
     }
+    // v1.90: a toast with Undo, which puts the form back as it was before it was emptied.
+    function undoToast(message, before, restored) {
+      const t = toast(message, 'success', 9000);
+      if (!t) return;
+      const undo = h('button', { class: 'toast-undo', type: 'button' }, 'Undo');
+      undo.addEventListener('click', async () => {
+        t.remove();
+        for (const k of Object.keys(data)) delete data[k];
+        Object.assign(data, before);
+        save(0);
+        await Save.flushAll();
+        toast(restored, 'success', 4000);
+        ui.refresh();
+      });
+      t.append(' ', undo);
+    }
     // Clear All (v1.33): an empty form, to draft another report. What was sent stays in Reports and
     // Files; the next send makes a new report.
     const clearBtn = h('button', { class: 'btn danger-ghost', type: 'button', title: 'Empties the form to draft another report. Reports and Files keep what was already sent.', onclick: async () => {
-      if (!(await ui.confirmDialog({ title: 'Clear the whole draft?', message: 'Every entry on this form is emptied, to draft another report. What you already sent stays under Reports and Files. A draft not sent yet is lost.', confirmText: 'Clear All', danger: true }))) return;
+      if (!(await ui.confirmDialog({ title: 'Clear the whole draft?', message: 'Every entry on this form is emptied, to draft another report. What you already sent stays under Reports and Files. A draft not sent yet can be brought back with Undo right after.', confirmText: 'Clear All', danger: true }))) return;
+      const before = structuredClone(data);
       await clearForm();
-      toast('The form is empty: ready for another report.', 'success', 4000);
+      undoToast('The form is empty: ready for another report.', before, 'The draft is back on the form.');
       ui.refresh();
     } }, 'Clear All');
 

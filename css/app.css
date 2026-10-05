@@ -3916,16 +3916,16 @@ html .tl-item.deadline::before { transform: none; }
 /* v1.89: Case History: the date and time in their own column, then what happened; your notes
    are tagged and can be deleted. The Case Officer role reads like the boxes next to it. */
 .history-list { list-style: none; margin: 0 0 .6rem; padding: 0; }
-.history-list li { display: grid; grid-template-columns: 13.5rem minmax(0, 1fr) 1.6rem; align-items: center; gap: 1rem; padding: .45rem .2rem; border-bottom: 1px solid var(--border); }
+.history-list li { display: grid; grid-template-columns: 13.5rem minmax(0, 1fr) 3.2rem; align-items: center; gap: 1rem; padding: .45rem .2rem; border-bottom: 1px solid var(--border); }
 .history-list li:last-child { border-bottom: 0; }
 .history-when { color: var(--muted); font-size: .82rem; white-space: nowrap; }
 .history-what { min-width: 0; overflow-wrap: anywhere; }
 .history-tag { display: inline-block; margin-right: .5rem; padding: 0 .4rem; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; border: 1px solid var(--accent); color: var(--accent); }
 .history-derived .history-what { color: var(--muted); font-style: italic; }
-.history-del { width: 1.5rem; height: 1.5rem; padding: 0; }
-.history-del .bi { width: .7rem; height: .7rem; }
+.history-del, .history-edit { width: 1.5rem; height: 1.5rem; padding: 0; }
+.history-del .bi, .history-edit .bi { width: .7rem; height: .7rem; }
 .history-add { display: grid; grid-template-columns: 13rem minmax(0, 1fr) auto; gap: .6rem; align-items: end; }
-@media (max-width: 700px) { .history-list li { grid-template-columns: minmax(0, 1fr) 1.6rem; } .history-when { grid-column: 1 / -1; } .history-add { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 700px) { .history-list li { grid-template-columns: minmax(0, 1fr) 3.2rem; } .history-when { grid-column: 1 / -1; } .history-add { grid-template-columns: minmax(0, 1fr); } }
 .cv-boxed .field .contact-fixed { font-size: .9rem; font-weight: 400; }
 /* v1.89: PDFs in the Files preview use CaseVault's own viewer (square controls). */
 .preview-pdf { display: flex; flex-direction: column; height: calc(84vh / var(--z, 1)); min-height: 20rem; }
@@ -3934,3 +3934,9 @@ html .tl-item.deadline::before { transform: none; }
 /* v1.89: every key in Keyboard Shortcuts is the same size. */
 .shortcuts-table td:first-child { width: 7rem; }
 .shortcuts-table kbd { display: inline-flex; align-items: center; justify-content: center; width: 5.4rem; min-width: 0; height: 1.75rem; padding: 0; box-sizing: border-box; }
+
+/* v1.90: change a Case History note in place. */
+.history-btns { display: inline-flex; gap: .2rem; justify-content: flex-end; }
+.history-list li.history-editing { display: block; padding: .5rem .2rem; }
+.history-edit-actions { display: inline-flex; gap: .4rem; }
+.power-backup-form { max-width: 34rem; }
