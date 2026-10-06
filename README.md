@@ -15,10 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.95
+## What's New in v1.96
 
-- **Offense Classification always matches a charge's Statute Description, word for word**, including drafts saved before: when a draft opens, when it's saved and on the PDF, wording that isn't one of the charges' descriptions becomes the first charge's. Pick another charge's wording from the box's arrow; typed wording that isn't a charge's goes back when you leave the box (a note says why). With the Charges list ticked off, the box stays as typed
-- Adding, removing, picking or retyping a charge keeps Offense Classification in step
+- **Deconfliction checks in date order**: the oldest check is first and checks with no date go last. Change a date and the check moves to its place once you leave the list, so a card doesn't jump while you're typing. A new check opens at its place
 
 ## What CaseVault Does
 

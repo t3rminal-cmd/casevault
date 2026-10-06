@@ -215,6 +215,10 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.96
+
+- **Details → Deconfliction is in date order**, oldest check first; checks with no date go last. When you change a date, the check moves to its place after you click outside the Deconfliction list, so it doesn't jump while you type. **Add Deconfliction** puts the new check (today's date) where it belongs and takes you to it
+
 ### What's new in v1.95
 
 - **Offense Classification = a charge's Statute Description, exactly.** Older drafts are corrected the moment they open (the first charge's wording), and the PDF always prints the charge wording. To use another charge's wording, pick it from the arrow on the Offense Classification box. Wording that isn't a charge's goes back when you leave the box. If the Charges list is ticked off, the box keeps what you type

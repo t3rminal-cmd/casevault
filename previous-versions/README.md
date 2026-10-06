@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.95)
+
+- **Offense Classification always matches a charge's Statute Description, word for word**, including drafts saved before: when a draft opens, when it's saved and on the PDF, wording that isn't one of the charges' descriptions becomes the first charge's. Pick another charge's wording from the box's arrow; typed wording that isn't a charge's goes back when you leave the box (a note says why). With the Charges list ticked off, the box stays as typed
+- Adding, removing, picking or retyping a charge keeps Offense Classification in step
+
 ## Features (v1.94)
 
 - **Offender Vehicle(s):** each offender on the Draft tab lists their vehicles, one card each: Year, Make, Model, Color, License Plate, Plate State, VIN and Registered Owner, with **Impound**, **Tow** and **DNA** as click boxes (one at a time). Add Another Vehicle and the trash can add and remove them; No Vehicle still hides them
