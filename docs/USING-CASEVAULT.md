@@ -215,6 +215,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.94
+
+- **Draft → Offenders → Offender Vehicle(s):** click **Add Vehicle** on an offender for each car: Year, Make, Model, Color, License Plate, Plate State, VIN, Registered Owner, and tick **Impound**, **Tow** or **DNA** (Does Not Apply) — ticking one clears the others. **Add Another Vehicle** for the next one; the trash can removes one; **No Vehicle** hides them all
+- The offender's old Vehicle / VIN / Plates boxes and the separate **Vehicles** list in the Officer's Report are gone; anything entered there is moved onto the offender's vehicles the first time the Draft opens
+- On the PDF each vehicle is a line under its offender
+
 ### What's new in v1.93
 
 - **Victim: State of Illinois** gets Relation Code **024** by itself (you can change it); the PDF line reads *State of Illinois · Relation Code: 024 · Officer Name*

@@ -81,7 +81,10 @@ test('Report Fields v1.21: lists, parts left out, and v1.20 single entries moved
   assert.deepStrictEqual([d.offendersList[0].name, d.offendersList[0].relation], ['DOE, John', 'X']);
   assert.strictEqual(d.charges[0].description, '720 ILCS 570/401');
   assert.strictEqual(d.gangs[0].name, 'Latin Kings');
-  assert.strictEqual(d.vehicles[0].notes, '2015 Honda; Towed');
+  // v1.94: the old vehicle line lands on the offender's vehicles (Towed becomes the Tow click box).
+  assert.strictEqual(d.offendersList[0].vehicles[0].make, '2015 Honda; Towed');
+  assert.strictEqual(d.offendersList[0].vehicles[0].disposition, 'Tow');
+  assert.strictEqual(d.vehicles.length, 0);
   assert.ok(!('victimName' in d) && !('vehicle' in d));
   assert.strictEqual(F.normalize(d).victimsList.length, 1, 'normalizing twice does not add again');
   d.offendersList[0].dob = '1990-01-02';
@@ -318,7 +321,7 @@ test('v1.31: Officer\'s Report lines, UCO, no reclassification, and a report dra
 test('v1.34: every Officer\'s Report line and list can be ticked off', () => {
   const F = require('../js/report-fields.js');
   for (const k of ['operation', 'courtBranch', 'courtDate', 'fundSheet', 'evidenceOfficer', 'cbNumber']) assert.ok(F.OPTIONAL_LINES.includes(k), k);
-  assert.deepStrictEqual(F.OPTIONAL_LISTS, ['funds', 'narcotics', 'charges', 'gangs', 'notArrested', 'personnel', 'vehicles', 'notifications']);
+  assert.deepStrictEqual(F.OPTIONAL_LISTS, ['funds', 'narcotics', 'charges', 'gangs', 'notArrested', 'personnel', 'notifications']);
   const d = F.normalize({ evidenceOfficer: 'Officer Sample', courtBranch: 'Branch 1', courtDate: '2026-10-20', charges: [{ statute: '720 ILCS 570/402(c)', description: 'Possession' }], hidden: ['evidenceOfficer', 'charges', 'courtDate'] });
   const md = F.toMarkdown(d);
   assert.ok(!/Officer Sample/.test(md));

@@ -3905,3 +3905,18 @@ html .tl-item.deadline::before { transform: none; }
 .suspect-pick-form { max-width: 34rem; }
 .suspect-pick-list { display: grid; gap: .35rem; margin: .6rem 0 .2rem; }
 .suspect-pick-list .rf-suspect-pick { padding: .45rem .6rem; border: 1px solid var(--border); background: var(--surface); }
+
+/* v1.94: Offender Vehicle(s): a card per vehicle, Impound / Tow / DNA click boxes beside its name. */
+.rf-vehicles { display: block; }
+.rf-vehicles > span { display: block; margin-bottom: .35rem; }
+.rf-vehicles-list { display: grid; gap: .5rem; }
+.rf-veh-card { border: 1px solid var(--border); background: var(--surface); padding: .5rem .6rem .6rem; }
+.rf-veh-head { display: flex; align-items: center; gap: .8rem; margin-bottom: .4rem; }
+.rf-veh-head > strong { font-size: .85rem; white-space: nowrap; }
+.rf-veh-ticks { display: flex; gap: 1rem; flex: 1; }
+.rf-veh-tick { margin: 0; white-space: nowrap; font-size: .85rem; }
+.rf-veh-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .4rem .5rem; }
+.rf-veh-grid .rf-veh-vin { grid-column: span 2; }
+.rf-veh-grid .rf-veh-owner { grid-column: 1 / -1; }
+.rf-veh-add { justify-self: start; }
+@media (max-width: 700px) { .rf-veh-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rf-veh-head { flex-wrap: wrap; } }
