@@ -1,0 +1,16 @@
+const boot = require('./boot');
+const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
+(async () => { const { b, p, ids, errs } = await boot(1366, 900);
+  await p.evaluate(() => document.querySelectorAll('.toast').forEach((t) => t.remove()));
+  await p.evaluate((id) => { location.hash = `#/case/${id}/draft`; }, ids.c); await p.waitForSelector('.rf-second-toggle', { state: 'attached' });
+  await p.evaluate(() => document.querySelectorAll('.rf-fold[aria-expanded="false"]').forEach((x) => x.click())); await p.waitForTimeout(300);
+  ok(!(await p.$$eval('.rf-second', (e) => e.some((x) => x.hidden))), 'secondary fields shown by default');
+  ok(!(await p.$('.rf-lines .field:has-text("IR Number")')), 'no IR Number line in the Officer\'s Report');
+  await p.click('.rf-second-toggle input'); await p.waitForTimeout(1500);
+  ok(await p.$$eval('.rf-second', (e) => e.every((x) => x.hidden)), 'secondary fields hidden after untick');
+  const saved = await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'report-fields.json')).hidden, ids.c);
+  ok(saved.includes('secondOfficer'), 'saved as hidden');
+  await p.locator('.rf-second-toggle').screenshot({ path: process.env.SP + '/v186/toggle.png' });
+  await p.evaluate((id) => { location.hash = '#/x'; location.hash = `#/case/${id}/draft`; }, ids.c); await p.waitForTimeout(1200);
+  ok(!(await p.$eval('.rf-second-toggle input', (x) => x.checked)), 'stays off after reopening');
+  console.log('errors', errs); await b.close(); })();

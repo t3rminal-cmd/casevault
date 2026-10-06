@@ -19,7 +19,8 @@ test('v1.87: helper 1.11 has the backup calls, and a backup only goes to a drive
   for (const fn of ['backupDrives', 'backupStart', 'backupStatus']) assert.ok(hfs.includes(`async function ${fn}`), fn);
 });
 
-test('v1.91: helper 1.12 no longer serves in-browser models (/webllm)', () => {
-  assert.match(ps, /\$HelperVersion = '1\.12\.0'/);
+test('v1.91: helper 1.12 and later no longer serve in-browser models (/webllm)', () => {
+  const [maj, min] = /\$HelperVersion = '(\d+)\.(\d+)\.\d+'/.exec(ps).slice(1).map(Number);
+  assert.ok(maj > 1 || min >= 12, 'helper 1.12 or later');
   assert.doesNotMatch(ps, /webllm/i);
 });

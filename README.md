@@ -15,10 +15,12 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.97
+## What's New in v1.98
 
-- **Subject Names read "LAST, First" everywhere they're listed**: the sidebar, General Files, Mission folders, Needs Attention and the case header ("John Doe" and "doe, john" both show as **DOE, John**). The Subject Name box keeps what you typed; names that aren't one person's ("Unknown Offender", "State v. Doe", a group) show as typed. Search finds either form
-- **Timeline on the Details tab: events close together no longer overlap.** Events on the same day, or too close to tell apart, share one marker with their count; point at it to see each one
+- **Drive encryption checks.** With the helper (Firefox), CaseVault asks Windows whether the CASEVAULT drive has BitLocker. If it doesn't, a red **SSD not encrypted** chip sits on the home page and a warning shows at startup. **Back Up Everything** shows each drive's encryption and asks before copying every case to a drive without BitLocker. ⋮ → Vault → Backups shows the SSD's state. Helper **1.13**
+- **[docs/SECURITY.md](docs/SECURITY.md)**: what protects your cases and the code, and a checklist of GitHub settings to turn on (two-factor sign-in, branch protection, secret scanning)
+- **Safer publishing.** The GitHub Actions that check and publish CaseVault are pinned to exact versions (Dependabot proposes updates), and nothing is published until the new **browser tests** pass: the whole app driven in Chromium with made-up cases (`tests/e2e/`)
+- **Tidier code.** The Case Overview, Timeline tab and Files tab moved out of `js/app.js` into their own files; nothing changes on screen
 
 ## What CaseVault Does
 
@@ -63,6 +65,7 @@ Use ⋮ → Report a Problem to save a report (with case details scrubbed) for t
 - [docs/SSD-SETUP.md](docs/SSD-SETUP.md): partitioning the SanDisk Extreme, drive letters, BitLocker To Go
 - [docs/USING-CASEVAULT.md](docs/USING-CASEVAULT.md): everyday use
 - [docs/AI-SETUP.md](docs/AI-SETUP.md): the launcher, the Firefox helper, portable Ollama and models on the CV-AI partition
+- [docs/SECURITY.md](docs/SECURITY.md): what protects your cases and the code, and the GitHub settings to turn on
 - [previous-versions/](previous-versions/README.md): what each earlier version added
 
 ## Data layout on the SSD
@@ -123,6 +126,7 @@ CaseVault-Data/
 | `js/drafts/review.js` | Reports → Review: do the money and weight totals add up |
 | `js/rich-editor.js` | Formatted view for notes and reports: edits in Word-like form, saved as Markdown; paste from Word, copy for Word |
 | `js/app.js` | User interface, autosave, connect/reconnect |
+| `js/case-overview.js`, `js/case-timeline.js`, `js/files-tab.js` | The Details tab's Case Overview (suspects, partners, contacts, deconfliction, Case History, the timeline line), the Timeline tab and the Files tab |
 | `js/theme.js` | Light / dark / automatic theme (loaded first, so the page never flashes) |
 | `js/icons.js`, `js/icons-data.js` | Icons as inline SVG (a subset of Bootstrap Icons, made by `scripts/make-icons.js`) |
 | `js/reference/ref-data.js`, `js/reference/reference.js`, `js/reference/ref-ui.js`, `js/reference/links.js` | Reference: the data (values, codes), the logic (calculator, search, AI text), the screens and the Quick links (Reference, OSINT, LEO) |
@@ -151,8 +155,9 @@ CaseVault-Data/
 | `js/drafts/drafts-ui.js` | Drafts tab, editor, export, template settings |
 | `vendor/` | Bundled pdf.js, Tesseract.js, SheetJS, the Bootstrap Icons license and the Poppins font (see `vendor/README.md` for versions, licenses and provenance) |
 | `tools/Start-CaseVault.bat` | Launcher for the CV-AI partition: starts the helper and Ollama |
-| `tools/casevault-helper/` | The Firefox helper (Windows PowerShell 5.1, 127.0.0.1 only); also opens `.eml` mail drafts from a case's Email folder in Outlook, and reports RAM and disk space for the memory indicator, and (1.11) copies and checks Back Up Everything onto another drive |
+| `tools/casevault-helper/` | The Firefox helper (Windows PowerShell 5.1, 127.0.0.1 only); also opens `.eml` mail drafts from a case's Email folder in Outlook, and reports RAM and disk space for the memory indicator, and (1.11) copies and checks Back Up Everything onto another drive, and (1.13) says whether each drive has BitLocker |
 | `tests/` | Unit tests (`node --test tests/*.test.js`) and a mock Ollama server |
+| `tests/e2e/` | Browser tests: `node tests/e2e/run.js` drives the app in Chromium (Playwright) with made-up Doe/Roe/Poe cases; CI runs them before every publish |
 | `scripts/check-no-case-data.sh` | CI guard: fails if anything resembling case data is committed |
 
 Plain HTML, CSS, and JavaScript with classic `<script>` tags, so it also runs from `file://` (PDF reading and OCR need `http(s)`). To work on it locally, serve the folder (for example `python -m http.server`) and open it in Chrome or Edge. For the AI layer without a real model, run `node tests/mock-ollama.js`.

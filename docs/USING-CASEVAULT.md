@@ -215,6 +215,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.98
+
+- **Is the SSD encrypted?** In Firefox (with the helper), CaseVault asks Windows. If the CASEVAULT drive has no BitLocker, the home page shows a red **SSD not encrypted** chip and a warning at startup. Click the chip for ⋮ → Vault → Backups, which says how to turn BitLocker on. If BitLocker is paused, it says so and how to resume it. Chrome and Edge can't ask Windows, so there the Backups page says to look for the padlock on the drive in File Explorer
+- **Back Up Everything** lists each drive as **Encrypted (BitLocker on)** or **Not encrypted**. Picking one without BitLocker asks first, because the backup is a full copy of every case: **Cancel** (the default) or **Back Up Anyway**
+- **[SECURITY.md](SECURITY.md)** explains what keeps your cases safe, the BitLocker settings to use, and the GitHub settings that protect the code
+- Behind the scenes: the update checks are stricter (browser tests must pass before anything is published) and the code is split into smaller files. Nothing else changes on screen. The helper is now **1.13**: copy the new `casevault-helper` folder to `W:\`
+
 ### What's new in v1.97
 
 - **Subject Names line up as LAST, First** in the sidebar, General Files, Mission folders, Needs Attention and at the top of a case: "John Doe" shows as **DOE, John**, "Mary Ann Roe" as **ROE, Mary Ann**, "John Doe Jr" as **DOE, John Jr**. Nothing is changed in the Subject Name box. One-word names, "Unknown Offender", "Not Identified", case captions ("State v. Doe"), group names and names with numbers show as you typed them

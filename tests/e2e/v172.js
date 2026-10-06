@@ -1,0 +1,17 @@
+const boot = require('./boot');
+(async () => { const { b, p, errs } = await boot(1366, 900);
+  const sec = p.locator('.other-files-section'); await sec.scrollIntoViewIfNeeded();
+  const tiles = () => p.evaluate(() => [...document.querySelectorAll('.other-files-section .shared-tile')].map((t) => t.querySelector('.op-num').textContent + (t.classList.contains('open') ? '*' : '')).join(' | '));
+  console.log('tiles', await tiles(), 'drop shown', await p.evaluate(() => !!document.querySelector('.other-files-section .shared-drop')));
+  let bb = await sec.boundingBox(); await p.screenshot({ path: process.env.SP + '/v172/closed.png', clip: { x: bb.x - 10, y: Math.max(0, bb.y - 10), width: bb.width + 20, height: Math.min(bb.height + 20, 600) } });
+  await p.locator('.other-files-section .shared-tile', { hasText: 'INET Files' }).click(); await p.waitForTimeout(500);
+  await p.locator('.other-files-section input[type=file]').setInputFiles({ name: 'inet-sample.txt', mimeType: 'text/plain', buffer: Buffer.from('synthetic') }); await p.waitForTimeout(900);
+  console.log('open', await tiles(), await p.evaluate(() => [...document.querySelectorAll('.other-files-section tbody tr')].map((r) => r.innerText.replace(/\s+/g, ' ')).join(';')));
+  await sec.scrollIntoViewIfNeeded(); bb = await sec.boundingBox(); await p.screenshot({ path: process.env.SP + '/v172/open.png', clip: { x: bb.x - 10, y: Math.max(0, bb.y - 10), width: bb.width + 20, height: Math.min(bb.height + 20, 700) } });
+  await p.locator('.other-files-section .shared-tile', { hasText: 'INET Files' }).click(); await p.waitForTimeout(400);
+  console.log('closed again', await tiles(), 'count badge', await p.evaluate(() => [...document.querySelectorAll('.other-files-section .op-folder-count')].map((x) => x.textContent).join(',')));
+  await p.locator('.other-files-section .ov-btn-other').click(); await p.waitForTimeout(300); await p.fill('dialog[open] input', 'ATF Files'); await p.click('dialog[open] button:has-text("Create Folder")'); await p.waitForTimeout(800);
+  console.log('after new', await tiles());
+  await p.click('.other-files-section button:has-text("Remove Folder")'); await p.waitForTimeout(300); await p.click('dialog[open] button:has-text("Remove Folder")'); await p.waitForTimeout(800);
+  console.log('after remove', await tiles());
+  console.log('errors', errs); await b.close(); })();

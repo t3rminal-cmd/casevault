@@ -20,6 +20,7 @@
     -NoBrowser           do not open the browser
     -NoAI                do not start Ollama
     -BackupTargets <a;b> offer these folders as backup drives (for testing; normally every other drive)
+    -BitLockerStates <x> pretend drive states, e.g. "V:\=on;E:\=off" (for testing; normally asked of Windows)
 #>
 [CmdletBinding()]
 param(
@@ -28,13 +29,14 @@ param(
   [string]$AppPath = '',
   [switch]$NoBrowser,
   [switch]$NoAI,
-  [string]$BackupTargets = ''
+  [string]$BackupTargets = '',
+  [string]$BitLockerStates = ''
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 
-$HelperVersion = '1.12.0'
+$HelperVersion = '1.13.0'
 $VolumeLabel   = 'CASEVAULT'
 $DataDirName   = 'CaseVault-Data'
 $AppDirName    = 'CaseVault-App'
@@ -318,6 +320,26 @@ $script:BackupJob = $null
 
 # Drives a backup can go to: ready drives other than the vault's own, the AI drive (a partition of
 # the same SSD) and Windows' own drive.
+# v1.13: is a drive protected by BitLocker? Asked the way File Explorer does (its padlock), which
+# needs no admin rights. 'on', 'off', 'suspended' or 'unknown' (not Windows, or Windows can't say).
+function Get-BitLockerState([string]$path) {
+  if (-not $path) { return 'unknown' }
+  $rootPath = [System.IO.Path]::GetPathRoot([System.IO.Path]::GetFullPath($path))
+  if ($BitLockerStates) {
+    foreach ($pair in ($BitLockerStates -split ';' | Where-Object { $_ })) {
+      $k, $v = $pair -split '=', 2
+      if ($k -and ($rootPath -ieq $k -or [System.IO.Path]::GetFullPath($path) -ieq $k)) { return $v }
+    }
+    return 'unknown'
+  }
+  try {
+    $shell = New-Object -ComObject Shell.Application
+    $v = $shell.NameSpace($rootPath).Self.ExtendedProperty('System.Volume.BitLockerProtection')
+    # 1 on, 3 encrypting, 6 on and locked; 2 off, 4 decrypting; 5 suspended; anything else unknown.
+    switch ([int]$v) { 1 { return 'on' } 3 { return 'on' } 6 { return 'on' } 2 { return 'off' } 4 { return 'off' } 5 { return 'suspended' } default { return 'unknown' } }
+  } catch { return 'unknown' }
+}
+
 function Get-BackupDrives {
   $out = @()
   if ($BackupTargets) {
@@ -409,7 +431,7 @@ function Invoke-Api($stream, $req) {
     $ready = if ($root) { 'true' } else { 'false' }
     $rootName = if ($root) { Split-Path -Leaf $root } else { '' }
     $drive = if ($root) { [System.IO.Path]::GetPathRoot($root) } else { '' }
-    Send-Json $stream 200 ('{"app":"CaseVault helper","version":' + (ConvertTo-JsonString $HelperVersion) + ',"ready":' + $ready + ',"root":' + (ConvertTo-JsonString $rootName) + ',"drive":' + (ConvertTo-JsonString $drive) + '}')
+    Send-Json $stream 200 ('{"app":"CaseVault helper","version":' + (ConvertTo-JsonString $HelperVersion) + ',"ready":' + $ready + ',"root":' + (ConvertTo-JsonString $rootName) + ',"drive":' + (ConvertTo-JsonString $drive) + ',"bitlocker":' + (ConvertTo-JsonString (Get-BitLockerState $root)) + '}')
     return
   }
 
@@ -458,7 +480,7 @@ function Invoke-Api($stream, $req) {
   if ($op -eq 'backup-drives' -and $m -eq 'GET') {
     $items = @()
     foreach ($d in @(Get-BackupDrives)) {
-      $items += ('{"path":' + (ConvertTo-JsonString $d.Path) + ',"label":' + (ConvertTo-JsonString $d.Label) + ',"free":' + $d.Free + ',"total":' + $d.Total + ',"kind":' + (ConvertTo-JsonString $d.Kind) + '}')
+      $items += ('{"path":' + (ConvertTo-JsonString $d.Path) + ',"label":' + (ConvertTo-JsonString $d.Label) + ',"free":' + $d.Free + ',"total":' + $d.Total + ',"kind":' + (ConvertTo-JsonString $d.Kind) + ',"bitlocker":' + (ConvertTo-JsonString (Get-BitLockerState $d.Path)) + '}')
     }
     Send-Json $stream 200 ('[' + ($items -join ',') + ']')
     return

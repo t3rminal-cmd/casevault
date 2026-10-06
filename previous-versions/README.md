@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.97)
+
+- **Subject Names read "LAST, First" everywhere they're listed**: the sidebar, General Files, Mission folders, Needs Attention and the case header ("John Doe" and "doe, john" both show as **DOE, John**). The Subject Name box keeps what you typed; names that aren't one person's ("Unknown Offender", "State v. Doe", a group) show as typed. Search finds either form
+- **Timeline on the Details tab: events close together no longer overlap.** Events on the same day, or too close to tell apart, share one marker with their count; point at it to see each one
+
 ## Features (v1.96)
 
 - **Deconfliction checks in date order**: the oldest check is first and checks with no date go last. Change a date and the check moves to its place once you leave the list, so a card doesn't jump while you're typing. A new check opens at its place

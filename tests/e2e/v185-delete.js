@@ -1,0 +1,27 @@
+const boot = require('./boot');
+const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
+(async () => { const { b, p, ids, errs } = await boot(1366, 900);
+  await p.evaluate(() => document.querySelectorAll('.toast').forEach((t) => t.remove()));
+  await p.evaluate((id) => { location.hash = `#/case/${id}/details`; }, ids.c); await p.waitForTimeout(800);
+  console.log('closed box:', await p.inputValue('input[aria-label="Closed"]'), '| hint:', await p.textContent('.status-hint'));
+  console.log('actions:', await p.$$eval('.case-actions button', (b) => b.map((x) => x.textContent.trim())));
+  await p.click('button:has-text("Delete case")'); await p.waitForSelector('.delete-form');
+  await p.fill('.delete-form input', 'EX-100'); await p.click('.delete-form button.danger');
+  await p.waitForSelector('.doom-form'); await p.waitForTimeout(300);
+  await p.screenshot({ path: process.env.SP + '/v185/doom.png' });
+  await p.click('.doom-form button:has-text("Spare It")'); await p.waitForTimeout(500);
+  ok(await p.evaluate((id) => !!Vault.data.cases.find((c) => c.id === id), ids.c), 'spared case still exists');
+  await p.click('button:has-text("Delete case")'); await p.waitForSelector('.delete-form');
+  await p.fill('.delete-form input', 'EX-100'); await p.click('.delete-form button.danger');
+  await p.waitForSelector('.doom-form'); await p.click('.doom-form button.danger'); await p.waitForTimeout(800);
+  ok(await p.evaluate((id) => !Vault.data.cases.find((c) => c.id === id), ids.c), 'deleted after second yes');
+  // Mission page: Close Mission + edit rule
+  await p.evaluate((op) => { location.hash = `#/operation/${op}`; }, ids.op); await p.waitForTimeout(800);
+  console.log('mission buttons:', await p.$$eval('.page-head button', (b) => b.map((x) => x.textContent.trim())));
+  await p.click('.page-head button:has-text("Edit Mission")'); await p.waitForSelector('.op-form');
+  await p.selectOption('.op-form select[name=status]', 'Closed').catch(async () => { await p.evaluate(() => { const s = document.querySelector('.op-form select[name=status]'); s.value = 'Closed'; }); });
+  await p.click('.op-form button[type=submit]'); await p.waitForTimeout(400);
+  console.log('edit rule:', await p.textContent('.op-form .error-text'));
+  await p.click('.op-form button:has-text("Cancel")');
+  console.log('sidebar:', await p.$$eval('#case-list .op-name', (e) => e.map((x) => x.textContent)));
+  console.log('errors', errs); await b.close(); })();
