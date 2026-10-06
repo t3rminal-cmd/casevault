@@ -1,0 +1,9 @@
+# Keeps the GitHub Actions used to check and publish CaseVault up to date (they are pinned to exact
+# commits in .github/workflows/pages.yml; Dependabot opens a pull request when a new version is out).
+# CaseVault itself has no package dependencies: its libraries are copied into vendor/.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

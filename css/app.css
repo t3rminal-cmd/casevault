@@ -3924,3 +3924,8 @@ html .tl-item.deadline::before { transform: none; }
 .rf-veh-grid .rf-veh-owner { grid-column: 1 / -1; }
 .rf-veh-add { justify-self: start; }
 @media (max-width: 700px) { .rf-veh-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rf-veh-head { flex-wrap: wrap; } }
+/* v1.98: drive encryption, in the backup drive list. */
+.backup-drives .enc-on { color: var(--success, #198754); }
+.backup-drives .enc-off, .backup-drives .enc-suspended { color: var(--danger); font-weight: 600; }
+.backup-drives .enc-unknown { color: var(--muted); }
+.backup-drives [class^="enc-"] .bi { width: .9rem; height: .9rem; vertical-align: -2px; }

@@ -1,0 +1,21 @@
+const boot = require('./boot');
+(async () => { const { b, p, ids, errs } = await boot(1366, 900);
+  await p.evaluate(async (id) => { const d = new Date(); const iso = (n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+    await Vault.saveTimeline(id, { events: [{ id: 'e1', date: iso(-3), kind: 'event', title: 'Buy' }, { id: 'e2', date: iso(-1), kind: 'deadline', title: 'Lab due' }, { id: 'e3', date: iso(4), kind: 'deadline', title: 'Court' }] }); }, ids.c);
+  await p.evaluate((i) => { location.hash = '#/x'; location.hash = `#/case/${i}/timeline`; }, ids.c); await p.waitForTimeout(1300);
+  console.log('tl radii', await p.evaluate(() => [...document.querySelectorAll('.tl-item')].map((e) => { const s = getComputedStyle(e, '::before'); return s.borderRadius + ' ' + s.transform; })));
+  await p.locator('.timeline').first().screenshot({ path: process.env.SP + '/v176/tl.png' });
+  await p.evaluate((i) => { location.hash = `#/case/${i}/details`; }, ids.c); await p.waitForTimeout(1300);
+  const fj = p.locator('.field:has-text("Federal Jacket Number") input').first();
+  await p.locator('.field:has-text("Federal Jacket Number") .combo-toggle').first().click(); await p.waitForTimeout(300);
+  console.log('fed jacket list', await p.evaluate(() => [...document.querySelectorAll('.combo-list li, .combo-list [role=option]')].filter((x) => x.offsetParent).map((x) => x.innerText.replace(/\s+/g, ' '))));
+  const opt = p.locator('.combo-list [role=option]:visible, .combo-list li:visible').first(); if (await opt.count()) { await opt.click(); await p.waitForTimeout(200); }
+  console.log('fed jacket value', await fj.inputValue());
+  await p.evaluate(() => [...document.querySelectorAll('#main button')].find((b) => /Add Suspect/i.test(b.innerText))?.click()); await p.waitForTimeout(500);
+  console.log('suspect DNA combos', await p.evaluate(() => [...document.querySelectorAll('.suspect-demo .field')].filter((f) => /IR Number|FBI Number|IDOC Number/.test(f.innerText) && f.querySelector('.combo')).length));
+  await p.evaluate((i) => { location.hash = `#/case/${i}/draft`; }, ids.c); await p.waitForTimeout(1300);
+  await p.evaluate(() => document.querySelectorAll('.rf-fold').forEach((b) => b.getAttribute('aria-expanded') === 'false' && b.click())); await p.waitForTimeout(300);
+  await p.evaluate(() => [...document.querySelectorAll('.rf-section .btn')].find((b) => /Add Offender/i.test(b.innerText))?.click()); await p.waitForTimeout(300);
+  console.log('draft DNA combos', await p.evaluate(() => [...document.querySelectorAll('input[aria-label$="IR Number"], input[aria-label$="FBI Number"], input[aria-label$="IDOC Number"]')].map((i) => i.getAttribute('aria-label') + ':' + !!i.closest('.combo'))));
+  console.log('report IR line combo', await p.evaluate(() => { const f = [...document.querySelectorAll('.rf-report .field, .rf-report label, .rf-report .rf-line')].find((x) => /^\s*IR Number/i.test(x.innerText)); return f ? !!f.querySelector('.combo') || !!f.closest('.combo') : 'nf'; }));
+  console.log('errors', errs); await b.close(); })();

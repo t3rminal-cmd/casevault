@@ -1,0 +1,20 @@
+const boot = require('./boot');
+(async () => { const { b, p, ids, errs } = await boot(1366, 900);
+  await p.evaluate(async (id) => {
+    const c = await Vault.getCase(id); c.suspects = [{ name: 'Jane Roe', dob: '1991-03-04', role: 'Primary', info: { gender: 'Female', race: 'White', moniker: 'JR', height: '5 ft 6 in' } }]; await Vault.saveCase(c);
+    await Vault.writeCaseJSON(id, 'report-fields.json', { offendersList: [{ name: 'Jane Roe', address: '100 Example St, Example City', eyes: 'Brown', custody: 'In Custody' }, { name: 'John Doe', gender: 'Male', irNumber: '1234567' }] });
+  }, ids.c2);
+  await p.evaluate((i) => { location.hash = `#/operation/${i}`; }, ids.op); await p.waitForTimeout(1300);
+  console.log('tiles', await p.evaluate(() => [...document.querySelectorAll('.shared-tile .op-folder-name, .shared-tile')].map((t) => t.innerText.split('\n')[0]).filter(Boolean).slice(0, 8)));
+  await p.click('.shared-tile:has-text("Subject Data")'); await p.waitForTimeout(800);
+  await p.click('button:has-text("Add From Reports")'); await p.waitForTimeout(800);
+  const saved = await p.evaluate(async (i) => { await new Promise((r) => setTimeout(r, 700)); return Vault.readOpList(i, 'Subject Data', '.subjects.json'); }, ids.op);
+  console.log('added', JSON.stringify(saved.map((x) => [x.name, x.dob, x.alias, x.gender, x.height, x.address, x.eyes, x.irNumber])));
+  await p.click('button:has-text("Add Subject")'); await p.waitForTimeout(300);
+  await p.locator('.op-cards-subject .op-veh-card').nth(2).locator('.combo-toggle').first().click(); await p.waitForTimeout(300);
+  console.log('suggest list', await p.evaluate(() => [...document.querySelectorAll('.combo-list:not([hidden]) li')].map((x) => x.innerText.replace(/\n/g, ' '))));
+  await p.locator('.combo-list:not([hidden]) li').first().click(); await p.waitForTimeout(300);
+  console.log('picked', await p.evaluate(() => [...document.querySelectorAll('.op-cards-subject .op-veh-card')][2].querySelector('input[aria-label="Subject 3 Gender"], select[aria-label="Subject 3 Gender"]').value));
+  await p.evaluate((i) => { location.hash = `#/case/${i}/draft`; }, ids.c2); await p.waitForTimeout(1300);
+  console.log('custody select', await p.evaluate(() => { const s = document.querySelector('select[aria-label="Offender 1 Custody"]'); return s ? s.value + ' / ' + [...s.options].map((o) => o.value).join('|') : 'none'; }));
+  console.log('errors', errs); await b.close(); })();

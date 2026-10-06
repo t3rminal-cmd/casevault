@@ -1,0 +1,18 @@
+const boot = require('./boot');
+(async () => { const { b, p, ids, errs } = await boot(1366, 900);
+  await p.evaluate(async (i) => { const d = new Date(); d.setDate(d.getDate() - 2); await Vault.saveTimeline(i, { events: [{ id: 'e1', date: d.toISOString().slice(0, 10), kind: 'deadline', title: 'Lab results due' }] }); }, ids.c);
+  await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(1200);
+  const tall = await p.evaluate(() => document.getElementById('main').scrollHeight);
+  await p.setViewportSize({ width: 1366, height: Math.min(tall + 420, 3000) }); await p.waitForTimeout(400);
+  await p.screenshot({ path: process.env.SP + '/v174/home.png' });
+  console.log('titles', await p.evaluate(() => [...document.querySelectorAll('.ov-head .section-title')].map((t) => `${t.innerText}:${Math.round((t.querySelector('span') || t).getBoundingClientRect().width)}`).join(' | ')));
+  console.log('ql tabs', await p.evaluate(() => [...document.querySelectorAll('#ql-footer .ql-tabs button')].map((x) => x.innerText.trim()).join(',')));
+  await p.click('.att-fold'); await p.waitForTimeout(300);
+  console.log('folded', await p.evaluate(() => { const s = document.querySelector('.attention-section'); return [s.classList.contains('att-folded'), Math.round(s.getBoundingClientRect().height), document.querySelector('.att-summary').innerText]; }));
+  await p.screenshot({ path: process.env.SP + '/v174/home-folded.png', clip: { x: 300, y: 270, width: 1066, height: 160 } });
+  await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(900);
+  console.log('stays folded', await p.evaluate(() => document.querySelector('.attention-section').classList.contains('att-folded')));
+  await p.locator('.other-files-section .ov-btn-other').click(); await p.waitForTimeout(300); console.log('new folder dialog', await p.evaluate(() => (document.querySelector('dialog[open] h2') || {}).innerText)); await p.keyboard.press('Escape');
+  await p.evaluate((i) => { location.hash = `#/operation/${i}`; }, ids.op); await p.waitForTimeout(1000);
+  await p.screenshot({ path: process.env.SP + '/v174/op.png' });
+  console.log('errors', errs); await b.close(); })();

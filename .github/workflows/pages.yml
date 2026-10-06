@@ -20,7 +20,9 @@ jobs:
     name: Safety checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false   # the jobs never push; don't leave a token in .git
 
       - name: No case data in the repository
         run: bash scripts/check-no-case-data.sh
@@ -48,7 +50,7 @@ jobs:
 
       - name: JavaScript parses
         run: |
-          for f in js/*.js js/checker/*.js js/drafts/*.js js/secure/*.js js/reference/*.js scripts/*.js js/ai/*.js sw.js; do node --check "$f"; done
+          for f in js/*.js js/checker/*.js js/drafts/*.js js/secure/*.js js/reference/*.js scripts/*.js js/ai/*.js tests/e2e/*.js sw.js; do node --check "$f"; done
 
       - name: Content-Security-Policy allows no other hosts
         run: |
@@ -69,9 +71,30 @@ jobs:
           done
           exit $missing
 
+  browser:
+    # v1.98: the whole app, driven in Chromium with made-up Doe/Roe/Poe cases (tests/e2e/), plus the
+    # helper's drive-encryption check in PowerShell 7. Nothing here touches real case data.
+    name: Browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false   # the jobs never push; don't leave a token in .git
+
+      - name: Install Playwright and Chromium (test tools only; not part of the app)
+        run: |
+          npm install --no-save --no-package-lock --prefix "$RUNNER_TEMP/pw" playwright@1.56.1
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+
+      - name: Run the browser tests
+        env:
+          PWSH: pwsh
+        run: NODE_PATH="$RUNNER_TEMP/pw/node_modules" node tests/e2e/run.js
+
   deploy:
     name: Publish to GitHub Pages
-    needs: check
+    needs: [check, browser]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -82,7 +105,9 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false   # the jobs never push; don't leave a token in .git
 
       - name: Assemble the site (app files only)
         run: |
@@ -94,12 +119,12 @@ jobs:
           touch _site/.nojekyll
           find _site -type f | sort
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: _site
 
       - name: Deploy
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
