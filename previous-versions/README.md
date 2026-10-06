@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.94)
+
+- **Offender Vehicle(s):** each offender on the Draft tab lists their vehicles, one card each: Year, Make, Model, Color, License Plate, Plate State, VIN and Registered Owner, with **Impound**, **Tow** and **DNA** as click boxes (one at a time). Add Another Vehicle and the trash can add and remove them; No Vehicle still hides them
+- The duplicate boxes are gone: the offender's single Vehicle / VIN / Plates boxes and the separate Vehicles list in the Officer's Report. What was in them moves to the offender's vehicles by itself (a plate like "IL AB12345" splits into state and number; the same car in both places is kept once)
+- PDF: each vehicle prints under its offender (*Vehicle 1: 2015 Honda Accord, Black · Plate IL AB12345 · VIN … · Impounded*); the separate "Vehicle(s) Impounded / Towed" block is gone
+
 ## Features (v1.93)
 
 - **State of Illinois as victim: Relation Code 024**, filled in by itself (you can change it), and on the PDF: *State of Illinois · Relation Code: 024 · Officer Name*

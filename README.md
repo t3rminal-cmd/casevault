@@ -15,11 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.94
+## What's New in v1.95
 
-- **Offender Vehicle(s):** each offender on the Draft tab lists their vehicles, one card each: Year, Make, Model, Color, License Plate, Plate State, VIN and Registered Owner, with **Impound**, **Tow** and **DNA** as click boxes (one at a time). Add Another Vehicle and the trash can add and remove them; No Vehicle still hides them
-- The duplicate boxes are gone: the offender's single Vehicle / VIN / Plates boxes and the separate Vehicles list in the Officer's Report. What was in them moves to the offender's vehicles by itself (a plate like "IL AB12345" splits into state and number; the same car in both places is kept once)
-- PDF: each vehicle prints under its offender (*Vehicle 1: 2015 Honda Accord, Black · Plate IL AB12345 · VIN … · Impounded*); the separate "Vehicle(s) Impounded / Towed" block is gone
+- **Offense Classification always matches a charge's Statute Description, word for word**, including drafts saved before: when a draft opens, when it's saved and on the PDF, wording that isn't one of the charges' descriptions becomes the first charge's. Pick another charge's wording from the box's arrow; typed wording that isn't a charge's goes back when you leave the box (a note says why). With the Charges list ticked off, the box stays as typed
+- Adding, removing, picking or retyping a charge keeps Offense Classification in step
 
 ## What CaseVault Does
 
