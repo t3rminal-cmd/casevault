@@ -2653,6 +2653,11 @@
       el.addEventListener('change', () => { row[key] = String(el.value).trim(); save(); });
       return el;
     };
+    const dateBox = (r, i) => {
+      const el = cellInput(r, 'date', { type: 'date', 'aria-label': `Check ${i + 1} date` });
+      el.addEventListener('change', () => { resort = true; setTimeout(settle, 0); });
+      return el;
+    };
     // System (v1.34): a drop-down of the deconfliction systems; Other asks for its name.
     const systemPick = (r, i) => {
       const known = DECON_SYSTEMS.includes(r.system || '');
@@ -2668,7 +2673,24 @@
       other.addEventListener('input', () => { r.system = other.value.trim(); save(); });
       return h('div', { class: 'decon-system' }, sel, other);
     };
+    // v1.96: checks in date order, oldest first; no date goes last. A changed date re-sorts once
+    // the cursor leaves the list, so a card doesn't jump while its date is being typed.
+    const dateKey = (r) => (/^\d{4}-\d{2}-\d{2}$/.test((r && r.date) || '') ? r.date : '9999-99-99');
+    const sortChecks = () => {
+      const sorted = c.deconfliction.map((r, i) => [r, i]).sort((a, b) => dateKey(a[0]).localeCompare(dateKey(b[0])) || a[1] - b[1]).map(([r]) => r);
+      const moved = sorted.some((r, i) => r !== c.deconfliction[i]);
+      if (moved) c.deconfliction.splice(0, c.deconfliction.length, ...sorted);
+      return moved;
+    };
+    let resort = false;
+    const settle = () => {
+      if (!resort || rows.contains(document.activeElement)) return;
+      resort = false;
+      if (sortChecks()) { draw(); save(); }
+    };
+    rows.addEventListener('focusout', () => setTimeout(settle, 0));
     const draw = () => {
+      sortChecks();
       rows.replaceChildren(...(c.deconfliction.length ? c.deconfliction.map((r, i) => {
         const conflict = h('select', { 'aria-label': `Check ${i + 1} conflict`, class: r.conflict === 'Yes' ? 'decon-yes' : '' }, ['', 'No', 'Yes'].map((o) => h('option', { value: o, selected: o === (r.conflict || '') }, o || '—')));
         const card = h('div', { class: `decon-card${r.conflict === 'Yes' ? ' conflict' : ''}` });
@@ -2677,7 +2699,7 @@
           h('div', { class: 'decon-card-head' }, h('strong', {}, `Check ${i + 1}`), h('div', { class: 'spacer' }),
             h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Delete this check', onclick: () => { c.deconfliction.splice(i, 1); draw(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Delete check ${i + 1}`))),
           h('div', { class: 'decon-grid' },
-            field('Date', cellInput(r, 'date', { type: 'date', 'aria-label': `Check ${i + 1} date` })),
+            field('Date', dateBox(r, i)),
             field('Event / Location', cellInput(r, 'event', { 'aria-label': `Check ${i + 1} event or location` }), 'decon-wide'),
             field('System', systemPick(r, i)),
             field('Deconfliction Number', cellInput(r, 'number', { 'aria-label': `Check ${i + 1} deconfliction number` })),
@@ -2688,10 +2710,12 @@
     };
     draw();
     const add = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', onclick: () => {
-      c.deconfliction.push({ date: today(), event: '', system: '', number: '', conflict: '', notes: '' });
+      const row = { date: today(), event: '', system: '', number: '', conflict: '', notes: '' };
+      c.deconfliction.push(row);
       draw(); save();
-      const last = rows.lastElementChild && rows.lastElementChild.querySelector('.decon-wide input');
-      if (last) last.focus();
+      const card = rows.children[c.deconfliction.indexOf(row)];
+      const first = card && card.querySelector('.decon-wide input');
+      if (first) { first.focus(); card.scrollIntoView({ block: 'nearest' }); }
     } }, 'Add Deconfliction');
     return h('section', { class: 'contacts deconfliction cv-boxed', 'aria-labelledby': 'decon-title' },
       h('h3', { id: 'decon-title', icon: 'shield-exclamation', title: 'Each deconfliction check for this case, and whether it showed a conflict.' }, 'Deconfliction'),
