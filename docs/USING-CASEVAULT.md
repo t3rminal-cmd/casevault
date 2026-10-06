@@ -215,6 +215,11 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.97
+
+- **Subject Names line up as LAST, First** in the sidebar, General Files, Mission folders, Needs Attention and at the top of a case: "John Doe" shows as **DOE, John**, "Mary Ann Roe" as **ROE, Mary Ann**, "John Doe Jr" as **DOE, John Jr**. Nothing is changed in the Subject Name box. One-word names, "Unknown Offender", "Not Identified", case captions ("State v. Doe"), group names and names with numbers show as you typed them
+- **Details → Timeline line:** events on the same day, or a day or two apart, no longer sit on top of each other. They share one marker with a number (how many); point at it for the list, click it to open the Timeline tab
+
 ### What's new in v1.96
 
 - **Details → Deconfliction is in date order**, oldest check first; checks with no date go last. When you change a date, the check moves to its place after you click outside the Deconfliction list, so it doesn't jump while you type. **Add Deconfliction** puts the new check (today's date) where it belongs and takes you to it

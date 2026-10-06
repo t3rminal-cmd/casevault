@@ -2438,6 +2438,10 @@ input[list]::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
 .mini-tl-dot.deadline:hover, .mini-tl-dot.deadline:focus-visible { transform: translate(-50%, -50%) rotate(45deg) scale(1.5); }
 .mini-tl-dot.deadline.overdue { border-color: var(--danger); background: var(--danger); }
 .mini-tl-dot.done { opacity: .45; }
+/* v1.97: events close together share one marker with their count. */
+.mini-tl-dot.mini-tl-group { width: 1.25rem; height: 1.25rem; display: grid; place-items: center; font-size: .66rem; font-weight: 700; line-height: 1; color: var(--accent); text-decoration: none; }
+.mini-tl-dot.mini-tl-group.deadline { color: var(--warn); }
+.mini-tl-dot.mini-tl-group.overdue { color: #fff; }
 .mini-tl-today { position: absolute; top: -.15rem; bottom: -.15rem; width: 2px; transform: translateX(-50%); background: var(--danger); }
 /* Sidebar (v1.37): a chevron on each operation shows it folds; Titles only folds them all. */
 .op-chev { display: inline-grid; place-items: center; flex: 0 0 auto; color: var(--muted); transition: transform .15s; }

@@ -677,7 +677,9 @@
   // v1.46: the subject and the Operation's number and name are searched too.
   // v1.90: Case History notes are searched too.
   const notesOf = (c) => (c.notes ? [c.notes] : Array.isArray(c.activity) ? c.activity.filter((a) => a.note).map((a) => a.what) : []);
-  const matchesSearch = (c, q) => !q || [c.title, c.subject, c.fileNumber, c.number, c.agencyNumber, c.client, c.status, CVOperation.opLabel(Vault.operationOf(c)), ...(c.tags || []), ...notesOf(c)].join(' ').toLowerCase().includes(q);
+  // v1.97: Subject Names read "LAST, First" in every list (the saved name is kept as typed).
+  const subj = (c) => CVOperation.subjectLabel(c && c.subject);
+  const matchesSearch = (c, q) => !q || [c.title, c.subject, subj(c), c.fileNumber, c.number, c.agencyNumber, c.client, c.status, CVOperation.opLabel(Vault.operationOf(c)), ...(c.tags || []), ...notesOf(c)].join(' ').toLowerCase().includes(q);
 
   // Cases in cases/ (the archive has its own section below the list): open and pending first,
   // then closed, each most recently changed first. Typing a status in the search box finds those.
@@ -724,7 +726,7 @@
       // Just the numbers: file number | case number | client, e.g. "100 | JH123456 | State".
       // (No empty line when there are no numbers to show, v1.29. Inside an operation only the case
       // number shows, v1.32: the file number, original case and client are on the operation.)
-      h('div', { class: `case-item-meta muted${c.subject ? '' : ' no-subject'}` }, [c.subject || 'No subject yet', inGroup ? '' : CVOperation.opLabel(Vault.operationOf(c))].filter(Boolean).join(' | '))));
+      h('div', { class: `case-item-meta muted${c.subject ? '' : ' no-subject'}` }, [subj(c) || 'No subject yet', inGroup ? '' : CVOperation.opLabel(Vault.operationOf(c))].filter(Boolean).join(' | '))));
   }
 
   /* Operations (v1.46): an Operation is a record (number, name, status, dates, notes) in vault.json;
@@ -1249,7 +1251,7 @@
         ? h('div', { class: 'recent-grid', role: 'table' },
           h('div', { class: 'recent-row recent-headrow', role: 'row' }, ...['Subject', 'Case Number', 'File Number', 'Status', 'Updated'].map((t) => h('span', { role: 'columnheader' }, t))),
           ...recent.map((c) => h('a', { href: `#/case/${encodeURIComponent(c.id)}`, class: 'recent-row', role: 'row' },
-            h('span', { class: 'recent-cell' }, c.title || c.subject || 'Untitled case'),
+            h('span', { class: 'recent-cell' }, (c.title && c.title !== c.subject ? c.title : subj(c) || c.title) || 'Untitled case'),
             h('span', { class: 'recent-cell' }, c.number || '—'),
             h('span', { class: 'recent-cell' }, c.fileNumber || '—'),
             h('span', { class: 'recent-cell' }, statusPill(c.status)),
@@ -1367,13 +1369,13 @@
       const draw = () => {
         const t = q.value.trim().toLowerCase();
         const list = (Vault.data.cases || []).filter((c) => !isArchivedEntry(c) && c.operationId !== op.id)
-          .filter((c) => !t || [c.number, c.subject, c.title].join(' ').toLowerCase().includes(t)).sort(byNumber);
+          .filter((c) => !t || [c.number, c.subject, subj(c), c.title].join(' ').toLowerCase().includes(t)).sort(byNumber);
         rows.replaceChildren(...(list.length ? list.slice(0, 300).map((c) => {
           const other = opOf(c);
           const box = h('input', { type: 'checkbox', disabled: !!other, checked: picked.has(c.id) });
           box.addEventListener('change', () => { if (box.checked) picked.add(c.id); else picked.delete(c.id); ok.disabled = !picked.size; ok.textContent = picked.size > 1 ? `Link ${picked.size} cases` : 'Link case'; });
           return h('label', { class: `pick-row${other ? ' disabled' : ''}`, role: 'listitem', title: other ? `Already in ${opLabel(other)}. Unlink it there first.` : '' }, box,
-            h('span', { class: 'pick-num' }, c.number || 'No case number'), h('span', { class: 'pick-subject' }, c.subject || 'No subject yet'),
+            h('span', { class: 'pick-num' }, c.number || 'No case number'), h('span', { class: 'pick-subject' }, subj(c) || 'No subject yet'),
             h('span', { class: 'pick-op muted small' }, other ? `In ${opLabel(other)}` : 'Independent'));
         }) : [h('p', { class: 'muted' }, t ? 'No cases match.' : 'No other cases in General Files.')]));
       };
@@ -1462,7 +1464,7 @@
         h('thead', {}, h('tr', {}, ['Case Number', 'Subject Name', 'Status', 'Opened', 'Open', ''].map((x) => h('th', { class: x === 'Opened' ? 'date-cell' : '' }, x)))),
         h('tbody', {}, members.map((c) => h('tr', { class: isArchivedEntry(c) ? 'archived-row' : '' },
           h('td', {}, h('a', { href: caseLink(c), class: 'case-num-link' }, c.number || 'No case number')),
-          h('td', { class: c.subject ? '' : 'muted' }, c.subject || 'No subject yet'),
+          h('td', { class: c.subject ? 'subject-cell' : 'muted' }, subj(c) || 'No subject yet'),
           h('td', {}, statusPill(isArchivedEntry(c) ? 'Archived' : c.status)),
           h('td', { class: 'nowrap date-cell' }, c.opened ? fmtDate(c.opened) : '—'),
           h('td', { class: 'nowrap' }, h('div', { class: 'op-case-links' }, OP_TABS.map(([tab, label]) => h('a', { class: 'op-tab-link', href: caseLink(c, tab) }, label)))),
@@ -1524,7 +1526,7 @@
         if (show.value === 'archived' && !isArchivedEntry(c)) return false;
         if (['open', 'pending', 'closed'].includes(show.value) && (isArchivedEntry(c) || String(c.status).toLowerCase() !== show.value)) return false;
         if (show.value === 'overdue' && (isArchivedEntry(c) || c.status === 'Closed' || !c.nextDeadline || dueLabel(c.nextDeadline.date).cls !== 'overdue')) return false;
-        return !t || [c.number, c.subject, c.title, c.fileNumber, c.status, op ? opLabel(op) : 'general files'].join(' ').toLowerCase().includes(t);
+        return !t || [c.number, c.subject, subj(c), c.title, c.fileNumber, c.status, op ? opLabel(op) : 'general files'].join(' ').toLowerCase().includes(t);
       }).sort(byNumber);
       countEl.textContent = `${plural(list.length, 'case')}${list.length !== Vault.data.cases.length ? ` of ${Vault.data.cases.length}` : ''}`;
       body.replaceChildren(...(list.length ? list.map((c) => {
@@ -1536,7 +1538,7 @@
         return h('tr', { class: arch ? 'archived-row' : '' },
           h('td', {}, h('a', { href: caseLink(c), class: 'case-num-link' }, c.number || 'No case number'),
             dup ? h('span', { class: 'dup-flag', title: 'Another case has the same Case Number (made before numbers had to be unique). Nothing was changed.' }, I('exclamation-triangle-fill'), 'Duplicate') : null),
-          h('td', { class: c.subject ? '' : 'muted' }, c.subject || 'No subject yet'),
+          h('td', { class: c.subject ? 'subject-cell' : 'muted' }, subj(c) || 'No subject yet'),
           h('td', {}, op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}` }, opLabel(op)) : h('span', { class: 'muted' }, '—')),
           h('td', {}, statusPill(arch ? 'Archived' : c.status)),
           h('td', { class: 'nowrap date-cell' }, c.opened ? fmtDate(c.opened) : '—'),
@@ -1585,7 +1587,7 @@
     const op = withOp ? opOf(c) : null;
     return h('div', { class: 'op-case-card' },
       h('a', { class: 'op-case-top', href: to('details') }, h('span', { class: 'op-case-id' }, h('span', { class: 'op-case-num' }, c.number || 'No case number yet'),
-        h('span', { class: 'op-case-subject muted' }, [c.subject || 'No subject yet', op ? opLabel(op) : ''].filter(Boolean).join(' · '))), statusPill(c.status)),
+        h('span', { class: 'op-case-subject muted' }, [subj(c) || 'No subject yet', op ? opLabel(op) : ''].filter(Boolean).join(' · '))), statusPill(c.status)),
       h('nav', { class: 'op-case-links', 'aria-label': `${c.number || 'Case'} tabs` },
         ...OP_TABS.map(([tab, label]) => h('a', { class: 'op-tab-link', href: to(tab) }, label))));
   }
@@ -1780,9 +1782,9 @@
       const box = h('div', { class: 'pick-case-list', role: 'list' });
       const draw = () => {
         const t = q.value.trim().toLowerCase();
-        const hits = list.filter((c) => !t || [c.number, c.subject, c.title, opOf(c) ? opLabel(opOf(c)) : 'General Files'].join(' ').toLowerCase().includes(t)).slice(0, 60);
+        const hits = list.filter((c) => !t || [c.number, c.subject, subj(c), c.title, opOf(c) ? opLabel(opOf(c)) : 'General Files'].join(' ').toLowerCase().includes(t)).slice(0, 60);
         box.replaceChildren(...(hits.length ? hits.map((c) => h('button', { type: 'button', role: 'listitem', class: 'pick-case-row', onclick: () => close(c) },
-          h('strong', {}, c.number || 'No case number'), h('span', { class: 'pick-case-sub' }, c.subject || c.title || ''),
+          h('strong', {}, c.number || 'No case number'), h('span', { class: 'pick-case-sub' }, subj(c) || c.title || ''),
           h('span', { class: 'muted small pick-case-op' }, opOf(c) ? (opOf(c).number || opOf(c).name) : 'General Files'), statusPill(c.status)))
           : [h('p', { class: 'muted' }, 'No case matches.')]));
       };
@@ -1808,7 +1810,7 @@
       const timer = setInterval(() => { if (!tick()) clearInterval(timer); }, 1000);
       const expired = end - Date.now() <= 0;
       return h('a', { role: 'listitem', class: 'attention-row att-overdue att-sol', href: caseLink(c, 'draft'), title: `Narcotic charges must be brought within 3 years of the Date of Occurrence (${fmtDate(c.sol.occurred)}).` },
-        h('span', { class: 'att-case' }, h('strong', {}, c.number || 'No case number'), h('span', { class: 'muted small' }, c.subject || '')),
+        h('span', { class: 'att-case' }, h('strong', {}, c.number || 'No case number'), h('span', { class: 'muted small' }, subj(c))),
         h('span', { class: 'att-what' }, I('exclamation-triangle-fill'), expired ? ' Statute of Limitations Expired' : ' Warning: Statute of Limitations Expiring'),
         h('span', { class: 'att-when' }, `${expired ? 'Expired' : 'Expires'} ${fmtDate(c.sol.expires)}`),
         left);
@@ -1840,7 +1842,7 @@
         const n = daysUntil(d.date);
         const lab = dueLabel(d.date);
         return h('a', { role: 'listitem', class: `attention-row ${n < 0 ? 'att-overdue' : n <= 1 ? 'att-now' : 'att-soon'}`, href: caseLink(c, 'timeline'), title: 'Open the Timeline of this case' },
-          h('span', { class: 'att-case' }, h('strong', {}, c.number || 'No case number'), h('span', { class: 'muted small' }, c.subject || '')),
+          h('span', { class: 'att-case' }, h('strong', {}, c.number || 'No case number'), h('span', { class: 'muted small' }, subj(c))),
           h('span', { class: 'att-what' }, d.title || 'Deadline'),
           h('span', { class: 'att-when' }, fmtDate(d.date), d.time ? ` ${d.time}` : ''),
           h('span', { class: 'att-due' }, lab.text.replace(/\b\w/g, (ch) => ch.toUpperCase())));
@@ -1862,7 +1864,7 @@
    * is pointed out (never merged). Returns true to go ahead. */
   async function subjectCheck(subject, exceptId = '') {
     const m = CVOperation.subjectMatches(Vault.data.cases, subject, exceptId);
-    const list = (cases) => h('ul', { class: 'match-list' }, cases.slice(0, 8).map((x) => h('li', {}, h('strong', {}, x.number || 'No case number'), ` · ${x.subject}`, opOf(x) ? ` · ${opLabel(opOf(x))}` : ' · General Files', isArchivedEntry(x) ? ' · Archived' : '')));
+    const list = (cases) => h('ul', { class: 'match-list' }, cases.slice(0, 8).map((x) => h('li', {}, h('strong', {}, x.number || 'No case number'), ` · ${subj(x)}`, opOf(x) ? ` · ${opLabel(opOf(x))}` : ' · General Files', isArchivedEntry(x) ? ' · Archived' : '')));
     const ask = (title, message, cases) => openDialog((close) => h('div', { class: 'confirm subject-warn' },
       h('h2', {}, title), h('p', {}, message), list(cases),
       h('div', { class: 'dialog-actions' },
@@ -2166,7 +2168,7 @@
       // v1.46: the Case Number first, the Subject Name under it, and the Operation it's in.
       h('div', { class: 'case-head' },
         h('h1', { id: 'case-title' }, c.number || 'No case number yet'),
-        h('div', { class: 'case-subject', id: 'case-subject' }, c.subject || 'No subject yet'),
+        h('div', { class: 'case-subject', id: 'case-subject' }, subj(c) || 'No subject yet'),
         h('div', { class: 'case-sub muted', id: 'case-sub' }, caseSubtitle(c))),
       h('nav', { class: 'tabs', role: 'tablist' }, tabs.map(([t, label]) =>
         h('a', { href: `#/case/${encodeURIComponent(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab), icon: TAB_ICONS[t] }, label, t === 'checks' ? betaTag() : null))),
@@ -2208,8 +2210,8 @@
   function refreshCaseHeader(c) {
     const title = $('#case-title');
     if (title) title.textContent = c.number || 'No case number yet';
-    const subj = $('#case-subject');
-    if (subj) subj.textContent = c.subject || 'No subject yet';
+    const subjEl = $('#case-subject');
+    if (subjEl) subjEl.textContent = subj(c) || 'No subject yet';
     const sub = $('#case-sub');
     if (sub) sub.replaceChildren(...caseSubtitle(c));
   }
@@ -2471,12 +2473,45 @@
       const line = h('div', { class: 'mini-tl-line' });
       const tip = (ev, number) => [`${fmtDate(ev.date)}${ev.time ? ` ${ev.time}` : ''}`, ev.title || (ev.kind === 'deadline' ? 'Deadline' : 'Event'),
         ev.kind === 'deadline' ? (ev.done ? 'Deadline: done' : `Deadline: ${dueLabel(ev.date).text}`) : '', number && members.length > 1 ? `Case ${number}` : '', ev.note || ''].filter(Boolean).join('\n');
-      for (const { caseId, number, ev } of rows) {
-        const due = ev.kind === 'deadline' && !ev.done ? dueLabel(ev.date) : null;
-        const dot = h('a', { class: `mini-tl-dot${ev.kind === 'deadline' ? ' deadline' : ''}${ev.done ? ' done' : ''}${due ? ` ${due.cls}` : ''}`, href: `#/case/${encodeURIComponent(caseId)}/timeline`, 'data-tip': tip(ev, number), 'aria-label': tip(ev, number).replace(/\n/g, ', ') });
-        dot.style.setProperty('left', pos(ev.date));
-        line.append(dot);
-      }
+      // v1.97: events too close to tell apart (the same day, or a day or two on a long line) share
+      // one marker with their count; pointing at it lists them all. Worked out again on resize.
+      const pct = (d) => 3 + 94 * (t(d) - first) / span;
+      const marker = (group) => {
+        const evs = group.items.map((r) => r.ev);
+        const dues = evs.map((ev) => (ev.kind === 'deadline' && !ev.done ? dueLabel(ev.date) : null));
+        const due = dues.find((d) => d && d.cls === 'overdue') || dues.find(Boolean);
+        const deadline = evs.some((ev) => ev.kind === 'deadline');
+        const done = evs.every((ev) => ev.done);
+        const many = evs.length > 1;
+        const text = many ? [`${evs.length} events`, ...group.items.map(({ ev, number }) => `${fmtDate(ev.date)}${ev.time ? ` ${ev.time}` : ''} · ${ev.title || (ev.kind === 'deadline' ? 'Deadline' : 'Event')}${ev.kind === 'deadline' ? (ev.done ? ' (done)' : ` (${dueLabel(ev.date).text})`) : ''}${number && members.length > 1 ? ` · ${number}` : ''}`)].join('\n')
+          : tip(evs[0], group.items[0].number);
+        const dot = h('a', { class: `mini-tl-dot${many ? ' mini-tl-group' : ''}${deadline ? ' deadline' : ''}${done ? ' done' : ''}${due ? ` ${due.cls}` : ''}`, href: `#/case/${encodeURIComponent(group.items[0].caseId)}/timeline`, 'data-tip': text, 'aria-label': text.replace(/\n/g, ', ') }, many ? String(evs.length) : null);
+        dot.style.setProperty('left', `${group.x.toFixed(2)}%`);
+        return dot;
+      };
+      const place = () => {
+        const gap = (18 / (line.clientWidth || 900)) * 100;
+        let groups = [];
+        for (const r of rows) {
+          const x = pct(r.ev.date);
+          const g = groups[groups.length - 1];
+          if (g && x - g.x0 < gap) { g.items.push(r); g.xs.push(x); } else groups.push({ x0: x, items: [r], xs: [x] });
+        }
+        groups.forEach((g) => { g.x = g.xs.reduce((a, b) => a + b, 0) / g.xs.length; });
+        for (let i = 1; i < groups.length; i += 1) {
+          if (groups[i].x - groups[i - 1].x < gap) {
+            const a = groups[i - 1]; const b = groups[i];
+            a.items.push(...b.items); a.xs.push(...b.xs); a.x = a.xs.reduce((m, n) => m + n, 0) / a.xs.length;
+            groups.splice(i, 1); i = Math.max(0, i - 2);
+          }
+        }
+        groups = groups.map(marker);
+        line.querySelectorAll('.mini-tl-dot').forEach((d) => d.remove());
+        line.prepend(...groups);
+      };
+      let width = 0;
+      new ResizeObserver(() => { if (line.clientWidth && line.clientWidth !== width) { width = line.clientWidth; place(); } }).observe(line);
+      place();
       const now = h('span', { class: 'mini-tl-today', 'data-tip': `Today, ${fmtDate(todayIso)}`, 'aria-label': 'Today' });
       now.style.setProperty('left', pos(todayIso));
       line.append(now);
