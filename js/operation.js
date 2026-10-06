@@ -206,7 +206,43 @@
   /** A case's title: its Operation's name, else its Subject Name, else what it had. */
   const caseTitle = (c, op) => (op && String(op.name || '').trim()) || String((c && c.subject) || '').trim() || String((c && c.title) || '').trim() || 'Untitled case';
 
+  /* v1.97: a Subject Name shown the same way everywhere: "LAST, First" ("John Doe" and
+   * "doe, john" both read "DOE, John"). Only a person's name is turned around; anything else
+   * (one word, numbers, several people, "Unknown Offender", a group) shows as typed. The saved
+   * Subject Name never changes. */
+  const SUFFIX = /^(jr|sr|ii|iii|iv|v)\.?$/i;
+  const PARTICLE = /^(de|del|della|la|las|los|van|von|der|den|da|di|du|le|st\.?|bin|al|el|mac|ter)$/i;
+  const NOT_A_NAME = /^(unknown|unidentified|not|identified|offender|offenders|subject|subjects|suspect|suspects|gang|group|crew|dto|organization|org|inc\.?|llc|co\.?|company|et|al\.?|and|the|of|aka|a\.k\.a\.?|state|people|county|city|village|usa|united|states)$/i;
+  const WORD = /^[A-Za-z\u00C0-\u024F][A-Za-z\u00C0-\u024F'’.-]*$/;
+  const titleWord = (w) => w.toLowerCase().replace(/(^|[-'’ ])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+  const ROMAN = /^(ii|iii|iv|v)\.?$/i;
+  // First names typed all in capitals or all in small letters get capitals; mixed ones stay as typed.
+  const firstPart = (t) => (t !== t.toUpperCase() && t !== t.toLowerCase() ? t
+    : t.split(' ').map((w) => (ROMAN.test(w) ? w.toUpperCase() : titleWord(w))).join(' '));
+  function subjectLabel(subject) {
+    const s = String(subject || '').replace(/\s+/g, ' ').trim();
+    if (!s || /\d|[&/;()]|\s\+\s|\s(v|vs)\.?\s/i.test(s)) return s; // a caption (State v. Doe) stays
+    const parts = s.split(',').map((x) => x.trim());
+    let last; let first;
+    if (parts.length === 3 && SUFFIX.test(parts[2])) parts.splice(1, 2, `${parts[1]} ${parts[2]}`);
+    if (parts.length === 2 && parts[0] && parts[1]) [last, first] = parts;
+    else if (parts.length === 1) {
+      const w = s.split(' ');
+      if (w.length < 2 || w.length > 5) return s;
+      let suffix = '';
+      if (SUFFIX.test(w[w.length - 1]) && w.length > 2) suffix = w.pop();
+      let i = w.length - 1;
+      while (i > 1 && PARTICLE.test(w[i - 1])) i -= 1;
+      last = w.slice(i).join(' ');
+      first = [...w.slice(0, i), suffix].filter(Boolean).join(' ');
+    } else return s;
+    const words = `${last} ${first}`.split(' ');
+    if (!words.every((x) => WORD.test(x)) || words.some((x) => NOT_A_NAME.test(x))) return s;
+    return `${last.toUpperCase()}, ${firstPart(first)}`;
+  }
+
   const api = {
+    subjectLabel,
     opKey, mergeOverview, sameOverview, mergeEvents,
     OP_STATUSES, normNumber, opLabel, normName, nameMatch, subjectMatches, caseWithNumber, duplicateNumbers,
     validateOperation, validateCase, nextOpNumber, statusFrom, firstSuspect, planMigration, caseTitle,
