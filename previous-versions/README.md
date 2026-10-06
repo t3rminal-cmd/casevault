@@ -4,6 +4,14 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.93)
+
+- **State of Illinois as victim: Relation Code 024**, filled in by itself (you can change it), and on the PDF: *State of Illinois · Relation Code: 024 · Officer Name*
+- **Offense Classification uses the exact wording of the Statute Description:** picking (or typing) the first charge fills it, an IUCR code no longer replaces it, and its arrow lists the Statute Descriptions of every charge entered. Wording you typed yourself is never overwritten
+- **Officer's Report green check:** a list still ticked in but empty (for example no Police Personnel added) no longer counts as filled in; tick it off when it doesn't apply
+- **Suspects on the Details tab are kept in order:** Primary first, then Secondary, then Other; changing a role moves the card, and a new suspect goes into its role's place
+- **Add From Suspects (Draft → Offenders) lets you pick which suspects go into the report:** the Primary ones start ticked, suspects already in the report are marked, and Cancel adds nothing
+
 ## Features (v1.92)
 
 - **Court Date → Pending** no longer unticks the Court Date line in Firefox. The row held a tick box inside another tick box's label, so Firefox clicked both; it is now built so each tick box only answers to itself

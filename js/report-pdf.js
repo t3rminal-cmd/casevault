@@ -271,7 +271,8 @@
         [col(lv('Phone', f('phones')), 0, 1)],
         [col(lv('IR', f('irNumber')), 0, 0.4), col(lv('CB', f('cbNumber')), 0.42, 0.58)],
         [col(lv('FBI', f('fbiNumber')), 0, 0.4), col(lv('IDOC', f('idocNumber')), 0.42, 0.58)],
-        ...(o.noVehicle ? [] : [[col(lv('Vehicle', f('vehicle')), 0, 1)], [col(lv('Vin', f('vin')), 0, 1)], [col(lv('Plates', f('plates')), 0, 1)]]), // v1.82: No Vehicle
+        // v1.82: No Vehicle; v1.94: one line per offender vehicle (year make model, color, plate, VIN, owner, Impounded / Towed / DNA).
+        ...(o.noVehicle ? [] : (Array.isArray(o.vehicles) ? o.vehicles : []).map(RF.vehicleLine).filter(Boolean).map((t, j, all) => [col(lv(all.length > 1 ? `Vehicle ${j + 1}` : 'Vehicle', t), 0, 1)])),
       ].filter(Boolean);
       return { rows };
     };
@@ -438,7 +439,6 @@
       groupGap();
       ['proofResidence', 'cbNumber'].forEach(line1); // v1.86: the IR Number is in the offender's info
       groupGap();
-      list1('vehicles', 'Vehicle(s) Impounded / Towed');
       list1('notifications', 'Notifications');
       // Anything else of the report part, so nothing entered is left out.
       for (const [k, label, kind] of RF.SECTIONS.find((s2) => s2.id === 'report').fields) {

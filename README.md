@@ -15,13 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.93
+## What's New in v1.94
 
-- **State of Illinois as victim: Relation Code 024**, filled in by itself (you can change it), and on the PDF: *State of Illinois · Relation Code: 024 · Officer Name*
-- **Offense Classification uses the exact wording of the Statute Description:** picking (or typing) the first charge fills it, an IUCR code no longer replaces it, and its arrow lists the Statute Descriptions of every charge entered. Wording you typed yourself is never overwritten
-- **Officer's Report green check:** a list still ticked in but empty (for example no Police Personnel added) no longer counts as filled in; tick it off when it doesn't apply
-- **Suspects on the Details tab are kept in order:** Primary first, then Secondary, then Other; changing a role moves the card, and a new suspect goes into its role's place
-- **Add From Suspects (Draft → Offenders) lets you pick which suspects go into the report:** the Primary ones start ticked, suspects already in the report are marked, and Cancel adds nothing
+- **Offender Vehicle(s):** each offender on the Draft tab lists their vehicles, one card each: Year, Make, Model, Color, License Plate, Plate State, VIN and Registered Owner, with **Impound**, **Tow** and **DNA** as click boxes (one at a time). Add Another Vehicle and the trash can add and remove them; No Vehicle still hides them
+- The duplicate boxes are gone: the offender's single Vehicle / VIN / Plates boxes and the separate Vehicles list in the Officer's Report. What was in them moves to the offender's vehicles by itself (a plate like "IL AB12345" splits into state and number; the same car in both places is kept once)
+- PDF: each vehicle prints under its offender (*Vehicle 1: 2015 Honda Accord, Black · Plate IL AB12345 · VIN … · Impounded*); the separate "Vehicle(s) Impounded / Towed" block is gone
 
 ## What CaseVault Does
 

@@ -313,6 +313,35 @@
           const fields = F().fieldsFor(key, it).map(([k, label, kind, opts]) => {
             let el;
             // v1.39: an offender's phone numbers (Add Another Phone) and monikers with their app.
+            // v1.94: Offender Vehicle(s): a set of boxes per vehicle and Impound / Tow / DNA click boxes
+            // (one at a time). Built from <div>s, so no tick box sits inside another's label.
+            if (kind === 'vehicles') {
+              if (!Array.isArray(it[k])) it[k] = [];
+              const holder = h('div', { class: 'rf-vehicles-list' });
+              const drawVehicles = (focusLast) => {
+                holder.replaceChildren(...it[k].map((v, j) => {
+                  const vlab = `${lab} vehicle ${j + 1}`;
+                  const boxes = F().OFFENDER_VEHICLE.map(([vk, vl]) => {
+                    const inp = h('input', { type: 'text', autocomplete: 'off', value: v[vk] || '', 'aria-label': `${vlab} ${vl}`, maxlength: vk === 'vin' ? 17 : 120 });
+                    inp.addEventListener('input', () => { v[vk] = vk === 'vin' || vk === 'state' ? inp.value.toUpperCase() : inp.value; if (inp.value !== v[vk]) { const at = inp.selectionStart; inp.value = v[vk]; inp.setSelectionRange(at, at); } save(); });
+                    return ui.field(vl, inp, vk === 'owner' ? 'rf-veh-owner' : vk === 'vin' ? 'rf-veh-vin' : '');
+                  });
+                  const ticks = F().VEHICLE_DISPOSITIONS.map(([dk, dl]) => {
+                    const cb = h('input', { type: 'checkbox', checked: v.disposition === dk, 'aria-label': `${vlab} ${dl}` });
+                    cb.addEventListener('change', () => { v.disposition = cb.checked ? dk : ''; drawVehicles(); save(); });
+                    return h('label', { class: 'check-row rf-veh-tick', title: dk === 'DNA' ? 'Does Not Apply: not impounded or towed' : `The vehicle was ${dl.toLowerCase()}` }, cb, h('span', {}, dk));
+                  });
+                  return h('div', { class: 'rf-veh-card' },
+                    h('div', { class: 'rf-veh-head' }, h('strong', {}, `Vehicle ${j + 1}`), h('div', { class: 'rf-veh-ticks', role: 'group', 'aria-label': `${vlab} impound, tow or DNA` }, ...ticks),
+                      archived ? '' : h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Remove this vehicle', onclick: () => { it[k].splice(j, 1); drawVehicles(); save(); } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, `Remove ${vlab}`))),
+                    h('div', { class: 'rf-veh-grid' }, ...boxes));
+                }), archived ? '' : h('button', { class: 'btn small rf-veh-add', type: 'button', icon: 'plus-lg', onclick: () => { it[k].push(F().blankVehicle()); drawVehicles(true); save(); } }, it[k].length ? 'Add Another Vehicle' : 'Add Vehicle'));
+                if (focusLast) { const cards = holder.querySelectorAll('.rf-veh-card'); const first = cards.length && cards[cards.length - 1].querySelector('input[type=text]'); if (first) first.focus(); }
+              };
+              drawVehicles();
+              inputs[k] = holder;
+              return h('div', { class: 'field rf-wide rf-vehicles' }, h('span', {}, label), holder);
+            }
             if (kind === 'phones' || kind === 'socials') {
               if (!Array.isArray(it[k])) it[k] = [];
               if (kind === 'phones' && !it[k].length) it[k].push('');
@@ -574,7 +603,7 @@
         if (!cb.checked) complete = true;
         else {
           const boxes = [...inner.querySelectorAll('input, select, textarea')].filter((el) => !el.disabled && !['checkbox', 'radio', 'file', 'button', 'hidden', 'submit'].includes(el.type)
-            && !el.closest('.combo-list, datalist, .rf-multi, .rf-line-off, .rf-extras, .rf-photo-label, .rf-start-at') && (() => { const hid = el.parentElement && el.parentElement.closest('[hidden]'); return !hid || hid === inner; })());
+            && !el.closest('.combo-list, datalist, .rf-multi, .rf-vehicles-list, .rf-line-off, .rf-extras, .rf-photo-label, .rf-start-at') && (() => { const hid = el.parentElement && el.parentElement.closest('[hidden]'); return !hid || hid === inner; })());
           const offLines = inner.querySelectorAll('.rf-line-off').length;
           complete = (boxes.length || offLines) ? boxes.every((el) => String(el.value || '').trim()) : false;
           // v1.93: a list still ticked in with nothing added (no Police Personnel, no charges…) isn't

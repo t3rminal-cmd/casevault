@@ -97,7 +97,7 @@
       ['cbNumber', 'CB Number', 'line'],
       // One line per narcotic (type, total weight, purchase price, street value), v1.25.
       ['narcotics', 'Narcotics Recovered', 'list'],
-    ], lists: ['charges', 'gangs', 'notArrested', 'personnel', 'vehicles', 'notifications'] },
+    ], lists: ['charges', 'gangs', 'notArrested', 'personnel', 'notifications'] }, // v1.94: vehicles are on each offender
     // One row per officer: name, star, date, time (v1.23; the Lieutenant lines were removed).
     { id: 'approval', title: 'Submission and Approval', icon: 'pencil-square', fields: [
       ['reportingOfficer', 'Reporting Officer', 'text'],
@@ -165,7 +165,7 @@
     victimsList: { title: 'Victims', item: 'Victim', fields: [['name', 'Name', 'victim'], ['officer', 'Officer Name', 'text'], ...PERSON.slice(1)] },
     // v1.39: an offender's phone numbers and monikers (with the social media app each is used on).
     // v1.81: In Custody / Not in Custody, the residence, the CB number and the vehicle (as on the report).
-    offendersList: { title: 'Offenders', item: 'Offender', fields: [PERSON[0], ['custody', 'Custody', 'select', CUSTODY], ...PERSON.slice(1), ...RECORD_NUMBERS, ['cbNumber', 'CB Number', 'text'], ['address', 'Residence', 'wide'], ['phones', 'Phone Numbers', 'phones'], ['socials', 'Monikers / Social Media', 'socials'], ['vehicle', 'Vehicle', 'text'], ['vin', 'VIN', 'text'], ['plates', 'Plates', 'text']] },
+    offendersList: { title: 'Offenders', item: 'Offender', fields: [PERSON[0], ['custody', 'Custody', 'select', CUSTODY], ...PERSON.slice(1), ...RECORD_NUMBERS, ['cbNumber', 'CB Number', 'text'], ['address', 'Residence', 'wide'], ['phones', 'Phone Numbers', 'phones'], ['socials', 'Monikers / Social Media', 'socials'], ['vehicles', 'Offender Vehicle(s)', 'vehicles']] }, // v1.94: one entry per vehicle (was Vehicle / VIN / Plates)
     // v1.54: one entry per denomination, with how many bills and their serial numbers; one Recovered
     // or Not Recovered for all of them (fundsRecovered).
     funds: { title: 'Pre-Recorded Funds', item: 'Denomination', fields: [['denomination', 'Denomination', 'select', DENOMINATIONS], ['quantity', 'Quantity', 'text'], ['serials', 'Serial Numbers', 'serials']] },
@@ -197,7 +197,19 @@
 
   const empty = () => ({ schema: 4, ...Object.fromEntries(FIELDS.map(([k, , kind]) => [k, kind === 'check' ? false : ''])), ...Object.fromEntries(Object.keys(LISTS).map((k) => [k, []])), evidence: [], narrative: '', hidden: [] });
 
-  const MULTI = ['phones', 'socials', 'serials']; // fields that hold several entries
+  const MULTI = ['phones', 'socials', 'serials', 'vehicles']; // fields that hold several entries
+  // v1.94: an offender's vehicles: one set of boxes each, and Impound / Tow / DNA as click boxes.
+  const OFFENDER_VEHICLE = [['year', 'Year'], ['make', 'Make'], ['model', 'Model'], ['color', 'Color'], ['plate', 'License Plate'], ['state', 'Plate State'], ['vin', 'VIN'], ['owner', 'Registered Owner']];
+  const VEHICLE_DISPOSITIONS = [['Impound', 'Impounded'], ['Tow', 'Towed'], ['DNA', 'DNA']];
+  const blankVehicle = () => ({ ...Object.fromEntries(OFFENDER_VEHICLE.map(([k]) => [k, ''])), disposition: '' });
+  /** "2015 Honda Accord, Black · Plate IL AB12345 · VIN … · Owner … · Impounded" */
+  function vehicleLine(v) {
+    const t = (k) => String((v && v[k]) || '').trim();
+    const car = [t('year'), t('make'), t('model')].filter(Boolean).join(' ');
+    const plate = [t('state'), t('plate')].filter(Boolean).join(' ');
+    const disp = (VEHICLE_DISPOSITIONS.find(([k]) => k === t('disposition')) || [])[1] || '';
+    return [[car, t('color')].filter(Boolean).join(', '), plate ? `Plate ${plate}` : '', t('vin') ? `VIN ${t('vin')}` : '', t('owner') ? `Registered Owner ${t('owner')}` : '', disp].filter(Boolean).join(' · ');
+  }
   const SOCIAL_APPS = ['', 'Facebook', 'Instagram', 'Snapchat', 'TikTok', 'X (Twitter)', 'WhatsApp', 'Telegram', 'Signal', 'YouTube', 'Discord', 'Cash App', 'Other'];
   const blankItem = (list) => Object.fromEntries(LISTS[list].fields.map(([k, , kind]) => [k, MULTI.includes(kind) ? [] : '']));
   const hasText = (v) => (Array.isArray(v) ? v.some(hasText) : v && typeof v === 'object' ? Object.values(v).some(hasText) : !!String(v || '').trim());
@@ -279,6 +291,42 @@
     if (d.judgeTitle !== 'Magistrate') d.judgeTitle = 'Judge';
     delete d.extraCopies;
     d.schema = 4;
+    // v1.94: an offender's Vehicle / VIN / Plates boxes become its first vehicle ("IL AB12345" splits
+    // into the plate state and number); the Officer's Report Vehicles list moves to the first offender.
+    for (const o of d.offendersList) {
+      o.vehicles = (Array.isArray(o.vehicles) ? o.vehicles : []).map((v) => ({ ...blankVehicle(), ...(v && typeof v === 'object' ? v : {}) }));
+      const ov = String(o.vehicle || '').trim(); const vin = String(o.vin || '').trim(); const pl = String(o.plates || '').trim();
+      if (ov || vin || pl) {
+        const m = /^([A-Za-z]{2})\s+(\S.*)$/.exec(pl);
+        const y = /^((?:19|20)\d\d)\s+(.+)$/.exec(ov);
+        o.vehicles.unshift({ ...blankVehicle(), year: y ? y[1] : '', make: y ? y[2] : ov, vin, plate: m ? m[2] : pl, state: m ? m[1].toUpperCase() : '' });
+      }
+      delete o.vehicle; delete o.vin; delete o.plates;
+    }
+    const oldVehicles = (d.vehicles || []).filter(filled);
+    if (oldVehicles.length) {
+      if (!d.offendersList.length) d.offendersList.push(blankItem('offendersList'));
+      const o = d.offendersList[0];
+      const key = (x) => String(x || '').replace(/\s+/g, '').toUpperCase();
+      for (const v of oldVehicles) {
+        // The same car already on the offender (same VIN or plate) keeps one entry, with the list's details.
+        const same = o.vehicles.find((x) => (key(v.vin) && key(x.vin) === key(v.vin)) || (key(v.plate) && key(x.plate) === key(v.plate)));
+        if (same) {
+          for (const k of ['year', 'make', 'model', 'color', 'plate', 'state', 'vin']) if (String(v[k] || '').trim()) same[k] = String(v[k]).trim();
+          if (v.disposition === 'Impound' || v.disposition === 'Tow') same.disposition = v.disposition;
+          if (!same.owner) same.owner = [v.ownerName, v.ownerAddress, v.notes].map((x) => String(x || '').trim()).filter(Boolean).join(', ');
+          continue;
+        }
+        // Notes (a v1.20 "vehicle" line) become the Make when there is none; otherwise they join the owner line.
+        const notes = String(v.notes || '').trim();
+        const make = String(v.make || '').trim() || notes;
+        const owner = [v.ownerName, v.ownerAddress, make === notes ? '' : notes].map((x) => String(x || '').trim()).filter(Boolean).join(', ');
+        const disposition = v.disposition === 'Impound' || v.disposition === 'Tow' ? v.disposition : /\btow/i.test(notes) ? 'Tow' : /\bimpound/i.test(notes) ? 'Impound' : '';
+        o.vehicles.push({ ...blankVehicle(), year: v.year || '', make, model: v.model || '', color: v.color || '', plate: v.plate || '', state: v.state || '', vin: v.vin || '', owner, disposition });
+      }
+      o.noVehicle = false;
+    }
+    d.vehicles = [];
     return d;
   }
   // v1.54: one line holds the search warrant or the subpoena number, one the ASA or the AUSA; the
@@ -350,6 +398,7 @@
   /** A value as it reads in the report: weights get "lbs", a narcotic amount its unit. */
   function valueText(list, it, k, kind) {
     if (kind === 'phones' || kind === 'serials') return (Array.isArray(it[k]) ? it[k] : []).map((x) => String(x || '').trim()).filter(Boolean).join(', ');
+    if (kind === 'vehicles') return (Array.isArray(it[k]) ? it[k] : []).map(vehicleLine).filter(Boolean).join('; ');
     if (kind === 'socials') return (Array.isArray(it[k]) ? it[k] : []).filter(hasText).map((x) => `${String(x.name || '').trim()}${x.app ? ` (${x.app})` : ''}`).join('; ');
     let v = String(it[k] == null ? '' : it[k]).trim();
     if (!v) return '';
@@ -371,7 +420,7 @@
   function fieldsFor(list, it) {
     const all = LISTS[list].fields;
     // v1.82: an offender ticked "No Vehicle" has no Vehicle, VIN or Plates boxes (and none on the PDF).
-    if (list === 'offendersList') return it && it.noVehicle ? all.filter(([k]) => !['vehicle', 'vin', 'plates'].includes(k)) : all;
+    if (list === 'offendersList') return it && it.noVehicle ? all.filter(([k]) => k !== 'vehicles') : all;
     if (list !== 'victimsList') return all;
     // The State of Illinois: name, Relation Code (024) and the officer, in that order.
     return isStateVictim(list, it) ? ['name', 'relation', 'officer'].map((k) => all.find(([x]) => x === k)).filter(Boolean) : all.filter(([k]) => k !== 'officer');
@@ -608,7 +657,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, STATE_RELATION, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { OFFENDER_VEHICLE, VEHICLE_DISPOSITIONS, blankVehicle, vehicleLine, CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, STATE_RELATION, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);
