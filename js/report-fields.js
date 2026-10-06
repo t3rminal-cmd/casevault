@@ -217,6 +217,17 @@
 
   /** Saved data brought up to date: older type names, missing fields, and the single entries of
    * v1.20 (victim's name, charges, vehicle…) moved into the lists. */
+  /** v1.95: the charges' Statute Descriptions, in order, without repeats. */
+  const chargeDescriptions = (d) => [...new Set(((d && d.charges) || []).map((x) => String((x && x.description) || '').trim()).filter(Boolean))];
+  /** Offense Classification = a charge's Statute Description (the first, unless it already is one). */
+  function syncOffense(d) {
+    // Charges ticked off ("doesn't apply") leave the box as typed.
+    if (Array.isArray(d.hidden) && d.hidden.includes('charges')) return d;
+    const descs = chargeDescriptions(d);
+    if (descs.length && !descs.includes(String(d.offense || '').trim())) d.offense = descs[0];
+    return d;
+  }
+
   function normalize(data) {
     const src = data || {};
     const d = { ...empty(), ...src };
@@ -327,6 +338,9 @@
       o.noVehicle = false;
     }
     d.vehicles = [];
+    // v1.95: Offense Classification is always one of the charges' Statute Descriptions, word for word
+    // (the first one unless another charge's wording was picked). Applies to older drafts too.
+    syncOffense(d);
     return d;
   }
   // v1.54: one line holds the search warrant or the subpoena number, one the ASA or the AUSA; the
@@ -657,7 +671,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { OFFENDER_VEHICLE, VEHICLE_DISPOSITIONS, blankVehicle, vehicleLine, CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, STATE_RELATION, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { chargeDescriptions, syncOffense, OFFENDER_VEHICLE, VEHICLE_DISPOSITIONS, blankVehicle, vehicleLine, CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, STATE_RELATION, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

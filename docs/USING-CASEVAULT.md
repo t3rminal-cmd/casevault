@@ -215,6 +215,10 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.95
+
+- **Offense Classification = a charge's Statute Description, exactly.** Older drafts are corrected the moment they open (the first charge's wording), and the PDF always prints the charge wording. To use another charge's wording, pick it from the arrow on the Offense Classification box. Wording that isn't a charge's goes back when you leave the box. If the Charges list is ticked off, the box keeps what you type
+
 ### What's new in v1.94
 
 - **Draft → Offenders → Offender Vehicle(s):** click **Add Vehicle** on an offender for each car: Year, Make, Model, Color, License Plate, Plate State, VIN, Registered Owner, and tick **Impound**, **Tow** or **DNA** (Does Not Apply) — ticking one clears the others. **Add Another Vehicle** for the next one; the trash can removes one; **No Vehicle** hides them all

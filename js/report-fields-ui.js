@@ -212,13 +212,11 @@
     };
     const els = {}; // the Report Fields inputs by key, for fields filled from a pick
     // v1.93: Offense Classification uses the exact wording of the first charge's Statute Description.
-    const chargeDescs = () => [...new Set((data.charges || []).map((x) => String(x.description || '').trim()).filter(Boolean))];
-    const offenseFromCharge = (desc, prev = null) => {
-      const cur = String(data.offense || '').trim();
-      // Only over an empty box, the previous charge wording, or a UCR group's wording; never over your own.
-      if (cur && cur !== prev && !UCR_ITEMS.some((u) => u.desc === cur)) return;
-      data.offense = desc;
-      if (els.offense) els.offense.value = desc;
+    const chargeDescs = () => F().chargeDescriptions(data);
+    // v1.95: always one of the charges' Statute Descriptions (see CVReportFields.syncOffense).
+    const offenseFromCharge = () => {
+      F().syncOffense(data);
+      if (els.offense && els.offense.value !== (data.offense || '')) els.offense.value = data.offense || '';
     };
     const input = (key, label, kind, opts) => {
       if (kind === 'list') { const el = listEditor(key); el.classList.add('span-all'); return el; }
@@ -251,7 +249,16 @@
       // v1.76: the IR Number can be DNA as well; v1.92: and the CB Number.
       if (['methodCode', 'safeMethod', 'arrestUnit', 'residence', 'irNumber', 'cbNumber'].includes(key)) box = CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }], onPick: () => save() });
       // v1.93: Offense Classification offers the Statute Descriptions of the charges entered below.
-      if (key === 'offense') box = CVCombo.attach(el, { label: 'The charges\' Statute Descriptions', items: () => chargeDescs().map((d0) => ({ value: d0, label: d0, hint: 'Statute Description' })), onPick: () => save() });
+      if (key === 'offense') {
+        box = CVCombo.attach(el, { label: 'The charges\' Statute Descriptions', items: () => chargeDescs().map((d0) => ({ value: d0, label: d0, hint: 'Statute Description' })), onPick: () => save() });
+        // v1.95: wording that isn't one of the charges goes back to the charge's, when you leave the box.
+        el.addEventListener('change', () => {
+          const typed = String(data.offense || '').trim();
+          offenseFromCharge();
+          if (typed && typed !== data.offense) toast('Offense Classification uses the exact Statute Description of a charge. Pick another charge\'s wording from the arrow, or change the charge.', 'info', 7000);
+          save();
+        });
+      }
       // v1.69: Court Branch and Court Officer can be Pending, and so can the Court Date.
       if (key === 'courtBranch') box = CVCombo.attach(el, { items: () => [{ value: 'Pending', label: 'Pending', hint: 'Not set yet' }], onPick: () => save() });
       if (key === 'courtDate') {
@@ -469,22 +476,14 @@
             else if (kind === 'charge' || kind === 'chargeWide') {
               // Search the charges by statute or wording; picking fills both boxes.
               box = CVCombo.attach(el, { items: () => CHARGE_ITEMS.map((c) => ({ ...c, value: kind === 'charge' ? c.statute : c.desc })), onPick: (c) => {
-                const prev = String(it.description || '').trim();
                 it.statute = c.statute; it.description = c.desc;
                 if (inputs.statute) inputs.statute.value = c.statute;
                 if (inputs.description) inputs.description.value = c.desc;
-                if (key === 'charges' && data.charges[0] === it) offenseFromCharge(c.desc, prev);
+                if (key === 'charges') offenseFromCharge();
                 save();
               } });
-              // Typed by hand: Offense Classification follows the first charge's wording too.
-              if (kind === 'chargeWide' && key === 'charges') {
-                let prev = String(it.description || '').trim();
-                el.addEventListener('input', () => {
-                  const now = String(it.description || '').trim();
-                  if (data.charges[0] === it) { offenseFromCharge(now, prev); save(); }
-                  prev = now;
-                });
-              }
+              // Typed by hand: Offense Classification follows the charge's wording too.
+              if (kind === 'chargeWide' && key === 'charges') el.addEventListener('input', () => { offenseFromCharge(); save(); });
             }
             return ui.field(label, box, kind === 'wide' || kind === 'chargeWide' ? 'rf-wide' : '');
           });
@@ -504,7 +503,7 @@
               draw(); save();
             } }), h('span', {}, 'Unknown Offender')) : null;
           // v1.82: No Vehicle hides the Vehicle, VIN and Plates boxes (they stay saved if filled).
-          const noVehBox = key === 'offendersList' ? h('label', { class: 'check-row small rf-unknown', title: 'No vehicle information: hide Vehicle, VIN and Plates (left off the PDF)' },
+          const noVehBox = key === 'offendersList' ? h('label', { class: 'check-row small rf-unknown', title: 'No vehicle information: hide Offender Vehicle(s) (left off the PDF)' },
             h('input', { type: 'checkbox', checked: !!it.noVehicle, 'aria-label': `${lab} no vehicle`, onchange: (e) => { it.noVehicle = e.target.checked; draw(); save(); } }), h('span', {}, 'No Vehicle')) : null;
           return h('div', { class: `rf-item${unknown ? ' rf-item-unknown' : ''}${stateVictim ? ' rf-item-state' : ''}` },
             h('div', { class: 'rf-item-head' }, h('strong', {}, `${L.item} ${i + 1}`), unknownBox, noVehBox,
@@ -516,6 +515,8 @@
         }) : [h('p', { class: 'muted small rf-none' }, `No ${L.title.toLowerCase()} yet.`)]));
       };
       draw();
+      // v1.95: adding or removing a charge keeps Offense Classification on a charge's wording.
+      if (key === 'charges') new MutationObserver(() => { const before = data.offense; offenseFromCharge(); if (data.offense !== before) save(); }).observe(box, { childList: true });
       const add = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', onclick: () => {
         data[key].push(F().blankItem(key)); draw(); save();
         const last = box.lastElementChild && box.lastElementChild.querySelector('input, select');
@@ -563,6 +564,7 @@
           data.hidden = data.hidden.filter((x) => x !== key);
           if (!cb.checked) data.hidden.push(key);
           wrap.classList.toggle('rf-line-off', !cb.checked);
+          if (key === 'charges') offenseFromCharge(); // v1.95
           save();
         });
         head = h('label', { class: 'rf-list-head' }, cb, h('h4', {}, L.title));
