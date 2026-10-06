@@ -3929,3 +3929,11 @@ html .tl-item.deadline::before { transform: none; }
 .backup-drives .enc-off, .backup-drives .enc-suspended { color: var(--danger); font-weight: 600; }
 .backup-drives .enc-unknown { color: var(--muted); }
 .backup-drives [class^="enc-"] .bi { width: .9rem; height: .9rem; vertical-align: -2px; }
+
+/* v1.99: the backup reminder and an unencrypted SSD sit with the counts, in the same row as Overdue:
+ * the row wraps, every chip at least as wide as a count, the reminders as wide as their words. */
+.hero-counts { display: flex; flex-wrap: wrap; gap: .5rem; }
+.hero-counts .hero-count { flex: 0 0 auto; min-width: 7.5rem; }
+.hero-count.hc-backup { --hc-edge: #6ee7b7; }
+.hero-count.hc-backup.hc-alert, .hero-count.hc-encrypt { --hc-edge: #ff6b6b; }
+.hero-count.hc-alert.hc-backup, .hero-count.hc-encrypt { background: rgba(255,80,80,.24); }

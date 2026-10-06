@@ -49,8 +49,8 @@ const toastText = (p) => p.evaluate(() => [...document.querySelectorAll('.toast'
   ok(/is not encrypted/.test(await toastText(p)), 'startup warns the SSD is not encrypted');
   await p.evaluate(async () => { const c = await Vault.createCase({ number: 'EX-100', subject: 'John Doe' }); await Vault.addFile(c.id, new File(['hello'], 'note.txt')); });
   await p.evaluate(() => { document.querySelectorAll('.toast').forEach((t) => t.remove()); location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(800);
-  ok(await p.locator('.hero-encrypt').count() === 1 && /SSD not encrypted/.test(await p.textContent('.hero-encrypt')), 'home page has a red SSD not encrypted chip');
-  await p.click('.hero-encrypt'); await p.waitForSelector('.backup-enc');
+  ok(await p.locator('.hc-encrypt').count() === 1 && /Not Encrypted/.test(await p.textContent('.hc-encrypt')), 'home page has a red Not Encrypted chip next to Overdue');
+  await p.click('.hc-encrypt'); await p.waitForSelector('.backup-enc');
   ok(/This SSD: Not encrypted/.test(await p.textContent('.backup-enc')), 'Vault panel: This SSD: Not encrypted');
   await p.click('.backup-full:not(.backup-enc) button'); await p.waitForSelector('.backup-drives');
   const labels = await p.evaluate(() => [...document.querySelectorAll('.backup-drives .arch-opt')].map((x) => x.textContent));
@@ -60,7 +60,7 @@ const toastText = (p) => p.evaluate(() => [...document.querySelectorAll('.toast'
   ok(true, 'an unencrypted backup drive asks first');
   await p.click('#dialog[open] button:has-text("Cancel")'); await p.waitForTimeout(800);
   ok(!fs.readdirSync(h.bk2).length, 'Cancel: nothing is written to the unencrypted drive');
-  await p.click('.hero-backup:not(.hero-encrypt)'); await p.waitForSelector('.backup-full');
+  await p.click('.hc-backup'); await p.waitForSelector('.backup-full');
   await p.click('.backup-full:not(.backup-enc) button'); await p.waitForSelector('.backup-drives');
   await p.locator('.backup-drives .arch-opt').nth(0).click(); await p.click('#dialog[open] button:has-text("Back Up to This Drive")');
   await p.waitForSelector('#dialog[open] h2:has-text("Full Backup Done")', { timeout: 30000 });
@@ -71,8 +71,8 @@ const toastText = (p) => p.evaluate(() => [...document.querySelectorAll('.toast'
   ({ p, errs } = await open(b)); await p.waitForTimeout(1500);
   ok(!/is not encrypted/.test(await toastText(p)), 'BitLocker on: no warning');
   await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(800);
-  ok(await p.locator('.hero-encrypt').count() === 0, 'BitLocker on: no red chip');
-  await p.click('.hero-backup'); await p.waitForSelector('.backup-enc');
+  ok(await p.locator('.hc-encrypt').count() === 0, 'BitLocker on: no red chip');
+  await p.click('.hc-backup'); await p.waitForSelector('.backup-enc');
   ok(/Encrypted \(BitLocker on\)/.test(await p.textContent('.backup-enc')), 'Vault panel: Encrypted (BitLocker on)');
   console.log('errors', errs); await b.close(); await stop(h);
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

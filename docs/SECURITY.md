@@ -8,7 +8,7 @@ and the settings only you can turn on.
 
 | What | Protected by | Check |
 |---|---|---|
-| Cases on **V:** | BitLocker To Go on the CASEVAULT partition | CaseVault shows a red **SSD not encrypted** chip at the top of the home page, and a warning at startup, when V: has no BitLocker (Firefox with the helper; Chrome and Edge can't tell). ⋮ → Vault → Backups shows the drive's state |
+| Cases on **V:** | BitLocker To Go on the CASEVAULT partition | CaseVault shows a red **Not Encrypted** chip next to Overdue on the home page, and a warning at startup, when V: has no BitLocker (Firefox with the helper; Chrome and Edge can't tell). ⋮ → Vault → Backups shows the drive's state |
 | A full backup on another drive | BitLocker on that drive | The backup drive list shows each drive's encryption; picking one without BitLocker asks first |
 | Discovery exports | Their own password (AES-GCM) | — |
 | The screen while you step away | The privacy screen and its PIN | The PIN only hides the screen. It does not encrypt anything |

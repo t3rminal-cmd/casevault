@@ -15,12 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.98
+## What's New in v1.99
 
-- **Drive encryption checks.** With the helper (Firefox), CaseVault asks Windows whether the CASEVAULT drive has BitLocker. If it doesn't, a red **SSD not encrypted** chip sits on the home page and a warning shows at startup. **Back Up Everything** shows each drive's encryption and asks before copying every case to a drive without BitLocker. ⋮ → Vault → Backups shows the SSD's state. Helper **1.13**
-- **[docs/SECURITY.md](docs/SECURITY.md)**: what protects your cases and the code, and a checklist of GitHub settings to turn on (two-factor sign-in, branch protection, secret scanning)
-- **Safer publishing.** The GitHub Actions that check and publish CaseVault are pinned to exact versions (Dependabot proposes updates), and nothing is published until the new **browser tests** pass: the whole app driven in Chromium with made-up cases (`tests/e2e/`)
-- **Tidier code.** The Case Overview, Timeline tab and Files tab moved out of `js/app.js` into their own files; nothing changes on screen
+- **The backup reminder sits with Overdue.** On the home page banner, the full-backup chip is now in the same row as the Open, Pending, Closed, Archived and Overdue counts, right after Overdue: **No Backup** or **Backup 9d Ago** in red when a backup is due, **Backed Up Today** when it isn't. **Not Encrypted** joins it there when the SSD has no BitLocker. Click either for ⋮ → Vault → Backups
 
 ## What CaseVault Does
 

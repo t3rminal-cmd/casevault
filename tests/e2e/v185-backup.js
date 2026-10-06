@@ -1,7 +1,7 @@
 const boot = require('./boot');
 const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
 (async () => { const { b, p, ids, errs } = await boot(1366, 900);
-  console.log('hero backup:', await p.textContent('.hero-backup'), await p.getAttribute('.hero-backup', 'class'));
+  console.log('hero backup:', await p.textContent('.hc-backup'), await p.getAttribute('.hc-backup', 'class'));
   console.log('toasts:', await p.$$eval('.toast', (t) => t.map((x) => x.textContent)));
   // A file in a case so the copy has content.
   await p.evaluate(async (id) => { await Vault.addFile(id, 'Evidence', new File(['hello world'], 'note.txt', { type: 'text/plain' })).catch((e) => console.log(e)); }, ids.c);
@@ -12,7 +12,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   console.log('around:', around);
   // Picker returns a separate folder
   await p.evaluate(() => { window.showDirectoryPicker = async () => (await navigator.storage.getDirectory()).getDirectoryHandle('BackupDrive', { create: true }); });
-  await p.click('.hero-backup'); await p.waitForSelector('.backup-full');
+  await p.click('.hc-backup'); await p.waitForSelector('.backup-full');
   await p.screenshot({ path: process.env.SP + '/v185/vault-backups.png' });
   await p.click('.backup-full button'); await p.click('#dialog[open] button:has-text("Pick the Backup Drive")');
   await p.waitForSelector('#dialog[open] h2:has-text("Full Backup Done")', { timeout: 20000 });
@@ -25,13 +25,13 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   });
   console.log(listing);
   await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(600);
-  console.log('hero after:', await p.textContent('.hero-backup'), await p.getAttribute('.hero-backup', 'class'));
+  console.log('hero after:', await p.textContent('.hc-backup'), await p.getAttribute('.hc-backup', 'class'));
   // Restore: rename the mission then restore today's backup
   const before = await p.evaluate(() => Vault.listBackups());
   await p.evaluate(async (op) => { await Vault.backupNow(); await Vault.updateOperation(op, { name: 'Renamed Op' }); }, ids.op);
   const name = (await p.evaluate(() => Vault.listBackups()))[0];
   await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(400);
-  await p.click('.hero-backup'); await p.waitForSelector('.backup-list');
+  await p.click('.hc-backup'); await p.waitForSelector('.backup-list');
   await p.click('.backup-list summary');
   await p.click(`.backup-row:has-text("${name}") button`);
   await p.click('#dialog[open] button:has-text("Restore")'); await p.waitForTimeout(1200);

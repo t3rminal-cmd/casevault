@@ -4,7 +4,8 @@ const ok = (cond, msg) => console.log(cond ? 'PASS' : 'FAIL', msg);
   // Hero chips
   const chips = await p.$$eval('.hero-count', (els) => els.map((e) => [e.className, e.textContent.trim(), getComputedStyle(e).backgroundColor, getComputedStyle(e).borderLeftWidth]));
   console.log(chips);
-  ok(chips.length === 5 && chips[4][1].includes('Overdue'), 'five chips incl Overdue');
+  // v1.99: the backup reminder joined the row, right after Overdue.
+  ok(chips.length === 6 && chips[4][1].includes('Overdue') && /hc-backup/.test(chips[5][0]), 'five count chips incl Overdue, then the backup reminder');
   await p.click('.hero-count.hc-open'); await p.waitForTimeout(500);
   ok(location => true, '');
   console.log('hash', await p.evaluate(() => location.hash), 'show', await p.$eval('.general-tools select', (s) => s.value), 'rows', await p.$$eval('.general-table tbody tr', (r) => r.map((x) => x.textContent.slice(0, 30))));

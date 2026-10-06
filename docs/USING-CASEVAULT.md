@@ -215,9 +215,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.99
+
+- **Home page banner:** the backup reminder is now a chip in the row of counts, right after **Overdue**, so the reminders are together. It reads **No Backup** (never backed up) or **Backup 9d Ago** in red once a full backup is more than 7 days old, and **Backed Up Today** / **Backup 3d Ago** otherwise. If the SSD has no BitLocker, a red **Not Encrypted** chip follows it. Point at a chip for the details; click it for ⋮ → Vault → Backups
+
 ### What's new in v1.98
 
-- **Is the SSD encrypted?** In Firefox (with the helper), CaseVault asks Windows. If the CASEVAULT drive has no BitLocker, the home page shows a red **SSD not encrypted** chip and a warning at startup. Click the chip for ⋮ → Vault → Backups, which says how to turn BitLocker on. If BitLocker is paused, it says so and how to resume it. Chrome and Edge can't ask Windows, so there the Backups page says to look for the padlock on the drive in File Explorer
+- **Is the SSD encrypted?** In Firefox (with the helper), CaseVault asks Windows. If the CASEVAULT drive has no BitLocker, the home page shows a red **Not Encrypted** chip and a warning at startup. Click the chip for ⋮ → Vault → Backups, which says how to turn BitLocker on. If BitLocker is paused, it says so and how to resume it. Chrome and Edge can't ask Windows, so there the Backups page says to look for the padlock on the drive in File Explorer
 - **Back Up Everything** lists each drive as **Encrypted (BitLocker on)** or **Not encrypted**. Picking one without BitLocker asks first, because the backup is a full copy of every case: **Cancel** (the default) or **Back Up Anyway**
 - **[SECURITY.md](SECURITY.md)** explains what keeps your cases safe, the BitLocker settings to use, and the GitHub settings that protect the code
 - Behind the scenes: the update checks are stricter (browser tests must pass before anything is published) and the code is split into smaller files. Nothing else changes on screen. The helper is now **1.13**: copy the new `casevault-helper` folder to `W:\`
