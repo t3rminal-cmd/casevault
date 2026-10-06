@@ -4,6 +4,13 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.98)
+
+- **Drive encryption checks.** With the helper (Firefox), CaseVault asks Windows whether the CASEVAULT drive has BitLocker. If it doesn't, a red **SSD not encrypted** chip sits on the home page and a warning shows at startup. **Back Up Everything** shows each drive's encryption and asks before copying every case to a drive without BitLocker. ⋮ → Vault → Backups shows the SSD's state. Helper **1.13**
+- **[docs/SECURITY.md](docs/SECURITY.md)**: what protects your cases and the code, and a checklist of GitHub settings to turn on (two-factor sign-in, branch protection, secret scanning)
+- **Safer publishing.** The GitHub Actions that check and publish CaseVault are pinned to exact versions (Dependabot proposes updates), and nothing is published until the new **browser tests** pass: the whole app driven in Chromium with made-up cases (`tests/e2e/`)
+- **Tidier code.** The Case Overview, Timeline tab and Files tab moved out of `js/app.js` into their own files; nothing changes on screen
+
 ## Features (v1.97)
 
 - **Subject Names read "LAST, First" everywhere they're listed**: the sidebar, General Files, Mission folders, Needs Attention and the case header ("John Doe" and "doe, john" both show as **DOE, John**). The Subject Name box keeps what you typed; names that aren't one person's ("Unknown Offender", "State v. Doe", a group) show as typed. Search finds either form

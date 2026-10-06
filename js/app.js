@@ -1765,19 +1765,23 @@
     const overdue = deadlines.filter((c) => dueLabel(c.nextDeadline.date).cls === 'overdue').length;
     const chip = (key, label, n, icon) => h('button', { type: 'button', class: `hero-count hc-${key}${key === 'overdue' && n ? ' hc-alert' : ''}`, title: `${n} ${label.toLowerCase()} case${n === 1 ? '' : 's'}: click to see them in General Files`,
       onclick: () => showGeneralWith(key) }, I(icon), h('strong', {}, String(n)), h('span', {}, label));
+    // v1.99: the backup reminder (and an unencrypted SSD) sit in the same row, after Overdue.
+    const backupChip = (() => {
+      const n = fullBackupAge(); const due = n == null || n > FULL_BACKUP_DAYS;
+      const text = n == null ? 'No Backup' : n === 0 ? 'Backed Up Today' : `Backup ${n}d Ago`;
+      return h('button', { type: 'button', class: `hero-count hc-backup${due ? ' hc-alert' : ''}`, title: `${fullBackupText()}. Click to back up the whole vault to another drive.`, onclick: () => showVaultPanel('backups') },
+        I(due ? 'exclamation-triangle-fill' : 'hdd-fill'), h('span', {}, text));
+    })();
+    const encryptChip = driveEncryptionWarning() ? h('button', { type: 'button', class: 'hero-count hc-encrypt hc-alert', title: driveEncryptionWarning(), onclick: () => showVaultPanel('backups') },
+      I('unlock'), h('span', {}, state.bitlocker === 'suspended' ? 'BitLocker Paused' : 'Not Encrypted')) : null;
     const counts = h('div', { class: 'hero-counts' },
       Vault.STATUSES.map((st) => chip(st.toLowerCase(), st, count(st), STATUS_ICONS[st])),
-      chip('overdue', 'Overdue', overdue, 'bell-fill'));
+      chip('overdue', 'Overdue', overdue, 'bell-fill'), backupChip, encryptChip);
     return h('div', { class: 'hero hero-compact' },
       h('div', { class: 'hero-art', 'aria-hidden': 'true' }, h('span', { class: 'hero-ring r1' }), h('span', { class: 'hero-ring r2' }), h('span', { class: 'hero-ring r3' }), I('shield-lock-fill')),
       h('div', { class: 'hero-text' },
         h('div', { class: 'hero-line' }, h('h1', { class: 'hero-title' }, `${greet}${who ? `, ${who.split(/\s+/)[0]}` : ''}`), dateLine),
-        counts,
-        // v1.85: when the whole vault was last backed up to another drive.
-        (() => { const n = fullBackupAge(); const due = n == null || n > FULL_BACKUP_DAYS;
-          return h('button', { type: 'button', class: `hero-backup${due ? ' due' : ''}`, title: 'Back up the whole vault to another drive', onclick: () => showVaultPanel('backups') }, I(due ? 'exclamation-triangle-fill' : 'hdd-fill'), h('span', {}, fullBackupText())); })(),
-        // v1.98: a drive that isn't encrypted gets its own red chip.
-        driveEncryptionWarning() ? h('button', { type: 'button', class: 'hero-backup due hero-encrypt', title: driveEncryptionWarning(), onclick: () => showVaultPanel('backups') }, I('unlock'), h('span', {}, state.bitlocker === 'suspended' ? 'BitLocker paused' : 'SSD not encrypted')) : null),
+        counts),
       clock);
   }
 
