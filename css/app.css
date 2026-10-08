@@ -3937,3 +3937,10 @@ html .tl-item.deadline::before { transform: none; }
 .hero-count.hc-backup { --hc-edge: #6ee7b7; }
 .hero-count.hc-backup.hc-alert, .hero-count.hc-encrypt { --hc-edge: #ff6b6b; }
 .hero-count.hc-alert.hc-backup, .hero-count.hc-encrypt { background: rgba(255,80,80,.24); }
+/* v1.100: after Save Changes, what keeps a part from its green check is outlined in red. */
+.rf-section .rf-missing { outline: 2px solid var(--danger, #dc2626); outline-offset: -1px; }
+.rf-section .rf-none.rf-missing, .rf-section .rf-empty.rf-missing { padding: .3rem .5rem; color: var(--danger, #dc2626); }
+/* v1.100: the sidebar shows when each case was opened, and how long ago, under the Subject Name. */
+.case-item-meta .cim-subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.case-item .case-item-opened { display: flex; align-items: center; gap: .3rem; margin-top: .1rem; font-size: .72rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.case-item-opened .bi { width: .8rem; height: .8rem; flex: none; }
