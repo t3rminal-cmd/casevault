@@ -583,6 +583,16 @@
     const keepFolds = () => { try { localStorage.setItem(OPEN_KEY, JSON.stringify([...opened])); } catch { /* this session only */ } };
     const folded = { has: (id) => !opened.has(id), add: (id) => opened.delete(id), delete: (id) => opened.add(id) };
     const foldButtons = [];
+    // v1.100: after Save Changes, a part without its green check outlines what is still blank in red.
+    let showMissing = false;
+    const recheckers = [];
+    const missingBox = (el) => {
+      if (el.tagName === 'TEXTAREA' && !el.offsetParent) {
+        const rich = el.parentElement && el.parentElement.querySelector(`.${el.className.split(/\s+/)[0]}-rich`);
+        if (rich) return rich;
+      }
+      return el.closest('.rf-boxed') || el.closest('.combo, .date-field') || el;
+    };
     function part(id, title, icon, ...body) {
       const on = !F().isHidden(data, id);
       const inner = h('div', { class: 'rf-body' }, ...body);
@@ -611,12 +621,25 @@
           // v1.93: a list still ticked in with nothing added (no Police Personnel, no charges…) isn't
           // filled in; tick it off when it doesn't apply.
           if (complete && inner.querySelector('.rf-list:not(.rf-line-off) .rf-none')) complete = false;
+          inner.querySelectorAll('.rf-missing').forEach((el) => el.classList.remove('rf-missing'));
+          if (showMissing && !complete) {
+            boxes.filter((el) => !String(el.value || '').trim()).forEach((el) => missingBox(el).classList.add('rf-missing'));
+            inner.querySelectorAll('.rf-list:not(.rf-line-off) .rf-none').forEach((el) => el.classList.add('rf-missing'));
+            // Nothing blank to point at (an empty list, no evidence yet): the empty note, else its Add button.
+            if (!inner.querySelector('.rf-missing')) {
+              const empty = [...inner.querySelectorAll('.rf-empty, .rf-none')].filter((el) => el.offsetParent);
+              const add = [...inner.querySelectorAll('.contact-add button')].find((el) => el.offsetParent);
+              (empty.length ? empty : add ? [add] : []).forEach((el) => el.classList.add('rf-missing'));
+            }
+          }
         }
+        if (!cb.checked) inner.querySelectorAll('.rf-missing').forEach((el) => el.classList.remove('rf-missing'));
         done.classList.toggle('on', complete);
         done.setAttribute('aria-hidden', String(!complete));
         sec.classList.toggle('rf-complete', complete);
       };
       const later = () => { if (!pending) pending = requestAnimationFrame(checkDone); };
+      recheckers.push(checkDone);
       inner.addEventListener('input', later);
       inner.addEventListener('change', later);
       new MutationObserver(later).observe(inner, { childList: true, subtree: true });
@@ -851,7 +874,7 @@
             ui.field('Description', desc, 'span-all'),
             h('div', { class: 'rf-photo-row' }, strip, addPhoto, picker)),
           archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Remove exhibit', onclick: () => { data.evidence.splice(i, 1); drawEvidence(); save(); } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, `Remove exhibit ${n}`)));
-      }) : [h('p', { class: 'muted small' }, 'No evidence yet.')]));
+      }) : [h('p', { class: 'muted small rf-empty' }, 'No evidence yet.')]));
     };
     drawEvidence();
     const addExhibit = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', title: c.agencyNumber ? `Numbered on from the last exhibit of any case with federal jacket number ${c.agencyNumber}.` : 'Numbered on from the last exhibit of this case. Cases with the same federal jacket number share one sequence.', onclick: async () => {
@@ -986,7 +1009,10 @@
     const saveBtn = h('button', { class: 'btn primary', type: 'button', icon: 'save', onclick: async () => {
       save(0);
       await Save.flushAll();
-      if (!Save.failed.has(key)) toast('Report fields saved to the SSD.', 'success', 2500);
+      showMissing = true;
+      recheckers.forEach((f) => f());
+      const blank = panel.querySelectorAll('.rf-missing').length;
+      if (!Save.failed.has(key)) toast(blank ? `Report fields saved to the SSD. ${blank} blank field${blank === 1 ? ' is' : 's are'} outlined in red: fill ${blank === 1 ? 'it' : 'them'} in, or untick what doesn't apply.` : 'Report fields saved to the SSD.', 'success', blank ? 6000 : 2500);
     } }, 'Save Changes');
     // ---- the Supplementary Report as a PDF: look at it and print, keep it, or send it to sign.
     // Exhibit photos as JPEG for the Exhibit Attachments pages (at most 1600 px, readable in print).

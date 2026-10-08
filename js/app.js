@@ -56,6 +56,15 @@
     return CVFormat.dateText(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
   }
 
+  // v1.100: when a case was opened, short, and how long ago (for the sidebar).
+  function openedAge(iso) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return null;
+    const d = new Date(`${iso}T12:00:00`);
+    const days = Math.max(0, Math.round((new Date(`${today()}T12:00:00`) - d) / 864e5));
+    const age = days === 0 ? 'today' : days < 60 ? `${days}d` : days < 730 ? `${Math.floor(days / 30.44)}mo` : `${Math.floor(days / 365.25)}y`;
+    return { short: `${d.toLocaleString('en-US', { month: 'short' })} ${pad(d.getDate())}, ${d.getFullYear()}`, age, days, long: fmtDate(iso) };
+  }
+
   function fmtDateTime(ms) {
     const d = new Date(ms);
     return `${fmtDate(Vault.localDay(d))} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -730,8 +739,10 @@
     // v1.28: the bell sits right after the title; a case number inside an operation leaves it to
     // the operation's name.
     const alarm = !!due && !inGroup;
+    const opened = openedAge(c.opened || (c.dates && c.dates.opened));
     const tip = [
       `${c.number || 'No case number'}${c.subject ? `, ${c.subject}` : ''} · ${c.status}`,
+      opened ? `Opened ${opened.long} (${opened.days ? `${opened.days} day${opened.days === 1 ? '' : 's'} ago` : 'today'})` : null,
       c.status === 'Pending' && c.pending ? `Waiting on ${c.pending.reason}${c.pending.followUp ? `, follow up ${fmtDate(c.pending.followUp)}` : ''}` : null,
       sol ? `Statute of limitations ${sol === 'expired' ? 'expired' : 'expires'} ${fmtDate(c.sol.expires)}` : null,
       due && !sol ? `${due.cls === 'overdue' || due.cls === 'soon' ? 'Alarm: ' : 'Next deadline: '}${c.nextDeadline.title || 'Deadline'}, ${fmtDate(c.nextDeadline.date)}${c.nextDeadline.time ? ` ${c.nextDeadline.time}` : ''} (${due.text})` : null,
@@ -754,7 +765,11 @@
       // Just the numbers: file number | case number | client, e.g. "100 | JH123456 | State".
       // (No empty line when there are no numbers to show, v1.29. Inside an operation only the case
       // number shows, v1.32: the file number, original case and client are on the operation.)
-      h('div', { class: `case-item-meta muted${c.subject ? '' : ' no-subject'}` }, [subj(c) || 'No subject yet', inGroup ? '' : CVOperation.opLabel(Vault.operationOf(c))].filter(Boolean).join(' | '))));
+      h('div', { class: `case-item-meta muted${c.subject ? '' : ' no-subject'}` },
+        h('span', { class: 'cim-subject' }, [subj(c) || 'No subject yet', inGroup ? '' : CVOperation.opLabel(Vault.operationOf(c))].filter(Boolean).join(' | '))),
+      // v1.100: the day it was opened and how long ago, on its own line so the name is never cut off.
+      opened ? h('div', { class: 'case-item-opened muted', title: `Opened ${opened.long}${opened.days ? `, ${opened.days} day${opened.days === 1 ? '' : 's'} ago` : ', today'}` },
+        I('calendar-event'), h('span', { class: 'cim-opened' }, `${opened.short} · ${opened.age}`)) : null));
   }
 
   /* Operations (v1.46): an Operation is a record (number, name, status, dates, notes) in vault.json;

@@ -4,6 +4,10 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.99)
+
+- **The backup reminder sits with Overdue.** On the home page banner, the full-backup chip is now in the same row as the Open, Pending, Closed, Archived and Overdue counts, right after Overdue: **No Backup** or **Backup 9d Ago** in red when a backup is due, **Backed Up Today** when it isn't. **Not Encrypted** joins it there when the SSD has no BitLocker. Click either for ⋮ → Vault → Backups
+
 ## Features (v1.98)
 
 - **Drive encryption checks.** With the helper (Firefox), CaseVault asks Windows whether the CASEVAULT drive has BitLocker. If it doesn't, a red **SSD not encrypted** chip sits on the home page and a warning shows at startup. **Back Up Everything** shows each drive's encryption and asks before copying every case to a drive without BitLocker. ⋮ → Vault → Backups shows the SSD's state. Helper **1.13**

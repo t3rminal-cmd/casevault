@@ -15,9 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.99
+## What's New in v1.100
 
-- **The backup reminder sits with Overdue.** On the home page banner, the full-backup chip is now in the same row as the Open, Pending, Closed, Archived and Overdue counts, right after Overdue: **No Backup** or **Backup 9d Ago** in red when a backup is due, **Backed Up Today** when it isn't. **Not Encrypted** joins it there when the SSD has no BitLocker. Click either for ⋮ → Vault → Backups
+- **Sidebar: when each case was opened.** Under every case number's Subject Name, a small line shows the day it was opened and how long ago (*Oct 03, 2026 · 5d*, *Jul 10, 2026 · 2mo*, *Jul 30, 2024 · 2y*). Point at it for the full date and the number of days
+- **Draft: what's missing is outlined in red.** After **Save Changes**, every part without its green check outlines its blank fields in red (or its empty list, or *No evidence yet*), and the save message says how many. Each outline goes as soon as the field is filled; unticking a part that doesn't apply clears its outlines
 
 ## What CaseVault Does
 

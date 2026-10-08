@@ -215,6 +215,11 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.100
+
+- **Sidebar:** each case shows when it was opened, under its Subject Name: the date and how long ago (*today*, *5d* days, *2mo* months, *2y* years). Point at it for the full date and the exact number of days. Cases in a Mission folder show it too
+- **Draft → Save Changes:** if a part still has no green check, its blank fields are outlined in red so you can see what's missing. An empty list (no charges, no personnel) or *No evidence yet* is outlined too. The message after saving says how many fields are blank. Fill a field and its outline goes; untick a part that doesn't apply and its outlines go. Nothing is outlined before you click Save Changes
+
 ### What's new in v1.99
 
 - **Home page banner:** the backup reminder is now a chip in the row of counts, right after **Overdue**, so the reminders are together. It reads **No Backup** (never backed up) or **Backup 9d Ago** in red once a full backup is more than 7 days old, and **Backed Up Today** / **Backup 3d Ago** otherwise. If the SSD has no BitLocker, a red **Not Encrypted** chip follows it. Point at a chip for the details; click it for ⋮ → Vault → Backups
