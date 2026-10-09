@@ -42,14 +42,59 @@
     return { jpeg: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height };
   }
 
+  // v1.104: a PDF can be attached to an exhibit as well as photos. Each of its pages goes into the
+  // report as an attachment page, the same as a photo (at most 1600 px, readable in print).
+  const isPdf = (path) => /\.pdf$/i.test(String(path || ''));
+  async function pdfPageCanvas(page, maxSide) {
+    const base = page.getViewport({ scale: 1 });
+    const vp = page.getViewport({ scale: Math.min(2.5, maxSide / Math.max(base.width, base.height)) });
+    const cv = Object.assign(document.createElement('canvas'), { width: Math.ceil(vp.width), height: Math.ceil(vp.height) });
+    const g = cv.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+    await page.render({ canvasContext: g, viewport: vp }).promise;
+    return cv;
+  }
+  async function withPdf(c, path, fn) {
+    const lib = await CVExtract.loadPdfjs();
+    const task = CVExtract.openPdf(lib, new Uint8Array(await (await Vault.readFile(c.id, path)).arrayBuffer()));
+    try { return await fn(await task.promise); } finally { await task.destroy(); }
+  }
+  const jpegOf = async (cv) => new Uint8Array(await (await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.88))).arrayBuffer());
+  async function pdfJpegs(c, path) {
+    return withPdf(c, path, async (doc) => {
+      const out = [];
+      for (let n = 1; n <= doc.numPages; n++) {
+        const page = await doc.getPage(n);
+        const cv = await pdfPageCanvas(page, 1600);
+        out.push({ jpeg: await jpegOf(cv), w: cv.width, h: cv.height });
+        page.cleanup();
+      }
+      return out;
+    });
+  }
+  /** One attached file -> its pages as JPEGs (a photo is one page). */
+  async function fileJpegs(c, path) { return isPdf(path) ? pdfJpegs(c, path) : [await toJpeg(c, path)]; }
+  const pageNote = (k, n) => (n > 1 ? ` (page ${k + 1} of ${n})` : '');
+  /** The picture on an exhibit's tile: the photo, or the first page of a PDF. */
+  function showThumb(c, path, img) {
+    const done = (blob) => { img.src = URL.createObjectURL(blob); img.addEventListener('load', () => URL.revokeObjectURL(img.src), { once: true }); };
+    const fail = () => { img.alt = isPdf(path) ? 'PDF not found' : 'Photo not found'; };
+    if (!isPdf(path)) { Vault.readFile(c.id, path).then(done).catch(fail); return; }
+    img.classList.add('rf-thumb-pdf');
+    withPdf(c, path, async (doc) => { const page = await doc.getPage(1); const cv = await pdfPageCanvas(page, 480); page.cleanup(); return new Promise((res) => cv.toBlob(res, 'image/png')); }).then(done).catch(fail);
+  }
+  const PICK_ACCEPT = 'image/*,application/pdf,.pdf';
+
   async function photoJpegs(c, data) {
     const out = [];
     if (F().isHidden(data, 'evidence')) return out;
     for (const e of data.evidence) {
       for (const [j, path] of (e.photos || []).entries()) {
         try {
-          out.push({ ...(await toJpeg(c, path)), caption: `${F().exhibitLine(e).replace(/^Exhibit \S+?(?=[,:])/, `Exhibit ${F().photoLabel(e.number, j)}`)}${String((e.photoLabels || [])[j] || '').trim() ? ` - Photo: ${String(e.photoLabels[j]).trim()}` : ''}` });
-        } catch { /* a photo that can't be read is left out */ }
+          const pages = await fileJpegs(c, path);
+          const caption = `${F().exhibitLine(e).replace(/^Exhibit \S+?(?=[,:])/, `Exhibit ${F().photoLabel(e.number, j)}`)}${String((e.photoLabels || [])[j] || '').trim() ? ` - ${isPdf(path) ? 'Document' : 'Photo'}: ${String(e.photoLabels[j]).trim()}` : ''}`;
+          pages.forEach((pg, k) => out.push({ ...pg, caption: caption + pageNote(k, pages.length) }));
+        } catch { /* a photo or PDF that can't be read is left out */ }
       }
     }
     // v1.68: the Additional Exhibits after the inventoried ones.
@@ -59,7 +104,7 @@
   async function extraJpegs(c, x) {
     const out = [];
     for (const [j, path] of (x.photos || []).entries()) {
-      try { out.push({ ...(await toJpeg(c, path)), caption: F().extraCaption(x, j) }); } catch { /* left out */ }
+      try { const pages = await fileJpegs(c, path); pages.forEach((pg, k) => out.push({ ...pg, caption: F().extraCaption(x, j) + pageNote(k, pages.length) })); } catch { /* left out */ }
     }
     return out;
   }
@@ -837,22 +882,23 @@
           strip.replaceChildren(...e.photos.map((path, j) => {
             const tag = F().photoLabel(n, j);
             const img = h('img', { alt: `Exhibit ${tag}` });
-            Vault.readFile(c.id, path).then((f) => { img.src = URL.createObjectURL(f); img.addEventListener('load', () => URL.revokeObjectURL(img.src), { once: true }); }).catch(() => { img.alt = 'Photo not found'; });
+            showThumb(c, path, img);
             // A label for each photo (v1.34): shown under it here and in its caption in the PDF.
-            const label = h('input', { class: 'rf-photo-label', maxlength: 120, placeholder: 'Label this photo', 'aria-label': `Label for photo ${tag}`, readonly: archived || null });
+            const label = h('input', { class: 'rf-photo-label', maxlength: 120, placeholder: isPdf(path) ? 'Label this PDF' : 'Label this photo', 'aria-label': `Label for photo ${tag}`, readonly: archived || null });
             label.value = e.photoLabels[j] || '';
             label.addEventListener('input', () => { e.photoLabels[j] = label.value; save(); });
             return h('figure', { class: 'rf-photo-card' },
               h('div', { class: 'rf-photo' },
                 h('span', { class: 'rf-photo-tag' }, tag),
+                isPdf(path) ? h('span', { class: 'rf-photo-pdf', title: 'PDF: every page goes into the report' }, 'PDF') : null,
                 h('button', { 'data-ro-ok': 'true', class: 'rf-photo-open', type: 'button', title: 'View', onclick: () => ui.previewFile(c, path) }, img),
-                archived ? null : h('button', { class: 'rf-photo-x', type: 'button', title: 'Take off this exhibit (the photo stays in the case files)', onclick: () => { e.photos.splice(j, 1); e.photoLabels.splice(j, 1); drawPhotos(); save(); } }, ui.icon('x-lg'), h('span', { class: 'sr-only' }, 'Remove photo'))),
+                archived ? null : h('button', { class: 'rf-photo-x', type: 'button', title: 'Take off this exhibit (the file stays in the case files)', onclick: () => { e.photos.splice(j, 1); e.photoLabels.splice(j, 1); drawPhotos(); save(); } }, ui.icon('x-lg'), h('span', { class: 'sr-only' }, 'Remove photo'))),
               label);
           }));
         };
         drawPhotos();
         if (!archived) relabelPhotos(c, e, n).then((changed) => { if (changed) { drawPhotos(); save(0); } }).catch(() => {});
-        const picker = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true });
+        const picker = h('input', { type: 'file', accept: PICK_ACCEPT, multiple: true, hidden: true });
         picker.addEventListener('change', async () => {
           const files = [...picker.files];
           picker.value = '';
@@ -868,7 +914,7 @@
           save(0);
         });
         // A big camera tile, the size of a photo (v1.34), so it's easy to find.
-        const addPhoto = archived ? null : h('button', { class: 'rf-photo-add', type: 'button', title: 'Add photos of this exhibit', onclick: () => picker.click() }, ui.icon('camera-fill'), h('span', {}, 'Add Photos'));
+        const addPhoto = archived ? null : h('button', { class: 'rf-photo-add', type: 'button', title: 'Add photos or PDFs of this exhibit (every page of a PDF goes into the report)', onclick: () => picker.click() }, ui.icon('camera-fill'), h('span', {}, 'Add Photos or PDF'));
         return h('div', { class: 'rf-exhibit-card' },
           h('div', { class: 'rf-exhibit-no', title: 'Given automatically; never reused' }, h('span', { class: 'small muted' }, 'Exhibit No.'), h('strong', { class: 'rf-exhibit' }, String(n))),
           h('div', { class: 'rf-exhibit-body' },
@@ -943,20 +989,21 @@
           strip.replaceChildren(...x.photos.map((path, j) => {
             const tag = F().photoLabel(n, j);
             const img = h('img', { alt: `Additional Exhibit ${tag}` });
-            Vault.readFile(c.id, path).then((f) => { img.src = URL.createObjectURL(f); img.addEventListener('load', () => URL.revokeObjectURL(img.src), { once: true }); }).catch(() => { img.alt = 'Photo not found'; });
-            const label = h('input', { class: 'rf-photo-label', maxlength: 120, placeholder: 'Label this photo', 'aria-label': `Label for additional photo ${tag}`, readonly: archived || null });
+            showThumb(c, path, img);
+            const label = h('input', { class: 'rf-photo-label', maxlength: 120, placeholder: isPdf(path) ? 'Label this PDF' : 'Label this photo', 'aria-label': `Label for additional photo ${tag}`, readonly: archived || null });
             label.value = x.photoLabels[j] || '';
             label.addEventListener('input', () => { x.photoLabels[j] = label.value; save(); });
             return h('figure', { class: 'rf-photo-card' },
               h('div', { class: 'rf-photo' },
                 h('span', { class: 'rf-photo-tag' }, tag),
+                isPdf(path) ? h('span', { class: 'rf-photo-pdf', title: 'PDF: every page goes into the report' }, 'PDF') : null,
                 h('button', { 'data-ro-ok': 'true', class: 'rf-photo-open', type: 'button', title: 'View', onclick: () => ui.previewFile(c, path) }, img),
-                archived ? '' : h('button', { class: 'rf-photo-x', type: 'button', title: 'Take off this exhibit (the photo stays in the case files)', onclick: () => { x.photos.splice(j, 1); x.photoLabels.splice(j, 1); drawPhotos(); save(); } }, ui.icon('x-lg'), h('span', { class: 'sr-only' }, 'Remove photo'))),
+                archived ? '' : h('button', { class: 'rf-photo-x', type: 'button', title: 'Take off this exhibit (the file stays in the case files)', onclick: () => { x.photos.splice(j, 1); x.photoLabels.splice(j, 1); drawPhotos(); save(); } }, ui.icon('x-lg'), h('span', { class: 'sr-only' }, 'Remove photo'))),
               label);
           }));
         };
         drawPhotos();
-        const picker = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true });
+        const picker = h('input', { type: 'file', accept: PICK_ACCEPT, multiple: true, hidden: true });
         picker.addEventListener('change', async () => {
           const files = [...picker.files];
           picker.value = '';
@@ -970,7 +1017,7 @@
           drawPhotos();
           save(0);
         });
-        const addPhoto = archived ? '' : h('button', { class: 'rf-photo-add', type: 'button', title: x.kind === 'texts' ? 'Add screenshots of the text messages' : 'Add photographs', onclick: () => picker.click() }, ui.icon(x.kind === 'texts' ? 'chat-square-text' : 'camera-fill'), h('span', {}, x.kind === 'texts' ? 'Add Screenshots' : 'Add Photos'));
+        const addPhoto = archived ? '' : h('button', { class: 'rf-photo-add', type: 'button', title: x.kind === 'texts' ? 'Add screenshots of the text messages (or a PDF of them)' : 'Add photographs or PDFs (every page of a PDF goes into the report)', onclick: () => picker.click() }, ui.icon(x.kind === 'texts' ? 'chat-square-text' : 'camera-fill'), h('span', {}, x.kind === 'texts' ? 'Add Screenshots' : 'Add Photos or PDF'));
         const pdfBtn = x.kind === 'texts' ? h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button', icon: 'file-earmark-pdf', title: 'A portrait PDF of the screenshots, two to a page, each labelled. Saved under Files (Other Exhibits).', onclick: async (ev) => { const b = ev.currentTarget; b.disabled = true; b.classList.add('busy'); try { await textsPdf(x); } finally { b.disabled = false; b.classList.remove('busy'); } } }, 'Text Message PDF') : '';
         kind.addEventListener('change', () => { x.kind = kind.value; save(0); drawExtras(); });
         return h('div', { class: 'rf-exhibit-card rf-extra-card' },

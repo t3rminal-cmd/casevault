@@ -15,11 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.103
+## What's New in v1.104
 
-- **Mission timeline on the home page: the slim line with small circles.** Click a Mission folder and its timeline is the same line as on a case's Details tab: a small circle for each event of every case number (events close together share one circle with their count), red for an overdue deadline, and a red Today mark. It fits the page, with no sideways scrolling. Point at a circle for the date, title, note and case number; click it to open that case's Timeline tab. (This replaces the vertical list from v1.102.)
-- **Back up to C:\CaseVault-Backups.** In Firefox, **Back Up Everything** → **Add Backup Folder** now takes a folder on the PC's own drive as well as a shared folder on another PC, and `C:\CaseVault-Backups` is filled in: click **Add** (the folder is made if needed). Running CaseVault on the Beelink, that is the Beelink's C: drive. Its BitLocker state is shown, a folder on the SSD itself is refused, and the backups go straight into the folder (no CaseVault-Backups inside CaseVault-Backups). See [docs/BACKUP-TO-ANOTHER-PC.md](docs/BACKUP-TO-ANOTHER-PC.md)
-- **CaseVault helper 1.15**
+- **Attach a PDF to an exhibit, as well as photos.** On the Draft tab, each exhibit's tile now reads **Add Photos or PDF** (Additional Exhibits too). A PDF (a lab report, a receipt, a scanned form) is saved in the case's exhibit folder like a photo, gets the next letter (Exhibit 1b), and its tile shows the first page with a red **PDF** badge; click it to read it. In the report, every page of the PDF goes into the Exhibit Attachments, captioned with the exhibit, its label and the page (*Exhibit 1b, ... - Document: Lab report (page 2 of 3)*)
 
 ## What CaseVault Does
 
