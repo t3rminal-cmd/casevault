@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.107)
+
+- **Backup chip never clips:** shorter words (*Backed Up*, *Backup: 9d*, *No Backup*; the full sentence is in its tooltip), and no chip in the banner is ever narrower than its words
+- **Timeline circles glow green for the open case:** on a case's Details tab, the circles of that case number's events glow green (the others of the Mission stay blue); the case number is named next to *Timeline* as a key
+- **Put Exhibits in Date Order:** Draft → Evidence → **Put in Date Order**. Cases sharing one federal jacket number share one exhibit sequence; a case entered later but dated earlier now gets the first numbers. The exhibits are numbered again by each case's Date of Occurrence (its opened date when empty), shown first as *old → new*, and their photos and PDFs are renamed to match. Reports already sent keep their numbers
+
 ## Features (v1.106)
 
 - **Recently Deleted.** Delete Case now keeps the case for 30 days in ⋮ → Vault → **Recently Deleted**, with **Restore** (it goes back where it was, Mission and all) and **Delete Now**. After 30 days it is removed from the SSD for good

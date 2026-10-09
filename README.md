@@ -15,11 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.107
+## What's New in v1.108
 
-- **Backup chip never clips:** shorter words (*Backed Up*, *Backup: 9d*, *No Backup*; the full sentence is in its tooltip), and no chip in the banner is ever narrower than its words
-- **Timeline circles glow green for the open case:** on a case's Details tab, the circles of that case number's events glow green (the others of the Mission stay blue); the case number is named next to *Timeline* as a key
-- **Put Exhibits in Date Order:** Draft → Evidence → **Put in Date Order**. Cases sharing one federal jacket number share one exhibit sequence; a case entered later but dated earlier now gets the first numbers. The exhibits are numbered again by each case's Date of Occurrence (its opened date when empty), shown first as *old → new*, and their photos and PDFs are renamed to match. Reports already sent keep their numbers
+- **Confidential address:** Draft → Offense → Address of Occurrence offers *99 N Confidential* and *99 N Confidential Street* (any other address can still be typed)
+- **Federal Government as a victim:** the Victim name list offers the *Federal Government* next to the *State of Illinois*; like the State it has only the Relation Code and the officer's name
+- **See DEA 6:** a new button on the Draft tab for a report kept for statistics only. Victims, Offenders, Charges and Evidence Inventoried open and read *See DEA 6 for further information*, and the Summary of Investigation becomes *This report is for statistical purposes only. For further information see DEA 6 reports under Federal Case Number …. THIS CASE IS CLEAR/CLOSED.* (the case's Federal Jacket Number). Entries already typed are kept; Undo puts the form back
 
 ## What CaseVault Does
 

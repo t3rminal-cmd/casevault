@@ -114,7 +114,7 @@ test('v1.22: age from DOB, photo labels, roles, notifications and optional lines
   assert.strictEqual(F.ageOn('1990-09-30', '2026-09-30'), '36');
   assert.strictEqual(F.ageOn('', '2026-09-30'), '');
   assert.deepStrictEqual([F.photoLabel(1, 0), F.photoLabel(1, 1), F.photoLabel(3, 25), F.photoLabel(3, 26)], ['1a', '1b', '3z', '3aa']);
-  assert.deepStrictEqual(F.PICKS.victim, ['State of Illinois']);
+  assert.deepStrictEqual(F.PICKS.victim, ['State of Illinois', 'Federal Government']);
   const d = F.normalize({ schema: 3, notifications: 'Called the watch commander', personnel: [{ name: 'A', role: 'Unit 189' }, { name: 'B', role: 'Entry' }], within1000: 'School', hidden: ['within1000'] });
   assert.strictEqual(d.notifications[0].name, 'Called the watch commander');
   assert.deepStrictEqual(d.personnel.map((p) => [p.unit, p.role]), [['Unit 189', ''], ['', 'Entry']]);

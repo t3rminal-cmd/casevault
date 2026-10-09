@@ -177,7 +177,10 @@
     vehicles: { title: 'Vehicles', item: 'Vehicle', fields: [['year', 'Year', 'text'], ['make', 'Make', 'text'], ['model', 'Model', 'text'], ['color', 'Color', 'text'], ['plate', 'License Plate', 'text'], ['state', 'Plate State', 'text'], ['vin', 'VIN', 'text'], ['disposition', 'Impound / Tow', 'select', ['', 'Impound', 'Tow', 'Other']], ['ownerName', 'Registered Owner', 'text'], ['ownerAddress', 'Registered Owner Address', 'wide'], ['notes', 'Notes', 'wide']] }, // v1.73: Registered Owner and Address
   };
   const PICKS = {
-    victim: ['State of Illinois'],
+    // v1.108: the Federal Government as well as the State.
+    victim: ['State of Illinois', 'Federal Government'],
+    // v1.108: the confidential address used when the real one isn't written in the report.
+    address: ['99 N Confidential', '99 N Confidential Street'],
     hair: ['Black', 'Brown', 'Blonde', 'Red', 'Gray', 'White', 'Bald', 'Dyed'],
     // v1.69
     hairStyle: ['Short', 'Medium', 'Long', 'Bald / Shaved', 'Buzz Cut', 'Fade', 'Afro', 'Braids', 'Cornrows', 'Dreadlocks', 'Twists', 'Ponytail', 'Bun', 'Curly', 'Wavy', 'Straight', 'Mohawk', 'Receding'],
@@ -195,7 +198,7 @@
   // A 'list' entry in a section only marks where that list shows; it isn't a field of its own.
   const FIELDS = SECTIONS.flatMap((s) => s.fields).filter((f) => f[2] !== 'list');
 
-  const empty = () => ({ schema: 4, ...Object.fromEntries(FIELDS.map(([k, , kind]) => [k, kind === 'check' ? false : ''])), ...Object.fromEntries(Object.keys(LISTS).map((k) => [k, []])), evidence: [], narrative: '', hidden: [] });
+  const empty = () => ({ schema: 4, ...Object.fromEntries(FIELDS.map(([k, , kind]) => [k, kind === 'check' ? false : ''])), ...Object.fromEntries(Object.keys(LISTS).map((k) => [k, []])), evidence: [], evidenceNote: '', narrative: '', hidden: [] });
 
   const MULTI = ['phones', 'socials', 'serials', 'vehicles']; // fields that hold several entries
   // v1.94: an offender's vehicles: one set of boxes each, and Impound / Tow / DNA as click boxes.
@@ -215,10 +218,30 @@
   const hasText = (v) => (Array.isArray(v) ? v.some(hasText) : v && typeof v === 'object' ? Object.values(v).some(hasText) : !!String(v || '').trim());
   const filled = (item) => Object.values(item || {}).some(hasText);
 
+  /* v1.108: "See DEA 6": a report kept for statistics only. Victims, Offenders, Charges and
+   * Evidence Inventoried read "See DEA 6 for further information", and the Summary of
+   * Investigation points to the DEA 6 reports under the Federal Case Number. */
+  const SEE_DEA6 = 'See DEA 6 for further information';
+  const dea6Narrative = (fed) => `This report is for statistical purposes only. For further information see DEA 6 reports under ${String(fed || '').trim() ? `Federal Case Number ${String(fed).trim()}` : 'the Federal Case Number'}. THIS CASE IS CLEAR/CLOSED.`;
+  // The parts it fills, and where in each list the words go.
+  const DEA6_LISTS = [['victimsList', 'name'], ['offendersList', 'name'], ['charges', 'description']];
+  const DEA6_PARTS = ['people', 'victimsList', 'offendersList', 'report', 'charges', 'evidence', 'summary'];
+  /** Fills the form for "See DEA 6" (changes d): a list with no entries gets one reading
+   * SEE_DEA6; entries already there are kept. The parts are put back in the report. */
+  function seeDea6(d, fed) {
+    for (const [list, k] of DEA6_LISTS) {
+      if (!d[list].some(filled)) d[list] = [{ ...blankItem(list), [k]: SEE_DEA6 }];
+    }
+    d.evidenceNote = SEE_DEA6;
+    d.narrative = dea6Narrative(fed);
+    d.hidden = (d.hidden || []).filter((x) => !DEA6_PARTS.includes(x));
+    return d;
+  }
+
   /** Saved data brought up to date: older type names, missing fields, and the single entries of
    * v1.20 (victim's name, charges, vehicle…) moved into the lists. */
   /** v1.95: the charges' Statute Descriptions, in order, without repeats. */
-  const chargeDescriptions = (d) => [...new Set(((d && d.charges) || []).map((x) => String((x && x.description) || '').trim()).filter(Boolean))];
+  const chargeDescriptions = (d) => [...new Set(((d && d.charges) || []).map((x) => String((x && x.description) || '').trim()).filter((x) => x && x !== SEE_DEA6))];
   /** Offense Classification = a charge's Statute Description (the first, unless it already is one). */
   function syncOffense(d) {
     // Charges ticked off ("doesn't apply") leave the box as typed.
@@ -238,7 +261,8 @@
     if (typeof src.notifications === 'string') d.notifications = String(src.notifications).trim() ? [{ name: String(src.notifications).trim() }] : [];
     for (const k of Object.keys(LISTS)) d[k] = (Array.isArray(d[k]) ? d[k] : []).map((it) => ({ ...blankItem(k), ...(it && typeof it === 'object' ? it : {}) }));
     // v1.93: the State of Illinois as victim gets Relation Code 024 when none is entered.
-    for (const v of d.victimsList) if (isStateVictim('victimsList', v) && !String(v.relation || '').trim()) v.relation = STATE_RELATION;
+    for (const v of d.victimsList) if (isStateVictim('victimsList', v) && !String(v.relation || '').trim()) v.relation = govRelation(v);
+    d.evidenceNote = String(src.evidenceNote || '');
     // v1.42: Notifications have no Notes box; notes without a name become the name.
     for (const n of d.notifications) if (n.notes && !String(n.name || '').trim()) n.name = n.notes;
     // v1.21's "Unit / Role" text goes to Unit when it isn't one of the roles.
@@ -429,7 +453,13 @@
   const STATE_VICTIM = 'State of Illinois';
   // v1.93: the State of Illinois as victim has Relation Code 024.
   const STATE_RELATION = '024';
-  const isStateVictim = (list, it) => list === 'victimsList' && String((it && it.name) || '').trim().toLowerCase() === STATE_VICTIM.toLowerCase();
+  // v1.108: the Federal Government is a victim like the State: name, Relation Code and officer
+  // (no Relation Code filled for it).
+  const FEDERAL_VICTIM = 'Federal Government';
+  const GOV_RELATION = { [STATE_VICTIM.toLowerCase()]: STATE_RELATION, [FEDERAL_VICTIM.toLowerCase()]: '' };
+  const isStateVictim = (list, it) => list === 'victimsList' && Object.prototype.hasOwnProperty.call(GOV_RELATION, String((it && it.name) || '').trim().toLowerCase());
+  /** The Relation Code a government victim gets when none is typed ('' for none). */
+  const govRelation = (it) => GOV_RELATION[String((it && it.name) || '').trim().toLowerCase()] || '';
   /** The fields an entry uses. */
   function fieldsFor(list, it) {
     const all = LISTS[list].fields;
@@ -595,6 +625,7 @@
       }
       for (const k of s.lists || []) if (!isHidden(d, k)) for (const it of d[k].filter(filled)) lines.push(`${LISTS[k].item}: ${itemLine(k, it)}`);
     }
+    if (!isHidden(d, 'evidence') && String(d.evidenceNote || '').trim()) lines.push(`Evidence: ${String(d.evidenceNote).trim()}`);
     if (!isHidden(d, 'evidence')) for (const e of d.evidence) lines.push(`Evidence ${exhibitLine(e)}`);
     if (!isHidden(d, 'evidence')) for (const x of d.extraExhibits) lines.push(`Evidence ${extraLine(x)}`);
     if (!isHidden(d, 'summary') && String(d.narrative || '').trim()) lines.push(`Summary of investigation (the investigator's own words): ${String(d.narrative).trim()}`);
@@ -676,13 +707,15 @@
       list('narcotics');
       for (const key of report.lists) list(key);
     }
+    const evNote = String(d.evidenceNote || '').trim();
+    if (on('evidence') && evNote) { band('Evidence Inventoried'); out.push(evNote, ''); }
     if (on('evidence') && d.evidence.length) {
-      band('Evidence Inventoried');
+      if (!evNote) band('Evidence Inventoried');
       table(['Exhibit', 'Inventory No.', 'Type', 'Narcotic Type', 'Weight', 'Description'],
         d.evidence.map((e) => [String(e.number), e.inventory, e.type, e.type === 'Narcotics' ? e.drug : '', e.type === 'Narcotics' ? e.weight : '', e.description]));
     }
     if (on('evidence') && d.extraExhibits.length) {
-      if (!d.evidence.length) band('Evidence Inventoried');
+      if (!d.evidence.length && !evNote) band('Evidence Inventoried');
       table(['Additional Exhibit', 'Kind', 'Title', 'Images', 'Description'],
         d.extraExhibits.map((x) => [String(x.number), (EXTRA_KINDS.find(([k]) => k === x.kind) || EXTRA_KINDS[0])[1], x.title, String(x.photos.length), x.description]));
     }
@@ -700,7 +733,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { chargeDescriptions, syncOffense, OFFENDER_VEHICLE, VEHICLE_DISPOSITIONS, blankVehicle, vehicleLine, CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, STATE_RELATION, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, dateOrderPlan, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { chargeDescriptions, syncOffense, OFFENDER_VEHICLE, VEHICLE_DISPOSITIONS, blankVehicle, vehicleLine, CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, STATE_RELATION, FEDERAL_VICTIM, govRelation, isStateVictim, SEE_DEA6, dea6Narrative, seeDea6, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, dateOrderPlan, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

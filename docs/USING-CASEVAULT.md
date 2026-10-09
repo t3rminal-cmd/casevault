@@ -214,6 +214,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.108
+
+- **Draft → Offense → Address of Occurrence:** click the box (or its arrow) and pick *99 N Confidential* or *99 N Confidential Street*; any other address can still be typed
+- **Draft → Victims:** the Name list offers the *Federal Government* as well as the *State of Illinois*. Both show only Name, Relation Code and Officer Name (the State fills Relation Code 024; the Federal Government leaves it for you)
+- **Draft → See DEA 6** (next to Clear All): for a report kept for statistics only. Victims, Offenders, Charges and Evidence Inventoried open on screen and read *See DEA 6 for further information* in their grey boxes (a list that already has an entry keeps it; no exhibit number is used, the words go in an Evidence Note), and the Summary of Investigation becomes: *This report is for statistical purposes only. For further information see DEA 6 reports under Federal Case Number (the case's Federal Jacket Number). THIS CASE IS CLEAR/CLOSED.* The Offense Classification is left as it is. **Undo** on the message puts the form back. Then Print / PDF or Send Draft to Reports as usual
+
 ### What's new in v1.107
 
 - **Banner:** the backup chip says *Backed Up*, *Backup: 9d* or *No Backup* (point at it for the full sentence); no chip clips its words at any window width
