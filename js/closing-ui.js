@@ -1,7 +1,6 @@
 /* CaseVault — screens for the case status rules (js/closing.js):
  *   - the Arrest details tab (cases/<id>/arrest.json), for arrest reports;
  *   - "Close case…" with a disposition and a loose-ends checklist;
- *   - "Set to Pending" with what you're waiting on and a follow-up date on the timeline;
  *   - "Reopen case".
  * Uses the small UI kit app.js exposes as window.CaseVaultUI.
  */
@@ -11,7 +10,6 @@
   let ui = null;
   const K = () => root.CVClosing;
   const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-  const plusDays = (n) => { const d = new Date(Date.now() + n * 86400000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
   /** Does this case show the Arrest details tab? */
   // A case closed by arrest has the tab too, unless its arrest details were deleted (v1.29).
@@ -582,44 +580,9 @@
     } catch { return false; }
   }
 
-  /* ---------------- Pending ---------------- */
-
-  async function pendingDialog(c) {
-    const { h, openDialog, Save, toast } = ui;
-    const cur = c.pending || {};
-    const result = await openDialog((close) => {
-      const reason = h('select', {}, K().PENDING_REASONS.map((r) => h('option', { value: r, selected: r === cur.reason }, r)));
-      const detail = h('input', { type: 'text', maxlength: 120, value: cur.detail || '', placeholder: 'Lab request 26-114, DA Smith' });
-      const follow = h('input', { type: 'date', value: cur.followUp || plusDays(14) });
-      const addDeadline = h('input', { type: 'checkbox', checked: true });
-      return h('form', { onsubmit: (e) => { e.preventDefault(); close({ reason: reason.value, detail: detail.value.trim(), followUp: follow.value, addDeadline: addDeadline.checked }); } },
-        h('h2', {}, 'Set the case to Pending'),
-        h('p', { class: 'muted small explain' }, 'Pending means you\'re waiting on someone else (a lab, the DA, another agency) and can\'t move the case forward yourself. Set it back to Open when you can work it again. If there are no leads left and nothing to wait for, close it as Inactive instead.'),
-        h('div', { class: 'form-grid' }, ui.field('Waiting on', reason), ui.field('Details', detail), ui.field('Follow up by', follow), h('div')),
-        h('label', { class: 'check-row' }, addDeadline, h('span', {}, 'Add the follow-up date to the timeline as a deadline, so it shows in the case list and the Overview')),
-        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Set to Pending')));
-    });
-    if (!result) return false;
-    c.status = 'Pending';
-    c.pending = { reason: result.reason, detail: result.detail, followUp: result.followUp, since: today() };
-    Vault.logActivity(c, `Pending: waiting on ${result.reason}${result.detail ? ` (${result.detail})` : ''}`);
-    try {
-      await Save.track(`case:${c.id}`, () => Vault.saveCase(structuredClone(c)));
-      if (result.addDeadline && result.followUp) {
-        const tl = await Vault.getTimeline(c.id);
-        tl.events.push(K().followUpEvent(result.reason, result.detail, result.followUp, Vault.newId('e')));
-        await Save.track(`timeline:${c.id}`, () => Vault.saveTimeline(c.id, tl));
-      }
-      toast(`Pending: ${result.reason}${result.followUp ? `, follow up by ${result.followUp}` : ''}.`, 'success');
-      ui.refresh();
-      return true;
-    } catch { return false; }
-  }
-
   /** One line under the status: what the status means here, and what it's waiting on / how it closed. */
   function statusLine(c) {
     const K2 = K();
-    if (c.status === 'Pending' && c.pending) return `Waiting on ${c.pending.reason}${c.pending.detail ? ` (${c.pending.detail})` : ''}${c.pending.followUp ? ` · follow up by ${c.pending.followUp}` : ''}.`;
     if (c.status === 'Closed' && c.closure) {
       const d = K2.disposition(c.closure.disposition);
       return `Closed ${c.closure.date || ''}${c.closure.closedBy ? ` by ${c.closure.closedBy}` : ''}: ${d ? d.label : ''}${c.closure.reason ? ` (${c.closure.reason})` : ''}.`;
@@ -630,5 +593,5 @@
 
   function init(kit) { ui = kit; }
 
-  root.CVClosingUI = { init, hasArrestTab, deleteArrest, renderArrest, closeCaseDialog, reopenCase, pendingDialog, statusLine, templateExtra, startArrestReport };
+  root.CVClosingUI = { init, hasArrestTab, deleteArrest, renderArrest, closeCaseDialog, reopenCase, statusLine, templateExtra, startArrestReport };
 })(this);

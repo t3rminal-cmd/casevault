@@ -23,11 +23,11 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.104.0';
+  const APP_VERSION = '1.105.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
-  const STATUSES = ['Open', 'Pending', 'Closed', 'Archived'];
+  const STATUSES = ['Open', 'Closed', 'Archived']; // v1.105: no Pending
   const DEFAULT_SETTINGS = { backupsToKeep: 30, aiProfile: 'auto', privacyPin: null, privacyIdleMinutes: 15, affiant: null, sidebarCollapsed: false, mail: null, online: null, piiWatchlist: [] };
 
   let root = null;   // handle to CaseVault-Data
@@ -114,6 +114,7 @@ const Vault = (() => {
     await dailyBackup();
     await removeOnlineLeftovers();
     await rebuildIndex();
+    await retirePending();
     if ((vault.operationsVersion || 0) < OPERATIONS_VERSION) await migrateOperations();
     else await reconcileOperations();
     return vault;
@@ -287,7 +288,6 @@ const Vault = (() => {
       opened: c.dates?.opened || '',
       updated: [c.dates?.updated, prev?.updated].filter(Boolean).sort().pop() || '',
       nextDeadline: nextDeadline(timeline),
-      pending: c.status === 'Pending' && c.pending ? { reason: c.pending.reason || '', followUp: c.pending.followUp || '' } : null,
       // v1.67: the statute of limitations (narcotic charges, 3 years) and the archive sub-folder.
       sol: prev?.sol || null,
       archiveFolder: c.archiveFolder || '',
@@ -685,7 +685,7 @@ const Vault = (() => {
       if (prev) prev.location = 'active';
       const dir = await caseDir(id);
       const c = await getCase(id);
-      c.status = c.statusBeforeArchive && c.statusBeforeArchive !== 'Archived' ? c.statusBeforeArchive : (c.dates.closed ? 'Closed' : 'Open');
+      c.status = c.statusBeforeArchive && STATUSES.includes(c.statusBeforeArchive) && c.statusBeforeArchive !== 'Archived' ? c.statusBeforeArchive : (c.dates.closed ? 'Closed' : 'Open');
       delete c.statusBeforeArchive;
       delete c.dates.archived;
       delete c.archiveFolder;
@@ -1331,6 +1331,23 @@ const Vault = (() => {
   /* v1.91: the online AI features and the in-browser AI are gone. Any online AI key saved on the
    * SSD (secrets/) is deleted, and their settings dropped. lastCleanup says what was removed. */
   let lastCleanup = null;
+  /** v1.105: Pending is gone. A Pending case (or Mission) is Open again; its follow-up date stays
+   * on the timeline, and the case's history says so. An archived case that was Pending before
+   * comes back Open when it is restored. */
+  async function retirePending() {
+    for (const e of vault.cases.filter((x) => x.status === 'Pending' || x.statusBeforeArchive === 'Pending')) {
+      await writeLink(e.id, (c) => {
+        if (c.status !== 'Pending' && c.statusBeforeArchive !== 'Pending') return false;
+        if (c.status === 'Pending') { c.status = 'Open'; c.pending = null; logActivity(c, 'Pending was retired (v1.105): the case is Open again'); }
+        if (c.statusBeforeArchive === 'Pending') c.statusBeforeArchive = 'Open';
+        return true;
+      }).catch((err) => { if (FS.isDisconnectError(err)) throw err; });
+    }
+    let ops = false;
+    for (const o of vault.operations) if (o.status === 'Pending') { o.status = 'Open'; ops = true; }
+    if (ops) await saveVault();
+  }
+
   async function removeOnlineLeftovers() {
     lastCleanup = null;
     let keys = 0;

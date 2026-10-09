@@ -194,13 +194,18 @@ test('one-time migration: vault.json is backed up, shared Titles become Operatio
   assert.ok((await Vault.listBackups()).length > backupsBefore, 'vault.json backed up first');
   assert.strictEqual(Vault.data.operationsVersion, 1);
   const ops = Vault.listOperations().sort((x, y) => x.name.localeCompare(y.name));
-  assert.deepStrictEqual(ops.map((o) => [o.number, o.name, o.status]), [['F-77', 'example sweep', 'Pending'], ['OP-001', 'Lone Case', 'Open']]);
+  assert.deepStrictEqual(ops.map((o) => [o.number, o.name, o.status]), [['F-77', 'example sweep', 'Open'], ['OP-001', 'Lone Case', 'Open']]);
   const sweep = ops[0];
   assert.deepStrictEqual(Vault.data.settings.foldedOps, [sweep.id]);
   const ca = await readCase(FS, dir, a.id);
   assert.strictEqual(ca.operationId, sweep.id);
   assert.strictEqual(ca.subject, 'John Doe');
   assert.strictEqual((await readCase(FS, dir, b.id)).subject, '');
+  // v1.105: a Pending case is Open again, and its history says so.
+  const cb = await readCase(FS, dir, b.id);
+  assert.strictEqual(cb.status, 'Open');
+  assert.ok((cb.activity || []).some((x) => /Pending was retired/.test(x.what)));
+  assert.strictEqual(Vault.data.cases.find((x) => x.id === b.id).status, 'Open', 'the index knows');
   assert.strictEqual((await readCase(FS, dir, d.id, 'archive')).operationId, ops[1].id, 'archived cases join too');
   assert.strictEqual(Vault.data.cases.find((x) => x.id === a.id).operationId, sweep.id, 'the index knows');
 

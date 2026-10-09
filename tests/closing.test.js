@@ -20,7 +20,8 @@ const sampleArrest = () => {
 };
 
 test('status help and dispositions are complete', () => {
-  for (const s of ['Open', 'Pending', 'Closed', 'Archived']) assert.ok(C.STATUS_HELP[s].startsWith(s), s);
+  assert.ok(!('Pending' in C.STATUS_HELP), 'v1.105: no Pending');
+  for (const s of ['Open', 'Closed', 'Archived']) assert.ok(C.STATUS_HELP[s].startsWith(s), s);
   assert.deepStrictEqual(C.DISPOSITIONS.map((d) => d.key), ['arrest', 'exceptional', 'unfounded', 'inactive', 'referred', 'other']);
   assert.ok(C.disposition('exceptional').reasons.includes('Prosecution declined'));
   assert.strictEqual(C.disposition('nope'), null);
@@ -56,9 +57,7 @@ test('closure values and the close checklist', () => {
   assert.deepStrictEqual(C.closeChecklist({}), []);
 });
 
-test('Pending follow-up deadline, and arrestees for the privacy scan', () => {
-  const e = C.followUpEvent('Lab results', 'item 1', '2026-10-06', 'x1');
-  assert.deepStrictEqual([e.kind, e.date, e.title, e.done], ['deadline', '2026-10-06', 'Follow up: Lab results — item 1', false]);
+test('arrestees for the privacy scan', () => {
   assert.deepStrictEqual(C.peopleOf(sampleArrest()), ['Jordan Placeholder']);
 });
 

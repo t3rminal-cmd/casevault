@@ -23,7 +23,7 @@ function app() {
 const BYTES = new Uint8Array(5000).map((_, i) => (i * 7) % 256);
 
 async function makeCase(Vault) {
-  const c = await Vault.createCase({ title: 'Test v. Example', number: 'TEST-0001', client: 'Example Unit', status: 'Pending' });
+  const c = await Vault.createCase({ title: 'Test v. Example', number: 'TEST-0001', client: 'Example Unit', status: 'Closed' });
   await Vault.saveNotes(c.id, '# Notes\n\nSynthetic note for the archive test.');
   await Vault.saveTimeline(c.id, { events: [{ id: 'e1', date: '2026-03-14', kind: 'deadline', title: 'Example deadline' }] });
   await Vault.addFile(c.id, new File([BYTES], 'photo.bin'));
@@ -60,7 +60,7 @@ async function roundTrip(Vault, FS, rootHandle) {
   const moved = [];
   const archived = await Vault.archiveCase(c.id, (n, name) => moved.push(name));
   assert.strictEqual(archived.status, 'Archived');
-  assert.strictEqual(archived.statusBeforeArchive, 'Pending');
+  assert.strictEqual(archived.statusBeforeArchive, 'Closed');
   assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(archived.dates.closed), 'closed date filled in');
   assert.strictEqual(await folderSnapshot(FS, dataDir, 'cases', c.id), null, 'original removed');
   const after = await folderSnapshot(FS, dataDir, 'archive', c.id);
@@ -101,7 +101,7 @@ async function roundTrip(Vault, FS, rootHandle) {
 
   // Restore: back in cases/, previous status, writable again.
   const restored = await Vault.restoreCase(c.id);
-  assert.strictEqual(restored.status, 'Pending');
+  assert.strictEqual(restored.status, 'Closed');
   assert.strictEqual(restored.statusBeforeArchive, undefined);
   assert.strictEqual(await folderSnapshot(FS, dataDir, 'archive', c.id), null);
   const back = await folderSnapshot(FS, dataDir, 'cases', c.id);
@@ -157,7 +157,7 @@ test('a move that fails part-way leaves the original case intact and active', as
   assert.deepStrictEqual(await folderSnapshot(FS, dataDir, 'cases', c.id), before, 'original untouched, case.json included');
   assert.strictEqual(await folderSnapshot(FS, dataDir, 'archive', c.id), null, 'partial copy removed');
   assert.ok(!Vault.isArchived(c.id));
-  assert.strictEqual((await Vault.getCase(c.id)).status, 'Pending');
+  assert.strictEqual((await Vault.getCase(c.id)).status, 'Closed');
   await Vault.saveNotes(c.id, 'Still writable.');
   Vault.close();
 });

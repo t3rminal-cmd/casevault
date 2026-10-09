@@ -4,6 +4,10 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.104)
+
+- **Attach a PDF to an exhibit, as well as photos.** On the Draft tab, each exhibit's tile now reads **Add Photos or PDF** (Additional Exhibits too). A PDF (a lab report, a receipt, a scanned form) is saved in the case's exhibit folder like a photo, gets the next letter (Exhibit 1b), and its tile shows the first page with a red **PDF** badge; click it to read it. In the report, every page of the PDF goes into the Exhibit Attachments, captioned with the exhibit, its label and the page (*Exhibit 1b, ... - Document: Lab report (page 2 of 3)*)
+
 ## Features (v1.103)
 
 - **Mission timeline on the home page: the slim line with small circles.** Click a Mission folder and its timeline is the same line as on a case's Details tab: a small circle for each event of every case number (events close together share one circle with their count), red for an overdue deadline, and a red Today mark. It fits the page, with no sideways scrolling. Point at a circle for the date, title, note and case number; click it to open that case's Timeline tab. (This replaces the vertical list from v1.102.)

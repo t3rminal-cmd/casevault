@@ -73,7 +73,6 @@
       ['Closed', c.dates && c.dates.closed ? fmt(c.dates.closed) : ''],
       ['Disposition', d ? `${d.label}${c.closure.reason ? ` (${c.closure.reason})` : ''}` : ''],
       ['Closed By', c.closure ? clean(c.closure.closedBy) : ''],
-      c.status === 'Pending' && c.pending ? ['Waiting On', `${clean(c.pending.reason)}${c.pending.detail ? ` (${clean(c.pending.detail)})` : ''}${c.pending.followUp ? `, follow up ${fmt(c.pending.followUp)}` : ''}`] : null,
       c.archiveReason ? ['Archived', clean(c.archiveReason)] : null,
     ].filter(Boolean);
     band('CASE');

@@ -106,7 +106,7 @@
   const formHint = (...kids) => h('p', { class: 'form-hint span-2' }, I('info-circle'), h('span', {}, ...kids));
   // v1.76: DNA (does not apply) offered on number boxes such as the Federal Jacket Number.
   const dnaCombo = (el) => (window.CVCombo ? CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }] }) : el);
-  const STATUS_ICONS = { Open: 'folder2-open', Pending: 'hourglass-split', Closed: 'lock-fill', Archived: 'archive' };
+  const STATUS_ICONS = { Open: 'folder2-open', Closed: 'lock-fill', Archived: 'archive' };
   const statusPill = (status) => h('span', { class: `pill status-${String(status).toLowerCase()}`, icon: STATUS_ICONS[status] }, status);
   const I = (name, opts) => CVIcons.icon(name, opts);
   // v1.85: still being worked on (Templates, the Checker, the Anonymizer).
@@ -805,7 +805,6 @@
     const tip = [
       `${c.number || 'No case number'}${c.subject ? `, ${c.subject}` : ''} · ${c.status}`,
       opened ? `Opened ${opened.long} (${opened.days ? `${opened.days} day${opened.days === 1 ? '' : 's'} ago` : 'today'})` : null,
-      c.status === 'Pending' && c.pending ? `Waiting on ${c.pending.reason}${c.pending.followUp ? `, follow up ${fmtDate(c.pending.followUp)}` : ''}` : null,
       sol ? `Statute of limitations ${sol === 'expired' ? 'expired' : 'expires'} ${fmtDate(c.sol.expires)}` : null,
       due && !sol ? `${due.cls === 'overdue' || due.cls === 'soon' ? 'Alarm: ' : 'Next deadline: '}${c.nextDeadline.title || 'Deadline'}, ${fmtDate(c.nextDeadline.date)}${c.nextDeadline.time ? ` ${c.nextDeadline.time}` : ''} (${due.text})` : null,
     ].filter(Boolean).join('\n');
@@ -1422,7 +1421,7 @@
         // v1.85: a Mission is Closed only when its cases are: Close Mission gives each a disposition.
         if (fields.status === 'Closed' && (!op || op.status !== 'Closed')) {
           const open = op ? Vault.operationMembers(op.id).filter((x) => !isArchivedEntry(x) && x.status !== 'Closed') : [];
-          if (!op) errs.push('A new Mission starts Open or Pending.');
+          if (!op) errs.push('A new Mission starts Open.');
           else if (open.length) errs.push(`${plural(open.length, 'case number')} of this Mission ${open.length === 1 ? 'is' : 'are'} still open (${open.map((x) => x.number || 'no number').join(', ')}). Use Close Mission on the Mission page to close them with a disposition.`);
         }
         err.hidden = !errs.length;
@@ -1624,7 +1623,7 @@
     pageStart('General Files');
     const dups = CVOperation.duplicateNumbers(Vault.data.cases);
     const q = h('input', { type: 'search', placeholder: 'Search by case number, subject or Mission', 'aria-label': 'Search General Files', value: state.generalQuery || '' });
-    const show = h('select', { 'aria-label': 'Show' }, [['all', 'All cases'], ['loose', 'Independent cases'], ['linked', 'In a Mission'], ['open', 'Open'], ['pending', 'Pending'], ['closed', 'Closed'], ['overdue', 'Overdue'], ['archived', 'Archived']].map(([v, l]) => h('option', { value: v, selected: v === (state.generalShow || 'all') }, l)));
+    const show = h('select', { 'aria-label': 'Show' }, [['all', 'All cases'], ['loose', 'Independent cases'], ['linked', 'In a Mission'], ['open', 'Open'], ['closed', 'Closed'], ['overdue', 'Overdue'], ['archived', 'Archived']].map(([v, l]) => h('option', { value: v, selected: v === (state.generalShow || 'all') }, l)));
     const body = h('tbody', {});
     const countEl = h('span', { class: 'muted small' });
     const redraw = () => { renderCaseList(); showGeneralFiles(); };
@@ -1646,7 +1645,7 @@
         if (show.value === 'loose' && (op || isArchivedEntry(c))) return false;
         if (show.value === 'linked' && !op) return false;
         if (show.value === 'archived' && !isArchivedEntry(c)) return false;
-        if (['open', 'pending', 'closed'].includes(show.value) && (isArchivedEntry(c) || String(c.status).toLowerCase() !== show.value)) return false;
+        if (['open', 'closed'].includes(show.value) && (isArchivedEntry(c) || String(c.status).toLowerCase() !== show.value)) return false;
         if (show.value === 'overdue' && (isArchivedEntry(c) || c.status === 'Closed' || !c.nextDeadline || dueLabel(c.nextDeadline.date).cls !== 'overdue')) return false;
         return !t || [c.number, c.subject, subj(c), c.title, c.fileNumber, c.status, op ? opLabel(op) : 'general files'].join(' ').toLowerCase().includes(t);
       }).sort(byNumber);
@@ -2059,9 +2058,7 @@
       field('File Number', fileIn),
       field('Federal Jacket Number', dnaCombo(agencyIn)),
       fileList,
-      h('div', { class: 'span-2 form-row3' }, field('Client', clientIn),
-        field('Status', h('select', { name: 'status' }, ['Open', 'Pending'].map((x) => h('option', {}, x)))),
-        field('Opened', openedIn)),
+      h('div', { class: 'span-2 form-row2' }, field('Client', clientIn), field('Opened', openedIn)),
       formHint(folderNote),
       h('div', { class: 'dialog-actions span-2' },
         h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
@@ -2357,16 +2354,15 @@
 
     // v1.85: set by Close Case (and cleared by Reopen), so it is shown, not typed.
     const closedInput = h('input', { type: 'text', value: c.dates.closed ? fmtDate(c.dates.closed) : 'Not closed', readonly: true, tabindex: -1, class: 'readonly-date', 'aria-label': 'Closed', title: c.status === 'Closed' ? 'Set when the case was closed. To change it, reopen the case and close it again.' : 'Filled in when you close the case.' });
-    // v1.84: the drop-down offers Open and Pending; closing and archiving use their own buttons
-    // (they ask for the disposition or the reason). A closed case shows Closed, greyed.
-    const statusSelect = h('select', { title: 'Open or Pending. To close or archive the case, use the Close Case and Archive buttons.' },
-      ['Open', 'Pending', ...(['Open', 'Pending'].includes(c.status) ? [] : [c.status])].map((s) => h('option', { selected: s === c.status, disabled: !['Open', 'Pending'].includes(s) }, s)));
+    // v1.84: closing and archiving use their own buttons (they ask for the disposition or the
+    // reason). A closed case shows Closed, greyed; picking Open reopens it. (v1.105: no Pending.)
+    const statusSelect = h('select', { title: 'To close or archive the case, use the Close Case and Archive buttons.' },
+      ['Open', ...(c.status === 'Open' ? [] : [c.status])].map((s) => h('option', { selected: s === c.status, disabled: s !== 'Open' }, s)));
     statusSelect.addEventListener('change', () => {
-      // Pending asks what it's waiting on, and Open on a closed case reopens it. If the dialog is
-      // cancelled, nothing changes. (Closing and archiving have their own buttons, v1.84.)
+      // Open on a closed case reopens it. If the dialog is cancelled, nothing changes. (Closing
+      // and archiving have their own buttons, v1.84.)
       const want = statusSelect.value;
       statusSelect.value = c.status;
-      if (want === 'Pending') { CVClosingUI.pendingDialog(c); return; }
       if (want === 'Open' && c.status === 'Closed') { CVClosingUI.reopenCase(c); return; }
       if (want !== c.status) Vault.logActivity(c, `Status: ${c.status} to ${want}`);
       c.status = want;
@@ -2376,7 +2372,7 @@
       save();
     });
     const statusNote = h('span', { class: 'muted small block status-note' }, CVClosingUI.statusLine(c));
-    const statusHint = h('span', { class: 'muted small block status-hint' }, c.status === 'Closed' ? 'Pick Open to reopen. Archive uses its button.' : 'Pending: waiting on someone else. No leads left? Close it as Inactive. Close and Archive use the buttons below.');
+    const statusHint = h('span', { class: 'muted small block status-hint' }, c.status === 'Closed' ? 'Pick Open to reopen. Archive uses its button.' : 'No leads left? Close it as Inactive. Close and Archive use the buttons below.');
     const archived = Vault.isArchived(c.id);
 
     const members = archived ? [c] : [c, ...operationCases(c).filter((x) => x.id !== c.id)];

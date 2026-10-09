@@ -1,9 +1,8 @@
 /* CaseVault — case status rules, closing a case, and arrest details.
  *
  *   Open      You are actively working the case. (A new case starts here.)
- *   Pending   Waiting on someone else: lab results, a warrant signature, DA review, a subpoena
- *             return… CaseVault asks what you're waiting on and a follow-up date, and puts that
- *             date on the timeline so the case comes back to you.
+  *             (v1.105: there is no Pending. Waiting on a lab or the DA is Open, with a deadline
+ *             on the timeline.)
  *   Closed    The investigation is finished, with a disposition (cleared by arrest, exceptionally
  *             cleared, unfounded, inactive, referred…). Set through "Close case…", which also
  *             lists loose ends (open deadlines, open check flags, [CONFIRM: …] left in drafts).
@@ -19,22 +18,16 @@
 (function (root) {
   const STATUS_HELP = {
     Open: 'Open: you are actively working this case.',
-    Pending: 'Pending: waiting on someone else, such as the lab, a warrant, the prosecutor or records. Set what you\'re waiting on and when to follow up.',
     Closed: 'Closed: the investigation is finished, with a disposition. Use "Close case…" to close it.',
     Archived: 'Archived: closed and moved to the archive, read-only.',
   };
-
-  const PENDING_REASONS = [
-    'Lab results', 'Warrant signature', 'Prosecutor / DA review', 'Subpoena or records return', 'Suspect not located',
-    'Witness or victim contact', 'Another agency', 'Court date', 'Other',
-  ];
 
   const DISPOSITIONS = [
     { key: 'arrest', label: 'Cleared by arrest', hint: 'At least one person arrested and charged. Fill in the Arrest details.' },
     { key: 'exceptional', label: 'Exceptionally cleared', hint: 'Offender known and enough to charge, but something outside your control prevents it.',
       reasons: ['Death of the offender', 'Prosecution declined', 'Victim refused to cooperate', 'Extradition denied', 'Juvenile, no custody', 'Other'] },
     { key: 'unfounded', label: 'Unfounded', hint: 'The investigation showed no offense occurred.' },
-    { key: 'inactive', label: 'Inactive / no further leads', hint: 'Nothing left to work and nothing to wait for: closed until new information comes in. Can be reopened. (Waiting on a lab or the DA is Pending, not this.)' },
+    { key: 'inactive', label: 'Inactive / no further leads', hint: 'Nothing left to work and nothing to wait for: closed until new information comes in. Can be reopened. (Waiting on a lab or the DA: keep it Open, with a deadline on the Timeline.)' },
     { key: 'referred', label: 'Referred to another agency', hint: 'Handed to the agency with jurisdiction.' },
     { key: 'other', label: 'Other', hint: 'Explain in the closing note.' },
   ];
@@ -225,18 +218,13 @@
     return out;
   }
 
-  /** The timeline deadline that brings a Pending case back: "Follow up: Lab results". */
-  function followUpEvent(reason, detail, date, id) {
-    return { id, kind: 'deadline', date, time: '', title: `Follow up: ${[clean(reason), clean(detail)].filter(Boolean).join(' — ')}`, note: 'Added when the case was set to Pending.', done: false };
-  }
-
   /** People named in the arrest details, for the privacy scan (names CaseVault always hides). */
   const peopleOf = (arrest) => ((arrest && arrest.arrestees) || []).map(arresteeName).filter(Boolean);
 
   const api = {
-    STATUS_HELP, PENDING_REASONS, DISPOSITIONS, disposition, ARRESTEE_FIELDS, ARREST_FIELDS, CHARGE_FIELDS,
+    STATUS_HELP, DISPOSITIONS, disposition, ARRESTEE_FIELDS, ARREST_FIELDS, CHARGE_FIELDS,
     NUMBER_FIELDS, INCIDENT_FIELDS, VEHICLE_FIELDS, COURT_FIELDS, BOND_FIELDS, PERSONNEL_FIELDS, NARCOTIC_FIELDS, WARRANT_FIELDS, NON_OFFENDER_FIELDS, LISTS,
-    emptyArrest, emptyArrestee, emptyCharge, emptyItem, normalizeArrest, normalizeArrestee, itemFilled, ageOn, arresteeName, chargesText, arrestContext, closureContext, closeChecklist, followUpEvent, peopleOf,
+    emptyArrest, emptyArrestee, emptyCharge, emptyItem, normalizeArrest, normalizeArrestee, itemFilled, ageOn, arresteeName, chargesText, arrestContext, closureContext, closeChecklist, peopleOf,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVClosing = api;

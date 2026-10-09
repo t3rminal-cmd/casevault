@@ -14,11 +14,9 @@ const SP = process.env.SP;
   await p.evaluate(() => { location.hash = '#/case/' + encodeURIComponent(CaseVaultUI.state.caseId) + '/notes'; }); await p.waitForSelector('.notes-editor'); await p.fill('.notes-editor', 'Test note'); console.log('notes status while typing:', await p.textContent('.note-save-status'));
   await p.click('.tab-panel button:has-text("Save")'); await p.waitForTimeout(400); console.log('notes status after Save:', await p.textContent('.note-save-status'));
   await p.click('.tab:has-text("Details")'); await p.waitForSelector('.case-actions');
-  // Pending
-  await p.selectOption(statusSel, 'Pending'); await p.waitForSelector('#dialog[open] h2:has-text("Pending")');
-  await p.screenshot({ path: SP + '/cl-1-pending.png' });
-  await p.click('#dialog[open] button:has-text("Set to Pending")'); await p.waitForTimeout(800);
-  console.log('status note (Pending):', await p.textContent('.status-note'));
+  // v1.105: no Pending to pick.
+  const opts = await p.$$eval(`${statusSel} option`, (o) => o.map((x) => x.textContent));
+  if (opts.includes('Pending')) console.log('FAIL the status list still offers Pending', opts);
   console.log('case list:', await p.innerText('#case-list .case-item'));
   // Close by arrest
   await p.click('.case-actions button:has-text("Close case")'); await p.waitForSelector('#dialog[open] .close-form');
