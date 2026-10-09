@@ -4,8 +4,8 @@ const test = require('node:test');
 const assert = require('node:assert');
 const RF = require('../js/report-fields.js');
 
-test('v1.108: Address of Occurrence offers the confidential address', () => {
-  assert.deepStrictEqual(RF.PICKS.address, ['99 N Confidential', '99 N Confidential Street']);
+test('v1.108: Address of Occurrence offers the confidential address (v1.109: North and South)', () => {
+  assert.deepStrictEqual(RF.PICKS.address, ['99 N Confidential Street', '99 S Confidential Street']);
 });
 
 test('v1.108: the Federal Government is a victim like the State (no Relation Code filled)', () => {

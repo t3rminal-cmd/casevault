@@ -15,11 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.108
+## What's New in v1.109
 
-- **Confidential address:** Draft → Offense → Address of Occurrence offers *99 N Confidential* and *99 N Confidential Street* (any other address can still be typed)
-- **Federal Government as a victim:** the Victim name list offers the *Federal Government* next to the *State of Illinois*; like the State it has only the Relation Code and the officer's name
-- **See DEA 6:** a new button on the Draft tab for a report kept for statistics only. Victims, Offenders, Charges and Evidence Inventoried open and read *See DEA 6 for further information*, and the Summary of Investigation becomes *This report is for statistical purposes only. For further information see DEA 6 reports under Federal Case Number …. THIS CASE IS CLEAR/CLOSED.* (the case's Federal Jacket Number). Entries already typed are kept; Undo puts the form back
+- **Confidential address:** Address of Occurrence offers *99 N Confidential Street* and *99 S Confidential Street* (*99 N Confidential* is gone)
+- **See DEA 6 entries keep one box:** an offender, victim or charge that reads *See DEA 6 for further information* shows only that box (no description, record numbers or vehicle boxes), so its part gets the green check. Pick it from the Name list (or a charge's Statute list), or type it; the PDF prints just that line
+- **Narcotics list without doubles:** Narcotics Recovered lists the calculator's names once (*Marijuana (Domestic)* rather than also *Cannabis*, *Cocaine (Powder)* rather than also *Cocaine*), then PCP and Other Controlled Substance
 
 ## What CaseVault Does
 

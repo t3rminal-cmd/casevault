@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.108)
+
+- **Confidential address:** Draft → Offense → Address of Occurrence offers *99 N Confidential* and *99 N Confidential Street* (any other address can still be typed)
+- **Federal Government as a victim:** the Victim name list offers the *Federal Government* next to the *State of Illinois*; like the State it has only the Relation Code and the officer's name
+- **See DEA 6:** a new button on the Draft tab for a report kept for statistics only. Victims, Offenders, Charges and Evidence Inventoried open and read *See DEA 6 for further information*, and the Summary of Investigation becomes *This report is for statistical purposes only. For further information see DEA 6 reports under Federal Case Number …. THIS CASE IS CLEAR/CLOSED.* (the case's Federal Jacket Number). Entries already typed are kept; Undo puts the form back
+
 ## Features (v1.107)
 
 - **Backup chip never clips:** shorter words (*Backed Up*, *Backup: 9d*, *No Backup*; the full sentence is in its tooltip), and no chip in the banner is ever narrower than its words
