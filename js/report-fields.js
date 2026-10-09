@@ -490,6 +490,29 @@
     while (taken.has(n)) n++;
     return n;
   }
+  /**
+   * v1.107: the exhibits of the cases that share one sequence (one federal jacket number), numbered
+   * again in date order: the case with the earliest Date of Occurrence (else its opened date) gets
+   * the first numbers, each case keeping its own exhibits in their order. Numbering starts at the
+   * lowest number in use (1 if none). Additional Exhibits are numbered on their own and left alone.
+   * cases: [{ id, number, date, opened, evidence: [{ number }] }]
+   * -> { order: [id], changes: { id: [[old, new], …] }, changed: bool }
+   */
+  function dateOrderPlan(cases) {
+    const num = (n) => parseInt(String(n).replace(/\D+/g, ''), 10);
+    const all = (cases || []).flatMap((c) => (c.evidence || []).map((e) => num(e.number))).filter(Number.isFinite);
+    let next = all.length ? Math.max(1, Math.min(...all)) : 1;
+    const key = (c) => String(c.date || c.opened || '9999-12-31');
+    const sorted = [...(cases || [])].sort((a, b) => key(a).localeCompare(key(b)) || String(a.opened || '').localeCompare(String(b.opened || '')) || String(a.number || '').localeCompare(String(b.number || ''), undefined, { numeric: true }));
+    const changes = {};
+    let changed = false;
+    for (const c of sorted) {
+      const ev = [...(c.evidence || [])].sort((a, b) => (num(a.number) || 0) - (num(b.number) || 0));
+      changes[c.id] = ev.map((e) => { const to = next++; if (num(e.number) !== to) changed = true; return [num(e.number), to]; });
+    }
+    return { order: sorted.map((c) => c.id), changes, changed };
+  }
+
   function nextExhibit(numbersInUse) {
     const max = (numbersInUse || []).map((n) => parseInt(String(n).replace(/\D+/g, ''), 10)).filter(Number.isFinite).reduce((a, b) => Math.max(a, b), 0);
     return max + 1;
@@ -677,7 +700,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { chargeDescriptions, syncOffense, OFFENDER_VEHICLE, VEHICLE_DISPOSITIONS, blankVehicle, vehicleLine, CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, STATE_RELATION, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { chargeDescriptions, syncOffense, OFFENDER_VEHICLE, VEHICLE_DISPOSITIONS, blankVehicle, vehicleLine, CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, STATE_RELATION, isStateVictim, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, dateOrderPlan, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

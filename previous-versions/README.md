@@ -4,6 +4,15 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.106)
+
+- **Recently Deleted.** Delete Case now keeps the case for 30 days in ⋮ → Vault → **Recently Deleted**, with **Restore** (it goes back where it was, Mission and all) and **Delete Now**. After 30 days it is removed from the SSD for good
+- **Restore cases from a full backup.** ⋮ → Vault → Backups → **Restore Cases…**: pick a `CaseVault-Backup-<date>` folder (on the backup drive or `C:\CaseVault-Backups`), tick the cases to bring back. A case that is in the vault now goes to Recently Deleted first, so nothing is lost
+- **Search Inside Cases.** Type in the case-list search box and press Enter (or click **Search Inside Cases**): it also looks in notes, the timeline, reports, the Draft form, arrest details, suspects and contacts, and file names, and opens the right tab
+- **Add Follow-up** (Case actions, Details tab): waiting on a lab, the DA or another agency? Puts *Follow up: …* on the Timeline as a deadline
+- **Stronger PIN lock** (the privacy screen's PIN is now stored with a slow PBKDF2 hash; an older PIN is upgraded the next time it unlocks) and **copied text is cleared from the clipboard** when the privacy screen comes on
+- **Look:** one colour per status everywhere (Open blue, Closed slate grey, Archived purple, also on the sidebar's left edge), banner chips the same width, empty lists with an icon and a hint, every section heading in capitals, darker hint text, and a clear blue outline on whatever the keyboard is on
+
 ## Features (v1.105)
 
 - **No more Pending.** Cases are Open, Closed or Archived, and Missions Open or Closed. The Pending option, its hourglass icon, the Pending count in the banner and the Pending filter are gone. Anything that was Pending opens as Open (its follow-up deadlines stay on the Timeline, and the case history notes it). The Draft's *Court Date: Pending* box is unchanged

@@ -64,3 +64,17 @@ test('Restore from a backup into the vault: files back, the copy in the vault go
   await assert.rejects(Vault.restoreCaseFromBackup('../x', 'active', []), /not a case folder name/);
   Vault.close();
 });
+
+test('v1.107: exhibits put in date order across cases sharing one sequence', () => {
+  const F = require('../js/report-fields.js');
+  const plan = F.dateOrderPlan([
+    { id: 'a', number: 'EX-500', date: '2026-09-10', opened: '2026-09-11', evidence: [{ number: 1 }, { number: 2 }] },
+    { id: 'b', number: 'EX-600', date: '2026-08-01', opened: '2026-10-01', evidence: [{ number: 3 }] },
+    { id: 'c', number: 'EX-700', date: '', opened: '2026-08-15', evidence: [] },
+  ]);
+  assert.deepStrictEqual(plan.order, ['b', 'c', 'a'], 'Date of Occurrence first, the opened date when empty');
+  assert.deepStrictEqual(plan.changes, { b: [[3, 1]], c: [], a: [[1, 2], [2, 3]] });
+  assert.ok(plan.changed);
+  assert.ok(!F.dateOrderPlan([{ id: 'a', date: '2026-01-01', evidence: [{ number: 1 }, { number: 2 }] }]).changed, 'already in order');
+  assert.deepStrictEqual(F.dateOrderPlan([{ id: 'a', date: '2026-02-01', evidence: [{ number: 10 }] }, { id: 'b', date: '2026-01-01', evidence: [{ number: 11 }] }]).changes, { b: [[11, 10]], a: [[10, 11]] }, 'starts at the lowest number in use');
+});

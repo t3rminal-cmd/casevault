@@ -214,6 +214,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.107
+
+- **Banner:** the backup chip says *Backed Up*, *Backup: 9d* or *No Backup* (point at it for the full sentence); no chip clips its words at any window width
+- **Details tab → Timeline:** the circles of the case number you have open glow green; the other case numbers of the Mission stay blue. The green key next to *Timeline* names the case number. (The home page's Mission timeline has no green: no case is open there)
+- **Draft → Evidence → Put in Date Order:** exhibit numbers run on across every case with the same federal jacket number, in the order they were entered. If a case dated earlier was entered later, click **Put in Date Order**: CaseVault lists each case by its Date of Occurrence (or opened date) with *old → new* numbers; **Renumber** applies it and renames the exhibit photos and PDFs (Exhibit 2a…). Reports already sent keep the numbers they were sent with, and an exhibit number typed into a narrative is not changed. Archived cases are read-only and left as they are
+
 ### What's new in v1.106
 
 - **Delete Case → Recently Deleted:** a deleted case waits 30 days in ⋮ → Vault → **Recently Deleted** (`CaseVault-Data\deleted`). **Restore** puts it back where it was (cases or the archive; its Mission too, made again if needed). **Delete Now** removes it for good. After 30 days CaseVault empties it by itself the next time the vault opens

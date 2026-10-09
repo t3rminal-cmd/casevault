@@ -4018,3 +4018,20 @@ html .tl-item.deadline::before { transform: none; }
 .case-item.st-open { border-left: 3px solid var(--st-open); }
 .case-item.st-closed { border-left: 3px solid var(--st-closed); }
 .case-item.st-archived { border-left: 3px solid var(--st-archived); }
+
+/* ---------- v1.107 ---------- */
+/* The banner chips never clip their words: all as wide as the widest one needs (--chip-w is
+ * measured in welcomeHero), so they stay the same width. */
+.hero-counts .hero-count { min-width: var(--chip-w, 8.5rem); }
+.hero-count > span { white-space: nowrap; }
+/* On a case's Details tab, the timeline circles of the case number on screen glow green. */
+.mini-tl-dot.mini-tl-mine { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 30%, var(--surface)); box-shadow: 0 0 0 3px var(--ok-soft), 0 0 10px color-mix(in srgb, var(--ok) 70%, transparent); animation: mine-glow 2.4s ease-in-out infinite; z-index: 1; }
+.mini-tl-dot.mini-tl-mine.mini-tl-group { color: var(--ok); }
+.mini-tl-dot.mini-tl-mine.overdue { background: var(--danger); border-color: var(--ok); }
+@keyframes mine-glow { 0%, 100% { box-shadow: 0 0 0 3px var(--ok-soft), 0 0 6px color-mix(in srgb, var(--ok) 50%, transparent); } 50% { box-shadow: 0 0 0 4px var(--ok-soft), 0 0 14px color-mix(in srgb, var(--ok) 85%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .mini-tl-dot.mini-tl-mine { animation: none; } }
+.mini-tl-key { display: inline-flex; align-items: center; gap: .35rem; color: var(--ok); font-weight: 600; }
+.mini-tl-key-dot { width: .6rem; height: .6rem; border-radius: 50% !important; border: 2px solid var(--ok); background: color-mix(in srgb, var(--ok) 30%, var(--surface)); box-shadow: 0 0 6px color-mix(in srgb, var(--ok) 60%, transparent); }
+.date-order-table { width: 100%; border-collapse: collapse; margin: .4rem 0 .6rem; font-size: .88rem; }
+.date-order-table th, .date-order-table td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+.date-order-table th { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
