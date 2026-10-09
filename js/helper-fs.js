@@ -184,6 +184,13 @@ const HelperFS = (() => {
   async function backupStatus() {
     return (await call('GET', 'backup-status', '')).json();
   }
+  // v1.102 (helper 1.14): a shared folder on another PC (\\BEELINK\CaseVault-Backups) as a backup drive.
+  async function addNetworkFolder(path) {
+    await call('POST', 'backup-network', '', { query: `&path=${encodeURIComponent(path)}` });
+  }
+  async function removeNetworkFolder(path) {
+    await call('DELETE', 'backup-network', '', { query: `&path=${encodeURIComponent(path)}` });
+  }
 
-  return { servedByHelper, DEFAULT_URL, info, root, openFile, sysinfo, shutdown, backupDrives, backupStart, backupStatus };
+  return { servedByHelper, DEFAULT_URL, info, root, openFile, sysinfo, shutdown, backupDrives, backupStart, backupStatus, addNetworkFolder, removeNetworkFolder };
 })();

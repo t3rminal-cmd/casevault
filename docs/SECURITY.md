@@ -10,6 +10,7 @@ and the settings only you can turn on.
 |---|---|---|
 | Cases on **V:** | BitLocker To Go on the CASEVAULT partition | CaseVault shows a red **Not Encrypted** chip next to Overdue on the home page, and a warning at startup, when V: has no BitLocker (Firefox with the helper; Chrome and Edge can't tell). ⋮ → Vault → Backups shows the drive's state |
 | A full backup on another drive | BitLocker on that drive | The backup drive list shows each drive's encryption; picking one without BitLocker asks first |
+| A full backup on another PC (shared folder) | That PC's BitLocker or Device encryption, a share for your account only, and SMB encryption | CaseVault can't check another PC; the first backup to a folder asks you to confirm. See [BACKUP-TO-ANOTHER-PC.md](BACKUP-TO-ANOTHER-PC.md) |
 | Discovery exports | Their own password (AES-GCM) | — |
 | The screen while you step away | The privacy screen and its PIN | The PIN only hides the screen. It does not encrypt anything |
 
