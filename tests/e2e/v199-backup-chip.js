@@ -23,11 +23,11 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   await p.evaluate(async () => { Vault.data.settings.lastFullBackup = { at: new Date().toISOString(), files: 3, bytes: 10, verified: true }; location.hash = '#/x'; location.hash = '#/'; });
   await p.waitForTimeout(800);
   r = await row();
-  ok(r.text === 'Backed Up Today' && !r.alert, `after a backup: "${r.text}", not red`);
+  ok(r.text === 'Backed Up' && !r.alert, `after a backup: "${r.text}", not red`);
   await p.evaluate(async () => { Vault.data.settings.lastFullBackup.at = new Date(Date.now() - 9 * 864e5).toISOString(); location.hash = '#/x'; location.hash = '#/'; });
   await p.waitForTimeout(800);
   r = await row();
-  ok(r.text === 'Backup 9d Ago' && r.alert, `9 days later: "${r.text}", red again`);
+  ok(r.text === 'Backup: 9d' && r.alert, `9 days later: "${r.text}", red again`);
   for (const w of [1920, 1100, 700]) {
     await p.setViewportSize({ width: w, height: 900 }); await p.waitForTimeout(500);
     r = await row();

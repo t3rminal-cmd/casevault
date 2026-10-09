@@ -94,7 +94,7 @@
     /* A slim timeline on the Details tab (v1.37): a line with a small dot for each event of the
      * operation (every case number), in date order, and a Today mark. Point at a dot for its date,
      * title and note; click it to open that case's Timeline tab. */
-    function miniTimeline(c, members) {
+    function miniTimeline(c, members, { mine = false } = {}) {
       const box = h('section', { class: 'mini-tl', 'aria-label': 'Timeline' });
       (async () => {
         const tls = [];
@@ -122,7 +122,9 @@
           const many = evs.length > 1;
           const text = many ? [`${evs.length} events`, ...group.items.map(({ ev, number }) => `${fmtDate(ev.date)}${ev.time ? ` ${ev.time}` : ''} · ${ev.title || (ev.kind === 'deadline' ? 'Deadline' : 'Event')}${ev.kind === 'deadline' ? (ev.done ? ' (done)' : ` (${dueLabel(ev.date).text})`) : ''}${number && members.length > 1 ? ` · ${number}` : ''}`)].join('\n')
             : tip(evs[0], group.items[0].number);
-          const dot = h('a', { class: `mini-tl-dot${many ? ' mini-tl-group' : ''}${deadline ? ' deadline' : ''}${done ? ' done' : ''}${due ? ` ${due.cls}` : ''}`, href: `#/case/${encodeURIComponent(group.items[0].caseId)}/timeline`, 'data-tip': text, 'aria-label': text.replace(/\n/g, ', ') }, many ? String(evs.length) : null);
+          // v1.107: on a case's Details tab, the circles of that case number's own events glow green.
+          const own = mine && group.items.some((r) => r.caseId === c.id);
+          const dot = h('a', { class: `mini-tl-dot${own ? ' mini-tl-mine' : ''}${many ? ' mini-tl-group' : ''}${deadline ? ' deadline' : ''}${done ? ' done' : ''}${due ? ` ${due.cls}` : ''}`, href: `#/case/${encodeURIComponent(group.items[0].caseId)}/timeline`, 'data-tip': text, 'aria-label': text.replace(/\n/g, ', ') }, many ? String(evs.length) : null);
           dot.style.setProperty('left', `${group.x.toFixed(2)}%`);
           return dot;
         };
@@ -153,7 +155,8 @@
         now.style.setProperty('left', pos(todayIso));
         line.append(now);
         box.replaceChildren(
-          h('div', { class: 'mini-tl-head' }, h('span', { class: 'mini-tl-title' }, 'Timeline'), h('span', { class: 'muted small' }, `${rows.length} event${rows.length === 1 ? '' : 's'}`), h('div', { class: 'spacer' }),
+          h('div', { class: 'mini-tl-head' }, h('span', { class: 'mini-tl-title' }, 'Timeline'), h('span', { class: 'muted small' }, `${rows.length} event${rows.length === 1 ? '' : 's'}`),
+            mine && members.length > 1 ? h('span', { class: 'mini-tl-key small' }, h('span', { class: 'mini-tl-key-dot', 'aria-hidden': 'true' }), `${c.number || 'This case'}`) : null, h('div', { class: 'spacer' }),
             h('span', { class: 'muted small' }, `${fmtDate(new Date(first).toISOString().slice(0, 10))} – ${fmtDate(new Date(last).toISOString().slice(0, 10))}`)),
           line);
       })();

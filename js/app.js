@@ -1846,7 +1846,8 @@
     // v1.99: the backup reminder (and an unencrypted SSD) sit in the same row, after Overdue.
     const backupChip = (() => {
       const n = fullBackupAge(); const due = n == null || n > FULL_BACKUP_DAYS;
-      const text = n == null ? 'No Backup' : n === 0 ? 'Backed Up Today' : `Backup ${n}d Ago`;
+      // v1.107: short words, so the chip never clips (the full sentence is in its tooltip).
+      const text = n == null ? 'No Backup' : n === 0 ? 'Backed Up' : `Backup: ${n}d`;
       return h('button', { type: 'button', class: `hero-count hc-backup${due ? ' hc-alert' : ''}`, title: `${fullBackupText()}. Click to back up the whole vault to another drive.`, onclick: () => showVaultPanel('backups') },
         I(due ? 'exclamation-triangle-fill' : 'hdd-fill'), h('span', {}, text));
     })();
@@ -2407,7 +2408,7 @@
           field('Opened', bind(h('input', { type: 'date', value: c.dates.opened || '' }), (v) => { c.dates.opened = v; })),
           field('Closed', closedInput)),
         caseTiles(c, members, archived)),
-      miniTimeline(c, members),
+      miniTimeline(c, members, { mine: true }),
       // ---- this case number
       // v1.44: File Number, Original Case Number, Federal Jacket Number and Client in one row; no Tags.
       h('form', { class: 'form-grid details-grid details-row4', onsubmit: (e) => e.preventDefault() },

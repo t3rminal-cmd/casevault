@@ -947,7 +947,66 @@
     startAt.addEventListener('change', () => { const v = parseInt(startAt.value, 10); data.exhibitStart = v > 0 ? v : 0; save(0); drawNext(); });
     const resetBtn = h('button', { class: 'btn small ghost', type: 'button', onclick: () => { data.exhibitStart = 1; save(0); drawNext(); } }, 'Reset to 1');
     const autoBtn = h('button', { class: 'btn small ghost', type: 'button', onclick: () => { data.exhibitStart = 0; startAt.value = ''; save(0); drawNext(); } }, 'Automatic');
-    const numbering = archived ? null : h('div', { class: 'rf-numbering' }, h('label', { class: 'rf-numbering-label' }, h('span', {}, 'Next Exhibit No.'), startAt), resetBtn, autoBtn);
+    // v1.107: a case entered later but dated earlier: its exhibits move up, the others follow.
+    const dateBtn = h('button', { class: 'btn small', type: 'button', icon: 'list-ol', title: 'Number the exhibits again in date order (Date of Occurrence) across every case that shares this sequence', onclick: () => dateOrderDialog() }, 'Put in Date Order');
+    const numbering = archived ? null : h('div', { class: 'rf-numbering' }, h('label', { class: 'rf-numbering-label' }, h('span', {}, 'Next Exhibit No.'), startAt), resetBtn, autoBtn, dateBtn);
+    async function dateOrderDialog() {
+      save(0);
+      await Save.flushAll();
+      if (Save.failed.size) { toast('Some changes are not saved yet. Reconnect the SSD first.', 'error'); return; }
+      const agency = String(c.agencyNumber || '').trim().toLowerCase();
+      const entries = (Vault.data.cases || []).filter((x) => x.id === c.id || (agency && String(x.agencyNumber || '').trim().toLowerCase() === agency));
+      const group = [];
+      const skipped = [];
+      for (const e of entries) {
+        if (Vault.isArchived(e.id)) { skipped.push(e.number || e.title || e.id); continue; } // read-only
+        const d = e.id === c.id ? F().normalize(await Vault.readCaseJSON(c.id, FILE)) : F().normalize(await Vault.readCaseJSON(e.id, FILE).catch(() => null));
+        group.push({ id: e.id, number: e.number || '', date: d.date || '', opened: e.opened || '', evidence: d.evidence, d });
+      }
+      const plan = F().dateOrderPlan(group);
+      if (!plan.changed) { toast('The exhibits are already in date order.', 'success'); return; }
+      const byId = new Map(group.map((g) => [g.id, g]));
+      const ok = await ui.openDialog((close) => h('div', { class: 'confirm date-order' },
+        h('h2', { icon: 'list-ol' }, 'Put Exhibits in Date Order'),
+        h('p', {}, agency ? `Every case with federal jacket number ${c.agencyNumber} shares one exhibit sequence. Numbered again by Date of Occurrence (the opened date when it is empty):` : 'Numbered again in order:'),
+        h('table', { class: 'date-order-table' },
+          h('thead', {}, h('tr', {}, h('th', {}, 'Case'), h('th', {}, 'Date'), h('th', {}, 'Exhibits'))),
+          h('tbody', {}, plan.order.map((id) => { const g = byId.get(id); const ch = plan.changes[id];
+            return h('tr', {}, h('td', {}, g.number || 'No number'), h('td', {}, g.date ? F().shown('date', g.date) : `${g.opened ? `opened ${g.opened}` : '—'}`),
+              h('td', {}, ch.length ? ch.map(([a, b2]) => (a === b2 ? `${b2}` : `${a} → ${b2}`)).join(', ') : 'none')); }))),
+        h('p', { class: 'muted small' }, 'Exhibit photos and PDFs are renamed to their new numbers. Reports already sent keep the numbers they were sent with, and an exhibit number typed into a narrative is not changed: check those.'),
+        skipped.length ? h('p', { class: 'muted small' }, `Archived (read-only, left as they are): ${skipped.join(', ')}.`) : null,
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), h('button', { class: 'btn primary', type: 'button', icon: 'list-ol', onclick: () => close(true) }, 'Renumber'))));
+      if (!ok) return;
+      try {
+        for (const id of plan.order) {
+          const g = byId.get(id);
+          const map = new Map(plan.changes[id]);
+          const ev = [...g.d.evidence].sort((x, y) => (parseInt(x.number, 10) || 0) - (parseInt(y.number, 10) || 0));
+          // Photos and PDFs: renamed in two steps, so 1 → 2 and 2 → 1 never collide.
+          for (const step of ['tmp', 'final']) {
+            for (const e of ev) {
+              const to = map.get(parseInt(e.number, 10));
+              if (to == null || to === parseInt(e.number, 10)) continue;
+              for (let j = 0; j < (e.photos || []).length; j++) {
+                const { folder } = CVCaseFiles.splitPath(e.photos[j]);
+                const label = step === 'tmp' ? `Renumbering ${to}-${j}` : `Exhibit ${F().photoLabel(to, j)}`;
+                try { e.photos[j] = await Vault.moveFile(id, e.photos[j], folder, { description: label }); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+              }
+            }
+          }
+          for (const e of ev) { const to = map.get(parseInt(e.number, 10)); if (to != null) e.number = to; }
+          g.d.evidence.sort((x, y) => x.number - y.number);
+          g.d.lastExhibit = Math.max(0, ...g.d.evidence.map((e) => e.number));
+          g.d.exhibitStart = 0;
+          await Save.track(`report-fields:${id}`, () => Vault.writeCaseJSON(id, FILE, g.d));
+        }
+        toast('Exhibits renumbered in date order.', 'success', 5000);
+        ui.refresh();
+      } catch (err) {
+        if (FS.isDisconnectError(err)) ui.onDriveLost(); else toast(`Renumbering stopped: ${err.message}`, 'error', 9000);
+      }
+    }
     drawNext();
 
     // ---- v1.68: Additional Exhibits: photographs or text-message screenshots not tied to an
