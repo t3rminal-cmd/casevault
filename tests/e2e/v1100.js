@@ -39,7 +39,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   ok(r.filter(([, , done]) => !done).every(([, n]) => n > 0), 'every part without its green check has red outlines');
   ok(r.filter(([, , done]) => done).every(([, n]) => n === 0), 'parts with their green check have none');
   const toastText = await p.evaluate(() => [...document.querySelectorAll('.toast')].map((t) => t.textContent).join(' | '));
-  ok(/blank fields? (is|are) outlined in red/.test(toastText), `the save message says so: ${toastText.slice(0, 120)}`);
+  ok(/still blank \(outlined in red\)/.test(toastText), `the save message says so: ${toastText.slice(0, 120)}`);
   ok(await p.evaluate(() => [...document.querySelectorAll('.rf-missing')].every((el) => el.offsetParent && getComputedStyle(el).outlineStyle === 'solid')), 'every red outline is on a box you can see');
   // fill one red field: its outline goes away by itself
   const before = await p.evaluate(() => document.querySelectorAll('.rf-missing').length);

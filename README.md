@@ -15,10 +15,13 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.100
+## What's New in v1.101
 
-- **Sidebar: when each case was opened.** Under every case number's Subject Name, a small line shows the day it was opened and how long ago (*Oct 03, 2026 · 5d*, *Jul 10, 2026 · 2mo*, *Jul 30, 2024 · 2y*). Point at it for the full date and the number of days
-- **Draft: what's missing is outlined in red.** After **Save Changes**, every part without its green check outlines its blank fields in red (or its empty list, or *No evidence yet*), and the save message says how many. Each outline goes as soon as the field is filled; unticking a part that doesn't apply clears its outlines
+- **Draft: Next Missing.** After **Save Changes**, a red **Next Missing (N)** button takes you to each blank field in turn, opening a folded part on the way. The save message is shorter: *Saved. 64 fields still blank (outlined in red).*
+- **General Files: Age, and sorting.** A new **Age** column (*Today*, *5 days*, *2 months*, *2 years*) next to Opened. Click **Case Number**, **Subject Name**, **Opened** or **Age** to sort by it (again to reverse); Age puts the oldest case first
+- **Sidebar order.** The new button next to Hide (top of the sidebar) lists cases by case number, oldest opened first, or newest opened first; the choice is remembered on this PC
+- **Tidier INDEPENDENT CASES header.** The red bell is a badge on the folder instead of on top of the name, the count keeps its distance, and the line under it reads *4 cases*
+- **The "No full backup yet" pop-up shows at most once a day**; the red chip in the banner still shows until you back up
 
 ## What CaseVault Does
 

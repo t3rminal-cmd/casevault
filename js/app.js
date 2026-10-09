@@ -62,7 +62,8 @@
     const d = new Date(`${iso}T12:00:00`);
     const days = Math.max(0, Math.round((new Date(`${today()}T12:00:00`) - d) / 864e5));
     const age = days === 0 ? 'today' : days < 60 ? `${days}d` : days < 730 ? `${Math.floor(days / 30.44)}mo` : `${Math.floor(days / 365.25)}y`;
-    return { short: `${d.toLocaleString('en-US', { month: 'short' })} ${pad(d.getDate())}, ${d.getFullYear()}`, age, days, long: fmtDate(iso) };
+    const ageLong = days === 0 ? 'Today' : days < 60 ? plural(days, 'day') : days < 730 ? plural(Math.floor(days / 30.44), 'month') : plural(Math.floor(days / 365.25), 'year');
+    return { short: `${d.toLocaleString('en-US', { month: 'short' })} ${pad(d.getDate())}, ${d.getFullYear()}`, age, ageLong, days, long: fmtDate(iso) };
   }
 
   function fmtDateTime(ms) {
@@ -544,7 +545,15 @@
       if (!names.some((x) => x.startsWith(`vault-${Vault.localDay()}`))) warn.push('Today\'s automatic backup of vault.json is missing. Open ⋮ → Vault → Backups and click Back Up Now.');
     } catch { /* drive lost: reported elsewhere */ }
     const age = fullBackupAge();
-    if (age == null || age > FULL_BACKUP_DAYS) warn.push(`${fullBackupText()}. Back up the whole vault to a second drive: ⋮ → Vault → Backups.`);
+    // v1.101: the red chip in the banner always shows it; the pop-up says it once a day.
+    if (age == null || age > FULL_BACKUP_DAYS) {
+      let told = '';
+      try { told = localStorage.getItem('cv-backup-nag') || ''; } catch { /* not kept: say it */ }
+      if (told !== Vault.localDay()) {
+        warn.push(`${fullBackupText()}. Back up the whole vault to a second drive: ⋮ → Vault → Backups.`);
+        try { localStorage.setItem('cv-backup-nag', Vault.localDay()); } catch { /* not kept */ }
+      }
+    }
     if (MODE === 'helper' && HelperFS.sysinfo) {
       const si = await HelperFS.sysinfo();
       if (si && si.diskTotal && (si.diskFree < 2 * 1024 ** 3 || si.diskFree / si.diskTotal < 0.05)) warn.push(`The SSD is nearly full: ${fmtSize(si.diskFree)} free. Archive or move large files before it fills up.`);
@@ -811,16 +820,18 @@
     const open = folderOpen(group);
     const bell = cases.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date));
     const meta = op && group.partial ? `${cases.length} closed · ongoing`
-      : op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : `${group.total} independent case${group.total === 1 ? '' : 's'}`;
+      : op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : `${group.total} case${group.total === 1 ? '' : 's'}`; // v1.101: the title already says independent
     const det = h('details', { class: `op-group${op ? '' : ' general-group'}${bell ? ' has-reminder' : ''}`, open },
       h('summary', { class: 'op-head', title: op && group.partial ? `${label}: the closed cases of this Mission, which is still going on. They stay in its folder in MISSION FILES too.` : op ? `${label}: open the Mission` : 'INDEPENDENT CASES: the cases not in a Mission. Click to open General Files, the list of every case.' },
-        h('span', { class: `op-folder${op ? '' : ' gf-icon'}` }, I(op ? 'op-folder' : 'folder-fill')),
+        // v1.101: INDEPENDENT CASES has no room beside its name: its bell sits on the folder's corner.
+        h('span', { class: `op-folder${op ? '' : ' gf-icon'}` }, I(op ? 'op-folder' : 'folder-fill'),
+          bell && !op ? h('span', { class: 'case-bell folder-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
         h('span', { class: 'op-text' },
           // v1.60: an Operation's number on top, its name under it.
           h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, ...(op
             ? [h('span', { class: 'op-num' }, op.number || 'No number'), op.name ? h('span', { class: 'op-title' }, op.name) : null].filter(Boolean)
             : [h('span', { class: 'ind-name' }, 'INDEPENDENT CASES')])), // v1.77: the folder names in capitals; v1.85: was GENERAL FILES
-            bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
+            bell && op ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
           h('span', { class: 'op-meta muted' }, meta)),
         cases.length > 1 ? h('span', { class: 'op-count' }, String(cases.length)) : null,
         // v1.83: GENERAL FILES has a + for a new case, like MISSION FILES has one for a new Mission.
@@ -846,6 +857,12 @@
     if (!x !== !y) return x ? -1 : 1; // no file number last
     return x.localeCompare(y, undefined, { numeric: true, sensitivity: 'base' });
   };
+  // v1.101: the sidebar's order (the button by Home): case number, oldest opened first, or newest.
+  const SIDE_ORDERS = [['number', 'list-ol', 'By case number'], ['oldest', 'hourglass-split', 'Oldest opened first'], ['newest', 'calendar-event', 'Newest opened first']];
+  let sideOrder = (() => { try { return localStorage.getItem('cv-side-order') || 'number'; } catch { return 'number'; } })();
+  const openedKey = (c) => c.opened || (c.dates && c.dates.opened) || '';
+  const caseOrder = (a, b) => (sideOrder === 'oldest' ? (openedKey(a) || '9999').localeCompare(openedKey(b) || '9999')
+    : sideOrder === 'newest' ? openedKey(b).localeCompare(openedKey(a)) : 0) || byNumber(a, b);
   /** The folders for these cases: each Operation (in Operation Number order) with its cases, then
    * General Files with the independent ones. Empty Operations show too, unless a search is on. */
   function opGroups(cases, { searching = false, all = (Vault.data?.cases || []).filter((c) => !isArchivedEntry(c)) } = {}) {
@@ -858,7 +875,7 @@
       const hit = q && opLabel(op).toLowerCase().includes(q);
       // v1.84: open cases first, then the closed ones (greyed, with a lock, while the Mission goes on).
       const shut = (c) => (c.status === 'Closed' ? 1 : 0);
-      const mine = (hit ? total : cases.filter((c) => c.operationId === op.id)).sort((a, b) => shut(a) - shut(b) || byNumber(a, b));
+      const mine = (hit ? total : cases.filter((c) => c.operationId === op.id)).sort((a, b) => shut(a) - shut(b) || caseOrder(a, b));
       if (searching && q && !hit && !mine.length) continue;
       const closed = op.status === 'Closed' || (total.length > 0 && total.every((c) => c.status === 'Closed'));
       groups.push({ key: op.id, op, cases: mine, total: total.length, closed });
@@ -868,7 +885,7 @@
       if (shutNow.length) partials.push({ key: `${op.id}:closed`, op, cases: shutNow, total: total.length, closed: true, partial: true });
     }
     groups.push(...partials);
-    const loose = cases.filter((c) => !c.operationId || !Vault.getOperation(c.operationId)).sort(byNumber);
+    const loose = cases.filter((c) => !c.operationId || !Vault.getOperation(c.operationId)).sort(caseOrder);
     const looseAll = all.filter((c) => !c.operationId || !Vault.getOperation(c.operationId));
     if (loose.length || !searching || !q) {
       const open = loose.filter((c) => c.status !== 'Closed');
@@ -1558,6 +1575,15 @@
     const body = h('tbody', {});
     const countEl = h('span', { class: 'muted small' });
     const redraw = () => { renderCaseList(); showGeneralFiles(); };
+    // v1.101: click a heading to sort by it (again to reverse); Age is days since the case was opened.
+    const sortTh = (label, key, cls = '') => h('th', { class: cls, 'data-sort': key },
+      h('button', { type: 'button', class: 'th-sort', title: `Sort by ${label}`, onclick: () => {
+        const cur = state.generalSort || { key: 'number', dir: 1 };
+        state.generalSort = { key, dir: cur.key === key ? -cur.dir : 1 };
+        draw();
+      } }, label, h('span', { class: 'th-arrow', 'aria-hidden': 'true' })));
+    const head = h('thead', {}, h('tr', {}, sortTh('Case Number', 'number'), sortTh('Subject Name', 'subject'), h('th', {}, 'Mission'), h('th', {}, 'Status'),
+      sortTh('Opened', 'opened', 'date-cell'), sortTh('Age', 'age', 'age-cell'), h('th', {}, '')));
     const draw = () => {
       state.generalQuery = q.value;
       state.generalShow = show.value;
@@ -1571,6 +1597,14 @@
         if (show.value === 'overdue' && (isArchivedEntry(c) || c.status === 'Closed' || !c.nextDeadline || dueLabel(c.nextDeadline.date).cls !== 'overdue')) return false;
         return !t || [c.number, c.subject, subj(c), c.title, c.fileNumber, c.status, op ? opLabel(op) : 'general files'].join(' ').toLowerCase().includes(t);
       }).sort(byNumber);
+      // v1.101: sort by any column heading; Age (and Opened) put the oldest or newest case first.
+      const srt = state.generalSort || { key: 'number', dir: 1 };
+      const openedOf = (c) => c.opened || '9999-99-99';
+      if (srt.key === 'subject') list.sort((a, b) => srt.dir * String(subj(a) || '').localeCompare(String(subj(b) || '')));
+      else if (srt.key === 'opened') list.sort((a, b) => srt.dir * openedOf(a).localeCompare(openedOf(b)) || byNumber(a, b));
+      else if (srt.key === 'age') list.sort((a, b) => srt.dir * openedOf(a).localeCompare(openedOf(b)) || byNumber(a, b)); // oldest first, then newest
+      else if (srt.dir < 0) list.reverse();
+      head.querySelectorAll('th[data-sort]').forEach((th) => { const on = th.dataset.sort === srt.key; const up = (srt.dir > 0) !== (th.dataset.sort === 'age'); th.setAttribute('aria-sort', on ? (up ? 'ascending' : 'descending') : 'none'); });
       countEl.textContent = `${plural(list.length, 'case')}${list.length !== Vault.data.cases.length ? ` of ${Vault.data.cases.length}` : ''}`;
       body.replaceChildren(...(list.length ? list.map((c) => {
         const op = opOf(c);
@@ -1585,8 +1619,9 @@
           h('td', {}, op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}` }, opLabel(op)) : h('span', { class: 'muted' }, '—')),
           h('td', {}, statusPill(arch ? 'Archived' : c.status)),
           h('td', { class: 'nowrap date-cell' }, c.opened ? fmtDate(c.opened) : '—'),
+          h('td', { class: 'nowrap age-cell' }, (() => { const o = openedAge(c.opened); return o ? h('span', { title: `${o.days} day${o.days === 1 ? '' : 's'} since it was opened` }, o.ageLong) : '—'; })()),
           h('td', { class: 'nowrap' }, action));
-      }) : [h('tr', {}, h('td', { colspan: 6, class: 'muted empty-cell' }, Vault.data.cases.length ? 'No cases match.' : 'No cases yet. New Case makes one.'))]));
+      }) : [h('tr', {}, h('td', { colspan: 7, class: 'muted empty-cell' }, Vault.data.cases.length ? 'No cases match.' : 'No cases yet. New Case makes one.'))]));
     };
     q.addEventListener('input', debounce(draw, 120));
     show.addEventListener('change', draw);
@@ -1601,7 +1636,7 @@
       dups.size ? h('p', { class: 'warn-note small', role: 'note' }, I('exclamation-triangle-fill'), ` ${plural(dups.size, 'Case Number')} ${dups.size === 1 ? 'is' : 'are'} used by more than one case (made before numbers had to be unique). They are flagged below; nothing was changed.`) : null,
       h('div', { class: 'general-tools' }, q, show, countEl),
       h('div', { class: 'table-wrap' }, h('table', { class: 'data-table general-table' },
-        h('thead', {}, h('tr', {}, ['Case Number', 'Subject Name', 'Mission', 'Status', 'Opened', ''].map((x) => h('th', { class: x === 'Opened' ? 'date-cell' : '' }, x)))),
+        head,
         body))));
   }
 
@@ -3214,7 +3249,23 @@
   });
   const privacyBtn = $('#btn-privacy');
   privacyBtn.classList.remove('tb-square');
-  $('#btn-sidebar-collapse').after(searchBtn, homeBtn, privacyBtn);
+  const sortBtn = h('button', { id: 'btn-side-sort', class: 'icon-btn', type: 'button' });
+  const drawSort = () => {
+    const [, icon, label] = SIDE_ORDERS.find((o) => o[0] === sideOrder) || SIDE_ORDERS[0];
+    const next = SIDE_ORDERS[(SIDE_ORDERS.findIndex((o) => o[0] === sideOrder) + 1) % SIDE_ORDERS.length][2];
+    sortBtn.title = `Cases: ${label}. Click for ${next.toLowerCase()}`;
+    sortBtn.classList.toggle('on', sideOrder !== 'number');
+    sortBtn.replaceChildren(I(icon), h('span', { class: 'sr-only' }, `Order of the cases: ${label}`));
+  };
+  sortBtn.addEventListener('click', () => {
+    sideOrder = SIDE_ORDERS[(SIDE_ORDERS.findIndex((o) => o[0] === sideOrder) + 1) % SIDE_ORDERS.length][0];
+    try { localStorage.setItem('cv-side-order', sideOrder); } catch { /* not kept: fine */ }
+    drawSort();
+    renderCaseList();
+    toast(`Cases: ${SIDE_ORDERS.find((o) => o[0] === sideOrder)[2].toLowerCase()}.`, 'info', 1800);
+  });
+  drawSort();
+  $('#btn-sidebar-collapse').after(searchBtn, homeBtn, privacyBtn, sortBtn);
   const tools = $('.sidebar-tools');
   const showSearch = (on) => {
     tools.classList.toggle('search-open', on);
