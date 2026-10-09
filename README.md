@@ -15,14 +15,14 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.104
+## What's New in v1.105
 
-- **Attach a PDF to an exhibit, as well as photos.** On the Draft tab, each exhibit's tile now reads **Add Photos or PDF** (Additional Exhibits too). A PDF (a lab report, a receipt, a scanned form) is saved in the case's exhibit folder like a photo, gets the next letter (Exhibit 1b), and its tile shows the first page with a red **PDF** badge; click it to read it. In the report, every page of the PDF goes into the Exhibit Attachments, captioned with the exhibit, its label and the page (*Exhibit 1b, ... - Document: Lab report (page 2 of 3)*)
+- **No more Pending.** Cases are Open, Closed or Archived, and Missions Open or Closed. The Pending option, its hourglass icon, the Pending count in the banner and the Pending filter are gone. Anything that was Pending opens as Open (its follow-up deadlines stay on the Timeline, and the case history notes it). The Draft's *Court Date: Pending* box is unchanged
 
 ## What CaseVault Does
 
 **Cases and Missions**
-- Cases with a Case Number, File Number, Agency Case Number, subject, client and status (Open, Pending, Closed, Archived); several case numbers grouped under a **Mission**, or kept as **Independent Cases**
+- Cases with a Case Number, File Number, Agency Case Number, subject, client and status (Open, Closed, Archived); several case numbers grouped under a **Mission**, or kept as **Independent Cases**
 - Details tab: suspects, contacts (Case Officer, ASA/AUSA and others), LEO partners, deconfliction, and **Case History** with your own dated notes
 - Closing asks for a disposition and the arrest report; archiving asks for a reason (EXPIRED, NOLLE PROSEQUI, PROSECUTION or your own); a closed case can be reopened and an archived one restored
 - Timeline of events and deadlines, a red bell for anything due, and the statute of limitations for narcotic charges
@@ -134,7 +134,7 @@ CaseVault-Data/
 | `js/options.js` | Menu → Options (zoom, brightness, Dev Tools "Make it fictitious") and Contact Dev |
 | `js/format-bar.js` | The formatting bar over Notes and Drafts |
 | `js/tooltip.js` | Hover boxes for every button |
-| `js/closing.js`, `js/closing-ui.js` | Status rules, Pending follow-up, Close case (dispositions, loose ends), Reopen, the Arrest details tab and `{{arrest.*}}` / `{{closure.*}}` values |
+| `js/closing.js`, `js/closing-ui.js` | Status rules, Close case (dispositions, loose ends), Reopen, the Arrest details tab and `{{arrest.*}}` / `{{closure.*}}` values |
 | `js/docxview.js` | Word (.docx) to a read-only preview, and to Markdown for template import |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Installable offline PWA |
 | `js/helper-fs.js` | Helper mode: wraps the helper's API in FileSystemHandle-shaped objects |

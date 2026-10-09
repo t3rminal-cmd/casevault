@@ -19,8 +19,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   await p.keyboard.press('n'); await p.waitForTimeout(400); ok(!!(await p.$('#dialog[open] .new-case-form')), 'N opens New Case'); await p.keyboard.press('Escape'); await p.waitForTimeout(200);
   // history + summary
   await p.evaluate((id) => { location.hash = `#/case/${id}/details`; }, ids.c); await p.waitForTimeout(800);
-  await p.selectOption('.details-row-title select', 'Pending'); await p.waitForSelector('#dialog[open]');
-  await p.click('#dialog[open] button:has-text("Set to Pending")'); await p.waitForTimeout(800);
+  ok(!(await p.$$eval('.details-row-title select option', (o) => o.map((x) => x.textContent))).includes('Pending'), 'v1.105: the status list has no Pending');
   await p.click('.case-history .fold-btn').catch(() => {}); await p.waitForTimeout(200);
   console.log('history:', await p.$$eval('.history-list li', (l) => l.map((x) => x.textContent)));
   await p.click('.case-actions button:has-text("Case Summary")'); await p.waitForSelector('#dialog[open] .pdf-view'); await p.waitForTimeout(1500);

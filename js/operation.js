@@ -69,7 +69,7 @@
 
   /* ---------- v1.46: Operations as records ---------- */
 
-  const OP_STATUSES = ['Open', 'Pending', 'Closed'];
+  const OP_STATUSES = ['Open', 'Closed']; // v1.105: no Pending
   /** A number compared for duplicates: trimmed, single spaces, upper case. */
   const normNumber = (n) => String(n == null ? '' : n).trim().replace(/\s+/g, ' ').toUpperCase();
   /** "Number - Name" (just the one that's there when the other is empty). */
@@ -136,7 +136,7 @@
     if (!number) errs.push('Mission Number is required.');
     if (!name) errs.push('Mission Name is required.');
     if (number && (operations || []).some((o) => o && o.id !== exceptId && normNumber(o.number) === normNumber(number))) errs.push(`Mission Number ${number} is already used by another Mission.`);
-    if (op && op.status && !OP_STATUSES.includes(op.status)) errs.push('Status must be Open, Pending or Closed.');
+    if (op && op.status && !OP_STATUSES.includes(op.status)) errs.push('Status must be Open or Closed.');
     if (op && op.start && op.end && String(op.end) < String(op.start)) errs.push('End Date is before Start Date.');
     return errs;
   }
@@ -156,11 +156,11 @@
     const used = new Set([...(operations || []).map((o) => normNumber(o.number)), ...taken.map(normNumber)]);
     for (let n = 1; ; n++) { const v = `OP-${String(n).padStart(3, '0')}`; if (!used.has(v)) return v; }
   }
-  /** An Operation's status from its cases' (when it's made from them): Open if any is open, then
-   * Pending, else Closed. */
+  /** An Operation's status from its cases' (when it's made from them): Open if any is open (or
+   * was Pending, before v1.105), else Closed. */
   function statusFrom(statuses) {
     const s = (statuses || []).map((x) => (x === 'Archived' ? 'Closed' : x));
-    return s.includes('Open') || !s.length ? 'Open' : s.includes('Pending') ? 'Pending' : 'Closed';
+    return s.includes('Open') || s.includes('Pending') || !s.length ? 'Open' : 'Closed';
   }
 
   /** The first suspect's name (Primary first), for a case made before Subject Name existed. */

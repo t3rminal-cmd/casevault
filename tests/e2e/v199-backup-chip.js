@@ -11,7 +11,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
       oldLine: !!document.querySelector('.hero-backup') };
   });
   let r = await row();
-  ok(r.order.join(',') === 'open,pending,closed,archived,overdue,backup', `the backup chip comes right after Overdue (${r.order})`);
+  ok(r.order.join(',') === 'open,closed,archived,overdue,backup', `the backup chip comes right after Overdue (${r.order})`);
   ok(r.sameRow, 'in the same row as Overdue at 1366 wide');
   ok(r.text === 'No Backup' && r.alert, `no backup yet: "${r.text}", red`);
   ok(!r.clipped, 'no chip is cut off');
