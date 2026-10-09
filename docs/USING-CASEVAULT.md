@@ -215,6 +215,10 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.104
+
+- **Draft → Evidence → Add Photos or PDF:** an exhibit (or an Additional Exhibit) can have PDFs as well as photos. Pick one or more in the same window. A PDF gets the next letter (1b, 1c), shows its first page with a red **PDF** badge, and has a label box like a photo. Every page of it goes into the report's Exhibit Attachments, captioned with the page (*page 2 of 3*). The ✕ takes it off the exhibit; the file stays in the case files
+
 ### What's new in v1.103
 
 - **Home page → a Mission folder:** the timeline is now the slim line with small circles from a case's Details tab (one circle per event, close ones grouped with a count, red when overdue, a red Today mark), with no sideways scrolling. Point at a circle for the details; click it to open that case's Timeline tab. This replaces the vertical list from v1.102

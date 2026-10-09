@@ -523,7 +523,13 @@
   }
   function extraLine(x) {
     const kind = (EXTRA_KINDS.find(([k]) => k === x.kind) || EXTRA_KINDS[0])[1];
-    return `Additional Exhibit ${x.number}: ${kind}${x.title ? `, ${x.title}` : ''}${x.description ? `. ${x.description}` : ''} (${x.photos.length} ${x.photos.length === 1 ? 'image' : 'images'})`;
+    return `Additional Exhibit ${x.number}: ${kind}${x.title ? `, ${x.title}` : ''}${x.description ? `. ${x.description}` : ''} (${attachCount(x.photos)})`;
+  }
+  // v1.104: photos and PDFs attached to an exhibit, counted: "2 images", "1 image, 1 PDF".
+  function attachCount(paths) {
+    const pdf = paths.filter((p) => /\.pdf$/i.test(p)).length;
+    const img = paths.length - pdf;
+    return [img || !pdf ? `${img} ${img === 1 ? 'image' : 'images'}` : '', pdf ? `${pdf} PDF${pdf === 1 ? '' : 's'}` : ''].filter(Boolean).join(', ');
   }
 
   function exhibitLine(e) {

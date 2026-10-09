@@ -3946,3 +3946,6 @@ html .tl-item.deadline::before { transform: none; }
 /* v1.103: the Mission timeline on the home page is the Details tab's slim line with small circles. */
 .op-timeline-section .mini-tl { margin-top: .4rem; }
 .op-timeline-section .mini-tl-title { display: none; }
+/* v1.104: a PDF attached to an exhibit: its first page on the tile, with a PDF badge. */
+.rf-photo-pdf { position: absolute; right: 4px; bottom: 4px; z-index: 1; padding: .05rem .4rem; background: var(--danger); color: #fff; font-size: .68rem; font-weight: 700; letter-spacing: .04em; pointer-events: none; }
+.rf-photo img.rf-thumb-pdf { object-fit: contain; object-position: top center; background: #fff; }
