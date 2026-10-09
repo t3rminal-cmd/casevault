@@ -428,7 +428,12 @@
         if (vs.length) labelled(vs.length === 1 ? 'Victim' : 'Victim(s)', vs.map((v, i) => victimBlock(v, lines[i])));
       }
       groupGap();
-      if (on('evidence')) { const ex = exhibits(); if (ex.length) blocks('Evidence Inventoried', ex); else labelled('Evidence Inventoried', ''); }
+      // v1.108: a note ("See DEA 6 for further information") reads first, then the exhibits.
+      if (on('evidence')) {
+        const ex = exhibits(); const note = String(d.evidenceNote || '').trim();
+        if (note) labelled('Evidence Inventoried', note);
+        if (ex.length) { if (note) y -= 3; blocks(note ? '' : 'Evidence Inventoried', ex); } else if (!note) labelled('Evidence Inventoried', '');
+      }
       // v1.86: narcotics in columns, and Pre-Recorded Funds as a QTY / Denomination / Serial table.
       done.add('narcotics');
       if (!RF.isHidden(d, 'narcotics')) { const ns = d.narcotics.filter(RF.filled); if (ns.length) labelled('Narcotics Recovered (Total Weight & Value)', ns.map(narcoticBlock)); }

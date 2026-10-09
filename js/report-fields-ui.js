@@ -294,6 +294,8 @@
       // v1.76: the IR Number can be DNA as well; v1.92: and the CB Number.
       if (['methodCode', 'safeMethod', 'arrestUnit', 'residence', 'irNumber', 'cbNumber'].includes(key)) box = CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }], onPick: () => save() });
       // v1.93: Offense Classification offers the Statute Descriptions of the charges entered below.
+      // v1.108: Address of Occurrence offers the confidential address; any other can be typed.
+      if (key === 'address') box = CVCombo.attach(el, { items: () => pickItems(F().PICKS.address), onPick: () => save() });
       if (key === 'offense') {
         box = CVCombo.attach(el, { label: 'The charges\' Statute Descriptions', items: () => chargeDescs().map((d0) => ({ value: d0, label: d0, hint: 'Statute Description' })), onPick: () => save() });
         // v1.95: wording that isn't one of the charges goes back to the charge's, when you leave the box.
@@ -488,9 +490,15 @@
             // Switched as you type or pick (not when you leave the box, which would move the page
             // under a click); the cursor stays in the name box.
             const redrawIfState = () => {
-              if (F().isStateVictim(key, it) === stateVictim) return;
+              if (F().isStateVictim(key, it) === stateVictim) {
+                // v1.108: from the State of Illinois to the Federal Government (or back): the State's
+                // Relation Code 024 goes (or comes) with it; a code typed in stays.
+                const cur = String(it.relation || '').trim(); const want = F().govRelation(it);
+                if (stateVictim && cur !== want && (cur === '' || cur === F().STATE_RELATION)) { it.relation = want; if (inputs.relation) inputs.relation.value = want; save(); }
+                return;
+              }
               // v1.93: becoming the State of Illinois fills Relation Code 024 (when it's empty).
-              if (!stateVictim && !String(it.relation || '').trim()) it.relation = F().STATE_RELATION;
+              if (!stateVictim && !String(it.relation || '').trim()) it.relation = F().govRelation(it);
               draw(); save();
               const again = box.querySelector(`[aria-label="${L.item} ${i + 1} Name"]`);
               if (again) { again.focus(); const n = again.value.length; try { again.setSelectionRange(n, n); } catch { /* not a text box */ } }
@@ -661,7 +669,7 @@
         if (!cb.checked) complete = true;
         else {
           const boxes = [...inner.querySelectorAll('input, select, textarea')].filter((el) => !el.disabled && !['checkbox', 'radio', 'file', 'button', 'hidden', 'submit'].includes(el.type)
-            && !el.closest('.combo-list, datalist, .rf-multi, .rf-vehicles-list, .rf-line-off, .rf-extras, .rf-photo-label, .rf-start-at') && (() => { const hid = el.parentElement && el.parentElement.closest('[hidden]'); return !hid || hid === inner; })());
+            && !el.closest('.combo-list, datalist, .rf-multi, .rf-vehicles-list, .rf-line-off, .rf-extras, .rf-photo-label, .rf-start-at, .rf-ev-note-input') && (() => { const hid = el.parentElement && el.parentElement.closest('[hidden]'); return !hid || hid === inner; })());
           const offLines = inner.querySelectorAll('.rf-line-off').length;
           complete = (boxes.length || offLines) ? boxes.every((el) => String(el.value || '').trim()) : false;
           // v1.93: a list still ticked in with nothing added (no Police Personnel, no charges…) isn't
@@ -860,6 +868,10 @@
 
     // ---- evidence inventoried: one card per exhibit (number given automatically)
     const evRows = h('div', { class: 'rf-exhibits' });
+    // v1.108: a note for the whole part ("See DEA 6 for further information"), shown once it is set.
+    const evNote = h('input', { class: 'rf-ev-note-input', autocomplete: 'off', value: data.evidenceNote || '', 'aria-label': 'Evidence note' });
+    evNote.addEventListener('input', () => { data.evidenceNote = evNote.value; save(); });
+    const evNoteBox = String(data.evidenceNote || '').trim() ? ui.field('Evidence Note', evNote, 'rf-ev-note') : null;
     const drawEvidence = () => {
       evRows.replaceChildren(...(data.evidence.length ? data.evidence.map((e, i) => {
         const n = e.number;
@@ -1261,6 +1273,26 @@
       ui.refresh();
     } }, 'Clear All');
 
+    // v1.108: See DEA 6: a report kept for statistics only. Victims, Offenders, Charges and Evidence
+    // read "See DEA 6 for further information" and the summary points to the DEA 6 reports.
+    const dea6Btn = h('button', { class: 'btn', type: 'button', icon: 'file-earmark-text', title: 'For a report kept for statistics only: Victims, Offenders, Charges and Evidence say See DEA 6 for further information, and the Summary of Investigation points to the DEA 6 reports', onclick: async () => {
+      const fed = String(c.agencyNumber || '').trim();
+      const text = F().dea6Narrative(fed);
+      const had = String(data.narrative || '').trim();
+      const ok = await ui.confirmDialog({ title: 'See DEA 6 for further information?',
+        message: `Victims, Offenders, Charges and Evidence Inventoried show "${F().SEE_DEA6}" (entries already there are kept). The Summary of Investigation becomes: ${text}${had && had !== text ? ' The summary written now is replaced (Undo brings it back).' : ''}${fed ? '' : ' This case has no Federal Jacket Number yet: add it on the Details tab, then click See DEA 6 again.'}`,
+        confirmText: 'See DEA 6' });
+      if (!ok) return;
+      const before = structuredClone(data);
+      F().seeDea6(data, fed);
+      for (const id of ['people', 'report', 'evidence', 'summary']) folded.delete(id);
+      keepFolds();
+      save(0);
+      await Save.flushAll();
+      undoToast('Victims, Offenders, Charges and Evidence now say See DEA 6 for further information, and the summary is filled in.', before, 'The draft is back as it was.');
+      ui.refresh();
+    } }, 'See DEA 6');
+
     // v1.39: the heading names the Officer Report Type picked (Supplementary Report – Purchase…);
     // Show All / Hide All sit up here, and Save Changes sits with the other buttons.
     const heading = h('h2', {}, headingOf(data));
@@ -1271,11 +1303,11 @@
         h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-down', title: 'Open every part on screen', onclick: () => foldAll(false) }, 'Show All'),
         h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-right', title: 'Fold every part away on screen (they stay in the PDF). Open one with its arrow.', onclick: () => foldAll(true) }, 'Hide All')),
       h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case: fill it in, then Send Draft to Reports puts it under Reports and its PDF under Files. Clear All starts another one. Saved as report-fields.json.'),
-      h('div', { class: 'rf-actions' }, archived ? null : sendBtn, printBtn, archived ? null : clearBtn, h('div', { class: 'spacer' }), archived ? null : nextBtn, archived ? null : saveBtn),
+      h('div', { class: 'rf-actions' }, archived ? null : sendBtn, printBtn, archived ? null : clearBtn, archived ? null : dea6Btn, h('div', { class: 'spacer' }), archived ? null : nextBtn, archived ? null : saveBtn),
       // v1.85: the department letterhead, as at the top of the PDF.
       archived || !root.CVLetterhead ? null : root.CVLetterhead.editor(),
       ...sections.slice(0, -1),
-      part('evidence', 'Evidence Inventoried', 'box-seam', evRows, archived ? null : h('div', { class: 'contact-add rf-evidence-add' }, addExhibit, numbering), extrasBox),
+      part('evidence', 'Evidence Inventoried', 'box-seam', evNoteBox, evRows, archived ? null : h('div', { class: 'contact-add rf-evidence-add' }, addExhibit, numbering), extrasBox),
       part('summary', 'Summary of Investigation', 'journal-text', fmt, rich.el, narrative),
       sections[sections.length - 1]); // Submission and Approval comes last, as on the printed report
     // v1.48: every field is one grey box with its label inside; an empty box shows the label as its
