@@ -214,6 +214,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.109
+
+- **Draft → Offense → Address of Occurrence:** the list is *99 N Confidential Street* and *99 S Confidential Street*
+- **Draft → Offenders, Victims and Charges:** pick *See DEA 6 for further information* from an offender's or victim's Name list, or from a charge's Statute list (or type it). That entry then shows only that one box, which is enough for the part's green check. Change the words and the other boxes come back (anything typed in them before is still there). On the PDF it is one line
+- **Draft → Narcotics Recovered:** the Narcotics Type list has no doubles: the calculator's names (*Marijuana (Domestic)*, *Cocaine (Powder)*, *Heroin (Tan)*…) once each, then *PCP* and *Other Controlled Substance*. A type typed before stays as it was
+
 ### What's new in v1.108
 
 - **Draft → Offense → Address of Occurrence:** click the box (or its arrow) and pick *99 N Confidential* or *99 N Confidential Street*; any other address can still be typed

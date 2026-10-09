@@ -14,7 +14,7 @@ const SP = process.env.SP + '/v1108';
   const addr = p.locator('.rf-offense input[placeholder="Address of Occurrence"], .rf-offense input[data-label="Address of Occurrence"]').first();
   await addr.click(); await addr.fill('99'); await p.waitForTimeout(200);
   const opts = await p.$$eval('.combo-list .combo-opt', (x) => x.filter((e) => e.offsetParent).map((e) => e.textContent.trim()));
-  ok(opts.some((t) => t.startsWith('99 N Confidential Street')) && opts.some((t) => /^99 N Confidential(?! Street)/.test(t)), `the address list offers the confidential address: ${opts.join(' | ')}`);
+  ok(opts.some((t) => t.startsWith('99 N Confidential Street')) && opts.some((t) => t.startsWith('99 S Confidential Street')) && !opts.some((t) => /^99 N Confidential(?! Street)/.test(t)), `the address list offers the confidential address: ${opts.join(' | ')}`);
   await p.locator('.combo-list .combo-opt', { hasText: '99 N Confidential Street' }).first().click(); await p.waitForTimeout(300);
   ok(await addr.inputValue() === '99 N Confidential Street', 'picking it fills the box');
 

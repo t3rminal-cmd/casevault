@@ -249,8 +249,10 @@
     const pickItems = (list) => list.map((v) => ({ value: v, label: v }));
     // Narcotic types: the calculator's list (it has prices), then the evidence types not in it.
     const DNA_ITEMS = [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }];
-    const NARCOTIC_ITEMS = [...Object.keys(RD.NARCOTIC_DATA || {}).map((k) => ({ value: k, label: k, hint: RD.NARCOTIC_DATA[k].cat })),
-      ...F().DRUG_TYPES.filter((d) => !(RD.NARCOTIC_DATA || {})[d]).map((d) => ({ value: d, label: d }))];
+    // v1.109: no doubles (Cannabis is the calculator's Marijuana, Cocaine its Cocaine (Powder)…).
+    const NARCOTIC_ITEMS = F().narcoticChoices(RD.NARCOTIC_DATA || {});
+    // v1.109: a victim, offender or charge can read "See DEA 6 for further information".
+    const SEE_ITEM = { value: F().SEE_DEA6, label: F().SEE_DEA6, hint: 'Only this box', see: true };
     const moneyText = (v) => {
       const n = parseFloat(String(v || '').replace(/[$,\s]/g, ''));
       return Number.isFinite(n) ? `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : String(v || '').trim();
@@ -364,6 +366,7 @@
           const unknown = key === 'offendersList' && !!it.unknown;
           const lab = `${L.item} ${i + 1}`;
           const stateVictim = F().isStateVictim(key, it);
+          const seeDea6 = F().isSeeDea6(key, it);
           const fields = F().fieldsFor(key, it).map(([k, label, kind, opts]) => {
             let el;
             // v1.39: an offender's phone numbers (Add Another Phone) and monikers with their app.
@@ -503,8 +506,18 @@
               const again = box.querySelector(`[aria-label="${L.item} ${i + 1} Name"]`);
               if (again) { again.focus(); const n = again.value.length; try { again.setSelectionRange(n, n); } catch { /* not a text box */ } }
             };
-            if (key === 'victimsList' && k === 'name') el.addEventListener('input', redrawIfState);
-            if (F().PICKS[kind]) box = CVCombo.attach(el, { items: () => pickItems(F().PICKS[kind]), onPick: () => { if (key === 'victimsList') redrawIfState(); } });
+            // v1.109: becoming (or no longer) "See DEA 6": the other boxes go (or come back).
+            const redrawIfSee = () => {
+              if (F().isSeeDea6(key, it) === seeDea6) return false;
+              if (key === 'charges') offenseFromCharge();
+              draw(); save();
+              const again = document.querySelector(`[aria-label="${L.item} ${i + 1} ${label}"]`);
+              if (again) { again.focus(); const n = again.value.length; try { again.setSelectionRange(n, n); } catch { /* not a text box */ } }
+              return true;
+            };
+            if (['victimsList', 'offendersList'].includes(key) && k === 'name') el.addEventListener('input', () => { if (!redrawIfSee() && key === 'victimsList') redrawIfState(); });
+            if (F().PICKS[kind]) box = CVCombo.attach(el, { items: () => [...pickItems(F().PICKS[kind]), ...(key === 'victimsList' ? [SEE_ITEM] : [])], onPick: () => { if (key === 'victimsList' && !redrawIfSee()) redrawIfState(); } });
+            else if (key === 'offendersList' && k === 'name' && !unknown) box = CVCombo.attach(el, { items: () => [SEE_ITEM], onPick: () => redrawIfSee() });
             else if (kind === 'narcotic') box = CVCombo.attach(el, { items: () => NARCOTIC_ITEMS });
             // v1.76: IR, FBI and IDOC Numbers can be DNA (does not apply); v1.92: and the CB Number.
             else if (['irNumber', 'fbiNumber', 'idocNumber', 'cbNumber'].includes(k)) box = CVCombo.attach(el, { items: () => DNA_ITEMS });
@@ -528,7 +541,9 @@
             }
             else if (kind === 'charge' || kind === 'chargeWide') {
               // Search the charges by statute or wording; picking fills both boxes.
-              box = CVCombo.attach(el, { items: () => CHARGE_ITEMS.map((c) => ({ ...c, value: kind === 'charge' ? c.statute : c.desc })), onPick: (c) => {
+              box = CVCombo.attach(el, { items: () => [...CHARGE_ITEMS.map((c) => ({ ...c, value: kind === 'charge' ? c.statute : c.desc })), SEE_ITEM], onPick: (c) => {
+                // v1.109: See DEA 6: the statute is in the DEA 6, so only the description box stays.
+                if (c.see) { it.statute = ''; it.description = F().SEE_DEA6; if (key === 'charges') offenseFromCharge(); draw(); save(); return; }
                 it.statute = c.statute; it.description = c.desc;
                 if (inputs.statute) inputs.statute.value = c.statute;
                 if (inputs.description) inputs.description.value = c.desc;
@@ -536,9 +551,9 @@
                 save();
               } });
               // Typed by hand: Offense Classification follows the charge's wording too.
-              if (kind === 'chargeWide' && key === 'charges') el.addEventListener('input', () => { offenseFromCharge(); save(); });
+              if (kind === 'chargeWide' && key === 'charges') el.addEventListener('input', () => { if (!redrawIfSee()) { offenseFromCharge(); save(); } });
             }
-            return ui.field(label, box, kind === 'wide' || kind === 'chargeWide' ? 'rf-wide' : '');
+            return ui.field(label, box, kind === 'wide' || kind === 'chargeWide' || seeDea6 ? 'rf-wide' : ''); // v1.109: See DEA 6 never cut off
           });
           // Age follows the date of birth.
           if (inputs.dob && inputs.age && !unknown) {
@@ -546,7 +561,7 @@
             inputs.dob.addEventListener('input', upd);
             inputs.dob.addEventListener('change', upd);
           }
-          const unknownBox = key === 'offendersList' ? h('label', { class: 'check-row small rf-unknown', title: 'Name not known: age, height and weight become ranges' },
+          const unknownBox = key === 'offendersList' && !seeDea6 ? h('label', { class: 'check-row small rf-unknown', title: 'Name not known: age, height and weight become ranges' },
             h('input', { type: 'checkbox', checked: unknown, 'aria-label': `${lab} unknown offender`, onchange: (e) => {
               it.unknown = e.target.checked;
               if (it.unknown && !String(it.name || '').trim()) it.name = F().UNKNOWN;
@@ -556,9 +571,9 @@
               draw(); save();
             } }), h('span', {}, 'Unknown Offender')) : null;
           // v1.82: No Vehicle hides the Vehicle, VIN and Plates boxes (they stay saved if filled).
-          const noVehBox = key === 'offendersList' ? h('label', { class: 'check-row small rf-unknown', title: 'No vehicle information: hide Offender Vehicle(s) (left off the PDF)' },
+          const noVehBox = key === 'offendersList' && !seeDea6 ? h('label', { class: 'check-row small rf-unknown', title: 'No vehicle information: hide Offender Vehicle(s) (left off the PDF)' },
             h('input', { type: 'checkbox', checked: !!it.noVehicle, 'aria-label': `${lab} no vehicle`, onchange: (e) => { it.noVehicle = e.target.checked; draw(); save(); } }), h('span', {}, 'No Vehicle')) : null;
-          return h('div', { class: `rf-item${unknown ? ' rf-item-unknown' : ''}${stateVictim ? ' rf-item-state' : ''}` },
+          return h('div', { class: `rf-item${unknown ? ' rf-item-unknown' : ''}${stateVictim ? ' rf-item-state' : ''}${seeDea6 ? ' rf-item-see' : ''}` },
             h('div', { class: 'rf-item-head' }, h('strong', {}, `${L.item} ${i + 1}`), unknownBox, noVehBox,
               archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: `Delete ${L.item.toLowerCase()}`, onclick: async () => {
                 if (F().filled(it) && !(await ui.confirmDialog({ title: `Delete ${L.item} ${i + 1}?`, message: 'This entry is removed from the report.', confirmText: 'Delete', danger: true }))) return;

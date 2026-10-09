@@ -179,8 +179,9 @@
   const PICKS = {
     // v1.108: the Federal Government as well as the State.
     victim: ['State of Illinois', 'Federal Government'],
-    // v1.108: the confidential address used when the real one isn't written in the report.
-    address: ['99 N Confidential', '99 N Confidential Street'],
+    // v1.108: the confidential address used when the real one isn't written in the report
+    // (v1.109: North and South).
+    address: ['99 N Confidential Street', '99 S Confidential Street'],
     hair: ['Black', 'Brown', 'Blonde', 'Red', 'Gray', 'White', 'Bald', 'Dyed'],
     // v1.69
     hairStyle: ['Short', 'Medium', 'Long', 'Bald / Shaved', 'Buzz Cut', 'Fade', 'Afro', 'Braids', 'Cornrows', 'Dreadlocks', 'Twists', 'Ponytail', 'Bun', 'Curly', 'Wavy', 'Straight', 'Mohawk', 'Receding'],
@@ -194,6 +195,14 @@
   const EVIDENCE_TYPES = ['Narcotics', 'Currency', 'Personal Currency', 'Personal Property', 'Personal Jewelry', 'Jewelry', 'Electronics', 'Video/Audio', 'Photograph', 'Packaging', 'Other'];
   const DRUG_TYPES = ['Cannabis', 'Cocaine', 'Crack Cocaine', 'Heroin', 'Fentanyl', 'Methamphetamine', 'MDMA / Ecstasy', 'PCP', 'Oxycodone', 'Hydrocodone', 'Alprazolam', 'Adderall', 'Ketamine', 'Psilocybin', 'LSD', 'Other Controlled Substance'];
   // Types saved before v1.20.
+  /** v1.109: the Narcotics Recovered list: the calculator's narcotics (they have prices), then the
+   * types it doesn't already cover (Cannabis is its Marijuana, Crack Cocaine its Cocaine (Crack)…). */
+  const SAME_AS = { Cannabis: 'marijuana', 'Crack Cocaine': 'crack', 'MDMA / Ecstasy': 'mdma' };
+  function narcoticChoices(data) {
+    const names = Object.keys(data || {});
+    const covered = (t) => names.some((n) => n.toLowerCase().includes(SAME_AS[t] || t.toLowerCase()));
+    return [...names.map((k) => ({ value: k, label: k, hint: data[k].cat })), ...DRUG_TYPES.filter((t) => !covered(t)).map((t) => ({ value: t, label: t }))];
+  }
   const OLD_TYPES = { Narcotic: 'Narcotics', 'Personal property': 'Personal Property', 'Personal currency': 'Personal Currency', 'Recording (audio/video)': 'Video/Audio' };
   // A 'list' entry in a section only marks where that list shows; it isn't a field of its own.
   const FIELDS = SECTIONS.flatMap((s) => s.fields).filter((f) => f[2] !== 'list');
@@ -225,6 +234,11 @@
   const dea6Narrative = (fed) => `This report is for statistical purposes only. For further information see DEA 6 reports under ${String(fed || '').trim() ? `Federal Case Number ${String(fed).trim()}` : 'the Federal Case Number'}. THIS CASE IS CLEAR/CLOSED.`;
   // The parts it fills, and where in each list the words go.
   const DEA6_LISTS = [['victimsList', 'name'], ['offendersList', 'name'], ['charges', 'description']];
+ // v1.109: an entry reading SEE_DEA6 shows (and prints) only that box.
+  const DEA6_KEY = Object.fromEntries(DEA6_LISTS);
+  const isSee = (v) => String(v || '').trim().toLowerCase() === SEE_DEA6.toLowerCase();
+  /** True for a victim, offender or charge that reads "See DEA 6 for further information". */
+  const isSeeDea6 = (list, it) => !!DEA6_KEY[list] && !!it && (isSee(it[DEA6_KEY[list]]) || (list === 'charges' && isSee(it.statute)));
   const DEA6_PARTS = ['people', 'victimsList', 'offendersList', 'report', 'charges', 'evidence', 'summary'];
   /** Fills the form for "See DEA 6" (changes d): a list with no entries gets one reading
    * SEE_DEA6; entries already there are kept. The parts are put back in the report. */
@@ -263,6 +277,8 @@
     // v1.93: the State of Illinois as victim gets Relation Code 024 when none is entered.
     for (const v of d.victimsList) if (isStateVictim('victimsList', v) && !String(v.relation || '').trim()) v.relation = govRelation(v);
     d.evidenceNote = String(src.evidenceNote || '');
+    // v1.109: "See DEA 6" typed as a charge's statute goes in its description.
+    for (const c of d.charges) if (isSee(c.statute)) { c.statute = ''; c.description = SEE_DEA6; }
     // v1.42: Notifications have no Notes box; notes without a name become the name.
     for (const n of d.notifications) if (n.notes && !String(n.name || '').trim()) n.name = n.notes;
     // v1.21's "Unit / Role" text goes to Unit when it isn't one of the roles.
@@ -463,6 +479,8 @@
   /** The fields an entry uses. */
   function fieldsFor(list, it) {
     const all = LISTS[list].fields;
+    // v1.109: a "See DEA 6" entry has just the box that says so.
+    if (isSeeDea6(list, it)) return all.filter(([k]) => k === DEA6_KEY[list]);
     // v1.82: an offender ticked "No Vehicle" has no Vehicle, VIN or Plates boxes (and none on the PDF).
     if (list === 'offendersList') return it && it.noVehicle ? all.filter(([k]) => k !== 'vehicles') : all;
     if (list !== 'victimsList') return all;
@@ -733,7 +751,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { chargeDescriptions, syncOffense, OFFENDER_VEHICLE, VEHICLE_DISPOSITIONS, blankVehicle, vehicleLine, CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, STATE_RELATION, FEDERAL_VICTIM, govRelation, isStateVictim, SEE_DEA6, dea6Narrative, seeDea6, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, dateOrderPlan, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { chargeDescriptions, syncOffense, OFFENDER_VEHICLE, VEHICLE_DISPOSITIONS, blankVehicle, vehicleLine, CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, STATE_RELATION, FEDERAL_VICTIM, govRelation, isStateVictim, SEE_DEA6, dea6Narrative, seeDea6, isSeeDea6, narcoticChoices, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, dateOrderPlan, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

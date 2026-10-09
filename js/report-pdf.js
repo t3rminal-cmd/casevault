@@ -253,6 +253,7 @@
     const lv = (label, v) => (v ? `${label}: ${v}` : '');
     const today0 = new Date().toISOString().slice(0, 10);
     const offenderBlock = (o) => {
+      if (RF.isSeeDea6('offendersList', o)) return { rows: [[col(String(o.name).trim(), 0, 1)]] }; // v1.109
       const f = (k) => vt('offendersList', o, k);
       const lab = (k, l) => RF.labelFor(o, k, l);
       const age = f('age') || (o.dob && RF.ageOn ? String(RF.ageOn(o.dob, /^\d{4}-\d{2}-\d{2}$/.test(d.date || '') ? d.date : today0) || '') : '');
@@ -281,7 +282,7 @@
       const row = (vals, bold) => vals.map((v, i) => col(v, C[i][0], C[i][1], bold));
       return { rows: [row(['Name:', 'Star:', 'Unit:', 'Role:'], true), ...list.map((p) => row([p.name, p.star, p.unit, p.role].map((x) => String(x || '').trim()), false))] };
     };
-    const chargeBlock = (c) => ({ rows: [[col(String(c.statute || '').trim(), 0, 1)], [col(String(c.description || '').trim(), 0, 1)]] });
+    const chargeBlock = (c) => ({ rows: [String(c.statute || '').trim(), String(c.description || '').trim()].filter((t, j) => t || j || !RF.isSeeDea6('charges', c)).map((t) => [col(t, 0, 1)]) }); // v1.109: no blank statute line for See DEA 6
     // v1.86: money with a dollar sign ("100" -> "$100"); a whole-dollar bill as "$20.00".
     const money = (v) => { const t = String(v || '').trim(); return /^\d/.test(t) ? `$${t}` : t; };
     const bill = (v) => { const t = String(v || '').trim(); return /^\$\d+$/.test(t) ? `${t}.00` : t; };
