@@ -215,6 +215,11 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.103
+
+- **Home page → a Mission folder:** the timeline is now the slim line with small circles from a case's Details tab (one circle per event, close ones grouped with a count, red when overdue, a red Today mark), with no sideways scrolling. Point at a circle for the details; click it to open that case's Timeline tab. This replaces the vertical list from v1.102
+- **Back up to C:\CaseVault-Backups (Firefox, helper 1.15):** **Back Up Everything** → **Add Backup Folder** (the box is open and says `C:\CaseVault-Backups` until a folder is added) → **Add** → pick it → **Back Up to This Drive**. The folder is made if needed, its drive's BitLocker is shown, and the backups go straight into it. A shared folder on another PC (`\\BEELINK\CaseVault-Backups`) still works the same way
+
 ### What's new in v1.102
 
 - **Back up to another PC (e.g. a Beelink):** ⋮ → Vault → Backups → **Back Up Everything** → **Add Network Folder** → type `\\BEELINK\CaseVault-Backups` → **Add**. Pick it (globe icon) and back up. The first time, tick that the PC is encrypted and the folder is only yours. Off or unreachable: greyed out. **Remove** takes it off the list and leaves its backups there. In Chrome or Edge, map the folder to a drive letter (Z:) and pick that. Set up the other PC first: [BACKUP-TO-ANOTHER-PC.md](BACKUP-TO-ANOTHER-PC.md)

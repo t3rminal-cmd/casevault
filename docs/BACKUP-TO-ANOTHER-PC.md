@@ -35,8 +35,8 @@ you to confirm you did.
    the Beelink account from step 3 and tick *Remember my credentials*. You should see the folder.
 2. Open CaseVault → ⋮ → Vault → Backups → **Back Up Everything**.
 
-**Firefox (helper mode):** click **Add Network Folder**, type `\\BEELINK\CaseVault-Backups`, click
-**Add**. CaseVault checks it can write there and lists it first, with a globe icon. Pick it →
+**Firefox (helper mode):** click **Add Backup Folder**, type `\\BEELINK\CaseVault-Backups` over the
+`C:\CaseVault-Backups` that is filled in, click **Add**. CaseVault checks it can write there and lists it first, with a globe icon. Pick it →
 **Back Up to This Drive**. The first time, tick *I checked: that PC is encrypted and the shared
 folder is only mine* → **Back Up to This Folder**. The list is kept on the SSD (in
 `CaseVault-Data\backup-network.json`), so it follows the SSD to another PC. When the Beelink is off
@@ -48,9 +48,20 @@ Explorer → This PC → ⋯ → Map network drive → letter `Z:` → folder `\
 tick *Reconnect at sign-in*. Then pick `Z:` in Back Up Everything. (A mapped drive also shows up in
 Firefox's list, marked *network drive*.)
 
+## 2b. Working on the Beelink itself
+
+When the SSD is plugged into the Beelink and you run CaseVault there, the backup folder is simply
+`C:\CaseVault-Backups` on the Beelink (no sharing needed). In Firefox: **Back Up Everything** → the
+box already says `C:\CaseVault-Backups` → **Add** (the folder is made if it isn't there) → pick it →
+**Back Up to This Drive**. The list shows whether C: has BitLocker on, and asks first if it doesn't.
+In Chrome or Edge, pick the `C:\CaseVault-Backups` folder in the folder picker.
+
+The backups go straight into `C:\CaseVault-Backups` (as `CaseVault-Backup-<date>` folders), and the
+same folder is `\\BEELINK\CaseVault-Backups` from the other PC once it is shared (part 1).
+
 ## 3. Restoring from the Beelink
 
-Each backup is a plain folder, `CaseVault-Backups\CaseVault-Backup-<date>`. To restore onto a new or
+Each backup is a plain folder, `C:\CaseVault-Backups\CaseVault-Backup-<date>` on the Beelink. To restore onto a new or
 wiped SSD, copy what is inside it into an empty `CaseVault-Data` folder on the SSD's CASEVAULT partition, then
 open CaseVault. To restore a single file, open the backup folder from File Explorer and copy it.
 

@@ -574,42 +574,45 @@
       const draw = (items) => {
         list.replaceChildren(...(items.length ? items.map((d) => {
           const net = d.bitlocker === 'network';
-          const listed = /^Network folder/.test(d.kind || ''); // added with Add Network Folder (not a mapped drive)
-          // v1.102: a shared folder on another PC (a network folder) can be taken off the list again.
-          const remove = listed ? h('button', { class: 'btn small backup-net-remove', type: 'button', title: 'Take this network folder off the list (its backups stay on that PC)', onclick: async (e) => {
+          // Added with Add Backup Folder (not a drive Windows found): it can be taken off the list again.
+          const listed = d.saved === true || /^Network folder/.test(d.kind || '');
+          const remove = listed ? h('button', { class: 'btn small backup-net-remove', type: 'button', title: 'Take this folder off the list (the backups already in it stay there)', onclick: async (e) => {
             e.preventDefault(); e.stopPropagation();
             try { await HelperFS.removeNetworkFolder(d.path); await refresh(); } catch (err) { toast(err.message, 'error'); }
           } }, 'Remove') : null;
           return h('label', { class: `arch-opt${d.reachable === false ? ' backup-off' : ''}` },
-            h('input', { type: 'radio', name: 'backup-drive', value: d.path, disabled: d.reachable === false }), I(net ? 'globe2' : 'hdd-fill'),
+            h('input', { type: 'radio', name: 'backup-drive', value: d.path, disabled: d.reachable === false }), I(net ? 'globe2' : listed ? 'folder-fill' : 'hdd-fill'),
             h('span', {}, h('strong', {}, listed ? d.path : `${d.label || 'Drive'} (${d.path.replace(/[\\/]+$/, '')})`),
               h('span', { class: 'muted small block' }, d.total ? `${fmtSize(d.free)} free of ${fmtSize(d.total)}${d.kind === 'Removable' ? ' · removable' : ''}${d.kind === 'Network' ? ' · network drive' : ''}` : d.kind),
               d.bitlocker ? h('span', { class: `small block enc-${d.bitlocker}` }, I(d.bitlocker === 'on' ? 'shield-lock-fill' : net ? 'globe2' : 'unlock'), ` ${encryptionText(d.bitlocker)}`) : null),
             remove);
-        }) : [h('p', { class: 'muted' }, 'No other drive found. Plug in the backup drive and unlock it, or add a network folder, then click Look Again.')]));
+        }) : [h('p', { class: 'muted' }, 'No other drive found. Plug in the backup drive and unlock it, or add a backup folder, then click Look Again.')]));
         go.disabled = true;
+        // v1.103: until a backup folder is added, the box to add one (C:\CaseVault-Backups) is open.
+        netRow.hidden = items.some((d) => d.saved === true || /^Network folder/.test(d.kind || ''));
       };
-      // v1.102: Add Network Folder: a shared folder on another PC at home, e.g. \\BEELINK\CaseVault-Backups.
-      const netIn = h('input', { type: 'text', autocomplete: 'off', spellcheck: 'false', placeholder: '\\\\BEELINK\\CaseVault-Backups', 'aria-label': 'Network folder' });
+      // v1.102: Add a backup folder: a shared folder on another PC at home (\\BEELINK\CaseVault-Backups),
+      // or v1.103 a folder on this PC's drive, filled in as C:\CaseVault-Backups.
+      const netIn = h('input', { type: 'text', autocomplete: 'off', spellcheck: 'false', value: 'C:\\CaseVault-Backups', placeholder: 'C:\\CaseVault-Backups', 'aria-label': 'Backup folder' });
       const netAdd = h('button', { class: 'btn', type: 'button', onclick: async () => {
         const path = netIn.value.trim();
         if (!path) { netIn.focus(); return; }
         netAdd.disabled = true;
-        try { await HelperFS.addNetworkFolder(path); netIn.value = ''; netRow.hidden = true; await refresh(); toast(`Added ${path}.`, 'success', 2500); } catch (err) { toast(err.message, 'error', 9000); }
+        try { await HelperFS.addNetworkFolder(path); await refresh(); toast(`Added ${path}.`, 'success', 2500); } catch (err) { toast(err.message, 'error', 9000); }
         netAdd.disabled = false;
       } }, 'Add');
       netIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); netAdd.click(); } });
       const netRow = h('div', { class: 'backup-net-row', hidden: true },
-        h('label', { class: 'field' }, h('span', {}, 'Shared folder on another PC'), netIn), netAdd,
-        h('p', { class: 'muted small' }, 'Type it the way File Explorer shows it: two backslashes, the PC\'s name, a backslash, the shared folder. See docs/BACKUP-TO-ANOTHER-PC.md to set the folder up.'));
+        h('label', { class: 'field' }, h('span', {}, 'Backup folder'), netIn), netAdd,
+        h('p', { class: 'muted small' }, 'A folder on this PC, like C:\\CaseVault-Backups (made if it isn\'t there), or a shared folder on another PC, like \\\\BEELINK\\CaseVault-Backups. Never a folder on the SSD. See docs/BACKUP-TO-ANOTHER-PC.md.'));
       list.addEventListener('change', () => { go.disabled = !list.querySelector('input:checked'); });
       draw(drives);
       return h('form', { class: 'backup-form', onsubmit: (e) => { e.preventDefault(); const c = list.querySelector('input:checked'); if (c) close(drives.find((d) => d.path === c.value) || { path: c.value }); } },
         h('h2', { icon: 'hdd-fill' }, 'Back Up the Whole Vault'),
-        h('p', {}, 'Every case, file, report, template and setting in CaseVault-Data is copied to the drive you pick, into CaseVault-Backups, then read back and checked file by file. You can keep working while it runs.'),
-        h('p', { class: 'muted small' }, 'Pick an encrypted drive that is not part of this SSD, or a shared folder on another PC at home. The SSD\'s own partitions and the PC\'s Windows drive are not listed.'),
+        h('p', {}, 'Every case, file, report, template and setting in CaseVault-Data is copied to the drive or folder you pick, then read back and checked file by file. You can keep working while it runs.'),
+        h('p', { class: 'muted small' }, 'Pick an encrypted drive that is not part of this SSD, or add a backup folder: C:\\CaseVault-Backups on this PC, or a shared folder on another PC at home. The SSD\'s own partitions are never offered.'),
         list,
-        h('div', { class: 'backup-net-open' }, h('button', { class: 'btn small', type: 'button', icon: 'globe2', onclick: () => { netRow.hidden = !netRow.hidden; if (!netRow.hidden) netIn.focus(); } }, 'Add Network Folder')),
+        h('div', { class: 'backup-net-open' }, h('button', { class: 'btn small', type: 'button', icon: 'folder-plus', onclick: () => { netRow.hidden = !netRow.hidden; if (!netRow.hidden) netIn.focus(); } }, 'Add Backup Folder')),
         netRow,
         h('div', { class: 'dialog-actions' },
           h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
@@ -1800,47 +1803,16 @@
       if (opBox) { opBox.hidden = !inside; opBox.replaceChildren(...(inside ? [inside] : [])); }
       if (tlBox) drawTimeline(open);
     };
-    // The open operation's Timeline (v1.32): every case number's events, in its own section above
-    // Upcoming Deadlines.
-    let tlToken = 0;
-    async function drawTimeline(open) {
-      const my = ++tlToken;
-      if (!open) { tlBox.hidden = true; tlBox.replaceChildren(); return; }
-      const tls = [];
-      for (const c of open.group) { try { tls.push({ caseId: c.id, number: c.number || '', events: ((await Vault.getTimeline(c.id)) || {}).events || [] }); } catch { /* moved */ } }
-      if (my !== tlToken) return;
-      const rows = CVOperation.mergeEvents(tls);
+    // The open operation's Timeline (v1.32): every case number's events, in its own section.
+    // v1.103: the slim line with small circles from a case's Details tab (one circle per event,
+    // close ones share a circle with their count, a red Today mark). Point at a circle for the
+    // date, title and note; click it to open that case's Timeline tab.
+    function drawTimeline(open) {
+      if (!open || !open.group.length) { tlBox.hidden = true; tlBox.replaceChildren(); return; }
       tlBox.hidden = false;
-      // v1.102: the same vertical timeline as a case's Timeline tab (month headings, a date box, a
-      // dot on the line, a card), read-only: a click opens the event on that case's Timeline tab.
-      // Deadlines are diamonds (red when overdue), done ones are faded, a red line marks today.
-      const todayIso = today();
-      const monthName = (d) => new Date(`${d.slice(0, 7)}-01T12:00:00`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      const items = [];
-      let month = '';
-      let todayShown = false;
-      const todayLine = () => h('li', { class: 'tl-today', 'aria-label': 'Today' }, h('span', {}, `Today · ${fmtDate(todayIso)}`));
-      for (const { caseId, number, ev } of rows) {
-        const date = ev.date || '';
-        if (!todayShown && date >= todayIso && rows.some((x) => (x.ev.date || '') < todayIso)) { items.push(todayLine()); todayShown = true; }
-        if (date && date.slice(0, 7) !== month) { month = date.slice(0, 7); items.push(h('li', { class: 'tl-month' }, monthName(date))); }
-        const isDeadline = ev.kind === 'deadline';
-        const due = isDeadline && !ev.done ? dueLabel(ev.date) : null;
-        const wk = date ? new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short' }) : '';
-        items.push(h('li', { class: `tl-item ${isDeadline ? 'deadline' : 'event'}${ev.done ? ' done' : ''}${due ? ` ${due.cls}` : ''}${date < todayIso ? ' past' : ''}` },
-          h('div', { class: 'tl-when', title: fmtDate(date) }, h('span', { class: 'tl-day' }, date ? String(Number(date.slice(8, 10))) : '–'), h('span', { class: 'tl-wk' }, wk), ev.time ? h('span', { class: 'tl-time' }, ev.time) : null),
-          h('a', { class: 'tl-body', href: `#/case/${encodeURIComponent(caseId)}/timeline`, title: 'Open it on the case\'s Timeline tab' },
-            h('span', { class: 'tl-title' },
-              h('span', { class: `badge ${isDeadline ? 'deadline' : 'event'}` }, isDeadline ? 'Deadline' : 'Event'),
-              number && open.group.length > 1 ? h('span', { class: 'tl-case' }, number) : null,
-              h('strong', {}, ev.title || (isDeadline ? 'Deadline' : 'Event')),
-              ev.done ? h('span', { class: 'due' }, 'Done') : due ? h('span', { class: `due ${due.cls}` }, due.text) : null),
-            ev.note ? h('span', { class: 'tl-note' }, ev.note) : null)));
-      }
-      if (!todayShown && rows.length) items.push(todayLine());
       tlBox.replaceChildren(
         h('div', { class: 'section-head' }, h('h2', { class: 'section-title' }, `Timeline: ${open.name}`)),
-        rows.length ? h('ol', { class: 'timeline tl-modern tl-readonly', 'aria-label': `Timeline of ${open.name}` }, items) : h('p', { class: 'muted' }, 'No events yet. Add them on a case\'s Timeline tab.'));
+        miniTimeline(open.group[0], open.group));
     }
     // v1.38: a click on empty space on the Overview closes the open folder.
     opFolderState.close = () => { if (opFolderState.open && box.isConnected) { opFolderState.open = ''; draw(); } };
