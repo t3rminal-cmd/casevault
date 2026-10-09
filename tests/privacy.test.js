@@ -9,7 +9,7 @@ test('PIN validation: 4 to 6 digits only', () => {
   for (const bad of ['123', '1234567', '12a4', '', null, ' 1234']) assert.ok(!P.isValidPin(bad), String(bad));
 });
 
-test('PIN hashing: salted SHA-256, never stores the PIN', async () => {
+test('PIN hashing: salted, slow (PBKDF2 since v1.106), never stores the PIN', async () => {
   const salt = Buffer.from('0123456789abcdef').toString('base64');
   const h1 = await P.hashPin('2468', salt);
   assert.match(h1, /^[0-9a-f]{64}$/);
@@ -23,11 +23,32 @@ test('PIN hashing: salted SHA-256, never stores the PIN', async () => {
   assert.notStrictEqual(a.salt, b.salt, 'a fresh random salt each time');
   assert.notStrictEqual(a.hash, b.hash);
   assert.ok(!JSON.stringify(a).includes('2468'), 'the record never contains the PIN');
-  assert.strictEqual(a.algo, 'SHA-256');
+  assert.deepStrictEqual([a.v, a.algo, a.rounds], [2, 'PBKDF2-SHA-256', 600000]);
+  assert.ok(!P.isOldPinRecord(a));
   assert.ok(await P.verifyPin('2468', a));
   assert.ok(!(await P.verifyPin('2469', a)));
   assert.ok(!(await P.verifyPin('2468', null)));
   await assert.rejects(P.makePinRecord('12'), /4 to 6 digits/);
+  // A PIN saved before v1.106 (one SHA-256) still unlocks, and is marked to be re-saved.
+  const old = { v: 1, algo: 'SHA-256', salt, hash: h1 };
+  assert.ok(P.isOldPinRecord(old));
+  assert.ok(await P.verifyPin('2468', old));
+  assert.ok(!(await P.verifyPin('2469', old)));
+});
+
+test('v1.106: an old PIN is upgraded after it unlocks; copied text is cleared on lock', async () => {
+  const salt = Buffer.from('0123456789abcdef').toString('base64');
+  let record = { v: 1, algo: 'SHA-256', salt, hash: await P.hashPin('2468', salt) };
+  let cleared = 0;
+  const c = P.createController({ show() {}, hide() {}, getTitle: () => 't', setTitle() {}, getIcon: () => null, setIcon() {}, getPinRecord: () => record,
+    clearClipboard: () => { cleared += 1; }, upgradePin: async (pin) => { record = await P.makePinRecord(pin, 1000); } });
+  c.lock();
+  assert.strictEqual(cleared, 1, 'the clipboard is cleared when the screen comes on');
+  assert.ok((await c.unlock('2468')).ok);
+  await new Promise((r) => setTimeout(r, 50));
+  assert.strictEqual(record.v, 2, 're-saved with the slow hash');
+  c.lock();
+  assert.ok((await c.unlock('2468')).ok, 'and it still unlocks');
 });
 
 test('Esc twice within 500 ms triggers; slower presses do not', () => {

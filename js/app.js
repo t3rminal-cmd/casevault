@@ -142,7 +142,7 @@
 
   const DIALOG_SIZES = [
     ['panel', '.vault-panel'],
-    ['form', '.op-form, .new-case-form'],
+    ['form', '.op-form, .new-case-form, .deep-search, .restore-form'],
     ['full', '.preview, .doc-view, .lib-preview, .pdf-view, .word-view, .disc'],
     ['wide', '.problem-form, .type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
   ];
@@ -812,7 +812,7 @@
       h('a', {
         href: `#/case/${encodeURIComponent(c.id)}`,
         // v1.60: a case with a reminder (a deadline overdue or within a week) has a thin red border.
-        class: `case-item ${c.id === state.caseId ? 'active' : ''}${due ? ` has-reminder reminder-${due.cls}` : ''}${dim ? ' case-dim' : ''}`,
+        class: `case-item st-${String(c.status).toLowerCase()} ${c.id === state.caseId ? 'active' : ''}${due ? ` has-reminder reminder-${due.cls}` : ''}${dim ? ' case-dim' : ''}`,
         'aria-current': c.id === state.caseId ? 'page' : null,
         title: tip,
       },
@@ -1536,7 +1536,7 @@
           h('td', {}, h('strong', {}, r.where), h('div', { class: 'muted small' }, r.folder)),
           h('td', {}, h('button', { type: 'button', class: 'linkish', title: r.base, onclick: r.open }, r.base)),
           h('td', { class: 'num muted' }, fmtSize(r.size || 0)),
-          h('td', { class: 'muted date-cell' }, r.modified ? fmtDate(Vault.localDay(new Date(r.modified))) : '—')))))) : h('p', { class: 'muted' }, 'No files yet for this Mission.'),
+          h('td', { class: 'muted date-cell' }, r.modified ? fmtDate(Vault.localDay(new Date(r.modified))) : '—')))))) : h('p', { class: 'muted empty-note' }, I('folder2-open'), h('span', {}, 'No files yet for this Mission.')),
         h('p', { class: 'muted small op-section-note' }, `${plural(rows.length, 'file')}: every case number's Files tab and the Mission Folder.`));
     };
     const tlCase = members.find((c) => !isArchivedEntry(c));
@@ -1798,7 +1798,7 @@
           // v1.78: New Mission right here, beside All Missions.
           h('button', { class: 'btn small ov-btn-mission', type: 'button', icon: 'plus-lg', onclick: async () => { const op = await operationDialog(); if (op) { renderCaseList(); location.hash = `#/operation/${encodeURIComponent(op.id)}`; } } }, 'New Mission'),
           h('a', { class: 'btn small ov-btn-mission', href: '#/operations', icon: 'folder-mission' }, 'All Missions'))),
-        list.length ? tiles : h('p', { class: 'muted' }, 'No Missions yet. All Missions → New Mission makes one.'), opBox ? null : inside].filter(Boolean));
+        list.length ? tiles : h('p', { class: 'muted empty-note' }, I('folder-mission'), h('span', {}, 'No Missions yet. New Mission (above) makes one.')), opBox ? null : inside].filter(Boolean));
       if (opBox) { opBox.hidden = !inside; opBox.replaceChildren(...(inside ? [inside] : [])); }
       if (tlBox) drawTimeline(open);
     };
@@ -2452,10 +2452,11 @@
           } }, 'Add arrest details') : null,
           // The arrest details can be deleted again, also on a case closed by arrest (v1.29).
           !archived && CVClosingUI.hasArrestTab(c) ? h('button', { class: 'btn action-btn', type: 'button', icon: 'trash3', title: 'Takes the Arrest details tab off this case and deletes what was entered in it.', onclick: () => CVClosingUI.deleteArrest(c) }, 'Delete Arrest') : null,
+          !archived && c.status === 'Open' ? h('button', { class: 'btn action-btn', type: 'button', icon: 'calendar-check', title: 'Waiting on a lab, the DA or another agency? Puts the date to check back on the Timeline as a deadline.', onclick: () => CVClosingUI.followUpDialog(c) }, 'Add Follow-up') : null,
           !archived && Vault.conventionalId(c) ? h('button', { class: 'btn action-btn', type: 'button', icon: 'folder', title: `Renames this case's folder on the SSD to the <year>-<case no.> convention (${Vault.conventionalId(c)}). Every file is copied and checked first.`, onclick: () => renameCaseFolder(c) }, 'Rename folder') : null,
           !archived ? h('button', { class: 'btn action-btn', type: 'button', icon: 'archive', title: 'Keeps everything, read-only, in CaseVault-Data\\archive. It leaves the case list but can still be opened, searched and restored.', onclick: () => archiveCase(c) }, 'Archive Case') : null,
           h('button', { class: 'btn action-btn', type: 'button', icon: 'file-earmark-pdf', title: 'One page for a supervisor: status, disposition, arrestees and charges, exhibits and the timeline.', onclick: () => caseSummary(c) }, 'Case Summary'),
-          h('button', { class: 'btn danger action-btn', type: 'button', icon: 'trash3', title: 'Permanently deletes the case from the SSD. There is no trash to get it back from.', onclick: () => deleteCase(c) }, 'Delete case…'))));
+          h('button', { class: 'btn danger action-btn', type: 'button', icon: 'trash3', title: 'Moves the case to Recently Deleted (⋮ → Vault) for 30 days, then deletes it for good.', onclick: () => deleteCase(c) }, 'Delete case…'))));
 
     // Cases of the operation made before v1.27 each had their own suspects, contacts and
     // deconfliction: join them into the one Case Overview (then it's the same on all of them).
@@ -2628,11 +2629,11 @@
     const archived = Vault.isArchived(c.id);
     const choice = await openDialog((close) => {
       const typed = h('input', { type: 'text', autocomplete: 'off', spellcheck: 'false', 'aria-describedby': 'delete-help' });
-      const del = h('button', { class: 'btn danger', type: 'submit', disabled: true }, 'Delete permanently');
+      const del = h('button', { class: 'btn danger', type: 'submit', disabled: true }, 'Delete');
       typed.addEventListener('input', () => { del.disabled = !Vault.deleteConfirmMatches(c, typed.value); });
       return h('form', { class: 'delete-form', onsubmit: (e) => { e.preventDefault(); if (Vault.deleteConfirmMatches(c, typed.value)) close('delete'); } },
         h('h2', {}, `Delete "${c.title || 'Untitled case'}"?`),
-        h('p', { class: 'error-text' }, 'Permanently deletes this case from the SSD: notes, timeline, files, drafts and checks. This can\'t be undone.'),
+        h('p', { class: 'error-text' }, `Deletes this case: notes, timeline, files, drafts and checks. It is kept in Recently Deleted (⋮ → Vault) for ${Vault.BIN_DAYS} days, where you can restore it; after that it is gone for good.`),
         archived ? null : h('p', { class: 'muted small explain' }, 'To keep it out of the way but safe, archive it instead.'),
         h('label', { class: 'field' },
           h('span', { id: 'delete-help' }, c.number ? 'Type the case number to confirm: ' : 'Type the case title to confirm: ', h('code', {}, want)),
@@ -2652,21 +2653,114 @@
         h('div', { class: 'doom-body' },
           h('h2', {}, 'Last Chance, Detective'),
           h('p', { class: 'doom-case' }, c.number || c.title || 'This case'),
-          h('p', {}, 'You are about to send this case to the big evidence locker in the sky. There is no trash can, no "Undo", and IT cannot pull it out of a dumpster for you.'),
+          h('p', {}, `You are about to send this case to the evidence locker in the sky. It waits there ${Vault.BIN_DAYS} days in Recently Deleted, in case you change your mind. After that, IT cannot pull it out of a dumpster for you.`),
           h('p', { class: 'muted small' }, 'Did you make a full backup? No judgment. Okay, a little judgment.'),
           h('div', { class: 'dialog-actions' },
             no,
-            h('button', { class: 'btn danger', type: 'submit', icon: 'skull-crossbones' }, 'Delete It Forever'))));
+            h('button', { class: 'btn danger', type: 'submit', icon: 'skull-crossbones' }, 'Delete It'))));
     });
     if (!last) { toast('Case spared. It lives to see another day.', 'success'); return; }
     dropPendingSaves(c.id);
     try {
       await Save.track(`delete:${c.id}`, () => Vault.deleteCase(c.id));
       state.caseObj = null;
-      toast('Case deleted.');
+      toast(`Case deleted. It is in ⋮ → Vault → Recently Deleted for ${Vault.BIN_DAYS} days.`, 'success', 6000);
       renderCaseList();
       go(null);
     } catch { /* reported by Save */ }
+  }
+
+  /* ---------- Restore cases from a full backup (v1.106) ---------- */
+
+  async function restoreFromBackupDialog() {
+    // The browser reads the picked folder (it asks "upload N files?": nothing leaves the PC).
+    const files = await new Promise((resolve) => {
+      const input = h('input', { type: 'file', multiple: true, hidden: true });
+      input.webkitdirectory = true;
+      input.addEventListener('change', () => { resolve([...input.files].map((file) => ({ path: file.webkitRelativePath || file.name, file }))); input.remove(); });
+      input.addEventListener('cancel', () => { resolve(null); input.remove(); });
+      document.body.append(input);
+      input.click();
+    });
+    if (!files) return;
+    const found = CVBackupRestore.group(files);
+    const cases = [];
+    for (const g of found) {
+      const cj = g.files.find((x) => x.path === 'case.json');
+      let c = null;
+      try { c = JSON.parse(await cj.file.text()); } catch { /* unreadable: left out */ }
+      if (c) cases.push({ ...g, c, inVault: Vault.data.cases.some((e) => e.id === g.id) });
+    }
+    if (!cases.length) { toast('No cases found in that folder. Pick a CaseVault-Backup-<date> folder (or the CaseVault-Data folder inside it).', 'error', 9000); return; }
+    const picked = await openDialog((close) => {
+      const boxes = cases.map((x) => {
+        const tick = h('input', { type: 'checkbox', checked: !x.inVault, value: x.id });
+        return { x, tick, row: h('label', { class: `restore-row${x.inVault ? ' restore-exists' : ''}` }, tick,
+          h('span', { class: 'restore-what' }, h('strong', {}, x.c.number || x.c.title || x.id), x.c.subject ? h('span', { class: 'muted small block' }, x.c.subject) : null),
+          h('span', { class: 'small restore-meta' }, `${x.c.status || ''}${x.location === 'archive' ? ' · archived' : ''} · ${plural(x.files.length, 'file')} · backup ${CVBackupRestore.backupWhen(x.backup)}`),
+          x.inVault ? h('span', { class: 'small warn-text block restore-note' }, 'In the vault now: restoring replaces it (the current copy goes to Recently Deleted).') : null) };
+      });
+      const go = h('button', { class: 'btn primary', type: 'submit', icon: 'arrow-counterclockwise' }, 'Restore');
+      const count = () => { const n = boxes.filter((b) => b.tick.checked).length; go.disabled = !n; go.textContent = n ? `Restore ${plural(n, 'case')}` : 'Restore'; };
+      boxes.forEach((b) => b.tick.addEventListener('change', count));
+      count();
+      return h('form', { class: 'restore-form', onsubmit: (e) => { e.preventDefault(); close(boxes.filter((b) => b.tick.checked).map((b) => b.x)); } },
+        h('h2', { icon: 'arrow-counterclockwise' }, 'Restore Cases from a Backup'),
+        h('p', { class: 'muted small' }, `${plural(cases.length, 'case')} in this backup. Tick the ones to bring back; each comes back with its notes, timeline, reports and files.`),
+        h('div', { class: 'restore-list' }, boxes.map((b) => b.row)),
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), go));
+    });
+    if (!picked || !picked.length) return;
+    await Save.flushAll();
+    const progress = toast('Restoring…', 'info', 24 * 3600000);
+    let done = 0;
+    try {
+      for (const x of picked) {
+        progress.textContent = `Restoring ${x.c.number || x.id}…`;
+        await Save.track(`restore:${x.id}`, () => Vault.restoreCaseFromBackup(x.id, x.location, x.files.map((f) => ({ path: f.path, data: f.file }))));
+        done += 1;
+      }
+      toast(`${plural(done, 'case')} restored.`, 'success', 6000);
+    } catch (err) {
+      if (FS.isDisconnectError(err)) return onDriveLost();
+      toast(`${done ? `${plural(done, 'case')} restored, then: ` : ''}${err.message}`, 'error', 12000);
+    } finally {
+      progress.remove();
+      renderCaseList();
+    }
+  }
+
+  /* ---------- Search Inside Cases (v1.106) ---------- */
+
+  async function searchInsideCases(query) {
+    const q = String(query || '').trim();
+    if (!q || !state.connected) return;
+    await Save.flushAll().catch(() => {});
+    let stopped = false;
+    await openDialog((close) => {
+      const status = h('p', { class: 'muted small deep-status' }, 'Looking…');
+      const list = h('div', { class: 'deep-results' });
+      const box = h('div', { class: 'deep-search' },
+        h('h2', { icon: 'search' }, `Search Inside Cases: "${q}"`),
+        h('p', { class: 'muted small' }, 'Notes, timeline, reports, the Draft form, arrest details, suspects and contacts, and file names. Every word has to be in the same place.'),
+        status, list,
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => { stopped = true; close(null); } }, 'Done')));
+      // Started once the window is on screen; closing it (Done, Esc, a result) stops the search.
+      setTimeout(() => CVCaseSearch.search(Vault, q, { stop: () => stopped || !box.isConnected, isFatal: (err) => FS.isDisconnectError(err), onCase: (n, total) => { status.textContent = `Looking… ${n} of ${total} cases`; } })
+        .then((results) => {
+          if (!box.isConnected) return;
+          const hits = results.reduce((n, r) => n + r.hits.length, 0);
+          status.textContent = results.length ? `${hits} match${hits === 1 ? '' : 'es'} in ${plural(results.length, 'case')}.` : '';
+          list.replaceChildren(...(results.length ? results.map((r) => h('section', { class: 'deep-case' },
+            h('h3', {}, h('span', { class: 'deep-num' }, r.number || r.title || 'No case number'), r.subject ? h('span', { class: 'muted small' }, r.subject) : null, r.archived ? h('span', { class: 'pill status-archived' }, 'Archived') : null),
+            h('ul', {}, r.hits.slice(0, 12).map((x) => h('li', {}, h('a', { href: `#/case/${encodeURIComponent(r.id)}/${x.tab}`, onclick: () => { stopped = true; close(null); } }, h('strong', {}, x.where), h('span', { class: 'deep-snippet' }, x.snippet)))),
+              r.hits.length > 12 ? h('li', { class: 'muted small' }, `and ${r.hits.length - 12} more`) : null)))
+            : [h('div', { class: 'empty-state' }, I('search'), h('p', {}, `Nothing found for "${q}".`), h('p', { class: 'muted small' }, 'Check the spelling, or try fewer words.'))]));
+        })
+        .catch((err) => { if (FS.isDisconnectError(err)) { close(null); onDriveLost(); } else status.textContent = `The search stopped: ${err.message}`; }), 0);
+      return box;
+    });
+    stopped = true;
   }
 
   /* ---------- Notes ---------- */
@@ -2795,7 +2889,34 @@
           h('div', { class: 'spacer' }),
           h('button', { class: 'btn', type: 'button', icon: 'save', onclick: async () => {
             try { const name = await Save.track('backup', () => Vault.backupNow()); toast(`Backup saved: ${name}`, 'success'); close(); } catch { /* reported */ }
-          } }, 'Back up now')));
+          } }, 'Back up now')),
+        // v1.106: bring cases back from a full backup on another drive.
+        h('div', { class: 'backup-full backup-restore' },
+          h('span', { class: 'fact-icon' }, I('arrow-counterclockwise')),
+          h('div', {}, h('strong', { class: 'block' }, 'Restore cases from a full backup'),
+            h('span', { class: 'muted small block' }, 'Pick a CaseVault-Backup folder on the backup drive or the other PC, then the cases to bring back. A case that is in the vault now goes to Recently Deleted first.')),
+          h('div', { class: 'spacer' }),
+          h('button', { class: 'btn', type: 'button', icon: 'folder2-open', onclick: async () => { close(); await restoreFromBackupDialog(); } }, 'Restore Cases…')));
+      // v1.106: deleted cases wait here for 30 days.
+      const deletedSec = h('section', { 'data-section': 'deleted' }, h('h3', {}, 'Recently Deleted'));
+      const drawDeleted = async () => {
+        let items = [];
+        try { items = await Vault.listDeleted(); } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
+        const rows = items.map((x) => h('li', { class: 'bin-row' },
+          h('span', { class: 'bin-what' }, h('strong', {}, x.number || x.title || 'No case number'), x.subject ? h('span', { class: 'muted small block' }, x.subject) : null),
+          h('span', { class: 'muted small bin-when' }, `Deleted ${fmtDate(String(x.deletedAt).slice(0, 10))} · gone after ${fmtDate(x.until)}`),
+          h('button', { class: 'btn small', type: 'button', icon: 'arrow-counterclockwise', onclick: async () => {
+            try { await Save.track(`restore:${x.id}`, () => Vault.restoreDeleted(x.id)); renderCaseList(); toast(`${x.number || 'The case'} is back${x.from === 'archive' ? ' in the archive' : ''}.`, 'success'); drawDeleted(); } catch (err) { toast(err.message, 'error'); }
+          } }, 'Restore'),
+          h('button', { class: 'btn small danger', type: 'button', icon: 'trash3', onclick: async () => {
+            if (!(await confirmDialog({ title: 'Delete it for good?', message: `${x.number || x.title || 'This case'} will be removed from the SSD. This can't be undone.`, confirmText: 'Delete Now', danger: true }))) return;
+            try { await Save.track(`purge:${x.id}`, () => Vault.purgeDeleted(x.id)); toast('Deleted for good.'); drawDeleted(); } catch { /* reported */ }
+          } }, 'Delete Now')));
+        deletedSec.replaceChildren(h('h3', {}, 'Recently Deleted'),
+          h('p', { class: 'muted small' }, `Deleted cases wait here ${Vault.BIN_DAYS} days, then they are removed from the SSD for good. Restore puts one back where it was.`),
+          rows.length ? h('ul', { class: 'bin-list' }, rows) : h('p', { class: 'empty-state small' }, I('trash3'), h('span', {}, 'Nothing deleted in the last 30 days.')));
+      };
+      drawDeleted();
       const maintenance = h('section', { 'data-section': 'maintenance' },
         h('h3', {}, 'Maintenance'),
         h('div', { class: 'row wrap' },
@@ -2819,8 +2940,8 @@
           } }, 'Disconnect')));
 
       // Each section is a card; the list on the left jumps to it and follows the scrolling.
-      const SECTION_ICONS = { vault: 'safe2', backups: 'save', privacy: 'eye-slash', affiant: 'person-badge', templates: 'file-earmark-ruled', library: 'bookshelf', behavior: 'robot', links: 'link-45deg', pii: 'fingerprint', mail: 'envelope-at', log: 'list-check', maintenance: 'tools' };
-      const sections = [info, backupsSec, privacySettings(v), affiantSettings(v), CVDraftsUI.templateSettings(), CVLibraryUI.librarySection(), CVLibraryUI.behaviorSection(), CVReferenceUI.linksSection(),
+      const SECTION_ICONS = { vault: 'safe2', backups: 'save', deleted: 'trash3', privacy: 'eye-slash', affiant: 'person-badge', templates: 'file-earmark-ruled', library: 'bookshelf', behavior: 'robot', links: 'link-45deg', pii: 'fingerprint', mail: 'envelope-at', log: 'list-check', maintenance: 'tools' };
+      const sections = [info, backupsSec, deletedSec, privacySettings(v), affiantSettings(v), CVDraftsUI.templateSettings(), CVLibraryUI.librarySection(), CVLibraryUI.behaviorSection(), CVReferenceUI.linksSection(),
         CVSecureSettings.watchSection(), CVSecureSettings.mailSection(), CVSecureSettings.logSection(), maintenance];
       const scroller = h('div', { class: 'vault-content' });
       // Scroll only the sections' own box. scrollIntoView would also scroll the panel itself,
@@ -3304,10 +3425,15 @@
     showSearch(on || !!$('#case-search').value.trim());
     if (on) $('#case-search').focus();
   });
+  // v1.106: Search Inside Cases: under the search box while something is typed; Enter starts it.
+  const deepBtn = h('button', { id: 'btn-deep-search', class: 'btn small deep-search-btn', type: 'button', icon: 'search', hidden: true, title: 'Also look in each case\'s notes, timeline, reports, Draft form, arrest details and file names', onclick: () => searchInsideCases($('#case-search').value) }, 'Search Inside Cases');
+  $('#case-search').closest('.search-wrap').after(deepBtn);
+  $('#case-search').addEventListener('input', () => { deepBtn.hidden = !$('#case-search').value.trim(); });
+  $('#case-search').addEventListener('keydown', (e) => { if (e.key === 'Enter' && $('#case-search').value.trim()) { e.preventDefault(); searchInsideCases($('#case-search').value); } });
   $('#case-search').addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     e.preventDefault();
-    if ($('#case-search').value) { $('#case-search').value = ''; renderCaseList(); }
+    if ($('#case-search').value) { $('#case-search').value = ''; deepBtn.hidden = true; renderCaseList(); }
     showSearch(false);
     searchBtn.focus();
   });
@@ -3414,6 +3540,8 @@
     getPinRecord: () => (Vault.data && Vault.data.settings.privacyPin) || null,
     getIdleMinutes: idleMinutes,
     button: $('#btn-privacy'),
+    // v1.106: a PIN saved before v1.106 is re-saved with the slower hash after it unlocks.
+    upgradePin: async (pin) => { const record = await CVPrivacy.makePinRecord(pin); await Save.track('settings', () => Vault.updateSettings({ privacyPin: record })); },
   });
 
   Save.render();

@@ -922,7 +922,7 @@
             ui.field('Description', desc, 'span-all'),
             h('div', { class: 'rf-photo-row' }, strip, addPhoto, picker)),
           archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Remove exhibit', onclick: () => { data.evidence.splice(i, 1); drawEvidence(); save(); } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, `Remove exhibit ${n}`)));
-      }) : [h('p', { class: 'muted small rf-empty' }, 'No evidence yet.')]));
+      }) : [h('p', { class: 'muted small rf-empty empty-note' }, ui.icon('camera-fill'), h('span', {}, 'No evidence yet.'))]));
     };
     drawEvidence();
     const addExhibit = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', title: c.agencyNumber ? `Numbered on from the last exhibit of any case with federal jacket number ${c.agencyNumber}.` : 'Numbered on from the last exhibit of this case. Cases with the same federal jacket number share one sequence.', onclick: async () => {
@@ -1027,7 +1027,7 @@
             ui.field('Description', desc, 'span-all'),
             h('div', { class: 'rf-photo-row' }, strip, addPhoto, picker)),
           archived ? '' : h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Remove additional exhibit', onclick: () => { data.extraExhibits.splice(i, 1); drawExtras(); drawExtraNext(); save(); } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, `Remove additional exhibit ${n}`)));
-      }) : [h('p', { class: 'muted small' }, 'No additional exhibits.')]));
+      }) : [h('p', { class: 'muted small empty-note' }, ui.icon('image'), h('span', {}, 'No additional exhibits.'))]));
     };
     drawExtras();
     const extraAt = h('input', { type: 'number', min: 1, step: 1, inputmode: 'numeric', class: 'rf-num rf-start-at rf-extra-start', 'aria-label': 'Next additional exhibit number', value: data.extraStart > 0 ? data.extraStart : '' });

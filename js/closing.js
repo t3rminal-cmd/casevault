@@ -22,6 +22,12 @@
     Archived: 'Archived: closed and moved to the archive, read-only.',
   };
 
+  // v1.106: Add Follow-up puts "Follow up: <what>" on the Timeline as a deadline.
+  const FOLLOW_UP_REASONS = [
+    'Lab results', 'Warrant signature', 'Prosecutor / DA review', 'Subpoena or records return', 'Suspect not located',
+    'Witness or victim contact', 'Another agency', 'Court date', 'Other',
+  ];
+
   const DISPOSITIONS = [
     { key: 'arrest', label: 'Cleared by arrest', hint: 'At least one person arrested and charged. Fill in the Arrest details.' },
     { key: 'exceptional', label: 'Exceptionally cleared', hint: 'Offender known and enough to charge, but something outside your control prevents it.',
@@ -218,13 +224,18 @@
     return out;
   }
 
+  /** The timeline deadline Add Follow-up makes: "Follow up: Lab results — item 1". */
+  function followUpEvent(reason, detail, date, id) {
+    return { id, kind: 'deadline', date, time: '', title: `Follow up: ${[clean(reason), clean(detail)].filter(Boolean).join(' — ')}`, note: 'Added with Add Follow-up.', done: false };
+  }
+
   /** People named in the arrest details, for the privacy scan (names CaseVault always hides). */
   const peopleOf = (arrest) => ((arrest && arrest.arrestees) || []).map(arresteeName).filter(Boolean);
 
   const api = {
-    STATUS_HELP, DISPOSITIONS, disposition, ARRESTEE_FIELDS, ARREST_FIELDS, CHARGE_FIELDS,
+    STATUS_HELP, FOLLOW_UP_REASONS, DISPOSITIONS, disposition, ARRESTEE_FIELDS, ARREST_FIELDS, CHARGE_FIELDS,
     NUMBER_FIELDS, INCIDENT_FIELDS, VEHICLE_FIELDS, COURT_FIELDS, BOND_FIELDS, PERSONNEL_FIELDS, NARCOTIC_FIELDS, WARRANT_FIELDS, NON_OFFENDER_FIELDS, LISTS,
-    emptyArrest, emptyArrestee, emptyCharge, emptyItem, normalizeArrest, normalizeArrestee, itemFilled, ageOn, arresteeName, chargesText, arrestContext, closureContext, closeChecklist, peopleOf,
+    emptyArrest, emptyArrestee, emptyCharge, emptyItem, normalizeArrest, normalizeArrestee, itemFilled, ageOn, arresteeName, chargesText, arrestContext, closureContext, closeChecklist, followUpEvent, peopleOf,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVClosing = api;

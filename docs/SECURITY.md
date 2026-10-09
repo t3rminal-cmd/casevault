@@ -12,7 +12,8 @@ and the settings only you can turn on.
 | A full backup on another drive | BitLocker on that drive | The backup drive list shows each drive's encryption; picking one without BitLocker asks first |
 | A full backup on another PC (shared folder) | That PC's BitLocker or Device encryption, a share for your account only, and SMB encryption | CaseVault can't check another PC; the first backup to a folder asks you to confirm. See [BACKUP-TO-ANOTHER-PC.md](BACKUP-TO-ANOTHER-PC.md) |
 | Discovery exports | Their own password (AES-GCM) | — |
-| The screen while you step away | The privacy screen and its PIN | The PIN only hides the screen. It does not encrypt anything |
+| The screen while you step away | The privacy screen and its PIN (stored as a slow PBKDF2 hash since v1.106) | The PIN only hides the screen. It does not encrypt anything. Copied case text is cleared from the clipboard when the screen comes on |
+| A deleted case | Recently Deleted keeps it 30 days in `CaseVault-Data\\deleted` (on the encrypted SSD) | Delete Now removes it at once |
 
 **BitLocker settings:** set Windows to **XTS-AES 256** for removable drives *before* encrypting
 (Group Policy → BitLocker Drive Encryption → Choose drive encryption method and cipher strength).

@@ -580,6 +580,34 @@
     } catch { return false; }
   }
 
+  /* ---------------- Follow-up (v1.106) ---------------- */
+
+  const plusDays = (n) => { const d = new Date(Date.now() + n * 86400000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+  /** Waiting on a lab, the DA, another agency: a deadline on the Timeline brings the case back. */
+  async function followUpDialog(c) {
+    const { h, openDialog, Save, toast } = ui;
+    const result = await openDialog((close) => {
+      const reason = h('select', {}, K().FOLLOW_UP_REASONS.map((r) => h('option', { value: r }, r)));
+      const detail = h('input', { type: 'text', maxlength: 120, placeholder: 'Lab request 26-114' });
+      const follow = h('input', { type: 'date', value: plusDays(14), required: true });
+      return h('form', { class: 'follow-form', onsubmit: (e) => { e.preventDefault(); if (follow.value) close({ reason: reason.value, detail: detail.value.trim(), followUp: follow.value }); } },
+        h('h2', { icon: 'calendar-check' }, 'Add Follow-up'),
+        h('p', { class: 'muted small explain' }, 'Waiting on someone else? Put the date to check back on the Timeline. It shows as a deadline on the Overview and rings the bell when it is close.'),
+        h('div', { class: 'form-grid' }, ui.field('Waiting on', reason), ui.field('Details', detail), ui.field('Follow up by', follow), h('div')),
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit', icon: 'calendar-check' }, 'Add to Timeline')));
+    });
+    if (!result) return false;
+    try {
+      const tl = await Vault.getTimeline(c.id);
+      tl.events.push(K().followUpEvent(result.reason, result.detail, result.followUp, Vault.newId('e')));
+      await Save.track(`timeline:${c.id}`, () => Vault.saveTimeline(c.id, tl));
+      toast(`Follow-up added: ${result.reason}, ${result.followUp}.`, 'success');
+      ui.refresh();
+      return true;
+    } catch { return false; }
+  }
+
   /** One line under the status: what the status means here, and what it's waiting on / how it closed. */
   function statusLine(c) {
     const K2 = K();
@@ -593,5 +621,5 @@
 
   function init(kit) { ui = kit; }
 
-  root.CVClosingUI = { init, hasArrestTab, deleteArrest, renderArrest, closeCaseDialog, reopenCase, statusLine, templateExtra, startArrestReport };
+  root.CVClosingUI = { init, hasArrestTab, deleteArrest, renderArrest, closeCaseDialog, reopenCase, followUpDialog, statusLine, templateExtra, startArrestReport };
 })(this);
