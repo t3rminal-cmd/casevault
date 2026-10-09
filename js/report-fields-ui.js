@@ -12,7 +12,11 @@
   async function load(c) {
     let d = null;
     try { d = await Vault.readCaseJSON(c.id, FILE); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
-    return F().normalize(d); // older saves brought up to date (v1.20 fields and evidence types)
+    const x = F().normalize(d); // older saves brought up to date (v1.20 fields and evidence types)
+    // v1.110: the Draft form only: old short IUCR wording ("Delv: Hallucinogens") is written out.
+    // Reports already sent keep the wording they were sent with.
+    F().updateOldUcr(x);
+    return x;
   }
 
   // Exhibit numbers already given in this case and in every case with the same agency case number.
@@ -260,6 +264,8 @@
     const els = {}; // the Report Fields inputs by key, for fields filled from a pick
     // v1.93: Offense Classification uses the exact wording of the first charge's Statute Description.
     const chargeDescs = () => F().chargeDescriptions(data);
+    /** v1.110: the description of the IUCR code entered ('' when it isn't one in the list). */
+    const ucrDesc = () => { const v = String(data.ucr || '').trim().toLowerCase(); const it = v && UCR_ITEMS.find((x) => x.code.toLowerCase() === v); return it ? it.desc : ''; };
     // v1.95: always one of the charges' Statute Descriptions (see CVReportFields.syncOffense).
     const offenseFromCharge = () => {
       F().syncOffense(data);
@@ -299,12 +305,15 @@
       // v1.108: Address of Occurrence offers the confidential address; any other can be typed.
       if (key === 'address') box = CVCombo.attach(el, { items: () => pickItems(F().PICKS.address), onPick: () => save() });
       if (key === 'offense') {
-        box = CVCombo.attach(el, { label: 'The charges\' Statute Descriptions', items: () => chargeDescs().map((d0) => ({ value: d0, label: d0, hint: 'Statute Description' })), onPick: () => save() });
+        // v1.110: the IUCR code's description is offered first.
+        box = CVCombo.attach(el, { label: 'The IUCR description and the charges\' Statute Descriptions', items: () => [...(ucrDesc() ? [{ value: ucrDesc(), label: ucrDesc(), hint: 'IUCR', ucr: true }] : []), ...chargeDescs().filter((d0) => d0 !== ucrDesc()).map((d0) => ({ value: d0, label: d0, hint: 'Statute Description' }))],
+          onPick: (it) => { data.offenseFrom = it && it.ucr ? 'ucr' : ''; save(); } });
         // v1.95: wording that isn't one of the charges goes back to the charge's, when you leave the box.
         el.addEventListener('change', () => {
           const typed = String(data.offense || '').trim();
+          data.offenseFrom = typed && typed === ucrDesc() ? 'ucr' : '';
           offenseFromCharge();
-          if (typed && typed !== data.offense) toast('Offense Classification uses the exact Statute Description of a charge. Pick another charge\'s wording from the arrow, or change the charge.', 'info', 7000);
+          if (typed && typed !== data.offense) toast('Offense Classification uses the exact description of the IUCR code or of a charge. Pick one from the arrow, or change the IUCR code or the charge.', 'info', 7000);
           save();
         });
       }
@@ -322,11 +331,15 @@
         // v1.39: picking an IUCR code puts its description in Offense Classification (for 2170:
         // "Delv: Synthetic Drugs"); so does typing a code that's in the list.
         // v1.93: when a charge is entered, its Statute Description wins over the UCR wording.
-        const fillOffense = (it) => { if (key === 'ucr' && it) { setField('offense', chargeDescs()[0] || it.desc); save(); } };
+        // v1.110: no longer: the IUCR code picked writes its description (spelled out, e.g.
+        // "Manufacture and Delivery: Hallucinogen") in Offense Classification.
+        const fillOffense = (it) => { if (key === 'ucr' && it) { setField('offense', it.desc); data.offenseFrom = 'ucr'; save(); } };
         box = CVCombo.attach(el, { items: () => UCR_ITEMS, onPick: (it) => { fillOffense(it); save(); } });
         el.addEventListener('change', () => {
           const v = el.value.trim().toLowerCase();
           fillOffense(UCR_ITEMS.find((it) => it.code.toLowerCase() === v || `${it.code} ${it.desc}`.toLowerCase() === v));
+          // Emptied: the wording goes back to the charge's.
+          if (!v && data.offenseFrom === 'ucr') { data.offenseFrom = ''; offenseFromCharge(); save(); }
         });
       } else if (kind === 'location') {
         // From Location Codes; Type of Location fills in from the code picked.
@@ -351,7 +364,7 @@
         });
         return row;
       }
-      return ui.field(label, box, kind === 'textarea' || kind === 'line' ? 'span-all rf-line' : opts === 'span' ? 'span-all' : '');
+      return ui.field(label, box, kind === 'textarea' || kind === 'line' ? 'span-all rf-line' : opts === 'span' ? 'span-all' : ['offense', 'address', 'locationType'].includes(key) ? 'rf-off-wide' : '');
     };
 
     // Pick-lists you can also type over (victim, gang, hair and eye colour).

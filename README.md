@@ -15,11 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.109
+## What's New in v1.110
 
-- **Confidential address:** Address of Occurrence offers *99 N Confidential Street* and *99 S Confidential Street* (*99 N Confidential* is gone)
-- **See DEA 6 entries keep one box:** an offender, victim or charge that reads *See DEA 6 for further information* shows only that box (no description, record numbers or vehicle boxes), so its part gets the green check. Pick it from the Name list (or a charge's Statute list), or type it; the PDF prints just that line
-- **Narcotics list without doubles:** Narcotics Recovered lists the calculator's names once (*Marijuana (Domestic)* rather than also *Cannabis*, *Cocaine (Powder)* rather than also *Cocaine*), then PCP and Other Controlled Substance
+- **IUCR codes written out:** the IUCR list (Draft → Offense, and Reference → UCR) reads *Manufacture and Delivery: Hallucinogen*, *Possession: Cannabis, 30 Grams or Less*, *Aggravated Assault: Handgun*, *Unlawful Use of a Weapon: Handgun* and so on, instead of *Delv:*, *Poss:*, *Agg:*, *UUW:*
+- **The IUCR code fills Offense Classification:** picking a code writes its wording in Offense Classification (and on the PDF), and it stays there when charges are added. Offense Classification's arrow offers the IUCR wording first, then each charge's Statute Description. A Draft form with the old short wording (*Delv: Hallucinogens*) shows the written-out wording when it opens; reports already sent keep theirs
+- **Offense layout:** Offense Classification, Address of Occurrence and Type of Location are two columns wide, so long wording is never cut off
 
 ## What CaseVault Does
 

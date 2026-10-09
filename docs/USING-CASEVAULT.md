@@ -214,6 +214,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.110
+
+- **Draft → Offense → IUCR Code:** the list is written out (*2015 Manufacture and Delivery: Hallucinogen*, *2025 Possession: Hallucinogen*, *1811 Possession: Cannabis, 30 Grams or Less*…); search by code or by any word. Reference → UCR shows the same wording
+- **Offense Classification follows the IUCR code:** pick (or type) a code and its wording goes in Offense Classification, also on the PDF and the report sent to Reports. Adding charges afterwards doesn't replace it. To use a charge's wording instead, pick it from Offense Classification's arrow (the IUCR wording is first in that list, then each charge's Statute Description). Emptying the IUCR Code puts the charge's wording back. A Draft form saved before with the old short wording (*Delv: Hallucinogens*, *Poss: Cannabis 30 grms or less*…) shows the written-out wording when it opens; wording you typed yourself, a charge's wording, and reports already sent are not changed
+- **Offense layout:** Offense Classification and IUCR Code on the first row, Address of Occurrence and Location Code on the second, Type of Location and Date on the third, then Time and the two Beats; the long boxes are two columns wide so nothing is cut off
+
 ### What's new in v1.109
 
 - **Draft → Offense → Address of Occurrence:** the list is *99 N Confidential Street* and *99 S Confidential Street*

@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.109)
+
+- **Confidential address:** Address of Occurrence offers *99 N Confidential Street* and *99 S Confidential Street* (*99 N Confidential* is gone)
+- **See DEA 6 entries keep one box:** an offender, victim or charge that reads *See DEA 6 for further information* shows only that box (no description, record numbers or vehicle boxes), so its part gets the green check. Pick it from the Name list (or a charge's Statute list), or type it; the PDF prints just that line
+- **Narcotics list without doubles:** Narcotics Recovered lists the calculator's names once (*Marijuana (Domestic)* rather than also *Cannabis*, *Cocaine (Powder)* rather than also *Cocaine*), then PCP and Other Controlled Substance
+
 ## Features (v1.108)
 
 - **Confidential address:** Draft → Offense → Address of Occurrence offers *99 N Confidential* and *99 N Confidential Street* (any other address can still be typed)

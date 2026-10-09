@@ -4035,3 +4035,9 @@ html .tl-item.deadline::before { transform: none; }
 .date-order-table { width: 100%; border-collapse: collapse; margin: .4rem 0 .6rem; font-size: .88rem; }
 .date-order-table th, .date-order-table td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
 .date-order-table th { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+
+/* ---------- v1.110 ---------- */
+/* Offense: Offense Classification, Address and Type of Location are two columns wide, so the
+ * written-out IUCR wording ("Manufacture and Delivery: Hallucinogen") is never cut off. */
+.rf-grid .rf-off-wide { grid-column: span 2; }
+@media (max-width: 600px) { .rf-grid .rf-off-wide { grid-column: auto; } }
