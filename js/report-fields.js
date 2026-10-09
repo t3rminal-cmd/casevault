@@ -38,9 +38,10 @@
     { id: 'offense', title: 'Offense', icon: 'file-earmark-text', fields: [
       ['offense', 'Offense Classification / Last Report', 'text'],
       ['ucr', 'IUCR Code', 'ucr'],
+      // v1.110: the long ones (Offense Classification, Address, Type of Location) are two columns wide.
       ['address', 'Address of Occurrence', 'text'],
-      ['locationType', 'Type of Location', 'text'],
       ['locationCode', 'Location Code', 'location'],
+      ['locationType', 'Type of Location', 'text'],
       ['date', 'Date of Occurrence', 'date'],
       ['time', 'Time of Occurrence', 'time'],
       ['beatOccurrence', 'Beat of Occurrence', 'text'],
@@ -256,10 +257,31 @@
    * v1.20 (victim's name, charges, vehicle…) moved into the lists. */
   /** v1.95: the charges' Statute Descriptions, in order, without repeats. */
   const chargeDescriptions = (d) => [...new Set(((d && d.charges) || []).map((x) => String((x && x.description) || '').trim()).filter((x) => x && x !== SEE_DEA6))];
-  /** Offense Classification = a charge's Statute Description (the first, unless it already is one). */
+  /* v1.110: the IUCR wording before it was written out: [code, old, new]. A Draft form whose
+   * Offense Classification is still an old wording gets the new one when it opens (updateOldUcr). */
+  const OLD_UCR = [["1025", "Agg: Arson", "Aggravated Arson"], ["051A", "Agg: Handgun", "Aggravated Assault: Handgun"], ["051B", "Agg: Other Firearm", "Aggravated Assault: Other Firearm"], ["0520", "Agg: Knife or Cutting Instrument", "Aggravated Assault: Knife or Cutting Instrument"], ["0530", "Agg: Other Dangerous Weapon", "Aggravated Assault: Other Dangerous Weapon"], ["041A", "Agg: Handgun", "Aggravated Battery: Handgun"], ["041B", "Agg: Other Firearm", "Aggravated Battery: Other Firearm"], ["0420", "Agg: Knife or Cutting Instrument", "Aggravated Battery: Knife or Cutting Instrument"], ["0430", "Agg: Other Dangerous Weapon", "Aggravated Battery: Other Dangerous Weapon"], ["0440", "Agg: Hands, Fist, Feet", "Aggravated Battery: Hands, Fist, Feet"], ["1811", "Poss: Cannabis 30 grms or less", "Possession: Cannabis, 30 Grams or Less"], ["1812", "Poss: Cannabis more than 30 grms", "Possession: Cannabis, More Than 30 Grams"], ["1821", "Delv: Cannabis 10 grms or less", "Manufacture and Delivery: Cannabis, 10 Grams or Less"], ["1822", "Delv: Cannabis over 10 grms", "Manufacture and Delivery: Cannabis, More Than 10 Grams"], ["2010", "Delv: Amphetamine", "Manufacture and Delivery: Amphetamine"], ["2012", "Delv: Cocaine", "Manufacture and Delivery: Cocaine"], ["2013", "Delv: Heroin (Tan)", "Manufacture and Delivery: Heroin (Tan)"], ["2014", "Delv: Heroin (White)", "Manufacture and Delivery: Heroin (White)"], ["2015", "Delv: Hallucinogens", "Manufacture and Delivery: Hallucinogen"], ["2016", "Delv: PCP", "Manufacture and Delivery: PCP"], ["2017", "Delv: Crack Cocaine", "Manufacture and Delivery: Crack Cocaine"], ["2018", "Delv: Synthetic Drugs", "Manufacture and Delivery: Synthetic Drug"], ["2020", "Poss: Amphetamine", "Possession: Amphetamine"], ["2022", "Poss: Cocaine", "Possession: Cocaine"], ["2023", "Poss: Heroin (Tan)", "Possession: Heroin (Tan)"], ["2024", "Poss: Heroin (White)", "Possession: Heroin (White)"], ["2025", "Poss: Hallucinogens", "Possession: Hallucinogen"], ["2026", "Poss: PCP", "Possession: PCP"], ["2027", "Poss: Crack Cocaine", "Possession: Crack Cocaine"], ["2028", "Poss: Synthetic Drugs", "Possession: Synthetic Drug"], ["2031", "Poss: Methamphetamine", "Possession: Methamphetamine"], ["2032", "Delv: Methamphetamine", "Manufacture and Delivery: Methamphetamine"], ["2091", "Forfiet Property: Narcotics", "Forfeited Property: Narcotics"], ["141A", "UUW: Handgun", "Unlawful Use of a Weapon: Handgun"], ["141B", "UUW: Other Firearm", "Unlawful Use of a Weapon: Other Firearm"], ["141C", "UUW: Other Dangerous Weapon", "Unlawful Use of a Weapon: Other Dangerous Weapon"]];
+  /** Old short IUCR wording in Offense Classification -> the written-out wording (changes d). The
+   * IUCR code entered picks between codes that shared a wording ("Agg: Handgun"); when it can't
+   * tell, the wording is left as it is. -> true when changed. */
+  function updateOldUcr(d) {
+    const o = String((d && d.offense) || '').trim().toLowerCase();
+    const hits = o ? OLD_UCR.filter(([, old]) => old.toLowerCase() === o) : [];
+    if (!hits.length) return false;
+    const code = String(d.ucr || '').trim().split(/\s+/)[0];
+    const hit = hits.find(([c]) => c === code) || (new Set(hits.map((x) => x[2])).size === 1 ? hits[0] : null);
+    if (!hit) return false;
+    d.offense = hit[2];
+    if (hit[0] === code) d.offenseFrom = 'ucr';
+    return true;
+  }
+
+  /** Offense Classification = a charge's Statute Description (the first, unless it already is one),
+   * or (v1.110) the IUCR code's description when that is where it came from (offenseFrom 'ucr'). */
   function syncOffense(d) {
     // Charges ticked off ("doesn't apply") leave the box as typed.
     if (Array.isArray(d.hidden) && d.hidden.includes('charges')) return d;
+    // v1.110: wording that came from the IUCR code picked stays (the IUCR description wins).
+    if (d.offenseFrom === 'ucr' && String(d.offense || '').trim()) return d;
     const descs = chargeDescriptions(d);
     if (descs.length && !descs.includes(String(d.offense || '').trim())) d.offense = descs[0];
     return d;
@@ -751,7 +773,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { chargeDescriptions, syncOffense, OFFENDER_VEHICLE, VEHICLE_DISPOSITIONS, blankVehicle, vehicleLine, CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, STATE_RELATION, FEDERAL_VICTIM, govRelation, isStateVictim, SEE_DEA6, dea6Narrative, seeDea6, isSeeDea6, narcoticChoices, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, dateOrderPlan, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
+  const api = { chargeDescriptions, syncOffense, OFFENDER_VEHICLE, VEHICLE_DISPOSITIONS, blankVehicle, vehicleLine, CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, STATE_RELATION, FEDERAL_VICTIM, govRelation, isStateVictim, SEE_DEA6, dea6Narrative, seeDea6, isSeeDea6, narcoticChoices, updateOldUcr, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, dateOrderPlan, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

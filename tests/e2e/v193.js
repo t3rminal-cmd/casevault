@@ -19,12 +19,13 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   await p.waitForTimeout(800);
   const saved = await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'report-fields.json')), ids.c);
   ok(chargeDesc && saved.offense === chargeDesc, `Offense Classification = "${saved.offense}" (Statute Description "${chargeDesc}")`);
-  // a UCR pick afterwards keeps the statute wording
+  // v1.110: a UCR pick afterwards writes the IUCR description instead (it wins over the statute wording)
   const ucr = await p.evaluateHandle(() => [...document.querySelectorAll('main .field')].find((f) => /IUCR|UCR/.test(f.querySelector('span').textContent)).querySelector('input'));
   await ucr.asElement().evaluate((el) => el.closest('.combo').querySelector('.combo-toggle').click()); await p.waitForTimeout(300);
   await ucr.asElement().evaluate((el) => el.closest('.combo').querySelector('.combo-list li').click()); await p.waitForTimeout(1200);
   const s2 = await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'report-fields.json')), ids.c);
-  ok(s2.ucr && s2.offense === chargeDesc, `after an IUCR pick (${s2.ucr}) the offense keeps the statute wording`);
+  const ucrDesc = await p.evaluate((code) => CVRefData.UCR_CODES.flatMap((g) => g.codes).find(([c]) => c === code)[1], s2.ucr);
+  ok(s2.ucr && s2.offense === ucrDesc && s2.offenseFrom === 'ucr', `after an IUCR pick (${s2.ucr}) the offense is its description: ${s2.offense}`);
   // 3. Officer's Report: no personnel -> no green check; add a filled officer -> green
   const done = () => p.evaluate(() => document.querySelector('.rf-section.rf-report').classList.contains('rf-complete'));
   ok(!(await done()), 'no green check while Police Personnel is empty');

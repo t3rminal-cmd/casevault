@@ -13,7 +13,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   // typing other wording goes back on leaving the box
   await box.asElement().fill('Possession'); await p.keyboard.press('Tab'); await p.waitForTimeout(500);
   ok(await val() === C1, `other wording goes back: "${await val()}"`);
-  ok(/exact Statute Description/.test(await p.$$eval('.toast', (t) => t.map((x) => x.textContent).join(' '))), 'a note says why');
+  ok(/exact description of the IUCR code or of a charge/.test(await p.$$eval('.toast', (t) => t.map((x) => x.textContent).join(' '))), 'a note says why');
   // pick the second charge's wording from the arrow
   await box.asElement().evaluate((el) => el.closest('.combo').querySelector('.combo-toggle').click()); await p.waitForTimeout(300);
   const items = await box.asElement().evaluate((el) => [...el.closest('.combo').querySelectorAll('.combo-list li')].map((x) => x.textContent));
