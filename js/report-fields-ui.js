@@ -586,6 +586,7 @@
     // v1.100: after Save Changes, a part without its green check outlines what is still blank in red.
     let showMissing = false;
     const recheckers = [];
+    let refreshNext = () => {};
     const missingBox = (el) => {
       if (el.tagName === 'TEXTAREA' && !el.offsetParent) {
         const rich = el.parentElement && el.parentElement.querySelector(`.${el.className.split(/\s+/)[0]}-rich`);
@@ -634,6 +635,7 @@
           }
         }
         if (!cb.checked) inner.querySelectorAll('.rf-missing').forEach((el) => el.classList.remove('rf-missing'));
+        refreshNext();
         done.classList.toggle('on', complete);
         done.setAttribute('aria-hidden', String(!complete));
         sec.classList.toggle('rf-complete', complete);
@@ -1012,8 +1014,33 @@
       showMissing = true;
       recheckers.forEach((f) => f());
       const blank = panel.querySelectorAll('.rf-missing').length;
-      if (!Save.failed.has(key)) toast(blank ? `Report fields saved to the SSD. ${blank} blank field${blank === 1 ? ' is' : 's are'} outlined in red: fill ${blank === 1 ? 'it' : 'them'} in, or untick what doesn't apply.` : 'Report fields saved to the SSD.', 'success', blank ? 6000 : 2500);
+      if (!Save.failed.has(key)) toast(blank ? `Saved. ${blank} field${blank === 1 ? '' : 's'} still blank (outlined in red).` : 'Report fields saved to the SSD.', 'success', blank ? 5000 : 2500);
     } }, 'Save Changes');
+    // v1.101: Next Missing takes you to each red outline in turn (opening a folded part on the way).
+    const nextBtn = h('button', { class: 'btn rf-next-missing', type: 'button', icon: 'arrow-down', hidden: true, title: 'Go to the next field still blank (outlined in red)' });
+    let nextAt = -1;
+    nextBtn.addEventListener('click', () => {
+      const all = [...panel.querySelectorAll('.rf-missing')];
+      if (!all.length) return;
+      nextAt = (nextAt + 1) % all.length;
+      const el = all[nextAt];
+      const sec = el.closest('.rf-section');
+      const fold = sec && sec.classList.contains('rf-folded') ? sec.querySelector('.rf-fold') : null;
+      if (fold) fold.click();
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      const input = el.matches('input, select, textarea, [contenteditable]') ? el : el.querySelector('input:not([type=hidden]), select, textarea, [contenteditable="true"]');
+      if (input) input.focus({ preventScroll: true });
+      el.classList.add('rf-missing-flash');
+      setTimeout(() => el.classList.remove('rf-missing-flash'), 900);
+    });
+    refreshNext = () => {
+      const n = panel.querySelectorAll('.rf-missing').length;
+      nextBtn.hidden = !n;
+      // Only when the count changes: rewriting it each time would set the form's own watchers off again.
+      const label = `Next Missing (${n})`;
+      if (nextBtn.textContent !== label) nextBtn.textContent = label;
+      if (nextAt >= n) nextAt = -1;
+    };
     // ---- the Supplementary Report as a PDF: look at it and print, keep it, or send it to sign.
     // Exhibit photos as JPEG for the Exhibit Attachments pages (at most 1600 px, readable in print).
     const pdfBytes = () => pdfFor(c, data);
@@ -1138,7 +1165,7 @@
         h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-down', title: 'Open every part on screen', onclick: () => foldAll(false) }, 'Show All'),
         h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-right', title: 'Fold every part away on screen (they stay in the PDF). Open one with its arrow.', onclick: () => foldAll(true) }, 'Hide All')),
       h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case: fill it in, then Send Draft to Reports puts it under Reports and its PDF under Files. Clear All starts another one. Saved as report-fields.json.'),
-      h('div', { class: 'rf-actions' }, archived ? null : sendBtn, printBtn, archived ? null : clearBtn, h('div', { class: 'spacer' }), archived ? null : saveBtn),
+      h('div', { class: 'rf-actions' }, archived ? null : sendBtn, printBtn, archived ? null : clearBtn, h('div', { class: 'spacer' }), archived ? null : nextBtn, archived ? null : saveBtn),
       // v1.85: the department letterhead, as at the top of the PDF.
       archived || !root.CVLetterhead ? null : root.CVLetterhead.editor(),
       ...sections.slice(0, -1),

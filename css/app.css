@@ -3939,8 +3939,26 @@ html .tl-item.deadline::before { transform: none; }
 .hero-count.hc-alert.hc-backup, .hero-count.hc-encrypt { background: rgba(255,80,80,.24); }
 /* v1.100: after Save Changes, what keeps a part from its green check is outlined in red. */
 .rf-section .rf-missing { outline: 2px solid var(--danger, #dc2626); outline-offset: -1px; }
+.rf-actions .rf-next-missing { color: var(--danger, #dc2626); border-color: var(--danger, #dc2626); }
+.rf-section .rf-missing.rf-missing-flash { outline-width: 4px; }
 .rf-section .rf-none.rf-missing, .rf-section .rf-empty.rf-missing { padding: .3rem .5rem; color: var(--danger, #dc2626); }
 /* v1.100: the sidebar shows when each case was opened, and how long ago, under the Subject Name. */
 .case-item-meta .cim-subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .case-item .case-item-opened { display: flex; align-items: center; gap: .3rem; margin-top: .1rem; font-size: .72rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .case-item-opened .bi { width: .8rem; height: .8rem; flex: none; }
+
+/* v1.101: General Files: sortable headings and the Age column. */
+.general-table .th-sort { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: .3rem; font: inherit; font-weight: inherit; }
+.general-table .th-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.general-table .th-arrow::after { content: ""; display: inline-block; width: .7rem; color: var(--muted); }
+.general-table th[aria-sort="ascending"] .th-arrow::after { content: "▲"; font-size: .6rem; color: var(--accent); }
+.general-table th[aria-sort="descending"] .th-arrow::after { content: "▼"; font-size: .6rem; color: var(--accent); }
+.general-table .age-cell { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* v1.101: INDEPENDENT CASES header: nothing overlaps. The bell is a badge on the folder, and the
+ * count keeps its distance from the name. */
+.op-head > .op-folder { position: relative; }
+.op-folder .folder-bell { position: absolute; top: -.35rem; right: -.35rem; margin: 0; line-height: 0; background: var(--surface); border-radius: 50%; padding: 1px; }
+.op-folder .folder-bell .bi { width: .8rem; height: .8rem; }
+.op-head > .op-count { flex: none; margin-left: .4rem; }
+#sidebar .general-group > .op-head > .op-text { flex: 1 1 auto; min-width: 0; }

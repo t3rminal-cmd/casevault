@@ -215,6 +215,14 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.101
+
+- **Draft → Next Missing:** after Save Changes, the red **Next Missing (N)** button (left of Save Changes) jumps to the first blank field, then the next one each time you click. A folded part opens by itself. N counts down as you fill fields in, and the button goes away when nothing is blank
+- **General Files:** the **Age** column says how long ago each case was opened. Click a column heading (Case Number, Subject Name, Opened, Age) to sort; click it again to reverse. The arrow beside the heading shows which way
+- **Sidebar order:** the list icon at the top of the sidebar (after Hide) switches the case lists between *By case number*, *Oldest opened first* and *Newest opened first*. It applies to Mission folders and Independent Cases, and this PC remembers it
+- **INDEPENDENT CASES** in the sidebar: the bell for a deadline now sits on the folder's corner, and the line under the name just says how many cases
+- **"No full backup yet"** pops up at most once a day. The **No Backup** chip in the banner stays until you back up
+
 ### What's new in v1.100
 
 - **Sidebar:** each case shows when it was opened, under its Subject Name: the date and how long ago (*today*, *5d* days, *2mo* months, *2y* years). Point at it for the full date and the exact number of days. Cases in a Mission folder show it too

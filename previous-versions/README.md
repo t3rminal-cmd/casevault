@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.100)
+
+- **Sidebar: when each case was opened.** Under every case number's Subject Name, a small line shows the day it was opened and how long ago (*Oct 03, 2026 · 5d*, *Jul 10, 2026 · 2mo*, *Jul 30, 2024 · 2y*). Point at it for the full date and the number of days
+- **Draft: what's missing is outlined in red.** After **Save Changes**, every part without its green check outlines its blank fields in red (or its empty list, or *No evidence yet*), and the save message says how many. Each outline goes as soon as the field is filled; unticking a part that doesn't apply clears its outlines
+
 ## Features (v1.99)
 
 - **The backup reminder sits with Overdue.** On the home page banner, the full-backup chip is now in the same row as the Open, Pending, Closed, Archived and Overdue counts, right after Overdue: **No Backup** or **Backup 9d Ago** in red when a backup is due, **Backed Up Today** when it isn't. **Not Encrypted** joins it there when the SSD has no BitLocker. Click either for ⋮ → Vault → Backups
