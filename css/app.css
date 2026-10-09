@@ -4020,8 +4020,9 @@ html .tl-item.deadline::before { transform: none; }
 .case-item.st-archived { border-left: 3px solid var(--st-archived); }
 
 /* ---------- v1.107 ---------- */
-/* The banner chips never clip their words: as wide as the words need, then equal. */
-.hero-counts .hero-count { min-width: max-content; }
+/* The banner chips never clip their words: all as wide as the widest one needs (--chip-w is
+ * measured in welcomeHero), so they stay the same width. */
+.hero-counts .hero-count { min-width: var(--chip-w, 8.5rem); }
 .hero-count > span { white-space: nowrap; }
 /* On a case's Details tab, the timeline circles of the case number on screen glow green. */
 .mini-tl-dot.mini-tl-mine { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 30%, var(--surface)); box-shadow: 0 0 0 3px var(--ok-soft), 0 0 10px color-mix(in srgb, var(--ok) 70%, transparent); animation: mine-glow 2.4s ease-in-out infinite; z-index: 1; }

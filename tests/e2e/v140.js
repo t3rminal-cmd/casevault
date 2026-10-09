@@ -18,8 +18,9 @@ const SP = process.env.SP;
   await p.locator('.timeline').screenshot({ path: `${SP}/v140-tl.png` });
   // two draft-sent reports + one New Report
   const send = async (offense, extra) => {
+    // Leave the Draft page first, so its last save has finished before the file is read again.
+    await p.evaluate(() => { location.hash = '#/'; }); await p.waitForTimeout(400);
     await p.evaluate(async ([id, offense, extra]) => { const d = await CVReportFieldsUI.load({ id }); await Vault.writeCaseJSON(id, 'report-fields.json', { ...d, offense, ...extra }); }, [id, offense, extra]);
-    await p.evaluate(() => { location.hash = '#/'; }); await p.waitForTimeout(200);
     await p.evaluate((id) => { location.hash = `#/case/${id}/draft`; }, id); await p.waitForSelector('.rf-actions');
     await p.click('.rf-actions button:has-text("Send Draft to Reports")'); await p.waitForTimeout(2200);
   };

@@ -1856,6 +1856,15 @@
     const counts = h('div', { class: 'hero-counts' },
       Vault.STATUSES.map((st) => chip(st.toLowerCase(), st, count(st), STATUS_ICONS[st])),
       chip('overdue', 'Overdue', overdue, 'bell-fill'), backupChip, encryptChip);
+    // v1.107: every chip as wide as the widest one's words need, so none clips and all match.
+    requestAnimationFrame(() => {
+      if (!counts.isConnected) return;
+      const chips = [...counts.querySelectorAll('.hero-count')];
+      chips.forEach((x) => { x.style.minWidth = 'max-content'; });
+      const w = Math.max(0, ...chips.map((x) => Math.ceil(x.getBoundingClientRect().width)));
+      chips.forEach((x) => { x.style.minWidth = ''; });
+      if (w) counts.style.setProperty('--chip-w', `${w}px`);
+    });
     return h('div', { class: 'hero hero-compact' },
       h('div', { class: 'hero-art', 'aria-hidden': 'true' }, h('span', { class: 'hero-ring r1' }), h('span', { class: 'hero-ring r2' }), h('span', { class: 'hero-ring r3' }), I('shield-lock-fill')),
       h('div', { class: 'hero-text' },
