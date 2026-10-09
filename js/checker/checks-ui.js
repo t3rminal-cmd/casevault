@@ -336,7 +336,7 @@
           h('td', {}, k.counts ? ['High', 'Medium', 'Low'].map((s) => h('span', { class: `sev-count sev-${s.toLowerCase()}`, title: s }, `${k.counts[s] || 0}`)) : ''),
           h('td', {}, k.open != null ? String(k.open) : ''),
           h('td', { class: 'muted small' }, k.engine ? (k.engine.model || 'Rules only') : '', k.complete === false ? ' (stopped early)' : '')))))
-      : h('p', { class: 'muted' }, 'No checks yet.');
+      : h('p', { class: 'muted empty-note' }, ui.icon('clipboard2-pulse'), h('span', {}, 'No checks yet.'));
 
     // An archived case is read-only: its past checks can be opened, but no new ones run.
     const archived = Vault.isArchived(c.id);

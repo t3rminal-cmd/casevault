@@ -71,7 +71,7 @@
             demo);
           showNotId();
           return card;
-        }) : [h('p', { class: 'muted small suspect-empty' }, 'No suspects yet.')]));
+        }) : [h('p', { class: 'muted small suspect-empty empty-note' }, I('person-vcard'), h('span', {}, 'No suspects yet. Add suspect makes one.'))]));
       };
       draw();
       return h('section', { class: 'contacts suspects cv-boxed', 'aria-labelledby': 'suspects-title' },
@@ -378,7 +378,7 @@
               field('Conflict', conflict),
               field('Notes', cellInput(r, 'notes', { 'aria-label': `Check ${i + 1} notes` }), 'decon-wide')));
           return card;
-        }) : [h('p', { class: 'muted small' }, 'No deconfliction yet.')]));
+        }) : [h('p', { class: 'muted small empty-note' }, I('shield-check'), h('span', {}, 'No deconfliction yet.'))]));
       };
       draw();
       const add = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', onclick: () => {

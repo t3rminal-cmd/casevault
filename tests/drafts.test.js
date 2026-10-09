@@ -269,6 +269,7 @@ test('v1.28: deleting a case tidies its backups and chats; Emergency Purge empti
   await Vault.saveChat({ id: 'chat-0001', title: 'About A', caseId: a.id, turns: [] });
   await Vault.saveChat({ id: 'chat-0002', title: 'About B', caseId: b.id, turns: [] });
   await Vault.deleteCase(a.id);
+  await Vault.purgeDeleted(a.id); // v1.106: Delete Now (or 30 days later) is when the traces go
   const data = await ssd.getDirectoryHandle('CaseVault-Data');
   const backups = await data.getDirectoryHandle('backups');
   for (const [name] of backups.children) {

@@ -214,6 +214,15 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.106
+
+- **Delete Case → Recently Deleted:** a deleted case waits 30 days in ⋮ → Vault → **Recently Deleted** (`CaseVault-Data\deleted`). **Restore** puts it back where it was (cases or the archive; its Mission too, made again if needed). **Delete Now** removes it for good. After 30 days CaseVault empties it by itself the next time the vault opens
+- **⋮ → Vault → Backups → Restore Cases…:** pick a `CaseVault-Backup-<date>` folder from a full backup (the browser asks to "upload" it: nothing leaves the PC, it only reads the files). Tick the cases to bring back and click **Restore**. Each comes back with its notes, timeline, reports and files; one that is in the vault now goes to Recently Deleted first. The files are copied in full before the case appears, so an interrupted restore never leaves half a case
+- **Search Inside Cases:** type in the case list's search box, then press **Enter** or click **Search Inside Cases** under it. It reads every case's notes, timeline, reports, Draft form, arrest details, suspects, contacts and file names; every word has to be in the same place. Click a result to open that tab
+- **Add Follow-up** (Details → Case actions, for an Open case): pick what you're waiting on, add details and the date; it goes on the Timeline as *Follow up: Lab results — …*
+- **Privacy screen:** the PIN is now stored with PBKDF2 (600,000 rounds) instead of one SHA-256, so a copied vault.json can't be guessed quickly; an older PIN still works and is upgraded the next time it unlocks. Text you copied from CaseVault is cleared from the clipboard when the screen comes on (always with Hide; with the idle timer when the window is in front)
+- **Look:** Open blue, Closed slate grey, Archived purple on every status label, the banner and the sidebar's left edge; the banner chips are the same width; empty lists show an icon and a hint; every section heading is in capitals; grey hint text is darker; the keyboard focus has a clear blue outline
+
 ### What's new in v1.105
 
 - **No more Pending.** A case is Open, Closed or Archived; a Mission is Open or Closed. The Pending option, its hourglass icon, the Pending box in the banner and the Pending filter in General Files are gone. Cases and Missions that were Pending are Open again the first time v1.105 opens the vault; their follow-up deadlines stay on the Timeline, and each case's history notes the change. Waiting on a lab or the DA? Keep the case Open and put the follow-up date on its Timeline. (The Draft's **Court Date → Pending** box is unchanged: it means the court date isn't set yet.)

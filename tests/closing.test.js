@@ -57,7 +57,10 @@ test('closure values and the close checklist', () => {
   assert.deepStrictEqual(C.closeChecklist({}), []);
 });
 
-test('arrestees for the privacy scan', () => {
+test('v1.106: Add Follow-up deadline, and arrestees for the privacy scan', () => {
+  const e = C.followUpEvent('Lab results', 'item 1', '2026-10-06', 'x1');
+  assert.deepStrictEqual([e.kind, e.date, e.title, e.done], ['deadline', '2026-10-06', 'Follow up: Lab results — item 1', false]);
+  assert.ok(C.FOLLOW_UP_REASONS.includes('Prosecutor / DA review'));
   assert.deepStrictEqual(C.peopleOf(sampleArrest()), ['Jordan Placeholder']);
 });
 

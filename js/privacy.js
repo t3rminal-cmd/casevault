@@ -46,16 +46,27 @@
     return toHex(await subtle().digest('SHA-256', data));
   }
 
+  /** v1.106: PBKDF2-SHA-256 over the PIN, many rounds, so a copied vault.json can't be guessed
+   * through quickly (a 4-6 digit PIN only has a million choices). Hex encoded. */
+  const PIN_ROUNDS = 600000;
+  async function slowHashPin(pin, saltB64, rounds = PIN_ROUNDS) {
+    const key = await subtle().importKey('raw', new TextEncoder().encode(String(pin)), 'PBKDF2', false, ['deriveBits']);
+    return toHex(await subtle().deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: unb64(saltB64), iterations: rounds }, key, 256));
+  }
+
   /** What gets stored in vault.json settings. The PIN itself is never stored. */
-  async function makePinRecord(pin) {
+  async function makePinRecord(pin, rounds = PIN_ROUNDS) {
     if (!isValidPin(pin)) throw new Error('The PIN must be 4 to 6 digits.');
     const salt = b64((root.crypto || globalThis.crypto).getRandomValues(new Uint8Array(16)));
-    return { v: 1, algo: 'SHA-256', salt, hash: await hashPin(pin, salt) };
+    return { v: 2, algo: 'PBKDF2-SHA-256', rounds, salt, hash: await slowHashPin(pin, salt, rounds) };
   }
+
+  /** A record made before v1.106 (one SHA-256): still accepted, and replaced on the next unlock. */
+  const isOldPinRecord = (record) => !!record && record.v !== 2;
 
   async function verifyPin(pin, record) {
     if (!record || !record.salt || !record.hash || !isValidPin(pin)) return false;
-    const got = await hashPin(pin, record.salt);
+    const got = record.v === 2 ? await slowHashPin(pin, record.salt, Number(record.rounds) || PIN_ROUNDS) : await hashPin(pin, record.salt);
     let diff = got.length ^ record.hash.length;
     for (let i = 0; i < got.length && i < record.hash.length; i++) diff |= got.charCodeAt(i) ^ record.hash.charCodeAt(i);
     return diff === 0;
@@ -93,6 +104,7 @@
       env.setIcon(BLANK_ICON);
       try { env.pauseMedia && env.pauseMedia(); } catch { /* ignore */ }
       try { env.closePreviews && env.closePreviews(); } catch { /* ignore */ }
+      try { env.clearClipboard && env.clearClipboard(); } catch { /* ignore */ }
       env.show(!!env.getPinRecord());
       try { const p = env.flush && env.flush(); if (p && p.catch) p.catch(() => {}); } catch { /* reported by Save */ }
       return true;
@@ -113,7 +125,11 @@
       if (!record) { restore(); return { ok: true }; }
       const t = now();
       if (t < s.blockedUntil) return { ok: false, reason: 'wait', waitMs: s.blockedUntil - t };
-      if (await verifyPin(pin, record)) { restore(); return { ok: true }; }
+      if (await verifyPin(pin, record)) {
+        restore();
+        if (isOldPinRecord(record) && env.upgradePin) { try { const p = env.upgradePin(pin); if (p && p.catch) p.catch(() => {}); } catch { /* kept as it was */ } }
+        return { ok: true };
+      }
       s.tries++;
       if (s.tries >= MAX_TRIES) { s.tries = 0; s.blockedUntil = t + COOLDOWN_MS; return { ok: false, reason: 'wait', waitMs: COOLDOWN_MS }; }
       return { ok: false, reason: 'wrong', left: MAX_TRIES - s.tries };
@@ -200,8 +216,21 @@
 
   let controller = null;
 
-  function init({ flush, getPinRecord, getIdleMinutes, button }) {
+  function init({ flush, getPinRecord, getIdleMinutes, button, upgradePin }) {
     const doc = root.document;
+    // v1.106: text copied from CaseVault (Ctrl+C, or a Copy button) is cleared from the Windows
+    // clipboard when the privacy screen comes on. The browser only allows it while the CaseVault
+    // window is in front, so the Hide button always clears it; the idle timer does when it can.
+    let copied = false;
+    let clearClipboard = null;
+    const clip = root.navigator && root.navigator.clipboard;
+    if (clip && clip.writeText) {
+      const write = clip.writeText.bind(clip);
+      try { clip.writeText = (t) => { copied = true; return write(t); }; } catch { /* read-only in this browser */ }
+      doc.addEventListener('copy', () => { copied = true; });
+      doc.addEventListener('cut', () => { copied = true; });
+      clearClipboard = () => { if (!copied) return; write(' ').then(() => { copied = false; }, () => {}); };
+    }
     const dlg = doc.createElement('dialog');
     dlg.id = 'privacy-screen';
     dlg.className = 'privacy-screen';
@@ -263,6 +292,8 @@
         if (d && d.open && d.querySelector('.preview')) d.close();
       },
       flush,
+      clearClipboard: () => { if (clearClipboard) clearClipboard(); },
+      upgradePin,
       getPinRecord,
     });
 
@@ -313,7 +344,7 @@
 
   const api = {
     PIN_RE, BLANK_ICON, COVER_TITLE, MAX_TRIES, COOLDOWN_MS,
-    isValidPin, hashPin, makePinRecord, verifyPin, createEscDetector, createController, createIdleTimer, init,
+    isValidPin, hashPin, slowHashPin, makePinRecord, verifyPin, isOldPinRecord, PIN_ROUNDS, createEscDetector, createController, createIdleTimer, init,
     lock: () => controller && controller.lock(),
     get locked() { return !!(controller && controller.locked); },
   };

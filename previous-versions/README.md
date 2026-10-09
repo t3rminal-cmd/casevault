@@ -4,6 +4,10 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.105)
+
+- **No more Pending.** Cases are Open, Closed or Archived, and Missions Open or Closed. The Pending option, its hourglass icon, the Pending count in the banner and the Pending filter are gone. Anything that was Pending opens as Open (its follow-up deadlines stay on the Timeline, and the case history notes it). The Draft's *Court Date: Pending* box is unchanged
+
 ## Features (v1.104)
 
 - **Attach a PDF to an exhibit, as well as photos.** On the Draft tab, each exhibit's tile now reads **Add Photos or PDF** (Additional Exhibits too). A PDF (a lab report, a receipt, a scanned form) is saved in the case's exhibit folder like a photo, gets the next letter (Exhibit 1b), and its tile shows the first page with a red **PDF** badge; click it to read it. In the report, every page of the PDF goes into the Exhibit Attachments, captioned with the exhibit, its label and the page (*Exhibit 1b, ... - Document: Lab report (page 2 of 3)*)

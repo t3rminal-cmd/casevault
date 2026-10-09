@@ -110,11 +110,34 @@ async function roundTrip(Vault, FS, rootHandle) {
   await Vault.saveNotes(c.id, 'Writable again.');
   assert.strictEqual(await Vault.getNotes(c.id), 'Writable again.');
 
-  // Deleting an archived case removes it for good.
+  // v1.106: deleting an archived case moves it to Recently Deleted; it can be restored, and Delete
+  // Now (or 30 days) removes it for good.
   await Vault.archiveCase(c.id);
+  const beforeDelete = await folderSnapshot(FS, dataDir, 'archive', c.id);
   await Vault.deleteCase(c.id);
   assert.strictEqual(await folderSnapshot(FS, dataDir, 'archive', c.id), null);
   assert.ok(!Vault.data.cases.some((e) => e.id === c.id));
+  const bin = await Vault.listDeleted();
+  assert.deepStrictEqual(bin.map((x) => [x.id, x.number, x.from]), [[c.id, 'TEST-0001', 'archive']]);
+  assert.ok(await folderSnapshot(FS, dataDir, 'deleted', c.id), 'kept in deleted/');
+  await Vault.restoreDeleted(c.id);
+  assert.strictEqual(Vault.data.cases.find((e) => e.id === c.id).location, 'archive', 'back where it was');
+  const again = await folderSnapshot(FS, dataDir, 'archive', c.id);
+  for (const [name, bytes] of Object.entries(beforeDelete)) if (name !== 'case.json') assert.strictEqual(again[name], bytes, `${name} intact after Recently Deleted`);
+  assert.ok(!('deleted' in (await Vault.getCase(c.id))));
+  assert.deepStrictEqual(await Vault.listDeleted(), []);
+  await Vault.deleteCase(c.id);
+  await Vault.purgeDeleted(c.id);
+  assert.strictEqual(await folderSnapshot(FS, dataDir, 'deleted', c.id), null, 'Delete Now: gone');
+  // Past its 30 days: emptied the next time the vault opens.
+  const d = await Vault.createCase({ title: 'Old', number: 'TEST-0002' });
+  await Vault.deleteCase(d.id);
+  const h = await FS.getDir(await FS.getDir(dataDir, 'deleted'), d.id);
+  const cj = await FS.readJSON(h, 'case.json');
+  cj.deleted.until = '2000-01-01';
+  await FS.writeJSON(h, 'case.json', cj);
+  await Vault.load(dataDir);
+  assert.strictEqual(await folderSnapshot(FS, dataDir, 'deleted', d.id), null, 'expired: emptied on open');
   Vault.close();
 }
 

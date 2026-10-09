@@ -23,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.105.0';
+  const APP_VERSION = '1.106.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -113,6 +113,7 @@ const Vault = (() => {
     await FS.getDir(root, 'backups', true);
     await dailyBackup();
     await removeOnlineLeftovers();
+    await tidyDeleted();
     await rebuildIndex();
     await retirePending();
     if ((vault.operationsVersion || 0) < OPERATIONS_VERSION) await migrateOperations();
@@ -365,7 +366,7 @@ const Vault = (() => {
   /* ---------- cases ---------- */
 
   // Active cases live in cases/, archived ones in archive/. The index entry's `location` says which.
-  const FOLDERS = { active: 'cases', archive: 'archive' };
+  const FOLDERS = { active: 'cases', archive: 'archive', deleted: 'deleted', restoring: 'restore-tmp' }; // v1.106: deleted/ is Recently Deleted
   const locationOf = (id) => ((vault.cases.find((c) => c.id === id) || {}).location === 'archive' ? 'archive' : 'active');
   const isArchived = (id) => !!vault && locationOf(id) === 'archive';
 
@@ -479,14 +480,163 @@ const Vault = (() => {
   }
 
   // Permanent: removes the case folder (active or archived) with everything in it. No trash.
-  async function deleteCase(id) {
+  /** v1.106: Delete Case moves the case to Recently Deleted (deleted/<id>) for BIN_DAYS days, from
+   * where it can be restored. After that, or with Delete Now, it is gone for good. */
+  const BIN_DAYS = 30;
+  function deleteCase(id) {
+    return serial(`case:${id}`, () => binCase(id));
+  }
+  async function binCase(id) {
+    const from = locationOf(id);
+    const parent = await FS.getDir(root, FOLDERS[from], true);
+    if (await FS.exists(parent, id, 'directory')) {
+      const dir = await FS.getDir(parent, id);
+      const c = await FS.readJSON(dir, 'case.json').catch(() => null);
+      if (c) {
+        c.deleted = { at: nowISO(), from, until: new Date(Date.now() + BIN_DAYS * 864e5).toISOString().slice(0, 10) };
+        logActivity(c, 'Deleted (kept in Recently Deleted)');
+        await FS.writeJSON(dir, 'case.json', c);
+        await moveCaseFolder(id, from, 'deleted');
+      } else {
+        await FS.remove(parent, id, true); // nothing readable to keep
+      }
+    }
+    vault.cases = vault.cases.filter((c) => c.id !== id);
+    await saveVault();
+  }
+
+  /**
+   * v1.106: put one case back from a full backup. files: [{ path, data }] with paths relative to
+   * the case folder ("case.json", "files/Photos/x.jpg"). They are written to restore-tmp/<id>
+   * first and moved in only when all are there. A case with the same id in the vault goes to
+   * Recently Deleted first, so nothing is lost. -> the restored case.
+   */
+  function restoreCaseFromBackup(id, location, files, onFile = () => {}) {
     return serial(`case:${id}`, async () => {
-      const parent = await FS.getDir(root, FOLDERS[locationOf(id)], true);
-      if (await FS.exists(parent, id, 'directory')) await FS.remove(parent, id, true);
-      vault.cases = vault.cases.filter((c) => c.id !== id);
+      if (!/^[A-Za-z0-9][\w.-]*$/.test(id)) throw Object.assign(new Error(`"${id}" is not a case folder name.`), { name: 'SyntaxError' });
+      const to = location === 'archive' ? 'archive' : 'active';
+      const tmpParent = await FS.getDir(root, FOLDERS.restoring, true);
+      if (await FS.exists(tmpParent, id, 'directory')) await FS.remove(tmpParent, id, true);
+      const tmp = await FS.getDir(tmpParent, id, true);
+      try {
+        for (const f of files) {
+          const parts = String(f.path).split('/').filter(Boolean);
+          if (!parts.length || parts.some((x) => x === '..' || x === '.')) continue;
+          let d = tmp;
+          for (const part of parts.slice(0, -1)) d = await FS.getDir(d, part, true);
+          await FS.writeData(d, parts[parts.length - 1], f.data);
+          onFile(f.path);
+        }
+        const c = await FS.readJSON(tmp, 'case.json');
+        if (!c) throw Object.assign(new Error('The backup has no readable case.json for this case.'), { name: 'NotReadableError' });
+        c.id = id;
+        delete c.deleted;
+        logActivity(c, 'Restored from a full backup');
+        await FS.writeJSON(tmp, 'case.json', c);
+        // The copy in the vault now (if any) waits in Recently Deleted; an older one there makes way.
+        if (vault.cases.some((e) => e.id === id)) {
+          const bin = await FS.getDir(root, FOLDERS.deleted);
+          if (bin && await FS.exists(bin, id, 'directory')) await FS.remove(bin, id, true);
+          await binCase(id);
+        }
+        await moveCaseFolder(id, 'restoring', to);
+        const at = await FS.getDir(await FS.getDir(root, FOLDERS[to]), id);
+        const tl = await FS.readJSON(at, 'timeline.json').catch(() => null);
+        upsertIndex(indexEntry(c, tl, null, to));
+        await reconcileOperations(); // its Mission is made again if this vault doesn't have it
+        await saveVault();
+        return c;
+      } catch (err) {
+        await FS.remove(tmpParent, id, true).catch(() => {});
+        throw err;
+      }
+    });
+  }
+
+  /** The cases in Recently Deleted, newest first: { id, number, subject, title, deletedAt, until, from }. */
+  async function listDeleted() {
+    const bin = await FS.getDir(root, FOLDERS.deleted);
+    if (!bin) return [];
+    const out = [];
+    for (const e of await FS.list(bin)) {
+      if (e.kind !== 'directory') continue;
+      const c = await FS.readJSON(e.handle, 'case.json').catch(() => null);
+      if (!c || !c.deleted) continue;
+      out.push({ id: e.name, number: c.number || '', subject: c.subject || '', title: c.title || '', deletedAt: c.deleted.at, until: c.deleted.until, from: c.deleted.from === 'archive' ? 'archive' : 'active' });
+    }
+    return out.sort((a, b) => String(b.deletedAt).localeCompare(String(a.deletedAt)));
+  }
+
+  /** Put a case back where it was deleted from (cases/ or archive/). */
+  function restoreDeleted(id) {
+    return serial(`case:${id}`, async () => {
+      const bin = await FS.getDir(root, FOLDERS.deleted);
+      const dir = bin && await FS.getDir(bin, id);
+      const c = dir && await FS.readJSON(dir, 'case.json').catch(() => null);
+      if (!c) throw Object.assign(new Error('That case is no longer in Recently Deleted.'), { name: 'CaseMissingError' });
+      const to = c.deleted && c.deleted.from === 'archive' ? 'archive' : 'active';
+      if (await FS.exists(await FS.getDir(root, FOLDERS[to], true), id, 'directory')) throw Object.assign(new Error('A case with the same folder is already in the vault.'), { name: 'InvalidStateError' });
+      delete c.deleted;
+      logActivity(c, 'Restored from Recently Deleted');
+      if (c.operationId && !getOperation(c.operationId)) { c.operationId = ''; c.operation = null; c.title = CVOperation.caseTitle(c, null); }
+      c.dates = { ...(c.dates || {}), updated: nowISO() };
+      await FS.writeJSON(dir, 'case.json', c);
+      await moveCaseFolder(id, 'deleted', to);
+      const at = await FS.getDir(await FS.getDir(root, FOLDERS[to]), id);
+      const tl = await FS.readJSON(at, 'timeline.json').catch(() => null);
+      upsertIndex(indexEntry(c, tl, null, to));
       await saveVault();
+      return c;
+    });
+  }
+
+  /** Delete Now: gone from the SSD for good, with its traces in the vault.json backups and chats. */
+  function purgeDeleted(id) {
+    return serial(`case:${id}`, async () => {
+      const bin = await FS.getDir(root, FOLDERS.deleted);
+      if (bin && await FS.exists(bin, id, 'directory')) await FS.remove(bin, id, true);
       await scrubCase(id);
     });
+  }
+
+  async function countFiles(dir) {
+    let n = 0;
+    for (const x of await FS.list(dir)) n += x.kind === 'directory' ? await countFiles(x.handle) : (x.name === MOVE_MARKER ? 0 : 1);
+    return n;
+  }
+
+  /** On open: finish a delete or restore that was interrupted, and empty what is past its 30 days. */
+  async function tidyDeleted() {
+    // A restore from a backup that was cut off leaves restore-tmp/: nothing in it was moved in.
+    if (await FS.getDir(root, FOLDERS.restoring)) await FS.remove(root, FOLDERS.restoring, true).catch(() => {});
+    const bin = await FS.getDir(root, FOLDERS.deleted);
+    if (!bin) return;
+    const today = localDay();
+    for (const e of await FS.list(bin)) {
+      if (e.kind !== 'directory') continue;
+      try {
+        for (const where of ['active', 'archive']) {
+          const parent = await FS.getDir(root, FOLDERS[where]);
+          if (!parent || !(await FS.exists(parent, e.name, 'directory'))) continue;
+          // In both places (a delete or a restore was cut off): a copy with the move marker is the
+          // finished one. With no marker, the copy with fewer files is the unfinished one; when
+          // they match, the case stays in the vault (the safe side).
+          const inVault = await FS.getDir(parent, e.name);
+          let keepBin;
+          if (await FS.exists(e.handle, MOVE_MARKER)) keepBin = true;
+          else if (await FS.exists(inVault, MOVE_MARKER)) keepBin = false;
+          else keepBin = (await countFiles(e.handle)) > (await countFiles(inVault));
+          if (keepBin) { await FS.remove(parent, e.name, true); await FS.remove(e.handle, MOVE_MARKER).catch(() => {}); continue; }
+          await FS.remove(bin, e.name, true);
+          await FS.remove(inVault, MOVE_MARKER).catch(() => {});
+          const c = await FS.readJSON(inVault, 'case.json').catch(() => null);
+          if (c && c.deleted) { delete c.deleted; await FS.writeJSON(inVault, 'case.json', c); }
+        }
+        if (!(await FS.exists(bin, e.name, 'directory'))) continue;
+        const c = await FS.readJSON(e.handle, 'case.json').catch(() => null);
+        if (c && c.deleted && c.deleted.until && c.deleted.until < today) { await FS.remove(bin, e.name, true); await scrubCase(e.name); }
+      } catch (err) { if (FS.isDisconnectError(err)) throw err; console.warn('Recently Deleted: could not tidy', e.name, err); }
+    }
   }
 
   /** v1.28: a deleted case leaves no trace elsewhere in the vault: its line in the older copies of
@@ -1715,7 +1865,7 @@ const Vault = (() => {
     newId, localDay, logActivity,
     resolve, create, load, close, ping,
     backupNow, listBackups, rebuildIndex, updateSettings, fullBackup, recordManualBackup, recordHelperBackup, restoreBackup, readLetterheadLogo, saveLetterheadLogo, deleteLetterheadLogo,
-    createCase, getCase, saveCase, deleteCase,
+    createCase, getCase, saveCase, deleteCase, restoreCaseFromBackup, listDeleted, restoreDeleted, purgeDeleted, BIN_DAYS,
     listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
     archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS,
     OP_FOLDERS, OTHER_FOLDERS, readOpVehicles, saveOpVehicles, readOpList, saveOpList, otherCustomFolders, addOtherFolder, removeOtherFolder, listShared, addShared, readShared, deleteShared, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,

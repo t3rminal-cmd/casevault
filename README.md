@@ -15,9 +15,14 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.105
+## What's New in v1.106
 
-- **No more Pending.** Cases are Open, Closed or Archived, and Missions Open or Closed. The Pending option, its hourglass icon, the Pending count in the banner and the Pending filter are gone. Anything that was Pending opens as Open (its follow-up deadlines stay on the Timeline, and the case history notes it). The Draft's *Court Date: Pending* box is unchanged
+- **Recently Deleted.** Delete Case now keeps the case for 30 days in ⋮ → Vault → **Recently Deleted**, with **Restore** (it goes back where it was, Mission and all) and **Delete Now**. After 30 days it is removed from the SSD for good
+- **Restore cases from a full backup.** ⋮ → Vault → Backups → **Restore Cases…**: pick a `CaseVault-Backup-<date>` folder (on the backup drive or `C:\CaseVault-Backups`), tick the cases to bring back. A case that is in the vault now goes to Recently Deleted first, so nothing is lost
+- **Search Inside Cases.** Type in the case-list search box and press Enter (or click **Search Inside Cases**): it also looks in notes, the timeline, reports, the Draft form, arrest details, suspects and contacts, and file names, and opens the right tab
+- **Add Follow-up** (Case actions, Details tab): waiting on a lab, the DA or another agency? Puts *Follow up: …* on the Timeline as a deadline
+- **Stronger PIN lock** (the privacy screen's PIN is now stored with a slow PBKDF2 hash; an older PIN is upgraded the next time it unlocks) and **copied text is cleared from the clipboard** when the privacy screen comes on
+- **Look:** one colour per status everywhere (Open blue, Closed slate grey, Archived purple, also on the sidebar's left edge), banner chips the same width, empty lists with an icon and a hint, every section heading in capitals, darker hint text, and a clear blue outline on whatever the keyboard is on
 
 ## What CaseVault Does
 
@@ -134,7 +139,8 @@ CaseVault-Data/
 | `js/options.js` | Menu → Options (zoom, brightness, Dev Tools "Make it fictitious") and Contact Dev |
 | `js/format-bar.js` | The formatting bar over Notes and Drafts |
 | `js/tooltip.js` | Hover boxes for every button |
-| `js/closing.js`, `js/closing-ui.js` | Status rules, Close case (dispositions, loose ends), Reopen, the Arrest details tab and `{{arrest.*}}` / `{{closure.*}}` values |
+| `js/case-search.js`, `js/backup-restore.js` | Search Inside Cases; finding the cases in a picked full-backup folder (v1.106) |
+| `js/closing.js`, `js/closing-ui.js` | Status rules, Add Follow-up, Close case (dispositions, loose ends), Reopen, the Arrest details tab and `{{arrest.*}}` / `{{closure.*}}` values |
 | `js/docxview.js` | Word (.docx) to a read-only preview, and to Markdown for template import |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Installable offline PWA |
 | `js/helper-fs.js` | Helper mode: wraps the helper's API in FileSystemHandle-shaped objects |
