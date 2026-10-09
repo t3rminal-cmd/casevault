@@ -1,6 +1,7 @@
-// v1.102: Back Up Everything to a shared folder on another PC (\\BEELINK\CaseVault-Backups).
-// Runs the real helper in PowerShell 7 (pwsh). -AllowLocalNetworkFolders lets a temporary folder
-// stand in for the shared folder; skipped when pwsh isn't installed.
+// v1.102/v1.103: Back Up Everything to a folder of your choice: C:\CaseVault-Backups on this PC, or a
+// shared folder on another PC (\\BEELINK\CaseVault-Backups). Runs the real helper in PowerShell 7
+// (pwsh); -SimulatedNetworkRoot makes a temporary folder stand in for the other PC. Skipped when
+// pwsh isn't installed.
 const { chromium } = require('playwright');
 const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
@@ -16,10 +17,11 @@ if (spawnSync(PWSH, ['-NoProfile', '-Command', 'exit 0']).status !== 0) { consol
 
 (async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cv-helper-'));
-  const data = path.join(dir, 'ssd', 'CaseVault-Data'); const bk1 = path.join(dir, 'bk1'); const share = path.join(dir, 'beelink-share');
+  const data = path.join(dir, 'ssd', 'CaseVault-Data'); const bk1 = path.join(dir, 'bk1'); const net = path.join(dir, 'net'); const share = path.join(net, 'beelink-share');
+  const local = path.join(dir, 'pc-c', 'CaseVault-Backups'); // stands in for C:\CaseVault-Backups; not made yet
   for (const d of [data, bk1, share]) fs.mkdirSync(d, { recursive: true });
   const proc = spawn(PWSH, ['-NoProfile', '-File', HELPER, '-Port', String(PORT), '-DataPath', data, '-AppPath', APP, '-NoBrowser', '-NoAI',
-    '-BackupTargets', bk1, '-BitLockerStates', `${bk1}=on;${path.parse(data).root}=on`, '-AllowLocalNetworkFolders'], { stdio: 'ignore' });
+    '-BackupTargets', bk1, '-BitLockerStates', `${bk1}=on;${local}=on;${path.parse(data).root}=on`, '-SimulatedNetworkRoot', net], { stdio: 'ignore' });
   for (let i = 0; i < 100; i += 1) {
     try { if ((await fetch(`http://127.0.0.1:${PORT}/`)).ok) break; } catch { /* starting */ }
     await new Promise((r) => setTimeout(r, 200));
@@ -38,19 +40,19 @@ if (spawnSync(PWSH, ['-NoProfile', '-Command', 'exit 0']).status !== 0) { consol
 
   // The API refuses what isn't a shared folder, or can't be reached.
   const api = (m, q) => p.evaluate(async ([m2, q2]) => (await fetch(`/api/backup-network?p=${q2}`, { method: m2, headers: { 'X-CaseVault': '1' } })).status, [m, q]);
-  ok(await api('POST', `&path=${encodeURIComponent('relative\\folder')}`) === 400, 'a path that is not \\\\PC\\share is refused (400)');
-  ok(await api('POST', `&path=${encodeURIComponent(path.join(dir, 'missing'))}`) === 404, 'a folder that cannot be reached is refused (404)');
+  ok(await api('POST', `&path=${encodeURIComponent('relative\\folder')}`) === 400, 'a path that is not a whole folder is refused (400)');
+  ok(await api('POST', `&path=${encodeURIComponent(path.join(net, 'missing'))}`) === 404, 'a shared folder that cannot be reached is refused (404)');
+  ok(await api('POST', `&path=${encodeURIComponent(path.join(data, 'cases'))}`) === 400, 'a folder inside the vault is refused');
   ok(await p.evaluate(async () => (await fetch('/api/backup-start?p=&drive=' + encodeURIComponent('C:\\Windows'), { method: 'POST', headers: { 'X-CaseVault': '1' } })).status) === 400, 'backup-start still only writes to a listed drive');
 
   await clearToasts();
   await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(800);
   await p.click('.hc-backup'); await p.waitForSelector('.backup-full');
   await p.click('.backup-full:not(.backup-enc) button'); await p.waitForSelector('.backup-drives');
-  ok(await p.locator('.backup-net-row').isHidden(), 'the network folder box is hidden until asked for');
-  await p.click('#dialog[open] button:has-text("Add Network Folder")');
-  await p.screenshot({ path: process.env.SP + '/v1102/add.png' });
+  ok(await p.locator('.backup-net-row').isVisible() && await p.inputValue('.backup-net-row input') === 'C:\\CaseVault-Backups', 'until a folder is added, the box is open with C:\\CaseVault-Backups filled in');
+  await p.screenshot({ path: process.env.SP + '/v1103/add.png' });
   ok(await p.evaluate(() => [...document.querySelectorAll('#dialog[open] button')].every((x) => { const r = x.getBoundingClientRect(); const d = document.querySelector('#dialog[open]').getBoundingClientRect(); return r.width === 0 || (r.left >= d.left - 1 && r.right <= d.right + 1); })), 'every button fits inside the dialog');
-  await p.fill('.backup-net-row input', path.join(dir, 'nope'));
+  await p.fill('.backup-net-row input', path.join(net, 'nope'));
   await p.click('.backup-net-row button:has-text("Add")'); await p.waitForTimeout(600);
   ok(/Can't reach/.test(await toastText()), 'a folder that cannot be reached shows why');
   await clearToasts();
@@ -92,6 +94,20 @@ if (spawnSync(PWSH, ['-NoProfile', '-Command', 'exit 0']).status !== 0) { consol
   fs.rmSync(share, { recursive: true, force: true });
   await p.click('#dialog[open] button:has-text("Look Again")'); await p.waitForTimeout(1000);
   ok(await p.locator('.backup-drives .arch-opt.backup-off input:disabled').count() === 1 && /not reachable/.test(await p.textContent('.backup-drives .arch-opt.backup-off')), 'an unreachable network folder is greyed out');
-  await p.screenshot({ path: process.env.SP + '/v1102/network.png' });
+  await p.screenshot({ path: process.env.SP + '/v1103/network.png' });
+
+  // v1.103: a folder on this PC (C:\CaseVault-Backups): made when added, its drive's BitLocker is
+  // shown, no "another PC" question, and the backups go straight into it (not CaseVault-Backups\CaseVault-Backups).
+  await p.click('#dialog[open] button:has-text("Add Backup Folder")');
+  await p.fill('.backup-net-row input', local);
+  await p.click('.backup-net-row button:has-text("Add")'); await p.waitForTimeout(1200);
+  ok(fs.existsSync(local), 'the folder is made when it is added');
+  const row = p.locator('.backup-drives .arch-opt', { hasText: local });
+  ok(await row.count() === 1 && /Encrypted \(BitLocker on\)/.test(await row.textContent()) && await row.locator('.backup-net-remove').count() === 1, 'listed with its drive\'s encryption and a Remove button');
+  await row.click(); await p.click('#dialog[open] button:has-text("Back Up to This Drive")');
+  await p.waitForSelector('#dialog[open] h2:has-text("Full Backup Done")', { timeout: 30000 });
+  ok(true, 'an encrypted folder on this PC backs up without asking');
+  const inside = fs.readdirSync(local);
+  ok(inside.length === 1 && /^CaseVault-Backup-/.test(inside[0]) && fs.existsSync(path.join(local, inside[0], 'vault.json')), `the backup goes straight into the folder: ${inside.join(', ')}`);
   console.log('errors', errs); await b.close(); proc.kill();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

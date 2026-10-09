@@ -4,6 +4,13 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.102)
+
+- **Back up to another PC at home.** In Firefox, **Back Up Everything** has an **Add Network Folder** button: type a shared folder such as `\\BEELINK\CaseVault-Backups` and the whole vault is copied there over your home network, then checked file by file. The cases stay on the SSD. The first backup to a folder asks you to confirm that PC is encrypted and the folder is shared with you only; a folder that can't be reached is greyed out; **Remove** takes it off the list. In Chrome or Edge, map the folder to a drive letter and pick it. Setup steps for the other PC: [docs/BACKUP-TO-ANOTHER-PC.md](docs/BACKUP-TO-ANOTHER-PC.md)
+- **Mission timeline on the home page is now vertical.** Click a Mission folder and its timeline reads top to bottom like a case's Timeline tab: month headings, a date box, a dot on the line, a card for each event, and a red Today line. No more sideways scrolling; click an event to open it on its case's Timeline tab
+- **No underline on mouse-over.** Links turn blue when the mouse is over them, without the underline
+- **CaseVault helper 1.14**
+
 ## Features (v1.101)
 
 - **Draft: Next Missing.** After **Save Changes**, a red **Next Missing (N)** button takes you to each blank field in turn, opening a folded part on the way. The save message is shorter: *Saved. 64 fields still blank (outlined in red).*

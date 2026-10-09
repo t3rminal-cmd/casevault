@@ -21,7 +21,7 @@
     -NoAI                do not start Ollama
     -BackupTargets <a;b> offer these folders as backup drives (for testing; normally every other drive)
     -BitLockerStates <x> pretend drive states, e.g. "V:\=on;E:\=off" (for testing; normally asked of Windows)
-    -AllowLocalNetworkFolders  accept any folder as a "network folder" (for testing; normally \\server\share only)
+    -SimulatedNetworkRoot <p>  treat saved backup folders under this folder as shared folders on another PC (for testing)
 #>
 [CmdletBinding()]
 param(
@@ -32,13 +32,13 @@ param(
   [switch]$NoAI,
   [string]$BackupTargets = '',
   [string]$BitLockerStates = '',
-  [switch]$AllowLocalNetworkFolders
+  [string]$SimulatedNetworkRoot = ''
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 
-$HelperVersion = '1.14.0'
+$HelperVersion = '1.15.0'
 $VolumeLabel   = 'CASEVAULT'
 $DataDirName   = 'CaseVault-Data'
 $AppDirName    = 'CaseVault-App'
@@ -343,8 +343,9 @@ function Get-BitLockerState([string]$path) {
 }
 
 # v1.14: network folders for Back Up Everything, e.g. a shared folder on another PC at home
-# (\\BEELINK\CaseVault-Backups). The list is kept in the vault (backup-network.json); the helper
-# only ever writes a backup to a folder on it or to one of the drives it lists.
+# (\\BEELINK\CaseVault-Backups). v1.15: or a folder on a drive of this PC (C:\CaseVault-Backups on the
+# Beelink). The list is kept in the vault (backup-network.json); the helper only ever writes a
+# backup to a folder on it or to one of the drives it lists.
 function Get-NetworkFolderFile { $root = Get-DataRoot; if ($root) { return (Join-Path $root 'backup-network.json') } return $null }
 function Get-NetworkFolders {
   $f = Get-NetworkFolderFile
@@ -357,10 +358,32 @@ function Save-NetworkFolders($list) {
   $json = '[' + ((@($list) | ForEach-Object { ConvertTo-JsonString $_ }) -join ',') + ']'
   [System.IO.File]::WriteAllText($f, $json, $Utf8)
 }
+function Test-UncPath([string]$p) { return [bool]($p -match '^\\\\[^\\/:*?"<>|]+\\[^\\/:*?"<>|]+') }   # \\server\share[\folder]
+# On another PC: a \\server\share path (or, in tests, a folder under -SimulatedNetworkRoot).
+function Test-OnOtherPC([string]$p) {
+  if (Test-UncPath $p) { return $true }
+  if ($SimulatedNetworkRoot) { $r = [System.IO.Path]::GetFullPath($SimulatedNetworkRoot).TrimEnd([char]'\', [char]'/'); return $p.StartsWith($r, [System.StringComparison]::OrdinalIgnoreCase) }
+  return $false
+}
+# A folder you can name: \\server\share[\folder], or a full path to a folder (not just a drive).
 function Test-NetworkFolderPath([string]$p) {
   if (-not $p) { return $false }
-  if ($p -match '^\\\\[^\\/:*?"<>|]+\\[^\\/:*?"<>|]+') { return $true }   # \\server\share[\folder]
-  return [bool]$AllowLocalNetworkFolders -and [System.IO.Path]::IsPathRooted($p)
+  if (Test-UncPath $p) { return $true }
+  if ($p -match '[*?"<>|]' -or -not [System.IO.Path]::IsPathRooted($p)) { return $false }
+  try { $full = [System.IO.Path]::GetFullPath($p) } catch { return $false }
+  return ($full.TrimEnd([char]'\', [char]'/') -ne [System.IO.Path]::GetPathRoot($full).TrimEnd([char]'\', [char]'/'))
+}
+# Why a folder can't hold the backup: inside the vault, or on the CASEVAULT drive itself.
+function Get-BackupFolderProblem([string]$p) {
+  if (Test-UncPath $p) { return $null }
+  $root = Get-DataRoot
+  if (-not $root) { return $null }
+  $full = [System.IO.Path]::GetFullPath($p).TrimEnd([char]'\', [char]'/')
+  $r = [System.IO.Path]::GetFullPath($root).TrimEnd([char]'\', [char]'/')
+  if ($full -ieq $r -or $full.StartsWith($r + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) { return 'That folder is inside the vault. Pick a folder on another drive.' }
+  $drive = [System.IO.Path]::GetPathRoot($r)
+  if ($drive -match '^[A-Za-z]:\\$' -and $full.StartsWith($drive, [System.StringComparison]::OrdinalIgnoreCase)) { return "That folder is on the CASEVAULT drive ($drive). A backup must go on another drive, so it survives if the SSD is lost." }
+  return $null
 }
 
 function Get-BackupDrives {
@@ -370,11 +393,16 @@ function Get-BackupDrives {
     if (-not (Test-NetworkFolderPath $n)) { continue }
     $ok = $false; try { $ok = Test-Path -LiteralPath $n -PathType Container } catch { }
     $leaf = Split-Path -Leaf $n.TrimEnd([char]'\', [char]'/')
-    $out += [pscustomobject]@{ Path = $n; Label = $leaf; Free = 0; Total = 0; Kind = $(if ($ok) { 'Network folder' } else { 'Network folder (not reachable)' }); BitLocker = 'network'; Reachable = $ok }
+    if (Test-OnOtherPC $n) {
+      $out += [pscustomobject]@{ Path = $n; Label = $leaf; Free = 0; Total = 0; Kind = $(if ($ok) { 'Network folder' } else { 'Network folder (not reachable)' }); BitLocker = 'network'; Reachable = $ok; Saved = $true }
+    } else {
+      # v1.15: a folder on this PC (C:\CaseVault-Backups): its drive's BitLocker is what protects it.
+      $out += [pscustomobject]@{ Path = $n; Label = $leaf; Free = 0; Total = 0; Kind = $(if ($ok) { 'Backup folder' } else { 'Backup folder (not found)' }); BitLocker = (Get-BitLockerState $n); Reachable = $ok; Saved = $true }
+    }
   }
   if ($BackupTargets) {
     foreach ($t in ($BackupTargets -split ';' | Where-Object { $_ })) {
-      if (Test-Path -LiteralPath $t -PathType Container) { $out += [pscustomobject]@{ Path = [System.IO.Path]::GetFullPath($t); Label = (Split-Path -Leaf $t); Free = 0; Total = 0; Kind = 'Folder'; BitLocker = (Get-BitLockerState $t); Reachable = $true } }
+      if (Test-Path -LiteralPath $t -PathType Container) { $out += [pscustomobject]@{ Path = [System.IO.Path]::GetFullPath($t); Label = (Split-Path -Leaf $t); Free = 0; Total = 0; Kind = 'Folder'; BitLocker = (Get-BitLockerState $t); Reachable = $true; Saved = $false } }
     }
     return $out
   }
@@ -392,7 +420,7 @@ function Get-BackupDrives {
       if ($skip | Where-Object { $_ -and $_ -ieq $p }) { continue }
       # A mapped network drive (Z: on the Beelink): Windows can't say whether that PC's disk is encrypted.
       $bl = if ($kind -eq 'Network') { 'network' } else { Get-BitLockerState $p }
-      $out += [pscustomobject]@{ Path = $p; Label = [string]$d.VolumeLabel; Free = [long]$d.AvailableFreeSpace; Total = [long]$d.TotalSize; Kind = $kind; BitLocker = $bl; Reachable = $true }
+      $out += [pscustomobject]@{ Path = $p; Label = [string]$d.VolumeLabel; Free = [long]$d.AvailableFreeSpace; Total = [long]$d.TotalSize; Kind = $kind; BitLocker = $bl; Reachable = $true; Saved = $false }
     } catch { }
   }
   return $out
@@ -402,7 +430,10 @@ $BackupScript = {
   param($root, $target, $S, $helperVersion)
   try {
     $stamp = Get-Date -Format 'yyyy-MM-dd-HHmmss'
-    $dest = Join-Path (Join-Path $target 'CaseVault-Backups') "CaseVault-Backup-$stamp"
+    # v1.15: a folder already named CaseVault-Backups (C:\CaseVault-Backups) holds the backups itself.
+    $leaf = Split-Path -Leaf ([string]$target).TrimEnd([char]'\', [char]'/')
+    $base = if ($leaf -ieq 'CaseVault-Backups') { $target } else { Join-Path $target 'CaseVault-Backups' }
+    $dest = Join-Path $base "CaseVault-Backup-$stamp"
     $S.folder = $dest
     $rootFull = [System.IO.Path]::GetFullPath($root).TrimEnd([char]'\', [char]'/')
     $rel = { param($full) $full.Substring($rootFull.Length).TrimStart([char]'\', [char]'/') }
@@ -514,7 +545,7 @@ function Invoke-Api($stream, $req) {
   if ($op -eq 'backup-drives' -and $m -eq 'GET') {
     $items = @()
     foreach ($d in @(Get-BackupDrives)) {
-      $items += ('{"path":' + (ConvertTo-JsonString $d.Path) + ',"label":' + (ConvertTo-JsonString $d.Label) + ',"free":' + $d.Free + ',"total":' + $d.Total + ',"kind":' + (ConvertTo-JsonString $d.Kind) + ',"bitlocker":' + (ConvertTo-JsonString $d.BitLocker) + ',"reachable":' + $(if ($d.Reachable) { 'true' } else { 'false' }) + '}')
+      $items += ('{"path":' + (ConvertTo-JsonString $d.Path) + ',"label":' + (ConvertTo-JsonString $d.Label) + ',"free":' + $d.Free + ',"total":' + $d.Total + ',"kind":' + (ConvertTo-JsonString $d.Kind) + ',"bitlocker":' + (ConvertTo-JsonString $d.BitLocker) + ',"reachable":' + $(if ($d.Reachable) { 'true' } else { 'false' }) + ',"saved":' + $(if ($d.Saved) { 'true' } else { 'false' }) + '}')
     }
     Send-Json $stream 200 ('[' + ($items -join ',') + ']')
     return
@@ -529,12 +560,19 @@ function Invoke-Api($stream, $req) {
       Send-Json $stream 200 '{"ok":true}'
       return
     }
-    if (-not (Test-NetworkFolderPath $p)) { Send-Error $stream 400 'SyntaxError' 'Type the network folder as \\COMPUTER\SharedFolder (for example \\BEELINK\CaseVault-Backups).'; return }
+    if (-not (Test-NetworkFolderPath $p)) { Send-Error $stream 400 'SyntaxError' 'Type the whole folder, for example C:\CaseVault-Backups, or a shared folder on another PC as \\COMPUTER\SharedFolder (\\BEELINK\CaseVault-Backups).'; return }
+    $problem = Get-BackupFolderProblem $p
+    if ($problem) { Send-Error $stream 400 'SecurityError' $problem; return }
     $exists = $false; try { $exists = Test-Path -LiteralPath $p -PathType Container } catch { }
-    if (-not $exists) { Send-Error $stream 404 'NotFoundError' "Can't reach $p. Check that the other PC is on, the folder is shared with you, and you can open it in File Explorer."; return }
+    # A folder on this PC is made if it isn't there yet; a shared folder must already exist.
+    if (-not $exists -and -not (Test-OnOtherPC $p)) {
+      $drive = [System.IO.Path]::GetPathRoot([System.IO.Path]::GetFullPath($p))
+      if ($drive -and (Test-Path -LiteralPath $drive -PathType Container)) { try { [void][System.IO.Directory]::CreateDirectory($p); $exists = $true } catch { } }
+    }
+    if (-not $exists) { Send-Error $stream 404 'NotFoundError' $(if (Test-OnOtherPC $p) { "Can't reach $p. Check that the other PC is on, the folder is shared with you, and you can open it in File Explorer." } else { "Can't find or make $p. Check the drive letter." }); return }
     # Can we write there? Make and remove a small test file.
     $probe = Join-Path $p ('.casevault-write-test-' + [guid]::NewGuid().ToString('N'))
-    try { [System.IO.File]::WriteAllText($probe, 'ok'); [System.IO.File]::Delete($probe) } catch { Send-Error $stream 403 'NotAllowedError' "Can open $p but can't write to it. On the other PC, give your account Change (write) permission on the share."; return }
+    try { [System.IO.File]::WriteAllText($probe, 'ok'); [System.IO.File]::Delete($probe) } catch { Send-Error $stream 403 'NotAllowedError' $(if (Test-OnOtherPC $p) { "Can open $p but can't write to it. On the other PC, give your account Change (write) permission on the share." } else { "Can open $p but can't write to it. Pick a folder your Windows account can write to." }); return }
     if (-not ($list | Where-Object { $_ -ieq $p })) { Save-NetworkFolders (@($list) + $p) }
     Send-Json $stream 200 '{"ok":true}'
     return

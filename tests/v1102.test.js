@@ -10,7 +10,7 @@ const ps = read('tools/casevault-helper/casevault-helper.ps1');
 const app = read('js/app.js');
 
 test('v1.102: helper 1.14 keeps a list of network folders in the vault and only writes to listed ones', () => {
-  assert.match(ps, /\$HelperVersion = '1\.14\.0'/);
+  assert.match(ps, /\$HelperVersion = '1\.(1[4-9]|[2-9]\d)\.\d+'/);
   assert.match(ps, /backup-network\.json/, 'the list lives in CaseVault-Data, not on the PC');
   assert.match(ps, /function Test-NetworkFolderPath/);
   assert.match(ps, /\$op -eq 'backup-network'/);
@@ -20,9 +20,18 @@ test('v1.102: helper 1.14 keeps a list of network folders in the vault and only 
 });
 
 test('v1.102: the app asks once per folder that the other PC is encrypted', () => {
-  assert.match(app, /Add Network Folder/);
+  assert.match(app, /Add Backup Folder/);
   assert.match(app, /Backing Up to Another PC/);
   assert.match(app, /networkBackupOk/);
   assert.match(read('js/helper-fs.js'), /addNetworkFolder[\s\S]*removeNetworkFolder/);
   assert.ok(fs.existsSync(path.join(__dirname, '..', 'docs', 'BACKUP-TO-ANOTHER-PC.md')));
+});
+
+test('v1.103: helper 1.15 also takes a folder on this PC (C:\\CaseVault-Backups), never one on the SSD', () => {
+  assert.match(ps, /\$HelperVersion = '1\.15\.0'/);
+  assert.match(ps, /function Get-BackupFolderProblem/, 'refuses a folder inside the vault or on the CASEVAULT drive');
+  assert.match(ps, /CreateDirectory\(\$p\)/, 'a folder on this PC is made when it is added');
+  assert.match(ps, /\$leaf -ieq 'CaseVault-Backups'/, 'a folder named CaseVault-Backups holds the backups itself');
+  assert.match(ps, /BitLocker = \(Get-BitLockerState \$n\)/, 'its drive\'s BitLocker is checked');
+  assert.match(app, /value: 'C:\\\\CaseVault-Backups'/, 'C:\\CaseVault-Backups is filled in');
 });

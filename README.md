@@ -15,12 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.102
+## What's New in v1.103
 
-- **Back up to another PC at home.** In Firefox, **Back Up Everything** has an **Add Network Folder** button: type a shared folder such as `\\BEELINK\CaseVault-Backups` and the whole vault is copied there over your home network, then checked file by file. The cases stay on the SSD. The first backup to a folder asks you to confirm that PC is encrypted and the folder is shared with you only; a folder that can't be reached is greyed out; **Remove** takes it off the list. In Chrome or Edge, map the folder to a drive letter and pick it. Setup steps for the other PC: [docs/BACKUP-TO-ANOTHER-PC.md](docs/BACKUP-TO-ANOTHER-PC.md)
-- **Mission timeline on the home page is now vertical.** Click a Mission folder and its timeline reads top to bottom like a case's Timeline tab: month headings, a date box, a dot on the line, a card for each event, and a red Today line. No more sideways scrolling; click an event to open it on its case's Timeline tab
-- **No underline on mouse-over.** Links turn blue when the mouse is over them, without the underline
-- **CaseVault helper 1.14**
+- **Mission timeline on the home page: the slim line with small circles.** Click a Mission folder and its timeline is the same line as on a case's Details tab: a small circle for each event of every case number (events close together share one circle with their count), red for an overdue deadline, and a red Today mark. It fits the page, with no sideways scrolling. Point at a circle for the date, title, note and case number; click it to open that case's Timeline tab. (This replaces the vertical list from v1.102.)
+- **Back up to C:\CaseVault-Backups.** In Firefox, **Back Up Everything** → **Add Backup Folder** now takes a folder on the PC's own drive as well as a shared folder on another PC, and `C:\CaseVault-Backups` is filled in: click **Add** (the folder is made if needed). Running CaseVault on the Beelink, that is the Beelink's C: drive. Its BitLocker state is shown, a folder on the SSD itself is refused, and the backups go straight into the folder (no CaseVault-Backups inside CaseVault-Backups). See [docs/BACKUP-TO-ANOTHER-PC.md](docs/BACKUP-TO-ANOTHER-PC.md)
+- **CaseVault helper 1.15**
 
 ## What CaseVault Does
 

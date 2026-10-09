@@ -3943,11 +3943,6 @@ html .tl-item.deadline::before { transform: none; }
 .backup-net-row { display: grid; grid-template-columns: 1fr auto; gap: .5rem; align-items: end; margin-top: .6rem; }
 .backup-net-row > p { grid-column: 1 / -1; margin: 0; }
 
-/* v1.102: the Mission timeline on the home page: the Timeline tab's vertical look, read-only. */
-.tl-modern.tl-readonly { text-align: left; }
-.tl-modern.tl-readonly a.tl-body { display: block; justify-self: stretch; color: var(--text); text-decoration: none; }
-.tl-modern.tl-readonly a.tl-body:hover, .tl-modern.tl-readonly a.tl-body:focus-visible { color: var(--text); outline: none; }
-.tl-modern.tl-readonly a.tl-body:hover strong, .tl-modern.tl-readonly a.tl-body:focus-visible strong { color: var(--accent-strong, var(--accent)); }
-.tl-modern.tl-readonly .tl-note { display: block; margin-top: .25rem; color: var(--muted); font-size: .82rem; white-space: pre-wrap; }
-.tl-modern.tl-readonly .tl-item.done .tl-title strong { text-decoration: line-through; }
-.op-timeline-section .tl-readonly { max-width: 60rem; margin: .4rem auto 0; }
+/* v1.103: the Mission timeline on the home page is the Details tab's slim line with small circles. */
+.op-timeline-section .mini-tl { margin-top: .4rem; }
+.op-timeline-section .mini-tl-title { display: none; }
