@@ -15,13 +15,12 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.101
+## What's New in v1.102
 
-- **Draft: Next Missing.** After **Save Changes**, a red **Next Missing (N)** button takes you to each blank field in turn, opening a folded part on the way. The save message is shorter: *Saved. 64 fields still blank (outlined in red).*
-- **General Files: Age, and sorting.** A new **Age** column (*Today*, *5 days*, *2 months*, *2 years*) next to Opened. Click **Case Number**, **Subject Name**, **Opened** or **Age** to sort by it (again to reverse); Age puts the oldest case first
-- **Sidebar order.** The new button next to Hide (top of the sidebar) lists cases by case number, oldest opened first, or newest opened first; the choice is remembered on this PC
-- **Tidier INDEPENDENT CASES header.** The red bell is a badge on the folder instead of on top of the name, the count keeps its distance, and the line under it reads *4 cases*
-- **The "No full backup yet" pop-up shows at most once a day**; the red chip in the banner still shows until you back up
+- **Back up to another PC at home.** In Firefox, **Back Up Everything** has an **Add Network Folder** button: type a shared folder such as `\\BEELINK\CaseVault-Backups` and the whole vault is copied there over your home network, then checked file by file. The cases stay on the SSD. The first backup to a folder asks you to confirm that PC is encrypted and the folder is shared with you only; a folder that can't be reached is greyed out; **Remove** takes it off the list. In Chrome or Edge, map the folder to a drive letter and pick it. Setup steps for the other PC: [docs/BACKUP-TO-ANOTHER-PC.md](docs/BACKUP-TO-ANOTHER-PC.md)
+- **Mission timeline on the home page is now vertical.** Click a Mission folder and its timeline reads top to bottom like a case's Timeline tab: month headings, a date box, a dot on the line, a card for each event, and a red Today line. No more sideways scrolling; click an event to open it on its case's Timeline tab
+- **No underline on mouse-over.** Links turn blue when the mouse is over them, without the underline
+- **CaseVault helper 1.14**
 
 ## What CaseVault Does
 
@@ -66,6 +65,7 @@ Use ⋮ → Report a Problem to save a report (with case details scrubbed) for t
 - [docs/SSD-SETUP.md](docs/SSD-SETUP.md): partitioning the SanDisk Extreme, drive letters, BitLocker To Go
 - [docs/USING-CASEVAULT.md](docs/USING-CASEVAULT.md): everyday use
 - [docs/AI-SETUP.md](docs/AI-SETUP.md): the launcher, the Firefox helper, portable Ollama and models on the CV-AI partition
+- [docs/BACKUP-TO-ANOTHER-PC.md](docs/BACKUP-TO-ANOTHER-PC.md): backing up to a shared folder on another PC at home (e.g. a Beelink)
 - [docs/SECURITY.md](docs/SECURITY.md): what protects your cases and the code, and the GitHub settings to turn on
 - [previous-versions/](previous-versions/README.md): what each earlier version added
 

@@ -1,4 +1,4 @@
-// v1.98: drive encryption checks (helper 1.13) and the repository's own safeguards.
+// v1.98: drive encryption checks (helper 1.13 or later) and the repository's own safeguards.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
@@ -10,12 +10,13 @@ const ps = read('tools/casevault-helper/casevault-helper.ps1');
 const app = read('js/app.js');
 const wf = read('.github/workflows/pages.yml');
 
-test('v1.98: helper 1.13 says whether the vault drive and each backup drive have BitLocker', () => {
-  assert.match(ps, /\$HelperVersion = '1\.13\.0'/);
+test('v1.98: helper 1.13+ says whether the vault drive and each backup drive have BitLocker', () => {
+  assert.match(ps, /\$HelperVersion = '1\.(1[3-9]|[2-9]\d)\.\d+'/);
   assert.match(ps, /function Get-BitLockerState/);
   assert.match(ps, /System\.Volume\.BitLockerProtection/, 'asked the way File Explorer does, without admin rights');
   assert.match(ps, /"bitlocker":' \+ \(ConvertTo-JsonString \(Get-BitLockerState \$root\)\)/, '/api/info reports the vault drive');
-  assert.match(ps, /"bitlocker":' \+ \(ConvertTo-JsonString \(Get-BitLockerState \$d\.Path\)\)/, '/api/backup-drives reports each drive');
+  assert.match(ps, /"bitlocker":' \+ \(ConvertTo-JsonString \$d\.BitLocker\)/, '/api/backup-drives reports each drive');
+  assert.match(ps, /BitLocker = \(Get-BitLockerState \$t\)/);
 });
 
 test('v1.98: the app warns about an unencrypted SSD and asks before backing up to one', () => {

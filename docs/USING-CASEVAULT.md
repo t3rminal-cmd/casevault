@@ -215,6 +215,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.102
+
+- **Back up to another PC (e.g. a Beelink):** ⋮ → Vault → Backups → **Back Up Everything** → **Add Network Folder** → type `\\BEELINK\CaseVault-Backups` → **Add**. Pick it (globe icon) and back up. The first time, tick that the PC is encrypted and the folder is only yours. Off or unreachable: greyed out. **Remove** takes it off the list and leaves its backups there. In Chrome or Edge, map the folder to a drive letter (Z:) and pick that. Set up the other PC first: [BACKUP-TO-ANOTHER-PC.md](BACKUP-TO-ANOTHER-PC.md)
+- **Home page → a Mission folder:** its timeline is now the vertical one from the Timeline tab (month headings, date boxes, cards, the red Today line) instead of a strip you scroll sideways. Click an event to open it on its case's Timeline tab
+- Links no longer underline when the mouse is over them; they turn blue
+
 ### What's new in v1.101
 
 - **Draft → Next Missing:** after Save Changes, the red **Next Missing (N)** button (left of Save Changes) jumps to the first blank field, then the next one each time you click. A folded part opens by itself. N counts down as you fill fields in, and the button goes away when nothing is blank
