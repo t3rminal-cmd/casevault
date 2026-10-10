@@ -214,6 +214,14 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.113
+
+- **Arrest Details → Show All / Hide All** (top right) open or fold every part, as on the Draft tab
+- **Arrest Details → Charges:** when an arrestee has no charges typed yet, the Draft tab's charges fill in by themselves when the tab opens (once: charges you remove don't come back). **Use Report Charges** still adds any new ones
+- **Arrest Details → Offender → Pick from Suspects:** lists the suspects on the Details tab and the offenders on the Draft tab (one line per person). Picking one fills Last, First and Middle name, date of birth, sex, race, height, weight, eyes, hair, complexion, residence, phone, IR # and CB # from what is there. Check them before printing. Age now shows even before the arrest date is in (counted to today)
+- **Arrest Details → Recovered Narcotics, Warrant, Arrestee Vehicle:** tick **No narcotics recovered**, **No warrant identified** or **No arrestee vehicle information** when it doesn't apply: the boxes fold away (what was typed is kept) and the PDF prints NO NARCOTICS RECOVERED, NO WARRANT IDENTIFIED or NO VEHICLE
+- **Arrest Details → Victim and Complainant → + Add State of Illinois as Victim** (or pick *State of Illinois* in a person's Name): only Role, Name and **Officer name** are asked, and the PDF prints the State of Illinois with the officer's name
+
 ### What's new in v1.112
 
 - **Home page → SECURE LOCKER:** the Secure Locker has its own section under Other Files: click its **Secure Locker** tile or **Open Locker**. (In v1.111 it was a tile and a button inside Other Files.)

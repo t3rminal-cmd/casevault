@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.112)
+
+- **Secure Locker in its own section:** on the home page it has its own **SECURE LOCKER** section, right under Other Files, with one **Secure Locker** tile and an **Open Locker** button. Other Files is back to its own folders and New Folder
+- **General Files never empty:** with no case outside a Mission, General Files shows this year's folder, greyed out; opening it says it is empty and offers New Case
+
 ## Features (v1.111)
 
 - **Secure Locker** (Other Files → Secure Locker): a **Password Manager**, **Confidential Files** for informant files (any file type) and **Covert** aliases and covert accounts, all behind a password of their own (not the PIN). Everything is encrypted on the SSD (AES-256) and a recovery key, shown once, opens it if the password is forgotten. It locks itself when you leave it, after 5 minutes, and with the privacy screen
