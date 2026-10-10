@@ -15,15 +15,15 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   const desc = await st.evaluate((el) => { const li = el.closest('.combo').querySelector('.combo-list li'); li.click(); return null; });
   await p.waitForTimeout(800);
   const chargeDesc = await p.inputValue('input[aria-label="Charge 1 Statute Description"], textarea[aria-label="Charge 1 Statute Description"]');
-  const offense = await p.evaluate(() => document.querySelector('.rf-offense input, [aria-label="Offense Classification / Last Report"]') && null) || await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'report-fields.json')).offense, ids.c);
+  const offense = await p.evaluate(() => document.querySelector('.rf-offense input, [aria-label="Offense Classification / Last Report"]') && null) || await p.evaluate(async (id) => (await window.CaseVaultUI.Save.flushAll(), await Vault.readCaseJSON(id, 'report-fields.json')).offense, ids.c);
   await p.waitForTimeout(800);
-  const saved = await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'report-fields.json')), ids.c);
+  const saved = await p.evaluate(async (id) => (await window.CaseVaultUI.Save.flushAll(), await Vault.readCaseJSON(id, 'report-fields.json')), ids.c);
   ok(chargeDesc && saved.offense === chargeDesc, `Offense Classification = "${saved.offense}" (Statute Description "${chargeDesc}")`);
   // v1.110: a UCR pick afterwards writes the IUCR description instead (it wins over the statute wording)
   const ucr = await p.evaluateHandle(() => [...document.querySelectorAll('main .field')].find((f) => /IUCR|UCR/.test(f.querySelector('span').textContent)).querySelector('input'));
   await ucr.asElement().evaluate((el) => el.closest('.combo').querySelector('.combo-toggle').click()); await p.waitForTimeout(300);
   await ucr.asElement().evaluate((el) => el.closest('.combo').querySelector('.combo-list li').click()); await p.waitForTimeout(1200);
-  const s2 = await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'report-fields.json')), ids.c);
+  const s2 = await p.evaluate(async (id) => (await window.CaseVaultUI.Save.flushAll(), await Vault.readCaseJSON(id, 'report-fields.json')), ids.c);
   const ucrDesc = await p.evaluate((code) => CVRefData.UCR_CODES.flatMap((g) => g.codes).find(([c]) => c === code)[1], s2.ucr);
   ok(s2.ucr && s2.offense === ucrDesc && s2.offenseFrom === 'ucr', `after an IUCR pick (${s2.ucr}) the offense is its description: ${s2.offense}`);
   // 3. Officer's Report: no personnel -> no green check; add a filled officer -> green

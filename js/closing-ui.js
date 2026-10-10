@@ -67,14 +67,27 @@
   async function renderArrest(panel, c, token) {
     const { h, Save, toast } = ui;
     const arrest = K().normalizeArrest(await readArrest(c));
+    const archived = Vault.isArchived(c.id);
+    const RFsee = (x) => root.CVReportFields.isSeeDea6('charges', x);
     if (token !== ui.state.renderToken) return;
     if (!arrest.arrestees.length) arrest.arrestees.push(K().emptyArrestee());
     // The RD number is the case number unless you type another.
     for (const a of arrest.arrestees) if (!a.rdNumber && c.number) a.rdNumber = c.number;
-    const archived = Vault.isArchived(c.id);
     const images = archived ? [] : (await Vault.listFiles(c.id).catch(() => [])).filter((f) => IMAGE_RE.test(f.name));
-    const reportCharges = root.CVReportFieldsUI ? await CVReportFieldsUI.load(c).then((d) => (d.charges || []).filter((x) => (x.statute || x.description))).catch(() => []) : [];
+    const draftForm = root.CVReportFieldsUI ? await CVReportFieldsUI.load(c).catch(() => null) : null;
+    const isSee = (x) => root.CVReportFields && RFsee(x);
+    const reportCharges = ((draftForm && draftForm.charges) || []).filter((x) => (x.statute || x.description) && !isSee(x));
+    // v1.113: the people to pick the arrestee from: Details suspects and the Draft's offenders.
+    const choices = K().arresteeChoices(c.suspects, (draftForm && draftForm.offendersList) || []);
     if (token !== ui.state.renderToken) return;
+    // v1.113: an arrestee with no charges typed yet gets the Draft tab's charges by itself.
+    let autoCharged = false;
+    // Once only: charges you removed on purpose don't come back.
+    if (!archived && reportCharges.length) for (const a of arrest.arrestees) if (!a.chargesAuto && K().chargesBlank(a)) {
+      a.charges = reportCharges.map((x) => ({ ...K().emptyCharge(), statute: x.statute || '', description: x.description || '' }));
+      a.chargesAuto = true;
+      autoCharged = true;
+    }
 
     const status = h('span', { class: 'note-save-status small muted', role: 'status', 'aria-live': 'polite' }, '✓ Saved on the SSD');
     const key = `arrest:${c.id}`;
@@ -106,6 +119,8 @@
       else el = h('input', { type: f.type || 'text', autocomplete: 'off', 'data-format': f.format || null, maxlength: f.format === 'ssn' ? 11 : null });
       if (f.type !== 'select' && f.type !== 'yn') el.value = obj[f.key] || '';
       el.addEventListener(f.type === 'select' || f.type === 'yn' ? 'change' : 'input', () => { obj[f.key] = el.value; changed(); if (onChange) onChange(); });
+      // v1.113: a victim can be the State of Illinois (then only the officer's name is asked).
+      if (f.victimPick && root.CVCombo) return CVCombo.attach(el, { items: () => [{ value: K().STATE_VICTIM, label: K().STATE_VICTIM, hint: 'Officer name only' }], onPick: () => { if (onChange) onChange(); } });
       // v1.92: CB # and IR # can be DNA (does not apply), as on the Draft tab.
       if ((f.key === 'bookingNumber' || f.key === 'irNumber') && root.CVCombo) {
         return CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }] });
@@ -124,8 +139,15 @@
         box.replaceChildren(...(a[listKey].length ? a[listKey].map((it, i) => h('div', { class: 'arrest-item' },
           h('div', { class: 'arrest-item-head' }, h('strong', {}, `${L.item} ${i + 1}`), h('div', { class: 'spacer' }),
             archived ? null : h('button', { class: 'btn small ghost danger-text', type: 'button', onclick: () => { a[listKey].splice(i, 1); changed(); draw(); } }, `Remove ${L.item}`)),
-          fieldset(it, L.fields))) : [h('p', { class: 'muted small' }, noneText)]),
-        archived ? null : h('button', { class: 'btn small', type: 'button', onclick: () => { a[listKey].push(K().emptyItem(listKey)); changed(); draw(); } }, addLabel));
+          listKey === 'nonOffenders' ? (() => {
+            // v1.113: State of Illinois: Role, Name and Officer name only; switches as the name changes.
+            const was = K().isStateVictim(it);
+            const flip = () => { if (K().isStateVictim(it) !== was) { draw(); const el = box.querySelectorAll('.arrest-item')[i]; const n = el && el.querySelector('input'); if (n) { n.focus(); } } };
+            return fieldset(it, K().nonOffenderFields(it), flip);
+          })() : fieldset(it, L.fields))) : [h('p', { class: 'muted small' }, noneText)]),
+        archived ? null : h('div', { class: 'row' },
+          h('button', { class: 'btn small', type: 'button', onclick: () => { a[listKey].push(K().emptyItem(listKey)); changed(); draw(); } }, addLabel),
+          listKey === 'nonOffenders' && !a.nonOffenders.some(K().isStateVictim) ? h('button', { class: 'btn small', type: 'button', title: 'The State of Illinois as the victim, with the officer\'s name', onclick: () => { a.nonOffenders.push({ ...K().emptyItem('nonOffenders'), role: 'Victim', name: K().STATE_VICTIM }); changed(); draw(); } }, '+ Add State of Illinois as Victim') : null));
       };
       draw();
       return box;
@@ -164,6 +186,27 @@
           archived ? null : h('button', { class: 'btn small', type: 'button', title: 'Adds a picture to the case files (Subject Information) and uses it here', onclick: () => file.click() }, 'Add Photo'), file));
     };
 
+    // v1.113: a tick box for a part that doesn't apply: the boxes go and the report says so.
+    const noneBox = (a, flag, label, body) => {
+      const cb = h('input', { type: 'checkbox', checked: !!a[flag], disabled: archived || null });
+      const wrap = h('div', { class: 'arrest-none-body', hidden: !!a[flag] }, body);
+      cb.addEventListener('change', () => { a[flag] = cb.checked; wrap.hidden = cb.checked; changed(); });
+      return [h('label', { class: 'check-row arrest-none' }, cb, h('span', {}, label)), wrap];
+    };
+    // v1.113: pick the arrestee from the suspects and offenders already written up.
+    const personPick = (a, redraw) => {
+      if (archived || !choices.length) return null;
+      const sel = h('select', { class: 'arrest-pick', 'aria-label': 'Pick the arrestee from the suspects' },
+        h('option', { value: '' }, 'Pick from Suspects…'), ...choices.map((p, i) => h('option', { value: String(i) }, `${p.name} (${p.from})`)));
+      sel.addEventListener('change', () => {
+        const p = choices[Number(sel.value)];
+        if (!p) return;
+        Object.assign(a, K().personToArrestee(p));
+        changed(); redraw();
+        toast(`${p.name}: name and description filled in from the ${p.from}. Check them before printing.`, 'success', 5000);
+      });
+      return h('div', { class: 'arrest-pick-row' }, ui.field('Arrestee', sel, '', 'Fills the name, date of birth and description from a suspect on the Details tab or an offender on the Draft tab'));
+    };
     const list = h('div', { class: 'arrestees' });
     const draw = () => {
       list.replaceChildren(...arrest.arrestees.map((a, i) => {
@@ -180,7 +223,8 @@
           h('td', {}, h('button', { class: 'btn small ghost', type: 'button', title: 'Remove this charge', onclick: () => { a.charges.splice(j, 1); if (!a.charges.length) a.charges.push(K().emptyCharge()); changed(); draw(); } }, '✕')))));
         const name = K().arresteeName(a) || `Arrestee ${i + 1}`;
         const ageOut = h('output', { class: 'arrest-age' });
-        const showAge = () => { const n = K().ageOn(a.dob, a.date); ageOut.textContent = n ? `${n} years` : '—'; };
+        // v1.113: until the arrest date is in, the age today.
+        const showAge = () => { const n = K().ageOn(a.dob, a.date || Vault.localDay()); ageOut.textContent = n ? `${n} years` : '—'; };
         showAge();
         const offender = fieldset(a, K().ARRESTEE_FIELDS, showAge, 'arrest-g-offender');
         offender.insertBefore(ui.field('Age', ageOut), offender.children[6] || null);
@@ -193,7 +237,7 @@
               changed(); draw();
             } }, 'Remove Arrestee')),
           section('Report Numbers', (() => { const g = fieldset(a, K().NUMBER_FIELDS); g.classList.add('arrest-numbers'); return g; })()),
-          section('Offender', h('div', { class: 'arrest-offender' }, offender, photoPicker(a))),
+          section('Offender', personPick(a, draw), h('div', { class: 'arrest-offender' }, offender, photoPicker(a))),
           section('Incident', fieldset(a, K().INCIDENT_FIELDS, showAge, 'arrest-g-incident')),
           section('Charges',
             h('div', { class: 'table-scroll' }, h('table', { class: 'files charges-table' },
@@ -207,10 +251,10 @@
                 if (!a.charges.length) a.charges.push(K().emptyCharge());
                 changed(); draw();
               } }, 'Use Report Charges') : null)),
-          section('Recovered Narcotics', listEditor(a, 'narcotics', 'No narcotics recovered.', '+ Add Narcotic')),
-          section('Warrant', listEditor(a, 'warrants', 'No warrant identified.', '+ Add Warrant')),
+          section('Recovered Narcotics', ...noneBox(a, 'noNarcotics', 'No narcotics recovered', listEditor(a, 'narcotics', 'No narcotics recovered.', '+ Add Narcotic'))),
+          section('Warrant', ...noneBox(a, 'noWarrant', 'No warrant identified', listEditor(a, 'warrants', 'No warrant identified.', '+ Add Warrant'))),
           section('Victim and Complainant', listEditor(a, 'nonOffenders', 'None added.', '+ Add Victim or Complainant')),
-          section('Arrestee Vehicle', fieldset(a, K().VEHICLE_FIELDS, null, 'arrest-g-4')),
+          section('Arrestee Vehicle', ...noneBox(a, 'noVehicle', 'No arrestee vehicle information', fieldset(a, K().VEHICLE_FIELDS, null, 'arrest-g-4'))),
           section('Properties', fieldset(a, [{ key: 'property', label: 'Confiscated properties: inventory numbers and description', type: 'textarea' }])),
           section('Incident Narrative', fieldset(a, [{ key: 'narrative', label: 'The facts for probable cause to arrest and to support the charges', type: 'textarea' }])),
           section('Court and Bond', fieldset(a, [...K().COURT_FIELDS, ...K().BOND_FIELDS], null, 'arrest-g-court')),
@@ -285,11 +329,16 @@
     } }, 'Save');
     const reportBtn = h('button', { class: 'btn small', type: 'button', onclick: () => startArrestReport(c) }, 'Start an arrest report draft');
 
+    // v1.113: Show All / Hide All, as on the Draft tab.
+    const foldAll = (want) => panel.querySelectorAll(`.arrest-section.foldable${want ? ':not(.folded)' : '.folded'} > .fold-head .fold-btn`).forEach((b) => b.click());
+    const showAll = h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-down', title: 'Open every part on screen', onclick: () => foldAll(false) }, 'Show All');
+    const hideAll = h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-right', title: 'Fold every part away on screen (they stay on the report)', onclick: () => foldAll(true) }, 'Hide All');
+    if (autoCharged) { changed(); toast('Charges filled in from the Draft tab. Change or remove them as needed.', 'info', 5000); }
     panel.replaceChildren(
       h('div', { class: 'toolbar arrest-toolbar' },
         h('p', { class: 'muted small explain' }, 'The Arrest Report for this case, one per arrestee. Print it, save it as a PDF or email it to sign. These details also fill {{arrest.…}} in templates. Saved in this case\'s folder on the SSD (arrest.json).'),
         printBtn, archived ? null : pdfCaseBtn, archived ? null : signBtn,
-        h('div', { class: 'spacer' }), status, archived ? null : saveBtn,
+        h('div', { class: 'spacer' }), showAll, hideAll, status, archived ? null : saveBtn,
         archived ? null : h('button', { class: 'btn small danger-ghost', type: 'button', title: 'Deletes all the arrest details of this case and takes the tab off', onclick: () => deleteArrest(c) }, 'Delete Arrest')),
       archived || !root.CVLetterhead ? null : root.CVLetterhead.editor(), // v1.85
       list,

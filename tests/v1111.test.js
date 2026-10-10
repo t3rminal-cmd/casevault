@@ -75,3 +75,17 @@ test('v1.111: a subject name in Last, First and Middle', () => {
   assert.strictEqual(O.nameParts('John Doe Jr').last, 'DOE JR');
   assert.ok(O.nameParts('State v. Doe').whole);
 });
+
+test('v1.113: the arrestee picked from the suspects, and the State of Illinois as victim', () => {
+  const ch = K.arresteeChoices([{ name: 'John Q Doe', dob: '1990-02-03', info: { gender: 'Male', race: 'White' } }, { name: 'Not Identified', notIdentified: true }],
+    [{ name: 'DOE, John Q', address: '1 Example St', cbNumber: '123' }, { name: 'Unknown', unknown: true }, { name: 'See DEA 6 for further information' }]);
+  assert.strictEqual(ch.length, 1);
+  assert.deepStrictEqual(K.personToArrestee(ch[0]), { lastName: 'DOE', firstName: 'John', middleName: 'Q', dob: '1990-02-03', sex: 'Male', race: 'White', address: '1 Example St', bookingNumber: '123' });
+  assert.deepStrictEqual(K.splitName('Jane Roe Jr'), { lastName: 'ROE JR', firstName: 'Jane', middleName: '' });
+  assert.ok(K.isStateVictim({ name: 'state of illinois' }));
+  assert.deepStrictEqual(K.nonOffenderFields({ name: 'State of Illinois' }).map((f) => f.key), ['role', 'name', 'officer']);
+  assert.ok(!K.nonOffenderFields({ name: 'Jane Roe' }).some((f) => f.key === 'officer'));
+  assert.ok(K.chargesBlank({ charges: [K.emptyCharge()] }));
+  const a = K.normalizeArrestee({});
+  assert.strictEqual(a.noVehicle, false);
+});

@@ -222,7 +222,7 @@
 
       // ---- recovered narcotics
       startSeg('RECOVERED NARCOTICS', 56);
-      const narcotics = a.narcotics.filter(C.itemFilled);
+      const narcotics = a.noNarcotics ? [] : a.narcotics.filter(C.itemFilled); // v1.113: ticked No narcotics recovered
       if (!narcotics.length) { y -= 6; big('NO NARCOTICS RECOVERED'); }
       else tableRows([['Narcotic', 0, 0.26], ['Amount', 0.26, 0.16], ['Inventory #', 0.42, 0.16], ['Description', 0.58, 0.42]],
         narcotics.map((x) => [clean(x.drug), [clean(x.amount), clean(x.unit)].filter(Boolean).join(' '), clean(x.inventory), clean(x.description)]));
@@ -230,7 +230,7 @@
 
       // ---- warrant
       startSeg('WARRANT', 44);
-      const warrants = a.warrants.filter(C.itemFilled);
+      const warrants = a.noWarrant ? [] : a.warrants.filter(C.itemFilled);
       if (!warrants.length) { y -= 4; big('NO WARRANT IDENTIFIED'); }
       else tableRows([['Warrant #', 0, 0.2], ['Type', 0.2, 0.2], ['Issued By', 0.4, 0.22], ['Date Issued', 0.62, 0.16], ['Offense', 0.78, 0.22]],
         warrants.map((x) => [clean(x.number), clean(x.kind), clean(x.issuedBy), US(x.issued), clean(x.offense)]));
@@ -253,6 +253,8 @@
         const x2 = CX + w1 + 12; const x3 = x2 + w2 + 12;
         text(CX, y - 9, 'Name:', 9, true);
         text(CX + width('Name: ', 9, true), y - 9, `${clean(p.name).toUpperCase()}${clean(p.role) ? `  (${clean(p.role)})` : ''}`, 9.5, true);
+        // v1.113: the State of Illinois as victim: its officer, on one line.
+        if (C.isStateVictim(p)) { y = kvList(CX, y - 25, [['Officer Name:', p.officer]], CW) - 2; if (i < others.length - 1) { line(CX, y + 2, CX + CW, y + 2, 0.4); y -= 2; } return; }
         const yy0 = y - 25;
         const py = kvList(CX, yy0, [['Res:', p.address], ['Phone:', p.phone], ['Beat:', p.beat], ...(clean(p.employer) ? [['Empl:', p.employer], ['Empl Beat:', p.employerBeat]] : [])], w1);
         const qy = kvList(x2, yy0, [['Sex:', p.sex], ['Race:', p.race], ['DOB:', US(p.dob)], ['Age:', C.ageOn(p.dob, a.date)]], w2);
@@ -267,7 +269,7 @@
 
       // ---- arrestee vehicle: two columns of the same width
       startSeg('ARRESTEE VEHICLE', 56);
-      if (C.VEHICLE_FIELDS.some((f) => clean(a[f.key]))) {
+      if (!a.noVehicle && C.VEHICLE_FIELDS.some((f) => clean(a[f.key]))) {
         const vt = y; const vh = (CW - 12) / 2; const vx2 = CX + vh + 12;
         const vy1 = kvList(CX, y - 9, [['Vehicle:', [a.vehYear, a.vehMake, a.vehModel, a.vehStyle].map(clean).filter(Boolean).join(' - ')], ['Color:', a.vehColor], ['Impounded:', yn(a.impounded)], ['Disposition:', a.vehDisposition]], vh);
         const vy2 = kvList(vx2, y - 9, [['VIN #:', a.vin], ['Plate:', [clean(a.plate), clean(a.plateState)].filter(Boolean).join('  ')], ['Pound #:', a.poundNumber], ['Inv #:', a.vehInventory]], vh);

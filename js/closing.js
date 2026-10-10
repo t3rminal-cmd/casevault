@@ -119,7 +119,7 @@
   ];
   const NON_OFFENDER_FIELDS = [
     { key: 'role', label: 'Role', type: 'select', options: ['Victim', 'Complainant', 'Victim and complainant', 'Witness'] },
-    { key: 'name', label: 'Name' }, { key: 'address', label: 'Residence', type: 'textarea' }, { key: 'beat', label: 'Beat' },
+    { key: 'name', label: 'Name', victimPick: true }, { key: 'officer', label: 'Officer name' }, { key: 'address', label: 'Residence', type: 'textarea' }, { key: 'beat', label: 'Beat' },
     { key: 'phone', label: 'Phone', type: 'tel' }, { key: 'employer', label: 'Employer address', type: 'textarea' }, { key: 'employerBeat', label: 'Employer beat' },
     { key: 'sex', label: 'Sex', type: 'select', options: SEX }, { key: 'race', label: 'Race / ethnicity' },
     { key: 'dob', label: 'Date of birth', type: 'date' },
@@ -140,6 +140,8 @@
   const emptyArrestee = () => ({
     ...Object.fromEntries([...ARRESTEE_FIELDS, ...ARREST_FIELDS].map((f) => [f.key, ''])),
     photo: '', charges: [emptyCharge()], narcotics: [], warrants: [], nonOffenders: [], property: '', narrative: '', notes: '',
+    // v1.113: ticked when the part doesn't apply (the report then says so).
+    noVehicle: false, noNarcotics: false, noWarrant: false,
   });
   const emptyArrest = () => ({ schema: 2, arrestees: [emptyArrestee()] });
 
@@ -259,7 +261,59 @@
       .sort((a, b) => String(a.c.number || '').localeCompare(String(b.c.number || ''), undefined, { numeric: true }));
   }
 
-  const api = { personKey, peopleOfCase, sameSuspectCases,
+  /* v1.113: the State of Illinois as a victim: only the role, the name and the officer's name. */
+  const STATE_VICTIM = 'State of Illinois';
+  const isStateVictim = (p) => clean(p && p.name).toLowerCase() === STATE_VICTIM.toLowerCase();
+  /** The Victim and Complainant boxes a person uses. */
+  const nonOffenderFields = (p) => (isStateVictim(p) ? NON_OFFENDER_FIELDS.filter((f) => ['role', 'name', 'officer'].includes(f.key)) : NON_OFFENDER_FIELDS.filter((f) => f.key !== 'officer'));
+
+  /* v1.113: pick the arrestee from the case's suspects (Details) and the Draft tab's offenders. */
+  /** "DOE, John Q" or "John Q Doe" -> { lastName, firstName, middleName }. */
+  function splitName(name) {
+    const n = clean(name).replace(/\s+/g, ' ');
+    if (!n) return { lastName: '', firstName: '', middleName: '' };
+    if (n.includes(',')) {
+      const [last, rest = ''] = n.split(',').map((x) => x.trim());
+      const w = rest.split(' ').filter(Boolean);
+      return { lastName: last.toUpperCase(), firstName: w[0] || '', middleName: w.slice(1).join(' ') };
+    }
+    const w = n.split(' ');
+    if (w.length === 1) return { lastName: w[0].toUpperCase(), firstName: '', middleName: '' };
+    let suffix = '';
+    if (w.length > 2 && /^(jr|sr|ii|iii|iv)\.?$/i.test(w[w.length - 1])) suffix = ` ${w.pop().toUpperCase().replace(/\.$/, '')}`;
+    return { lastName: `${w.pop().toUpperCase()}${suffix}`, firstName: w.shift(), middleName: w.join(' ') };
+  }
+  const NO_PERSON = /^(unknown|unknown offender|not identified|see dea 6 for further information)$/i;
+  /** The people to pick from: [{ name, from, data }] (one per name; a Draft offender's details win,
+   * the suspect's fill what it lacks). suspects: c.suspects; offenders: the Draft's offendersList. */
+  function arresteeChoices(suspects, offenders) {
+    const out = new Map();
+    const key = (n) => clean(n).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').sort().join(' ');
+    const put = (name, from, data) => {
+      if (!clean(name) || NO_PERSON.test(clean(name))) return;
+      const k = key(name);
+      const cur = out.get(k);
+      if (!cur) out.set(k, { name: clean(name), from, data: { ...data } });
+      else { for (const [f, v] of Object.entries(data)) if (clean(v) && !clean(cur.data[f])) cur.data[f] = v; if (!cur.from.includes(from)) cur.from += ` and ${from}`; }
+    };
+    for (const o of offenders || []) if (o && !o.unknown) put(o.name, 'Draft offender', o);
+    for (const s of suspects || []) if (s && !s.notIdentified) put(s.name, 'Details suspect', { ...(s.info || {}), dob: s.dob || '' });
+    return [...out.values()];
+  }
+  /** The arrestee boxes a picked person fills (only those it has a value for). */
+  function personToArrestee(p) {
+    const d = (p && p.data) || {};
+    const v = (k) => clean(d[k]);
+    const sex = /^(male|female)$/i.test(v('gender')) ? v('gender')[0].toUpperCase() + v('gender').slice(1).toLowerCase() : '';
+    const out = { ...splitName(p && p.name), dob: v('dob'), sex, race: v('race'), height: v('height'), weight: v('weight'), eyes: v('eyes'), hair: v('hair'),
+      hairStyle: v('hairStyle'), complexion: v('complexion'), address: v('address'), phone: v('phone') || (Array.isArray(d.phones) ? clean(d.phones[0] && (d.phones[0].number || d.phones[0])) : ''),
+      irNumber: v('irNumber'), bookingNumber: v('cbNumber') };
+    return Object.fromEntries(Object.entries(out).filter(([, x]) => clean(x)));
+  }
+  /** Charges are blank (nothing typed yet). */
+  const chargesBlank = (a) => !(a && a.charges || []).some((x) => clean(x.statute) || clean(x.description));
+
+  const api = { STATE_VICTIM, isStateVictim, nonOffenderFields, splitName, arresteeChoices, personToArrestee, chargesBlank, personKey, peopleOfCase, sameSuspectCases,
     STATUS_HELP, FOLLOW_UP_REASONS, DISPOSITIONS, disposition, ARRESTEE_FIELDS, ARREST_FIELDS, CHARGE_FIELDS,
     NUMBER_FIELDS, INCIDENT_FIELDS, VEHICLE_FIELDS, COURT_FIELDS, BOND_FIELDS, PERSONNEL_FIELDS, NARCOTIC_FIELDS, WARRANT_FIELDS, NON_OFFENDER_FIELDS, LISTS,
     emptyArrest, emptyArrestee, emptyCharge, emptyItem, normalizeArrest, normalizeArrestee, itemFilled, ageOn, arresteeName, chargesText, arrestContext, closureContext, closeChecklist, followUpEvent, peopleOf,
