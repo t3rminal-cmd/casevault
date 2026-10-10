@@ -4082,3 +4082,8 @@ table.data-table.general-table th, table.data-table.general-table td { padding-l
 .locker-tabs .tab-count { margin-left: .2rem; min-width: 1.4rem; padding: 0 .35rem; font-size: .75rem; line-height: 1.3rem; text-align: center; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); }
 .ov-actions { display: inline-flex; gap: .4rem; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 a.locker-tile, a.locker-tile:hover, a.locker-tile * { text-decoration: none !important; color: inherit; }
+
+/* ---------- v1.112 ---------- */
+.year-tile.placeholder-tile .op-folder-art { opacity: .55; }
+.year-tile.placeholder-tile .op-folder-name { color: var(--muted); }
+.locker-section .op-folders { justify-content: flex-start; }

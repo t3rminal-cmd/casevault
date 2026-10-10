@@ -15,12 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.111
+## What's New in v1.112
 
-- **Secure Locker** (Other Files → Secure Locker): a **Password Manager**, **Confidential Files** for informant files (any file type) and **Covert** aliases and covert accounts, all behind a password of their own (not the PIN). Everything is encrypted on the SSD (AES-256) and a recovery key, shown once, opens it if the password is forgotten. It locks itself when you leave it, after 5 minutes, and with the privacy screen
-- **Field Notes in plain view:** a case's Details tab shows its Field Notes; a Mission's page shows every case number's Field Notes
-- **Close the other cases on the same suspect:** Close Case lists the other open cases with the same Subject Name or suspect (any order of the name: *DOE, John* is *John Doe*); tick them to close them too, with the same disposition
-- **General Files:** the Subject Name is in three columns, **Last Name**, **First Name** and **Middle Name**, left aligned; click Last Name or First Name to sort
+- **Secure Locker in its own section:** on the home page it has its own **SECURE LOCKER** section, right under Other Files, with one **Secure Locker** tile and an **Open Locker** button. Other Files is back to its own folders and New Folder
+- **General Files never empty:** with no case outside a Mission, General Files shows this year's folder, greyed out; opening it says it is empty and offers New Case
 
 ## What CaseVault Does
 

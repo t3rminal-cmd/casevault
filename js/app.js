@@ -1289,9 +1289,6 @@
         onclick: () => { folder = f.name === folder ? null : f.name; sharedOpen[key] = folder; draw(); },
       }, h('span', { class: 'op-folder-art' }, I(tileIcon), counts[f.name] ? h('span', { class: 'op-folder-count' }, String(counts[f.name])) : null),
       h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, f.label), (f.desc || f.custom) ? h('span', { class: 'op-title' }, f.desc || 'Your own folder') : ''))),
-      // v1.111: the Secure Locker: Password Manager, Confidential Files, Covert (own password).
-      key === 'other' ? h('a', { role: 'listitem', class: 'op-folder-tile shared-tile locker-tile', href: '#/locker', title: 'Secure Locker: Password Manager, Confidential (Informant) Files and Covert aliases and accounts, encrypted behind their own password' },
-        h('span', { class: 'op-folder-art' }, I('safe2')), h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, 'Secure Locker'), h('span', { class: 'op-title' }, 'Passwords, CI files, covert'))) : '',
       allowNew && newTile ? h('button', { type: 'button', role: 'listitem', class: 'op-folder-tile shared-tile shared-tile-new', title: 'Make a new folder in Other Files', onclick: newFolder },
         h('span', { class: 'op-folder-art' }, I('folder-plus')), h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, 'New Folder'), h('span', { class: 'op-title' }, 'Make your own'))) : '') : null;
       if (tiles && folder == null) { box.replaceChildren(tileRow); return; }
@@ -1360,6 +1357,7 @@
       generalYearFolders(cases),
       // v1.68: OTHER FILES: anything not tied to a case number or an Operation.
       otherFilesSection(),
+      secureLockerSection(),
       // v1.71: Recently Updated as even columns, in the Quick Links' size, not bold.
       h('div', { class: 'dash-section ov-panel recent-section' }, panelHead('Recently Updated', 'The cases changed most recently. Clear empties the list.',
         recent.length ? h('button', { class: 'btn small', type: 'button', icon: 'x-circle', title: 'Empties this list. Cases you change after this show here again.', onclick: async () => {
@@ -1756,23 +1754,33 @@
       getFolders: async () => [...Vault.OTHER_FOLDERS, ...(await Vault.otherCustomFolders()).map((n) => ({ name: n, custom: true }))] });
     return h('div', { class: 'dash-section ov-panel other-files-section' },
       panelHead('Other Files', 'Not tied to a case number or a Mission. Kept on the SSD in CaseVault-Data\\shared\\other.',
-        h('span', { class: 'ov-actions' },
-          h('a', { class: 'btn small ov-btn-locker', href: '#/locker', icon: 'safe2', title: 'Password Manager, Confidential (Informant) Files and Covert, encrypted behind their own password' }, 'Secure Locker'),
-          h('button', { type: 'button', class: 'btn small ov-btn-other', icon: 'folder-other', title: 'Make a new folder in Other Files', onclick: () => files.newFolder() }, 'New Folder'))),
+        h('button', { type: 'button', class: 'btn small ov-btn-other', icon: 'folder-other', title: 'Make a new folder in Other Files', onclick: () => files.newFolder() }, 'New Folder')),
       files);
+  }
+  /** v1.112: the Secure Locker in its own section, under Other Files. */
+  function secureLockerSection() {
+    const open = !!(window.CVLockerUI && CVLockerUI.isUnlocked());
+    return h('div', { class: 'dash-section ov-panel locker-section' },
+      panelHead('Secure Locker', 'Encrypted on the SSD, behind its own password.',
+        h('a', { class: 'btn small ov-btn-locker', href: '#/locker', icon: open ? 'unlock' : 'lock-fill', title: 'Open the Secure Locker (asks for its password)' }, 'Open Locker')),
+      h('div', { class: 'op-folders', role: 'list' },
+        h('a', { role: 'listitem', class: 'op-folder-tile locker-tile', href: '#/locker', title: 'Secure Locker: Password Manager, Confidential (Informant) Files and Covert aliases and accounts' },
+          h('span', { class: 'op-folder-art' }, I('safe2')), h('span', { class: 'op-folder-name' }, 'Secure Locker'))));
   }
   function generalYearFolders(cases) {
     const loose = cases.filter((c) => !isArchivedEntry(c) && (!c.operationId || !Vault.getOperation(c.operationId)));
     const yearOf = (c) => (/^\d{4}/.exec(String(c.opened || '')) || [''])[0];
     const years = [...new Set(loose.map(yearOf))].sort((a, b) => (!a) - (!b) || b.localeCompare(a));
     const list = years.map((y) => ({ k: y || 'none', name: y || 'No Date', group: loose.filter((c) => yearOf(c) === y).sort(byNumber) }));
+    // v1.112: an empty General Files shows this year's folder, empty, rather than no folder at all.
+    if (!list.length) list.push({ k: 'empty', name: String(new Date().getFullYear()), group: [], placeholder: true });
     const box = h('div', { class: 'dash-section ov-panel op-folders-section general-years-section' });
     const draw = () => {
       const open = list.find((o) => o.k === yearFolderState.open);
       const tiles = h('div', { class: 'op-folders', role: 'list' }, list.map((o) => {
         const bell = o.group.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date) && c.status !== 'Closed');
-        return h('button', { type: 'button', role: 'listitem', class: `op-folder-tile year-tile ${open === o ? 'open' : ''}`, 'aria-expanded': String(open === o),
-          title: `${o.name}: ${o.group.length} case${o.group.length === 1 ? '' : 's'} not in a Mission`,
+        return h('button', { type: 'button', role: 'listitem', class: `op-folder-tile year-tile ${open === o ? 'open' : ''}${o.placeholder ? ' placeholder-tile' : ''}`, 'aria-expanded': String(open === o),
+          title: o.placeholder ? 'No cases outside a Mission yet: New Case puts one here' : `${o.name}: ${o.group.length} case${o.group.length === 1 ? '' : 's'} not in a Mission`,
           onclick: () => { yearFolderState.open = open === o ? '' : o.k; draw(); } },
         h('span', { class: 'op-folder-art' }, I('folder-general'), o.group.length > 1 ? h('span', { class: 'op-folder-count' }, String(o.group.length)) : null),
         h('span', { class: 'op-folder-name' }, o.name, bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null));
@@ -1782,9 +1790,10 @@
           h('div', { class: 'spacer' }), h('button', { type: 'button', class: 'btn small', onclick: () => newCase() }, 'New Case')),
         h('div', { class: 'op-open-cases' }, open.op ? h('a', { class: 'op-folder-card', href: `#/operation/${encodeURIComponent(open.op.id)}`, title: 'Subpoenas, Affidavits, Mission Plans, Maps, Subject Data and the Vehicle List, for the whole Mission' },
           I('op-folder'), h('span', { class: 'op-folder-card-text' }, h('strong', {}, 'Mission Folder'), h('span', { class: 'muted small' }, Vault.OP_FOLDERS.map(opFolderLabel).join(' · ')))) : null,
-        ...open.group.map((c) => overviewCard(c)))) : null;
+        ...open.group.map((c) => overviewCard(c)),
+        open.group.length ? null : h('p', { class: 'muted small empty-note' }, I('folder-general'), h('span', {}, 'Empty. Cases not in a Mission show here, in the year they were opened. New Case makes one.')))) : null;
       box.replaceChildren(...[panelHead('General Files', 'Cases not in a Mission, by the year they were opened.', h('a', { class: 'btn small ov-btn-general', href: '#/general', icon: 'folder-general' }, 'All Cases')),
-        list.length ? tiles : h('p', { class: 'muted' }, 'Every case is in a Mission. Cases that aren\'t show here by the year they were opened.'), inside].filter(Boolean));
+        tiles, inside].filter(Boolean));
     };
     yearFolderState.close = () => { if (yearFolderState.open && box.isConnected) { yearFolderState.open = ''; draw(); } };
     draw();
