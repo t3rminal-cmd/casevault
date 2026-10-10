@@ -12,6 +12,7 @@ and the settings only you can turn on.
 | A full backup on another drive | BitLocker on that drive | The backup drive list shows each drive's encryption; picking one without BitLocker asks first |
 | A full backup on another PC (shared folder) | That PC's BitLocker or Device encryption, a share for your account only, and SMB encryption | CaseVault can't check another PC; the first backup to a folder asks you to confirm. See [BACKUP-TO-ANOTHER-PC.md](BACKUP-TO-ANOTHER-PC.md) |
 | Discovery exports | Their own password (AES-GCM) | — |
+| Secure Locker (Other Files): Password Manager, Confidential Files, Covert | Its own password, not the PIN: AES-256-GCM, the key made from the password with PBKDF2-SHA-256 (600,000 rounds), plus a recovery key shown once (v1.111) | Encrypted on the SSD and in every backup, on top of BitLocker. Locks on leaving its page, after 5 minutes without use and with the privacy screen. Without the password and the recovery key nobody can open it. A file saved out of the locker with Save a Copy is not encrypted |
 | The screen while you step away | The privacy screen and its PIN (stored as a slow PBKDF2 hash since v1.106) | The PIN only hides the screen. It does not encrypt anything. Copied case text is cleared from the clipboard when the screen comes on |
 | A deleted case | Recently Deleted keeps it 30 days in `CaseVault-Data\\deleted` (on the encrypted SSD) | Delete Now removes it at once |
 

@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.110)
+
+- **IUCR codes written out:** the IUCR list (Draft → Offense, and Reference → UCR) reads *Manufacture and Delivery: Hallucinogen*, *Possession: Cannabis, 30 Grams or Less*, *Aggravated Assault: Handgun*, *Unlawful Use of a Weapon: Handgun* and so on, instead of *Delv:*, *Poss:*, *Agg:*, *UUW:*
+- **The IUCR code fills Offense Classification:** picking a code writes its wording in Offense Classification (and on the PDF), and it stays there when charges are added. Offense Classification's arrow offers the IUCR wording first, then each charge's Statute Description. A Draft form with the old short wording (*Delv: Hallucinogens*) shows the written-out wording when it opens; reports already sent keep theirs
+- **Offense layout:** Offense Classification, Address of Occurrence and Type of Location are two columns wide, so long wording is never cut off
+
 ## Features (v1.109)
 
 - **Confidential address:** Address of Occurrence offers *99 N Confidential Street* and *99 S Confidential Street* (*99 N Confidential* is gone)

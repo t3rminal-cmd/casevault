@@ -142,7 +142,7 @@
 
   const DIALOG_SIZES = [
     ['panel', '.vault-panel'],
-    ['form', '.op-form, .new-case-form, .deep-search, .restore-form'],
+    ['form', '.op-form, .new-case-form, .deep-search, .restore-form, .locker-form'],
     ['full', '.preview, .doc-view, .lib-preview, .pdf-view, .word-view, .disc'],
     ['wide', '.problem-form, .type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
   ];
@@ -740,6 +740,7 @@
     quickFooter(false);
     CVChatUI.reset();
     CVNotesFloat.reset();
+    if (window.CVLockerUI) CVLockerUI.lock();
     renderNetStatus();
     Save.render();
     gateLost();
@@ -1066,6 +1067,8 @@
     const opm = location.hash.match(/^#\/operation\/([^/]+)/);
     if (opm) return showOperation(decodeURIComponent(opm[1]));
     if (/^#\/general\b/.test(location.hash)) return showGeneralFiles();
+    // v1.111: Other Files → Secure Locker.
+    if (/^#\/locker\b/.test(location.hash)) { pageStart('Secure Locker'); return CVLockerUI.show($('#main')); }
     const m = location.hash.match(/^#\/case\/([^/]+)(?:\/(\w+))?(?:\/([^/]+))?/);
     if (m) showCase(decodeURIComponent(m[1]), m[2] || 'details', m[3] || null);
     else showDashboard();
@@ -1286,6 +1289,9 @@
         onclick: () => { folder = f.name === folder ? null : f.name; sharedOpen[key] = folder; draw(); },
       }, h('span', { class: 'op-folder-art' }, I(tileIcon), counts[f.name] ? h('span', { class: 'op-folder-count' }, String(counts[f.name])) : null),
       h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, f.label), (f.desc || f.custom) ? h('span', { class: 'op-title' }, f.desc || 'Your own folder') : ''))),
+      // v1.111: the Secure Locker: Password Manager, Confidential Files, Covert (own password).
+      key === 'other' ? h('a', { role: 'listitem', class: 'op-folder-tile shared-tile locker-tile', href: '#/locker', title: 'Secure Locker: Password Manager, Confidential (Informant) Files and Covert aliases and accounts, encrypted behind their own password' },
+        h('span', { class: 'op-folder-art' }, I('safe2')), h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, 'Secure Locker'), h('span', { class: 'op-title' }, 'Passwords, CI files, covert'))) : '',
       allowNew && newTile ? h('button', { type: 'button', role: 'listitem', class: 'op-folder-tile shared-tile shared-tile-new', title: 'Make a new folder in Other Files', onclick: newFolder },
         h('span', { class: 'op-folder-art' }, I('folder-plus')), h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, 'New Folder'), h('span', { class: 'op-title' }, 'Make your own'))) : '') : null;
       if (tiles && folder == null) { box.replaceChildren(tileRow); return; }
@@ -1588,6 +1594,8 @@
       // v1.78: the Mission's timeline (all its case numbers) on its main page.
       h('div', { class: 'section-head op-tl-head', id: 'op-timeline' }, h('h2', { class: 'section-title caps' }, 'Timeline')),
       tlPanel,
+      // v1.111: every case number's Field Notes, in plain view.
+      members.length ? fieldNotesCard(members, { key: 'mission-field-notes', mission: true }) : null,
       // v1.68: the Operation's own folder, not tied to a case number.
       h('div', { class: 'section-head op-folder-head', id: 'op-folder' }, h('h2', { class: 'section-title caps' }, 'Mission Folder'), h('div', { class: 'spacer' }),
         h('button', { class: 'btn small', type: 'button', icon: 'collection', title: 'Every file on the SSD for this Mission: its case numbers\' files and its Mission Folder', onclick: (e) => toggleAllFiles(e.currentTarget) }, 'All Files')),
@@ -1634,7 +1642,8 @@
         state.generalSort = { key, dir: cur.key === key ? -cur.dir : 1 };
         draw();
       } }, label, h('span', { class: 'th-arrow', 'aria-hidden': 'true' })));
-    const head = h('thead', {}, h('tr', {}, sortTh('Case Number', 'number'), sortTh('Subject Name', 'subject'), h('th', {}, 'Mission'), h('th', {}, 'Status'),
+    // v1.111: the Subject Name in three columns: Last, First, Middle.
+    const head = h('thead', {}, h('tr', {}, sortTh('Case Number', 'number'), sortTh('Last Name', 'subject', 'name-cell'), sortTh('First Name', 'first', 'name-cell'), h('th', { class: 'name-cell' }, 'Middle Name'), h('th', {}, 'Mission'), h('th', {}, 'Status'),
       sortTh('Opened', 'opened', 'date-cell'), sortTh('Age', 'age', 'age-cell'), h('th', {}, '')));
     const draw = () => {
       state.generalQuery = q.value;
@@ -1652,7 +1661,12 @@
       // v1.101: sort by any column heading; Age (and Opened) put the oldest or newest case first.
       const srt = state.generalSort || { key: 'number', dir: 1 };
       const openedOf = (c) => c.opened || '9999-99-99';
-      if (srt.key === 'subject') list.sort((a, b) => srt.dir * String(subj(a) || '').localeCompare(String(subj(b) || '')));
+      const np = (c) => CVOperation.nameParts(c.subject);
+      const nameKey = (c, firstFirst) => { const p = np(c); return (firstFirst ? [p.first, p.last, p.middle] : [p.last, p.first, p.middle]).join('\u0001').toLowerCase(); };
+      // Cases with no subject go last either way.
+      const noName = (c) => (String(c.subject || '').trim() ? 0 : 1);
+      if (srt.key === 'subject') list.sort((a, b) => noName(a) - noName(b) || srt.dir * nameKey(a).localeCompare(nameKey(b)) || byNumber(a, b));
+      else if (srt.key === 'first') list.sort((a, b) => noName(a) - noName(b) || srt.dir * nameKey(a, true).localeCompare(nameKey(b, true)) || byNumber(a, b));
       else if (srt.key === 'opened') list.sort((a, b) => srt.dir * openedOf(a).localeCompare(openedOf(b)) || byNumber(a, b));
       else if (srt.key === 'age') list.sort((a, b) => srt.dir * openedOf(a).localeCompare(openedOf(b)) || byNumber(a, b)); // oldest first, then newest
       else if (srt.dir < 0) list.reverse();
@@ -1667,13 +1681,18 @@
         return h('tr', { class: arch ? 'archived-row' : '' },
           h('td', {}, h('a', { href: caseLink(c), class: 'case-num-link' }, c.number || 'No case number'),
             dup ? h('span', { class: 'dup-flag', title: 'Another case has the same Case Number (made before numbers had to be unique). Nothing was changed.' }, I('exclamation-triangle-fill'), 'Duplicate') : null),
-          h('td', { class: c.subject ? 'subject-cell' : 'muted' }, subj(c) || 'No subject yet'),
+          ...(() => {
+            const p = CVOperation.nameParts(c.subject);
+            if (!String(c.subject || '').trim()) return [h('td', { class: 'muted name-cell', colspan: 3 }, 'No subject yet')];
+            if (p.whole) return [h('td', { class: 'subject-cell name-cell', colspan: 3, title: 'Not a single person\'s name, so it isn\'t split' }, p.last)];
+            return [h('td', { class: 'subject-cell name-cell name-last' }, p.last), h('td', { class: 'name-cell' }, p.first), h('td', { class: 'name-cell' }, p.middle || h('span', { class: 'muted' }, '—'))];
+          })(),
           h('td', {}, op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}` }, opLabel(op)) : h('span', { class: 'muted' }, '—')),
           h('td', {}, statusPill(arch ? 'Archived' : c.status)),
           h('td', { class: 'nowrap date-cell' }, c.opened ? fmtDate(c.opened) : '—'),
           h('td', { class: 'nowrap age-cell' }, (() => { const o = openedAge(c.opened); return o ? h('span', { title: `${o.days} day${o.days === 1 ? '' : 's'} since it was opened` }, o.ageLong) : '—'; })()),
           h('td', { class: 'nowrap' }, action));
-      }) : [h('tr', {}, h('td', { colspan: 7, class: 'muted empty-cell' }, Vault.data.cases.length ? 'No cases match.' : 'No cases yet. New Case makes one.'))]));
+      }) : [h('tr', {}, h('td', { colspan: 9, class: 'muted empty-cell' }, Vault.data.cases.length ? 'No cases match.' : 'No cases yet. New Case makes one.'))]));
     };
     q.addEventListener('input', debounce(draw, 120));
     show.addEventListener('change', draw);
@@ -1737,7 +1756,9 @@
       getFolders: async () => [...Vault.OTHER_FOLDERS, ...(await Vault.otherCustomFolders()).map((n) => ({ name: n, custom: true }))] });
     return h('div', { class: 'dash-section ov-panel other-files-section' },
       panelHead('Other Files', 'Not tied to a case number or a Mission. Kept on the SSD in CaseVault-Data\\shared\\other.',
-        h('button', { type: 'button', class: 'btn small ov-btn-other', icon: 'folder-other', title: 'Make a new folder in Other Files', onclick: () => files.newFolder() }, 'New Folder')),
+        h('span', { class: 'ov-actions' },
+          h('a', { class: 'btn small ov-btn-locker', href: '#/locker', icon: 'safe2', title: 'Password Manager, Confidential (Informant) Files and Covert, encrypted behind their own password' }, 'Secure Locker'),
+          h('button', { type: 'button', class: 'btn small ov-btn-other', icon: 'folder-other', title: 'Make a new folder in Other Files', onclick: () => files.newFolder() }, 'New Folder'))),
       files);
   }
   function generalYearFolders(cases) {
@@ -2192,6 +2213,35 @@
     return section;
   }
 
+  /* v1.111: the Field Notes in plain view: on a case's Details tab (that case) and on a Mission's
+   * page (each of its case numbers). Read from notes.md on the SSD each time; Edit opens the Field
+   * Notes page of that case. */
+  function fieldNotesCard(cases, { key = 'field-notes', mission = false } = {}) {
+    const body = h('div', { class: 'fn-cards' }, h('p', { class: 'muted small' }, 'Reading the Field Notes…'));
+    const section = h('section', { class: 'card field-notes-card' }, h('h3', { icon: 'journal-text' }, 'Field Notes'), body);
+    const tk = state.renderToken;
+    (async () => {
+      const items = [];
+      for (const c of cases) {
+        let text = '';
+        try { text = await Vault.getNotes(c.id); } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
+        items.push({ c, text: String(text || '').trim() });
+      }
+      if (tk !== state.renderToken || !body.isConnected) return;
+      const shown = mission ? items.filter((x) => x.text) : items;
+      body.replaceChildren(...(shown.length ? shown.map(({ c, text }) => h('article', { class: 'fn-card' },
+        h('div', { class: 'fn-card-head' },
+          mission ? h('a', { href: caseLink(c), class: 'case-num-link' }, c.number || 'No case number') : null,
+          mission && subj(c) ? h('span', { class: 'muted small' }, subj(c)) : null,
+          h('div', { class: 'spacer' }),
+          !isArchivedEntry(c) && !mission && window.CVNotesFloat ? h('button', { class: 'btn small', type: 'button', icon: 'journal-text', title: 'Write in the floating Notes box, beside whatever page you are on', onclick: () => CVNotesFloat.toggle() }, 'Notes Box') : null,
+          h('a', { class: 'btn small', href: `#/case/${encodeURIComponent(c.id)}/reports/.notes`, icon: 'pencil', title: 'Open this case\'s Field Notes page to read or edit them' }, isArchivedEntry(c) ? 'Open' : 'Edit')),
+        text ? h('div', { class: 'fn-text markdown-body', html: Markdown.render(text) }) : h('p', { class: 'muted small empty-note' }, I('journal-text'), h('span', {}, 'No Field Notes yet. Edit, or the Notes button at the bottom right, to write some.'))))
+        : [h('p', { class: 'muted small empty-note' }, I('journal-text'), h('span', {}, 'None of this Mission\'s case numbers has Field Notes yet.'))]));
+    })();
+    return makeFoldable(section, key, { open: true });
+  }
+
   /** A labelled box. tip: the explanation, shown in the hover box (no brackets in labels). */
   function field(label, input, cls = '', tip = '') {
     return h('label', { class: `field ${cls}`, title: tip || null }, h('span', {}, label), input);
@@ -2418,6 +2468,8 @@
           field('Closed', closedInput)),
         caseTiles(c, members, archived)),
       miniTimeline(c, members, { mine: true }),
+      // v1.111: the case's Field Notes, in plain view.
+      fieldNotesCard([c], { key: 'details-field-notes' }),
       // ---- this case number
       // v1.44: File Number, Original Case Number, Federal Jacket Number and Client in one row; no Tags.
       h('form', { class: 'form-grid details-grid details-row4', onsubmit: (e) => e.preventDefault() },
@@ -3543,6 +3595,7 @@
   CVLibraryUI.init(window.CaseVaultUI);
   CVChatUI.init(window.CaseVaultUI);
   CVNotesFloat.init(window.CaseVaultUI);
+  CVLockerUI.init(window.CaseVaultUI);
 
   // Privacy screen: the "Hide" button or the idle timer. See js/privacy.js.
   CVPrivacy.init({

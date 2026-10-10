@@ -15,11 +15,12 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.110
+## What's New in v1.111
 
-- **IUCR codes written out:** the IUCR list (Draft → Offense, and Reference → UCR) reads *Manufacture and Delivery: Hallucinogen*, *Possession: Cannabis, 30 Grams or Less*, *Aggravated Assault: Handgun*, *Unlawful Use of a Weapon: Handgun* and so on, instead of *Delv:*, *Poss:*, *Agg:*, *UUW:*
-- **The IUCR code fills Offense Classification:** picking a code writes its wording in Offense Classification (and on the PDF), and it stays there when charges are added. Offense Classification's arrow offers the IUCR wording first, then each charge's Statute Description. A Draft form with the old short wording (*Delv: Hallucinogens*) shows the written-out wording when it opens; reports already sent keep theirs
-- **Offense layout:** Offense Classification, Address of Occurrence and Type of Location are two columns wide, so long wording is never cut off
+- **Secure Locker** (Other Files → Secure Locker): a **Password Manager**, **Confidential Files** for informant files (any file type) and **Covert** aliases and covert accounts, all behind a password of their own (not the PIN). Everything is encrypted on the SSD (AES-256) and a recovery key, shown once, opens it if the password is forgotten. It locks itself when you leave it, after 5 minutes, and with the privacy screen
+- **Field Notes in plain view:** a case's Details tab shows its Field Notes; a Mission's page shows every case number's Field Notes
+- **Close the other cases on the same suspect:** Close Case lists the other open cases with the same Subject Name or suspect (any order of the name: *DOE, John* is *John Doe*); tick them to close them too, with the same disposition
+- **General Files:** the Subject Name is in three columns, **Last Name**, **First Name** and **Middle Name**, left aligned; click Last Name or First Name to sort
 
 ## What CaseVault Does
 
@@ -86,6 +87,7 @@ CaseVault-Data/
     mail-log.json            department mail prepared from this case
   archive/<case-id>/         archived cases, same layout (read-only in the app)
   shared/                    Mission folders and Other Files (not tied to a case)
+  locker/                    the Secure Locker, encrypted: locker.json, data.bin, f-<id>.bin
   templates/, library/       your report templates, and the examples the AI learns from
   chats/                     saved Ask AI conversations
   branding/logo.jpg          the letterhead logo

@@ -278,6 +278,7 @@
         form.hidden = !pin;
         hint.textContent = pin ? '' : 'Click anywhere to continue';
         if (!dlg.open) dlg.showModal(); // top layer: covers everything, including open dialogs
+        doc.dispatchEvent(new Event('cv-privacy-screen')); // v1.111: the Secure Locker locks
         rain.start();
         if (pin) input.focus(); else dlg.focus();
       },

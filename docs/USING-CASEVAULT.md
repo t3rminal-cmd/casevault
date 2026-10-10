@@ -214,6 +214,20 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.111
+
+- **Secure Locker** (home page → Other Files → **Secure Locker**, or its tile):
+  - **The first time**, choose a locker password (at least 10 characters; not your PIN). CaseVault then shows a **recovery key** once: Print it or write it down, keep it away from the SSD, tick the box and click Done. Nothing is made until you do.
+  - **Password Manager**: Add Password (Site / System, Username, Password, Web Address, Notes). **Generate** makes a strong 20-character password. In the table the password shows as dots: the eye shows it for 20 seconds, Copy copies it and clears the clipboard after 30 seconds. Search finds any word but the passwords.
+  - **Confidential Files**: Add Files (or drop them on the list) for informant files and anything else to keep locked; each is encrypted on the SSD. Give each an **Informant / Label** (CI-1234) with the pencil. Click a name to read it (PDF, pictures, text); other files, or **Save a Copy**, go to Downloads *not encrypted*: delete them when done. The original you picked is not deleted: delete it yourself.
+  - **Covert**: Covert Aliases (alias name, date of birth and address used, ID number, phone, email, backstory) and Covert Accounts (platform, handle, password, the alias it belongs to, phone, email, notes).
+  - **Lock** locks it now; it also locks when you leave the page, after 5 minutes without use, with the privacy screen and when the SSD is unplugged. **Change Password** needs the current one; **New Recovery Key** makes a new key (the old one stops working).
+  - **Forgot the password?** on the locked page: type the recovery key and a new password.
+  - Kept in `CaseVault-Data\locker` (locker.json, data.bin, f-…bin), encrypted: a copied SSD or a full backup shows nothing readable. Without the password and the recovery key nobody, you included, can open it.
+- **Details tab → Field Notes:** the case's Field Notes, formatted, under the timeline. **Edit** opens the Field Notes page; **Notes Box** opens the floating box. On a **Mission's page**, the Field Notes of each case number that has some, under the Timeline
+- **Close Case → Other open cases on the same suspect:** CaseVault lists the other open cases whose Subject Name or an identified suspect is the same person (*DOE, John* = *John Doe*; a middle initial left off still matches, so check). None is ticked; tick the ones to close with this disposition and date. Each gets *Closed together with EX-100 (same suspect: John Doe)* in its closing note, and each can be reopened on its own. Cleared by arrest gives each an Arrest details tab
+- **General Files:** Last Name, First Name and Middle Name columns (left aligned; *John Michael Doe* and *DOE, John Michael* both read DOE | John | Michael). Something that isn't one person's name (*State v. Doe*, a crew) stays whole across the three columns. Sort by Last Name or First Name
+
 ### What's new in v1.110
 
 - **Draft → Offense → IUCR Code:** the list is written out (*2015 Manufacture and Delivery: Hallucinogen*, *2025 Possession: Hallucinogen*, *1811 Possession: Cannabis, 30 Grams or Less*…); search by code or by any word. Reference → UCR shows the same wording

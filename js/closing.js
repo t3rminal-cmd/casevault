@@ -232,7 +232,34 @@
   /** People named in the arrest details, for the privacy scan (names CaseVault always hides). */
   const peopleOf = (arrest) => ((arrest && arrest.arrestees) || []).map(arresteeName).filter(Boolean);
 
-  const api = {
+  /* v1.111: cases on the same suspect. A name matches whatever its order or commas ("DOE, John" is
+   * "John Doe"); a suspect marked Not Identified, or named Unknown, matches nothing. */
+  const NO_NAME = new Set(['unknown', 'not identified', 'unk', 'n/a', 'na', 'none']);
+  function personKey(name) {
+    const t = String(name || '').toLowerCase().replace(/[^a-z0-9\s,'-]/g, ' ').replace(/[,]/g, ' ').trim().replace(/\s+/g, ' ');
+    if (!t || NO_NAME.has(t)) return '';
+    const words = t.split(' ').filter((w) => w.length > 1 && !['jr', 'sr', 'ii', 'iii', 'iv'].includes(w));
+    return words.length >= 2 ? words.sort().join(' ') : '';
+  }
+  /** The people a case is about: its Subject Name and its identified suspects. -> [{ name, key }] */
+  function peopleOfCase(c) {
+    const out = [];
+    const add = (n) => { const key = personKey(n); if (key && !out.some((x) => x.key === key)) out.push({ name: String(n).trim(), key }); };
+    add(c && c.subject);
+    for (const s of (c && c.suspects) || []) if (s && !s.notIdentified) add(s.name);
+    return out;
+  }
+  /** Other open cases sharing a person with c. others: full cases. -> [{ c, names }] (by case number) */
+  function sameSuspectCases(c, others) {
+    const mine = new Map(peopleOfCase(c).map((p) => [p.key, p.name]));
+    if (!mine.size) return [];
+    return (others || []).filter((o) => o && o.id !== c.id && o.status !== 'Closed')
+      .map((o) => ({ c: o, names: [...new Set(peopleOfCase(o).filter((p) => mine.has(p.key)).map((p) => mine.get(p.key)))] }))
+      .filter((x) => x.names.length)
+      .sort((a, b) => String(a.c.number || '').localeCompare(String(b.c.number || ''), undefined, { numeric: true }));
+  }
+
+  const api = { personKey, peopleOfCase, sameSuspectCases,
     STATUS_HELP, FOLLOW_UP_REASONS, DISPOSITIONS, disposition, ARRESTEE_FIELDS, ARREST_FIELDS, CHARGE_FIELDS,
     NUMBER_FIELDS, INCIDENT_FIELDS, VEHICLE_FIELDS, COURT_FIELDS, BOND_FIELDS, PERSONNEL_FIELDS, NARCOTIC_FIELDS, WARRANT_FIELDS, NON_OFFENDER_FIELDS, LISTS,
     emptyArrest, emptyArrestee, emptyCharge, emptyItem, normalizeArrest, normalizeArrestee, itemFilled, ageOn, arresteeName, chargesText, arrestContext, closureContext, closeChecklist, followUpEvent, peopleOf,

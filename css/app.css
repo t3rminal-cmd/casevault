@@ -4041,3 +4041,44 @@ html .tl-item.deadline::before { transform: none; }
  * written-out IUCR wording ("Manufacture and Delivery: Hallucinogen") is never cut off. */
 .rf-grid .rf-off-wide { grid-column: span 2; }
 @media (max-width: 600px) { .rf-grid .rf-off-wide { grid-column: auto; } }
+
+/* v1.111: Field Notes in plain view (Details tab and Mission page). */
+.field-notes-card { margin: .8rem 0; }
+.fn-cards { display: grid; gap: .6rem; }
+.fn-card { border: 1px solid var(--border); border-left: 4px solid var(--accent); background: var(--surface); padding: .55rem .75rem; }
+.fn-card-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .35rem; }
+.fn-text { max-height: 18rem; overflow: auto; font-size: .92rem; line-height: 1.5; padding-right: .3rem; }
+.fn-text > :first-child { margin-top: 0; }
+.close-related { border: 1px solid var(--border); border-left: 4px solid var(--accent); padding: .5rem .75rem; margin: .6rem 0; background: var(--surface-2, var(--surface)); }
+/* v1.111: General Files name columns, left aligned. */
+.general-table th.name-cell, .general-table td.name-cell { text-align: left; }
+.general-table td.name-last { font-weight: 600; }
+/* Nine columns fit at 1366 wide: a little less padding between them. */
+table.data-table.general-table th, table.data-table.general-table td { padding-left: .5rem; padding-right: .5rem; }
+
+/* ---------- v1.111: Secure Locker ---------- */
+.locker-icon .bi { color: #b45309; }
+.locker-card { max-width: 46rem; padding: 1rem 1.2rem; }
+.locker-points { margin: .4rem 0 .8rem 1.1rem; display: grid; gap: .25rem; }
+.locker-row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.locker-note { display: flex; align-items: center; gap: .35rem; }
+.locker-section { margin: 1rem 0 1.4rem; }
+.locker-section .section-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.locker-section .section-head input[type=search] { width: 16rem; max-width: 100%; }
+.locker-table td { vertical-align: middle; }
+.locker-table td.col-actions { text-align: right; }
+.secret-wrap { display: inline-flex; align-items: center; gap: .2rem; font-family: Consolas, monospace; }
+.secret-text { min-width: 8ch; }
+.secret-edit { display: flex; gap: .3rem; align-items: center; }
+.secret-edit input { flex: 1 1 auto; min-width: 0; font-family: Consolas, monospace; }
+.recovery-key { font: 700 1.3rem/1.6 Consolas, monospace; letter-spacing: .04em; padding: .7rem 1rem; margin: .6rem 0; background: var(--surface-2); border: 1px dashed var(--accent); text-align: center; word-break: break-all; user-select: all; }
+.locker-drop.drag { outline: 2px dashed var(--accent); outline-offset: 4px; }
+.locker-img { text-align: center; overflow: auto; max-height: 75vh; }
+.locker-img img { max-width: 100%; }
+.locker-text { white-space: pre-wrap; max-height: 75vh; overflow: auto; }
+.locker-tile .op-folder-art .bi { color: #b45309; }
+.locker-has-notes { margin-right: .3rem; }
+.locker-tabs .tab-main { display: inline-flex; align-items: center; gap: .4rem; }
+.locker-tabs .tab-count { margin-left: .2rem; min-width: 1.4rem; padding: 0 .35rem; font-size: .75rem; line-height: 1.3rem; text-align: center; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); }
+.ov-actions { display: inline-flex; gap: .4rem; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+a.locker-tile, a.locker-tile:hover, a.locker-tile * { text-decoration: none !important; color: inherit; }
