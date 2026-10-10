@@ -241,8 +241,21 @@
     return `${last.toUpperCase()}, ${firstPart(first)}`;
   }
 
+  /** v1.111: a person's name in parts (General Files columns): "John Michael Doe" or "DOE, John
+   * Michael" -> { last: 'DOE', first: 'John', middle: 'Michael' }. Anything that isn't a person's
+   * name (a caption, one word, a group) -> { last: <as typed>, first: '', middle: '', whole: true }. */
+  function nameParts(subject) {
+    const label = subjectLabel(subject);
+    const m = /^([^,]+), (.+)$/.exec(label);
+    if (!m) return { last: label, first: '', middle: '', whole: true };
+    const rest = m[2].split(' ');
+    let last = m[1];
+    if (rest.length > 1 && SUFFIX.test(rest[rest.length - 1])) last = `${last} ${rest.pop().toUpperCase().replace(/\.$/, '')}`;
+    return { last, first: rest[0] || '', middle: rest.slice(1).join(' '), whole: false };
+  }
+
   const api = {
-    subjectLabel,
+    subjectLabel, nameParts,
     opKey, mergeOverview, sameOverview, mergeEvents,
     OP_STATUSES, normNumber, opLabel, normName, nameMatch, subjectMatches, caseWithNumber, duplicateNumbers,
     validateOperation, validateCase, nextOpNumber, statusFrom, firstSuspect, planMigration, caseTitle,

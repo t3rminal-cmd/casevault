@@ -42,7 +42,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
 
   // General Files: Age column and sorting
   await p.evaluate(() => { location.hash = '#/general'; }); await p.waitForTimeout(900);
-  const rows = () => p.evaluate(() => [...document.querySelectorAll('.general-table tbody tr')].map((r) => [r.cells[0].textContent.trim(), r.cells[5] && r.cells[5].textContent.trim()]));
+  const rows = () => p.evaluate(() => [...document.querySelectorAll('.general-table tbody tr')].map((r) => [r.cells[0].textContent.trim(), (r.querySelector('.age-cell') || {}).textContent.trim()]));
   let r = await rows();
   ok(r.find((x) => x[0] === 'EX-500')[1] === '5 days' && r.find((x) => x[0] === 'EX-600')[1] === '2 months' && r.find((x) => x[0] === 'EX-700')[1] === '2 years', `Age column: ${JSON.stringify(r)}`);
   await p.click('.general-table th[data-sort="age"] button'); await p.waitForTimeout(300);
@@ -54,7 +54,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   ok(await p.getAttribute('.general-table th[data-sort="age"]', 'aria-sort') === 'ascending', 'the heading shows the direction (youngest first)');
   await p.click('.general-table th[data-sort="subject"] button'); await p.waitForTimeout(300);
   r = await p.evaluate(() => [...document.querySelectorAll('.general-table tbody tr')].map((x) => x.cells[1].textContent.trim()));
-  ok(r.join('|') === [...r].sort().join('|'), `Subject Name sorts A–Z: ${r}`);
+  ok(r.join('|') === [...r].sort().join('|'), `Last Name sorts A–Z: ${r}`);
   await p.locator('.general-page').screenshot({ path: process.env.SP + '/v1101/general.png' });
 
   // Draft: Next Missing and the shorter message

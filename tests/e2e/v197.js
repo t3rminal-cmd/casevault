@@ -11,7 +11,11 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
       { id: 'e7', date: d(60), title: 'Grand jury', kind: 'deadline' }] });
   }, ids);
   await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/general'; }); await p.waitForTimeout(1200);
-  const rows = await p.evaluate(() => Object.fromEntries([...document.querySelectorAll('table tr')].map((r) => [r.cells[0] && r.cells[0].textContent.trim(), r.cells[1] && r.cells[1].textContent.trim()])));
+  // v1.111: Last, First and Middle are their own columns; read them back as "LAST, First Middle".
+  const rows = await p.evaluate(() => Object.fromEntries([...document.querySelectorAll('.general-table tbody tr')].map((r) => {
+    const n = [...r.querySelectorAll('td.name-cell')].map((c) => c.textContent.trim().replace(/^—$/, ''));
+    return [r.cells[0].textContent.trim(), n.length === 1 ? n[0] : `${n[0]}, ${[n[1], n[2]].filter(Boolean).join(' ')}`];
+  })));
   ok(rows['EX-100'] === 'DOE, John' && rows['EX-200'] === 'ROE, Jane' && rows['EX-400'] === 'DOE-ROE, Jonathan' && rows['EX-600'] === 'ROE, Mary Ann', `General Files: LAST, First ${JSON.stringify(rows)}`);
   ok(rows['EX-500'] === 'Unknown Offender', 'Unknown Offender left as typed');
   const side = await p.evaluate(() => [...document.querySelectorAll('.case-item-meta .cim-subject')].map((x) => x.textContent.trim()));

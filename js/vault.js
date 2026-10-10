@@ -23,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.110.0';
+  const APP_VERSION = '1.111.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -1114,6 +1114,36 @@ const Vault = (() => {
 
   /* ---------- notes ---------- */
 
+  /* v1.111: the Secure Locker (CaseVault-Data\\locker): locker.json holds the data key locked with
+   * the password and with the recovery key; data.bin (the tables and the file list) and f-<id>.bin
+   * (each Confidential File) are encrypted by js/secure/locker-core.js. Nothing in the folder is
+   * readable without the password or the recovery key. Only these names are read or written. */
+  const LOCKER_NAME = /^(locker\.json|data\.bin|f-[a-z0-9]{8,40}\.bin)$/;
+  const lockerName = (name) => { if (!LOCKER_NAME.test(String(name))) throw Object.assign(new Error('Not a locker file.'), { name: 'TypeError' }); return name; };
+  async function lockerDir(create = false) {
+    if (!root) throw new Error('No vault is open.');
+    return FS.getDir(root, 'locker', create);
+  }
+  /** locker.json, or null when there is no locker yet. */
+  async function lockerHeader() { const d = await lockerDir(); return d ? FS.readJSON(d, 'locker.json') : null; }
+  /** An encrypted file's bytes, or null. */
+  async function lockerRead(name) {
+    const d = await lockerDir();
+    const f = d ? await FS.getFile(d, lockerName(name)) : null;
+    return f ? new Uint8Array(await f.arrayBuffer()) : null;
+  }
+  function lockerWrite(name, data) {
+    return serial(`locker:${lockerName(name)}`, async () => {
+      const d = await lockerDir(true);
+      if (name === 'locker.json') await FS.writeJSON(d, name, data);
+      else await FS.writeData(d, name, data);
+    });
+  }
+  async function lockerRemove(name) {
+    const d = await lockerDir();
+    if (d && await FS.exists(d, lockerName(name), 'file')) await FS.remove(d, name);
+  }
+
   async function getNotes(id) {
     return (await FS.readText(await caseDir(id), 'notes.md')) || '';
   }
@@ -1869,6 +1899,7 @@ const Vault = (() => {
     listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
     archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS,
     OP_FOLDERS, OTHER_FOLDERS, readOpVehicles, saveOpVehicles, readOpList, saveOpList, otherCustomFolders, addOtherFolder, removeOtherFolder, listShared, addShared, readShared, deleteShared, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
+    lockerHeader, lockerRead, lockerWrite, lockerRemove,
     getNotes, saveNotes, listChats, readChat, saveChat, deleteChat,
     getTimeline, saveTimeline, sortEvents,
     listFiles, addFile, readFile, deleteFile, moveFile, ensureFolders, renameCaseFolder, conventionalId, RENAME_MARKER,
