@@ -214,9 +214,14 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.112
+
+- **Home page → SECURE LOCKER:** the Secure Locker has its own section under Other Files: click its **Secure Locker** tile or **Open Locker**. (In v1.111 it was a tile and a button inside Other Files.)
+- **Home page → GENERAL FILES:** when every case is in a Mission, General Files still shows a folder for this year, greyed out. Open it: it says it is empty, and New Case is there
+
 ### What's new in v1.111
 
-- **Secure Locker** (home page → Other Files → **Secure Locker**, or its tile):
+- **Secure Locker** (home page → **SECURE LOCKER** section, under Other Files, since v1.112):
   - **The first time**, choose a locker password (at least 10 characters; not your PIN). CaseVault then shows a **recovery key** once: Print it or write it down, keep it away from the SSD, tick the box and click Done. Nothing is made until you do.
   - **Password Manager**: Add Password (Site / System, Username, Password, Web Address, Notes). **Generate** makes a strong 20-character password. In the table the password shows as dots: the eye shows it for 20 seconds, Copy copies it and clears the clipboard after 30 seconds. Search finds any word but the passwords.
   - **Confidential Files**: Add Files (or drop them on the list) for informant files and anything else to keep locked; each is encrypted on the SSD. Give each an **Informant / Label** (CI-1234) with the pencil. Click a name to read it (PDF, pictures, text); other files, or **Save a Copy**, go to Downloads *not encrypted*: delete them when done. The original you picked is not deleted: delete it yourself.
