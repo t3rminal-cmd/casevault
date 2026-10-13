@@ -15,14 +15,12 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.113
+## What's New in v1.114
 
 - **Arrest Details tab:**
-  - **Show All / Hide All** at the top open or fold every part
-  - **Charges fill in by themselves** from the Draft tab's charges, the first time (change or remove them as needed)
-  - **Pick from Suspects** in Offender: choose a suspect (Details tab) or offender (Draft tab) and the name, date of birth and description fill in
-  - **No narcotics recovered**, **No warrant identified** and **No arrestee vehicle information** tick boxes: the boxes go and the report says so
-  - **State of Illinois as victim**, with the officer's name (**+ Add State of Illinois as Victim**, or pick it in a victim's Name)
+  - **Charges:** each charge on two lines so nothing is cut off. Picking an Offense as cited (or a Charge) fills in its **Class** and **Type**; Class has its own list (Class X to Class C, petty offense, federal), and the Type follows it. Charges filled from the Draft tab bring their class and type too
+  - **Victim** on a charge: pick from the victims on the reports (Draft tab and sent reports) with the arrestee's **RD number**, the victims entered on the arrest, or the State of Illinois
+  - **Properties:** a row per item with its **Inventory #** and a **Description** to pick (Prisoner Personal Property, Prisoner Jewelry, Prisoner Money, Prisoner Other) or write in; listed on the Arrest Report PDF
 
 ## What CaseVault Does
 

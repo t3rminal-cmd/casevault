@@ -4087,3 +4087,21 @@ a.locker-tile, a.locker-tile:hover, a.locker-tile * { text-decoration: none !imp
 .year-tile.placeholder-tile .op-folder-art { opacity: .55; }
 .year-tile.placeholder-tile .op-folder-name { color: var(--muted); }
 .locker-section .op-folders { justify-content: flex-start; }
+
+/* v1.114: arrest charges on two lines (nothing cut off); properties: a short Inventory # and a
+   wide Description. */
+.arrest-grid.arrest-g-property { grid-template-columns: minmax(0, 1fr) minmax(0, 3fr); }
+@media (max-width: 820px) { .arrest-grid.arrest-g-property { grid-template-columns: minmax(0, 1fr); } }
+.charges-table { width: 100%; border-collapse: separate; border-spacing: 0 .5rem; }
+.charges-table td.charge-card { padding: .5rem .75rem .75rem; background: var(--surface-2); border: 1px solid var(--border); }
+.charge-grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: .45rem .75rem; }
+.charge-grid > * { min-width: 0; }
+.charge-grid > .charge-statute { grid-column: span 3; order: 1; }
+.charge-grid > .charge-degree { grid-column: span 2; order: 2; }
+.charge-grid > .charge-level { grid-column: span 2; order: 3; }
+.charge-grid > .charge-counts { grid-column: span 1; order: 4; }
+.charge-grid > .charge-description { grid-column: span 6; order: 5; }
+.charge-grid > .charge-victim { grid-column: span 2; order: 6; }
+.charge-grid .combo { width: 100%; }
+.charges-table .charge-grid input, .charges-table .charge-grid select { min-width: 0; width: 100%; }
+@media (max-width: 820px) { .charge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .charge-grid > * { grid-column: span 2 !important; } }

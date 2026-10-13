@@ -4,6 +4,15 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.113)
+
+- **Arrest Details tab:**
+  - **Show All / Hide All** at the top open or fold every part
+  - **Charges fill in by themselves** from the Draft tab's charges, the first time (change or remove them as needed)
+  - **Pick from Suspects** in Offender: choose a suspect (Details tab) or offender (Draft tab) and the name, date of birth and description fill in
+  - **No narcotics recovered**, **No warrant identified** and **No arrestee vehicle information** tick boxes: the boxes go and the report says so
+  - **State of Illinois as victim**, with the officer's name (**+ Add State of Illinois as Victim**, or pick it in a victim's Name)
+
 ## Features (v1.112)
 
 - **Secure Locker in its own section:** on the home page it has its own **SECURE LOCKER** section, right under Other Files, with one **Secure Locker** tile and an **Open Locker** button. Other Files is back to its own folders and New Folder

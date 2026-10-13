@@ -214,6 +214,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.114
+
+- **Arrest Details → Charges:** each charge is a box on two lines: Offense as cited, Class, Type and Counts, then Charge and Victim. Picking an Offense as cited or a Charge from the list fills in the other one and its **Class** and **Type** (for example 720 ILCS 570/402(c): Class 4, Felony). Federal charges come in as Felony. Where the statute alone doesn't set the class, only the Type is filled. Check the class against the amount and the arrestee's record (a repeat offense can raise it) and change it if needed
+- **Class** has a list (Class X, 1, 2, 3, 4, A, B, C, Petty offense, Federal felony, Federal misdemeanor), or type your own. Picking one sets the Type (Felony or Misdemeanor)
+- **Victim** on a charge: the arrow lists the victims on the Draft tab and on sent reports whose **R.D. Number** is the arrestee's RD # (Report Numbers), then the victims on this arrest, then the State of Illinois. You can still type a name
+- **Properties:** **+ Add Property** adds a row with **Inventory #** and **Description**; pick Prisoner Personal Property, Prisoner Jewelry, Prisoner Money or Prisoner Other, or write your own. The Arrest Report PDF lists them in a table. Text written in the old Properties box before v1.114 stays, under the rows
+
 ### What's new in v1.113
 
 - **Arrest Details → Show All / Hide All** (top right) open or fold every part, as on the Draft tab
