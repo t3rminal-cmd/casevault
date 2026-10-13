@@ -1358,6 +1358,10 @@
       // v1.68: OTHER FILES: anything not tied to a case number or an Operation.
       otherFilesSection(),
       secureLockerSection(),
+      // v1.116: closed cases and Missions, then archived cases, in their own sections under Other
+      // Files (and the Secure Locker, which stays right under Other Files).
+      closedFilesSection(cases),
+      archivedSection(cases),
       // v1.71: Recently Updated as even columns, in the Quick Links' size, not bold.
       h('div', { class: 'dash-section ov-panel recent-section' }, panelHead('Recently Updated', 'The cases changed most recently. Clear empties the list.',
         recent.length ? h('button', { class: 'btn small', type: 'button', icon: 'x-circle', title: 'Empties this list. Cases you change after this show here again.', onclick: async () => {
@@ -1719,14 +1723,17 @@
   // timeline, and nothing inside a dialog or the sidebar.
   // v1.47: the General Files year folders close the same way.
   const yearFolderState = { open: '', close: null };
+  // v1.116: CLOSED FILES and ARCHIVED too.
+  const closedFolderState = { open: '', close: null };
+  const archFolderState = { open: '', close: null };
+  const FOLDER_STATES = [opFolderState, yearFolderState, closedFolderState, archFolderState];
   document.addEventListener('click', (e) => {
-    if (!(opFolderState.open && opFolderState.close) && !(yearFolderState.open && yearFolderState.close)) return;
+    if (!FOLDER_STATES.some((st) => st.open && st.close)) return;
     const t = e.target;
     if (!(t instanceof Element) || !t.closest('#main')) return;
     if (t.closest('a, button, input, select, textarea, label, summary, details, [role="button"], [contenteditable], .op-folder-tile, .op-open, .op-open-section, .op-timeline-section, .dialog')) return;
     if (window.getSelection && String(window.getSelection())) return; // selecting text isn't a click away
-    if (opFolderState.open && opFolderState.close) opFolderState.close();
-    if (yearFolderState.open && yearFolderState.close) yearFolderState.close();
+    for (const st of FOLDER_STATES) if (st.open && st.close) st.close();
   });
   /** A case as a card on the Overview: its number, subject (and Operation), status and tabs. */
   function overviewCard(c, withOp = false) {
@@ -1767,8 +1774,68 @@
         h('a', { role: 'listitem', class: 'op-folder-tile locker-tile', href: '#/locker', title: 'Secure Locker: Password Manager, Confidential (Informant) Files and Covert aliases and accounts' },
           h('span', { class: 'op-folder-art' }, I('safe2')), h('span', { class: 'op-folder-name' }, 'Secure Locker'))));
   }
+  /** v1.116: a Mission is closed when it says so, or when every one of its case numbers is closed. */
+  function missionClosed(op, active) {
+    const mine = active.filter((c) => c.operationId === op.id);
+    return op.status === 'Closed' || (mine.length > 0 && mine.every((c) => c.status === 'Closed'));
+  }
+  /** v1.116: a section of folders, each opening its cases below (CLOSED FILES, ARCHIVED).
+   * list: [{ k, name, sub, icon, title, group, href }]. */
+  function caseFolderSection({ cls, title, desc, action, list, st, empty }) {
+    const box = h('div', { class: `dash-section ov-panel op-folders-section ${cls}` });
+    const draw = () => {
+      const open = list.find((o) => o.k === st.open);
+      const tiles = h('div', { class: 'op-folders', role: 'list' }, list.map((o) => h('button', { type: 'button', role: 'listitem', class: `op-folder-tile done-tile ${open === o ? 'open' : ''}`, 'aria-expanded': String(open === o), title: o.title,
+        onclick: () => { st.open = open === o ? '' : o.k; draw(); } },
+      h('span', { class: 'op-folder-art' }, I(o.icon), o.group.length > 1 ? h('span', { class: 'op-folder-count' }, String(o.group.length)) : null),
+      o.sub ? h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, o.name), h('span', { class: 'op-title' }, o.sub)) : h('span', { class: 'op-folder-name' }, o.name))));
+      const inside = open ? h('div', { class: 'op-open' },
+        h('div', { class: 'op-open-head' }, open.href ? h('a', { href: open.href, class: 'op-open-name' }, h('strong', {}, open.label || open.name)) : h('strong', {}, open.label || open.name),
+          h('span', { class: 'muted small' }, `${open.group.length} case number${open.group.length === 1 ? '' : 's'}`)),
+        h('div', { class: 'op-open-cases' }, open.group.map((c) => overviewCard(c)))) : null;
+      box.replaceChildren(...[panelHead(title, desc, action), list.length ? tiles : h('p', { class: 'muted empty-note' }, I(empty[0]), h('span', {}, empty[1])), inside].filter(Boolean));
+    };
+    st.close = () => { if (st.open && box.isConnected) { st.open = ''; draw(); } };
+    if (st.open && !list.some((o) => o.k === st.open)) st.open = '';
+    draw();
+    return box;
+  }
+  /** v1.116: CLOSED FILES: each closed Mission with its cases; a Mission still open with closed case
+   * numbers (under its own name); closed cases not in a Mission, by the year they were opened. */
+  function closedFilesSection(cases) {
+    const active = cases.filter((c) => !isArchivedEntry(c));
+    const list = [];
+    for (const op of [...Vault.listOperations()].sort((a, b) => byFileNumber(a.number, b.number) || a.name.localeCompare(b.name))) {
+      const done = missionClosed(op, active);
+      const group = active.filter((c) => c.operationId === op.id && (done || c.status === 'Closed')).sort(byNumber);
+      if (!done && !group.length) continue;
+      list.push({ k: op.id, name: op.number || 'No number', sub: done ? op.name : `${op.name ? `${op.name} · ` : ''}${group.length} closed`, label: opLabel(op), icon: 'folder-closed', group,
+        href: `#/operation/${encodeURIComponent(op.id)}`, title: done ? `${opLabel(op)}: closed Mission, ${group.length} case number${group.length === 1 ? '' : 's'}` : `${opLabel(op)}: the Mission goes on; ${group.length} of its case numbers closed` });
+    }
+    const loose = active.filter((c) => c.status === 'Closed' && (!c.operationId || !Vault.getOperation(c.operationId)));
+    const yearOf = (c) => (/^\d{4}/.exec(String(c.opened || '')) || [''])[0];
+    for (const y of [...new Set(loose.map(yearOf))].sort((a, b) => (!a) - (!b) || b.localeCompare(a))) {
+      const group = loose.filter((c) => yearOf(c) === y).sort(byNumber);
+      list.push({ k: `year:${y || 'none'}`, name: y || 'No Date', sub: 'General Files', label: `General Files ${y || 'No Date'}, closed`, icon: 'folder-closed', group, title: `${group.length} closed case${group.length === 1 ? '' : 's'} not in a Mission, opened in ${y || 'an unknown year'}` });
+    }
+    return caseFolderSection({ cls: 'closed-files-section', title: 'Closed Files', desc: 'Closed Missions and closed case numbers. Each can be reopened.', list, st: closedFolderState,
+      action: h('button', { class: 'btn small ov-btn-closed', type: 'button', icon: 'folder-closed', title: 'Every closed case, in a list', onclick: () => showGeneralWith('closed') }, 'All Closed'),
+      empty: ['folder-closed', 'Nothing closed yet. Close Case moves a case here; a Mission comes here when it is closed.'] });
+  }
+  /** v1.116: ARCHIVED: a folder for each archive reason (EXPIRED, NOLLE PROSEQUI, PROSECUTION), then
+   * the archived cases without one. */
+  function archivedSection(cases) {
+    const arch = cases.filter(isArchivedEntry);
+    const list = Vault.ARCHIVE_FOLDERS.map(([k, label]) => ({ k, name: label, icon: 'folder-archived', group: arch.filter((c) => c.archiveFolder === k).sort(byNumber), title: `Archived: ${label}` }))
+      .filter((o) => o.group.length);
+    const rest = arch.filter((c) => !Vault.ARCHIVE_FOLDERS.some(([k]) => k === c.archiveFolder)).sort(byNumber);
+    if (rest.length) list.push({ k: 'other', name: 'Other', icon: 'folder-archived', group: rest, title: 'Archived for another reason' });
+    return caseFolderSection({ cls: 'archived-section', title: 'Archived', desc: 'Archived cases, by reason. Restore brings one back.', list, st: archFolderState,
+      action: h('button', { class: 'btn small ov-btn-archived', type: 'button', icon: 'folder-archived', title: 'Every archived case, in a list', onclick: () => showGeneralWith('archived') }, 'All Archived'), empty: ['folder-archived', 'Nothing archived. Archive (on a closed case) moves it here.'] });
+  }
   function generalYearFolders(cases) {
-    const loose = cases.filter((c) => !isArchivedEntry(c) && (!c.operationId || !Vault.getOperation(c.operationId)));
+    // v1.116: closed cases are under CLOSED FILES.
+    const loose = cases.filter((c) => !isArchivedEntry(c) && c.status !== 'Closed' && (!c.operationId || !Vault.getOperation(c.operationId)));
     const yearOf = (c) => (/^\d{4}/.exec(String(c.opened || '')) || [''])[0];
     const years = [...new Set(loose.map(yearOf))].sort((a, b) => (!a) - (!b) || b.localeCompare(a));
     const list = years.map((y) => ({ k: y || 'none', name: y || 'No Date', group: loose.filter((c) => yearOf(c) === y).sort(byNumber) }));
@@ -1803,7 +1870,8 @@
     const active = cases.filter((c) => !isArchivedEntry(c));
     // v1.46: a folder for each Operation (Operation Number order, as in the case list), then
     // General Files with the cases that aren't in one.
-    const list = Vault.listOperations().map((op) => ({ k: op.id, op, name: opLabel(op), group: active.filter((c) => c.operationId === op.id).sort(byNumber) }))
+    // v1.116: closed Missions, and the closed case numbers of the open ones, are under CLOSED FILES.
+    const list = Vault.listOperations().filter((op) => !missionClosed(op, active)).map((op) => ({ k: op.id, op, name: opLabel(op), group: active.filter((c) => c.operationId === op.id && c.status !== 'Closed').sort(byNumber) }))
       .sort((a, b) => byFileNumber(a.op.number, b.op.number) || a.op.name.localeCompare(b.op.name));
     // v1.47: General Files has its own section below, by year.
     const box = h('div', { class: 'dash-section ov-panel op-folders-section' });

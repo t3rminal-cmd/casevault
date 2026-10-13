@@ -15,9 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.115
+## What's New in v1.116
 
-- **Closing several case numbers by arrest with one arrest report:** when only one RD has the Arrest Details (for example the most recent of four RDs on the same offender), the Close dialog asks **Arrest report on RD** for the others and lets them pass. Each of them notes "Arrest report: see RD …", and its Arrest tab links to that RD. Works from Close Case and from Close Mission
+- **Landing page: CLOSED FILES and ARCHIVED sections** under Other Files and the Secure Locker. Closed Missions, the closed case numbers of Missions still going, and closed cases not in a Mission (by year) are in CLOSED FILES. Archived cases are in ARCHIVED, by reason (EXPIRED, NOLLE PROSEQUI, PROSECUTION). Mission Files and General Files now show open work only. **All Closed** and **All Archived** open the full list
 
 ## What CaseVault Does
 

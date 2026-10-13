@@ -4110,3 +4110,11 @@ a.locker-tile, a.locker-tile:hover, a.locker-tile * { text-decoration: none !imp
 .arrest-ref-card { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .75rem; padding: .6rem .75rem; margin-bottom: .75rem; }
 .arrest-ref-card .btn { width: auto; margin-left: auto; }
 .close-arrest-ref { margin: .25rem 0 .5rem; }
+
+/* v1.116: CLOSED FILES (grey) and ARCHIVED (amber) on the landing page, under Other Files. */
+.dashboard .op-folders-section.closed-files-section { border-left-color: #6b7280; }
+.dashboard .op-folders-section.archived-section { border-left-color: #b7791f; }
+.dashboard .ov-btn-closed { color: #4b5563; border-color: color-mix(in srgb, #6b7280 45%, var(--border)); }
+.dashboard .ov-btn-archived { color: #8a5a12; border-color: color-mix(in srgb, #b7791f 45%, var(--border)); }
+.dashboard .ov-btn-closed:hover { background: color-mix(in srgb, #6b7280 12%, var(--surface)); }
+.dashboard .ov-btn-archived:hover { background: color-mix(in srgb, #b7791f 12%, var(--surface)); }

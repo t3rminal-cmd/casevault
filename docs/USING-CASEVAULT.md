@@ -214,6 +214,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.116
+
+- **Landing page → CLOSED FILES** (under Other Files and the Secure Locker): a grey folder for each closed Mission (with all its case numbers), one for each Mission still going that has closed case numbers ("OP-1 · 1 closed"), and one per year for closed cases not in a Mission. Click a folder to see its cases; the Mission's name links to its page. **All Closed** lists every closed case
+- **Landing page → ARCHIVED** (under Closed Files): a folder for each archive reason (EXPIRED, NOLLE PROSEQUI, PROSECUTION, and Other). **All Archived** lists every archived case
+- **Mission Files** and **General Files** on the landing page now show open work only: a closed case or a closed Mission moves to CLOSED FILES, and comes back when reopened. The sidebar is unchanged
+
 ### What's new in v1.115
 
 - **Close by arrest, one arrest report for several RDs:** closing by arrest still needs an arrest report (an arrestee and a charge), now for each case number ticked. A case number without Arrest Details of its own can point to the RD that has them: choose it in **Arrest report on RD** (it lists the Mission's case numbers and the same-suspect cases that have an arrest report, newest arrest first, and is set to that one already). Close then passes
