@@ -4,6 +4,10 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.115)
+
+- **Closing several case numbers by arrest with one arrest report:** when only one RD has the Arrest Details (for example the most recent of four RDs on the same offender), the Close dialog asks **Arrest report on RD** for the others and lets them pass. Each of them notes "Arrest report: see RD …", and its Arrest tab links to that RD. Works from Close Case and from Close Mission
+
 ## Features (v1.114)
 
 - **Arrest Details tab:**
