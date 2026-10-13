@@ -254,8 +254,37 @@
     return { last, first: rest[0] || '', middle: rest.slice(1).join(' '), whole: false };
   }
 
+  /* v1.117: timeline colours, to tell apart at a glance which buys (events) go with which suspect
+   * in a large Mission. An event can name a suspect and carry a colour; a suspect's colour is the one
+   * on their latest coloured event, or the next free one of the palette. */
+  const TL_COLORS = [['Blue', '#1f6fd1'], ['Red', '#d1453b'], ['Green', '#2a9d6f'], ['Orange', '#e08a1e'], ['Purple', '#7b4fd8'],
+    ['Teal', '#1a9aa0'], ['Pink', '#d14a8b'], ['Brown', '#8a5a2b'], ['Olive', '#7a8a1e'], ['Slate', '#55606e']];
+  const isColor = (c) => /^#[0-9a-f]{6}$/i.test(String(c || ''));
+  const suspectKey = (n) => String(n || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  /** rows: mergeEvents() output. -> Map(suspect key -> { name, color, count }), in order of first event. */
+  function suspectColors(rows) {
+    const out = new Map();
+    for (const { ev } of rows || []) {
+      const k = suspectKey(ev && ev.suspect);
+      if (!k) continue;
+      const cur = out.get(k) || { name: String(ev.suspect).trim(), color: '', count: 0 };
+      cur.count += 1;
+      if (isColor(ev.color)) cur.color = ev.color; // rows are in date order: the latest wins
+      out.set(k, cur);
+    }
+    const used = new Set([...out.values()].map((x) => x.color.toLowerCase()).filter(Boolean));
+    for (const x of out.values()) {
+      if (x.color) continue;
+      const free = TL_COLORS.find(([, c]) => !used.has(c.toLowerCase())) || TL_COLORS[used.size % TL_COLORS.length];
+      x.color = free[1]; used.add(free[1].toLowerCase());
+    }
+    return out;
+  }
+  /** The colour an event shows: its own, else its suspect's, else none. */
+  const eventColor = (ev, colors) => (ev && isColor(ev.color) ? ev.color : (colors && ev && colors.get(suspectKey(ev.suspect)) || {}).color || '');
+
   const api = {
-    subjectLabel, nameParts,
+    subjectLabel, nameParts, TL_COLORS, isColor, suspectKey, suspectColors, eventColor,
     opKey, mergeOverview, sameOverview, mergeEvents,
     OP_STATUSES, normNumber, opLabel, normName, nameMatch, subjectMatches, caseWithNumber, duplicateNumbers,
     validateOperation, validateCase, nextOpNumber, statusFrom, firstSuspect, planMigration, caseTitle,

@@ -214,6 +214,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.117
+
+- **Timeline → Suspect and Colour:** each event can say which suspect it is about (pick from the suspects of every case number of the Mission, or type a name) and take a colour (ten to pick from, or none). Picking a suspect gives the event that suspect's colour; a new suspect gets the next free one. The event's edge, marker and suspect tag are in that colour
+- **Timeline → Suspects key** (above the list): each suspect with their colour and how many events. Click a name to see only that suspect's events (**Show All** to go back); click the colour square to change it on all their events at once
+- The small timelines on the **Details** tab and the **Mission** page show each circle in its suspect's colour, and the suspect in the hover box
+- **Draft → Offenders → Add From Suspects:** the popup lists Name, Role and In Report in their own columns, so Primary, Secondary and Other line up
+
 ### What's new in v1.116
 
 - **Landing page → CLOSED FILES** (under Other Files and the Secure Locker): a grey folder for each closed Mission (with all its case numbers), one for each Mission still going that has closed case numbers ("OP-1 · 1 closed"), and one per year for closed cases not in a Mission. Click a folder to see its cases; the Mission's name links to its page. **All Closed** lists every closed case

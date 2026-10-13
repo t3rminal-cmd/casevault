@@ -18,7 +18,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   // again: Second Roe marked as already in; tick Main Doe
   await p.click('button:has-text("Add From Suspects")'); await p.waitForTimeout(500);
   const note = await p.textContent('#dialog[open] .rf-suspect-pick:has-text("Second Roe")');
-  ok(/already in this report/.test(note), 'a suspect already in the report is marked');
+  ok(/already in this report/i.test(note), 'a suspect already in the report is marked');
   await p.click('#dialog[open] button[type=submit]'); await p.waitForTimeout(1500);
   d = await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'report-fields.json')), ids.c);
   ok(d.offendersList.map((o) => o.name).filter(Boolean).join(',') === 'Second Roe,Main Doe' && d.offendersList[1].hair === 'Black', `Main Doe added with details: ${d.offendersList.map((o) => o.name)}`);
