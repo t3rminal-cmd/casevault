@@ -3877,9 +3877,17 @@ html .tl-item.deadline::before { transform: none; }
 .net-status { cursor: default; }
 
 /* v1.93: pick which suspects go into the report (Draft → Offenders → Add From Suspects). */
-.suspect-pick-form { max-width: 34rem; }
+.suspect-pick-form { max-width: 40rem; }
 .suspect-pick-list { display: grid; gap: .35rem; margin: .6rem 0 .2rem; }
 .suspect-pick-list .rf-suspect-pick { padding: .45rem .6rem; border: 1px solid var(--border); background: var(--surface); }
+/* v1.117: one grid for every row: tick, Name, Role, In Report, so the columns line up. */
+.suspect-pick-list .sp-row { display: grid; grid-template-columns: 1.3rem minmax(0, 1fr) 7.5rem minmax(0, 13rem); gap: .3rem .7rem; align-items: center; cursor: pointer; }
+.suspect-pick-list .sp-head { border: 0; background: none; padding: 0 .6rem; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); cursor: default; }
+.suspect-pick-list .sp-name { overflow-wrap: anywhere; }
+.suspect-pick-list .sp-role { justify-self: start; font-size: .75rem; font-weight: 700; padding: .05rem .5rem; border: 1px solid var(--border); background: var(--surface-2); }
+.suspect-pick-list .sp-role-primary { color: #1f5fb8; border-color: color-mix(in srgb, #1f6fd1 45%, var(--border)); }
+.suspect-pick-list .sp-role-secondary { color: #6a3fc8; border-color: color-mix(in srgb, #7b4fd8 45%, var(--border)); }
+@media (max-width: 560px) { .suspect-pick-list .sp-row { grid-template-columns: 1.3rem minmax(0, 1fr) auto; } .suspect-pick-list .sp-note { grid-column: 2 / -1; } .suspect-pick-list .sp-head span:last-child { display: none; } }
 
 /* v1.94: Offender Vehicle(s): a card per vehicle, Impound / Tow / DNA click boxes beside its name. */
 .rf-vehicles { display: block; }
@@ -4118,3 +4126,23 @@ a.locker-tile, a.locker-tile:hover, a.locker-tile * { text-decoration: none !imp
 .dashboard .ov-btn-archived { color: #8a5a12; border-color: color-mix(in srgb, #b7791f 45%, var(--border)); }
 .dashboard .ov-btn-closed:hover { background: color-mix(in srgb, #6b7280 12%, var(--surface)); }
 .dashboard .ov-btn-archived:hover { background: color-mix(in srgb, #b7791f 12%, var(--surface)); }
+
+/* v1.117: timeline colours by suspect: the event's edge and marker in its colour, a suspect tag,
+   the colour swatches on the form, and a key of the suspects above the list. */
+.tl-modern .tl-item.tl-colored:not(.overdue) .tl-body { border-left-color: var(--tl-color); background: color-mix(in srgb, var(--tl-color) 5%, var(--surface)); }
+.tl-modern .tl-item.tl-colored:not(.overdue)::before { background: var(--tl-color); box-shadow: 0 0 0 2px var(--tl-color); }
+.tl-suspect { font-size: .72rem; font-weight: 700; padding: .05rem .45rem; color: var(--tl-color, var(--muted)); border: 1px solid color-mix(in srgb, var(--tl-color, var(--border)) 60%, var(--border)); background: color-mix(in srgb, var(--tl-color, transparent) 10%, var(--surface)); }
+.tl-swatches { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; min-height: 2.1rem; }
+.tl-swatch { width: 1.45rem; height: 1.45rem; padding: 0; border: 2px solid var(--surface); background: var(--sw, var(--surface)); box-shadow: 0 0 0 1px var(--border); cursor: pointer; }
+.tl-swatch.on { box-shadow: 0 0 0 2px var(--text); }
+.tl-swatch-none { display: grid; place-items: center; font-size: .9rem; line-height: 1; color: var(--muted); background: var(--surface); }
+@media (min-width: 821px) { .timeline-form .tl-suspect-field, .timeline-form .tl-color-field { grid-column: span 2; } }
+.tl-legend { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .5rem; margin: .1rem 0 .7rem; }
+.tl-legend-title { text-transform: uppercase; letter-spacing: .05em; font-weight: 700; margin-right: .2rem; }
+.tl-legend-chip { position: relative; display: inline-flex; align-items: stretch; border: 1px solid var(--border); background: var(--surface); }
+.tl-legend-chip.on { border-color: var(--text); box-shadow: 0 0 0 1px var(--text); }
+.tl-legend-dot { width: 1.3rem; border: 0; border-right: 1px solid var(--border); background: var(--sw); cursor: pointer; padding: 0; }
+.tl-legend-name { border: 0; background: none; padding: .2rem .55rem; font: inherit; font-size: .8rem; cursor: pointer; display: inline-flex; gap: .4rem; align-items: center; color: var(--text); }
+.tl-legend-name .count { font-size: .7rem; color: var(--muted); }
+.tl-recolor { position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; display: grid; grid-template-columns: repeat(5, 1.45rem); gap: .3rem; padding: .45rem; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-lg, var(--shadow)); }
+.mini-tl-dot.has-color:not(.overdue) { border-color: var(--dot-color); background: color-mix(in srgb, var(--dot-color) 45%, var(--surface)); color: var(--dot-color); }

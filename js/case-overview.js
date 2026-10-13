@@ -100,6 +100,7 @@
         const tls = [];
         for (const m of members) { try { tls.push({ caseId: m.id, number: m.number || '', events: ((await Vault.getTimeline(m.id)) || {}).events || [] }); } catch { /* moved */ } }
         const rows = CVOperation.mergeEvents(tls).filter((r) => r.ev && r.ev.date);
+        const colors = CVOperation.suspectColors(rows); // v1.117: each suspect's colour
         if (!rows.length) { box.replaceChildren(h('div', { class: 'mini-tl-head' }, h('span', { class: 'mini-tl-title' }, 'Timeline'), h('a', { class: 'muted small', href: `#/case/${encodeURIComponent(c.id)}/timeline` }, 'No events yet. Add them on the Timeline tab.'))); return; }
         const t = (d) => new Date(`${d}T12:00:00`).getTime();
         const todayIso = today();
@@ -108,7 +109,7 @@
         const span = Math.max(last - first, 864e5);
         const pos = (d) => `${(3 + 94 * (t(d) - first) / span).toFixed(2)}%`;
         const line = h('div', { class: 'mini-tl-line' });
-        const tip = (ev, number) => [`${fmtDate(ev.date)}${ev.time ? ` ${ev.time}` : ''}`, ev.title || (ev.kind === 'deadline' ? 'Deadline' : 'Event'),
+        const tip = (ev, number) => [`${fmtDate(ev.date)}${ev.time ? ` ${ev.time}` : ''}`, ev.title || (ev.kind === 'deadline' ? 'Deadline' : 'Event'), ev.suspect ? `Suspect: ${ev.suspect}` : '',
           ev.kind === 'deadline' ? (ev.done ? 'Deadline: done' : `Deadline: ${dueLabel(ev.date).text}`) : '', number && members.length > 1 ? `Case ${number}` : '', ev.note || ''].filter(Boolean).join('\n');
         // v1.97: events too close to tell apart (the same day, or a day or two on a long line) share
         // one marker with their count; pointing at it lists them all. Worked out again on resize.
@@ -126,6 +127,9 @@
           const own = mine && group.items.some((r) => r.caseId === c.id);
           const dot = h('a', { class: `mini-tl-dot${own ? ' mini-tl-mine' : ''}${many ? ' mini-tl-group' : ''}${deadline ? ' deadline' : ''}${done ? ' done' : ''}${due ? ` ${due.cls}` : ''}`, href: `#/case/${encodeURIComponent(group.items[0].caseId)}/timeline`, 'data-tip': text, 'aria-label': text.replace(/\n/g, ', ') }, many ? String(evs.length) : null);
           dot.style.setProperty('left', `${group.x.toFixed(2)}%`);
+          // v1.117: in the events' colour (the suspect's) when they share one.
+          const cols = [...new Set(evs.map((ev) => CVOperation.eventColor(ev, colors)))];
+          if (cols.length === 1 && cols[0]) { dot.classList.add('has-color'); dot.style.setProperty('--dot-color', cols[0]); }
           return dot;
         };
         const place = () => {

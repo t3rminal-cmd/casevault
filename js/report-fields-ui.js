@@ -613,8 +613,12 @@
           const boxes = list.map((s) => {
             const inReport = already.has(String(s.name).trim().toLowerCase());
             const cb = h('input', { type: 'checkbox', checked: !inReport && (s.role || 'Primary') === 'Primary' });
-            return [s, cb, h('label', { class: 'check-row rf-suspect-pick' }, cb,
-              h('span', {}, h('strong', {}, s.name), h('span', { class: 'muted small' }, ` · ${s.role || 'Primary'}${inReport ? ' · already in this report (updated if ticked)' : ''}`)))];
+            // v1.117: Name, Role and a note in their own columns, so the roles line up.
+            const role = s.role === 'Main' ? 'Primary' : s.role || 'Primary';
+            return [s, cb, h('label', { class: 'rf-suspect-pick sp-row' }, cb,
+              h('strong', { class: 'sp-name' }, s.name),
+              h('span', { class: `sp-role sp-role-${role.toLowerCase().replace(/[^a-z]+/g, '-')}` }, role),
+              h('span', { class: 'sp-note muted small' }, inReport ? 'Already in this report (updated if ticked)' : ''))];
           });
           const go = h('button', { class: 'btn primary', type: 'submit', icon: 'person-plus' }, 'Add to Offenders');
           const sync = () => { go.disabled = !boxes.some(([, cb]) => cb.checked); };
@@ -623,7 +627,9 @@
           return h('form', { class: 'suspect-pick-form', onsubmit: (e) => { e.preventDefault(); close(boxes.filter(([, cb]) => cb.checked).map(([x]) => x)); } },
             h('h2', { icon: 'person-exclamation' }, 'Add Suspects to This Report'),
             h('p', { class: 'muted small' }, 'Tick the suspects from the Details tab who are offenders in this report. Their name, date of birth and description are filled in.'),
-            h('div', { class: 'suspect-pick-list' }, boxes.map(([, , row]) => row)),
+            h('div', { class: 'suspect-pick-list' },
+              h('div', { class: 'sp-row sp-head', 'aria-hidden': 'true' }, h('span'), h('span', {}, 'Name'), h('span', {}, 'Role'), h('span', {}, 'In Report')),
+              boxes.map(([, , row]) => row)),
             h('div', { class: 'dialog-actions' },
               h('button', { class: 'btn', type: 'button', onclick: () => { boxes.forEach(([, cb]) => { cb.checked = true; }); sync(); } }, 'Tick All'),
               h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),

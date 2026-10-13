@@ -15,9 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.116
+## What's New in v1.117
 
-- **Landing page: CLOSED FILES and ARCHIVED sections** under Other Files and the Secure Locker. Closed Missions, the closed case numbers of Missions still going, and closed cases not in a Mission (by year) are in CLOSED FILES. Archived cases are in ARCHIVED, by reason (EXPIRED, NOLLE PROSEQUI, PROSECUTION). Mission Files and General Files now show open work only. **All Closed** and **All Archived** open the full list
+- **Timeline colours by suspect:** each event can name a **Suspect** and take a **Colour**; picking a suspect gives their colour. A key of the suspects above the list shows each one's colour: click a name to see only their events, click the colour to change it on all of them. The small timelines on the Details tab and the Mission page use the colours too
+- **Add Suspects to This Report** (Draft tab): Name, Role and In Report each in their own column, so the roles line up
 
 ## What CaseVault Does
 
