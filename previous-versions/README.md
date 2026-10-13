@@ -4,6 +4,13 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.114)
+
+- **Arrest Details tab:**
+  - **Charges:** each charge on two lines so nothing is cut off. Picking an Offense as cited (or a Charge) fills in its **Class** and **Type**; Class has its own list (Class X to Class C, petty offense, federal), and the Type follows it. Charges filled from the Draft tab bring their class and type too
+  - **Victim** on a charge: pick from the victims on the reports (Draft tab and sent reports) with the arrestee's **RD number**, the victims entered on the arrest, or the State of Illinois
+  - **Properties:** a row per item with its **Inventory #** and a **Description** to pick (Prisoner Personal Property, Prisoner Jewelry, Prisoner Money, Prisoner Other) or write in; listed on the Arrest Report PDF
+
 ## Features (v1.113)
 
 - **Arrest Details tab:**

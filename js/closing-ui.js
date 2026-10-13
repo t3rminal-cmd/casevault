@@ -370,6 +370,11 @@
         h('div', { class: 'spacer' }), showAll, hideAll, status, archived ? null : saveBtn,
         archived ? null : h('button', { class: 'btn small danger-ghost', type: 'button', title: 'Deletes all the arrest details of this case and takes the tab off', onclick: () => deleteArrest(c) }, 'Delete Arrest')),
       archived || !root.CVLetterhead ? null : root.CVLetterhead.editor(), // v1.85
+      // v1.115: closed by arrest with the arrest report on another RD.
+      c.closure && c.closure.arrestRef ? h('div', { class: 'card arrest-ref-card' },
+        h('strong', {}, `The arrest report for this case is on RD ${c.closure.arrestRef.number}.`),
+        h('span', { class: 'muted small' }, ' This case was closed by arrest with it.'), ' ',
+        (Vault.data.cases || []).some((x) => x.id === c.closure.arrestRef.id) ? h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button', icon: 'person-vcard', onclick: () => ui.go(c.closure.arrestRef.id, 'arrest') }, `Open RD ${c.closure.arrestRef.number}`) : null) : null,
       list,
       archived ? null : h('div', { class: 'row' },
         h('button', { class: 'btn', type: 'button', onclick: () => { const a = K().emptyArrestee(); if (c.number) a.rdNumber = c.number; arrest.arrestees.push(a); changed(); draw(); } }, '+ Add another arrestee'),
@@ -426,11 +431,17 @@
       }))).catch(() => []),
     ]);
     const loose = K().closeChecklist({ timeline, checks, drafts });
-    const arrest = await readArrest(c);
-    const named = K().peopleOf(arrest);
     // v1.84: closing by arrest needs the arrest report: an arrestee's name and at least one charge.
-    const charged = ((arrest && arrest.arrestees) || []).some((a) => K().arresteeName(a) && K().chargesText(a.charges));
-    const arrestReady = named.length > 0 && charged;
+    // v1.115: of every case number closed. One without its own can point to the RD that has it.
+    const reports = new Map(); // case id -> { c, names, ready, day }
+    const readReport = async (x) => {
+      if (reports.has(x.id)) return;
+      const a = await readArrest(x).catch(() => null);
+      const day = ((a && a.arrestees) || []).map((y) => y.date || '').sort().pop() || '';
+      reports.set(x.id, { c: x, names: K().peopleOf(a), ready: K().arrestReady(a), day });
+    };
+    for (const x of members) await readReport(x);
+    const named = reports.get(c.id).names;
     // v1.111: other open cases on the same suspect (Subject Name or an identified suspect), from
     // anywhere in the vault, offered to close with this one (not ticked to start).
     let related = [];
@@ -442,6 +453,12 @@
       }
       related = K().sameSuspectCases(c, full);
     }
+    // The RDs that can hold the arrest report: this mission's cases (closed ones too), and the others on the same suspect.
+    for (const x of related.map((r) => r.c)) await readReport(x);
+    if (c.operationId) for (const x of (Vault.data.cases || []).filter((y) => y.operationId === c.operationId && !Vault.isArchived(y.id))) await readReport(x);
+    const ready = new Set([...reports].filter(([, r]) => r.ready).map(([id]) => id));
+    // Newest arrest first; this case first when it has its own.
+    const refChoices = [...reports.values()].filter((r) => r.ready).sort((a, b) => (b.c.id === c.id) - (a.c.id === c.id) || b.day.localeCompare(a.day) || String(b.c.number || '').localeCompare(String(a.c.number || '')));
     const RF = root.CVReportFields;
     const optsOf = (key) => ((RF && RF.FIELDS.find(([k]) => k === key)) || [, , , ['']])[3];
 
@@ -453,6 +470,11 @@
       const reason = h('select', { 'aria-label': 'Reason' }, h('option', { value: '' }, 'Choose the reason…'), K().disposition('exceptional').reasons.map((x) => h('option', { value: x }, x)));
       const reasonRow = h('label', { class: 'field', hidden: true }, h('span', {}, 'Exceptional clearance reason'), reason);
       const arrestNote = h('p', { class: 'small', hidden: true });
+      // v1.115: Arrest report on RD: for the case numbers closed without arrest details of their own.
+      const refSel = h('select', { 'aria-label': 'Arrest report on RD' }, h('option', { value: '' }, 'Choose the RD…'),
+        refChoices.map((r) => h('option', { value: r.c.id }, `${r.c.number || r.c.title || 'No case number'}: ${r.names.join(', ')}`)));
+      if (refChoices.length) refSel.value = refChoices[0].c.id;
+      const refRow = h('div', { class: 'close-arrest-ref', hidden: true }, ui.field('Arrest report on RD', refSel, '', 'The case number whose Arrest Details hold the arrest report. The case numbers closed without arrest details of their own point to it.'));
       const date = h('input', { type: 'date', value: (c.dates && c.dates.closed) || today(), required: true });
       const by = h('input', { type: 'text', maxlength: 120, value: (c.closure && c.closure.closedBy) || ((Vault.data.settings.affiant || {}).name || ''), placeholder: 'Your name and star number', 'aria-label': 'Closed by' });
       const note = h('textarea', { rows: 3, placeholder: 'Optional: how the case ended, where the final report is, who was notified…' });
@@ -483,21 +505,31 @@
       const pick = () => {
         const sel = radios.find((x) => x.r.checked);
         reasonRow.hidden = !(sel && sel.d.key === 'exceptional');
-        arrestNote.hidden = !(sel && sel.d.key === 'arrest');
-        arrestNote.className = arrestReady ? 'small' : 'small arrest-required';
-        arrestNote.replaceChildren(arrestReady
-          ? `Arrest details: ${named.join(', ')}. You can still change them on the Arrest details tab.`
-          : `Required before closing by arrest: the arrest report. ${named.length ? `Add at least one charge for ${named.join(', ')}` : 'Fill in the arrestee and at least one charge'} on the Arrest details tab, then close the case.`,
-        arrestReady ? '' : h('button', { class: 'btn small-btn', type: 'button', icon: 'person-vcard', onclick: () => close({ fillArrest: true }) }, 'Open Arrest Details'));
-        const n = picks.filter((p) => p.cb.checked).length + relPicks.filter((p) => p.cb.checked).length;
+        const byArrest = !!(sel && sel.d.key === 'arrest');
+        const ticked = [...picks, ...relPicks].filter((p) => p.cb.checked).map((p) => p.x);
+        const cov = K().arrestCoverage(ticked, ready, refSel.value);
+        const nums = (list) => list.map((x) => x.number || x.title || 'no number').join(', ');
+        const ref = reports.get(refSel.value);
+        arrestNote.hidden = !byArrest;
+        refRow.hidden = !byArrest || !cov.missing.length || !refChoices.length;
+        arrestNote.className = cov.ok ? 'small' : 'small arrest-required';
+        const own = ticked.filter((x) => ready.has(x.id));
+        arrestNote.replaceChildren(
+          !cov.missing.length ? `Arrest details: ${[...new Set(own.flatMap((x) => reports.get(x.id).names))].join(', ')}. You can still change them on the Arrest details tab.`
+            : cov.ok ? `${nums(cov.missing)} ${cov.missing.length > 1 ? 'have' : 'has'} no arrest details of ${cov.missing.length > 1 ? 'their' : 'its'} own: closed by arrest with the arrest report on RD ${ref.c.number || ref.c.title} (${ref.names.join(', ')}).`
+              : refChoices.length ? `Required before closing by arrest: the arrest report. ${nums(cov.missing)} ${cov.missing.length > 1 ? 'have' : 'has'} no arrest details: choose the RD that has the arrest report below, or fill in the arrestee and a charge on the Arrest details tab.`
+                : `Required before closing by arrest: the arrest report. ${named.length ? `Add at least one charge for ${named.join(', ')}` : 'Fill in the arrestee and at least one charge'} on the Arrest details tab, then close the case.`,
+          cov.ok || ready.has(c.id) ? '' : h('button', { class: 'btn small-btn', type: 'button', icon: 'person-vcard', onclick: () => close({ fillArrest: true }) }, 'Open Arrest Details'));
+        const n = ticked.length;
         ok.textContent = n > 1 ? `Close ${n} Case Numbers` : 'Close Case';
-        ok.disabled = !sel || (sel.d.key === 'exceptional' && !reason.value) || (sel.d.key === 'arrest' && !arrestReady) || !date.value || !n || !by.value.trim();
-        ok.title = !sel ? 'Choose the disposition first.' : sel.d.key === 'arrest' && !arrestReady ? 'Fill in the arrest report first.' : '';
+        ok.disabled = !sel || (sel.d.key === 'exceptional' && !reason.value) || (byArrest && !cov.ok) || !date.value || !n || !by.value.trim();
+        ok.title = !sel ? 'Choose the disposition first.' : byArrest && !cov.ok ? 'Fill in the arrest report first, or choose the RD that has it.' : '';
       };
       const codes = () => { const sel = radios.find((x) => x.r.checked); const cc = sel && CLOSE_CODES[sel.d.key]; if (cc) { status.value = cc.status; cleared.value = cc.cleared; } };
       for (const x of radios) x.r.addEventListener('change', () => { codes(); pick(); });
       for (const p of [...picks, ...relPicks]) p.cb.addEventListener('change', pick);
       reason.addEventListener('change', pick);
+      refSel.addEventListener('change', pick);
       date.addEventListener('input', pick);
       by.addEventListener('input', pick);
       codes();
@@ -506,7 +538,11 @@
         e.preventDefault();
         const sel = radios.find((x) => x.r.checked);
         if (!sel) return;
+        const ticked = [...picks, ...relPicks].filter((p) => p.cb.checked).map((p) => p.x);
+        const cov = sel.d.key === 'arrest' ? K().arrestCoverage(ticked, ready, refSel.value) : { refFor: [] };
+        const ref = cov.refFor.length ? reports.get(refSel.value).c : null;
         close({
+          arrestRef: ref ? { id: ref.id, number: ref.number || ref.title || '', for: cov.refFor } : null,
           disposition: sel.d.key, reason: sel.d.key === 'exceptional' ? reason.value : '', date: date.value, note: note.value.trim(), closedBy: by.value.trim(),
           ids: [...picks, ...relPicks].filter((p) => p.cb.checked).map((p) => p.x.id),
           withSame: Object.fromEntries(relPicks.filter((p) => p.cb.checked).map((p) => [p.x.id, p.names])),
@@ -523,7 +559,7 @@
         h('div', { class: 'close-picks' }, relPicks.map((p) => p.row))) : '',
       h('h3', {}, 'Disposition'),
       h('div', { class: 'radio-list' }, radios.map((x) => x.row)),
-      reasonRow, arrestNote,
+      reasonRow, arrestNote, refRow,
       h('div', { class: 'form-grid' }, ui.field('Closed on', date), ui.field('Closed by', by)),
       RF ? h('div', {}, h('label', { class: 'check-row' }, upd, h('span', {}, h('strong', {}, 'Update the Draft tab'), h('span', { class: 'muted small' }, ': Status, How Cleared and the Update Information boxes of each case number closed'))), draftBox) : '',
       ui.field('Closing note', note),
@@ -540,7 +576,7 @@
       ui.go(c.id, 'arrest');
       return false;
     }
-    const { ids, draft, withSame = {}, ...closure } = result;
+    const { ids, draft, withSame = {}, arrestRef = null, ...closure } = result;
     const before = new Map();
     for (const id of ids) {
       const oc = id === c.id ? c : await Vault.getCase(id).catch(() => null);
@@ -556,9 +592,15 @@
         oc.closure = { ...closure, at: new Date().toISOString() };
         // v1.111: a case closed with another one on the same suspect says so.
         if (withSame[oc.id]) oc.closure.note = [closure.note, `Closed together with ${c.number || c.title || 'another case'} (same suspect: ${withSame[oc.id].join(', ')}).`].filter(Boolean).join('\n');
+        // v1.115: no arrest details of its own: the arrest report is on another RD.
+        const refHere = arrestRef && arrestRef.for.includes(oc.id);
+        if (refHere) {
+          oc.closure.arrestRef = { id: arrestRef.id, number: arrestRef.number };
+          oc.closure.note = [oc.closure.note, `Arrest report: see RD ${arrestRef.number}.`].filter(Boolean).join('\n');
+        }
         if (was && was.at && was.at !== oc.closure.at) oc.closureHistory = [...(oc.closureHistory || []), was];
         oc.pending = null;
-        if (closure.disposition === 'arrest') { oc.arrest = true; delete oc.arrestRemoved; }
+        if (closure.disposition === 'arrest' && !refHere) { oc.arrest = true; delete oc.arrestRemoved; }
         Vault.logActivity(oc, `Closed: ${K().disposition(closure.disposition).label}${closure.reason ? ` (${closure.reason})` : ''}${closure.closedBy ? `, by ${closure.closedBy}` : ''}`);
         await Save.track(`case:${oc.id}`, () => Vault.saveCase(structuredClone(oc)));
         // The Draft tab of each case closed: Status, How Cleared and the boxes ticked (v1.39).
@@ -712,7 +754,7 @@
     const K2 = K();
     if (c.status === 'Closed' && c.closure) {
       const d = K2.disposition(c.closure.disposition);
-      return `Closed ${c.closure.date || ''}${c.closure.closedBy ? ` by ${c.closure.closedBy}` : ''}: ${d ? d.label : ''}${c.closure.reason ? ` (${c.closure.reason})` : ''}.`;
+      return `Closed ${c.closure.date || ''}${c.closure.closedBy ? ` by ${c.closure.closedBy}` : ''}: ${d ? d.label : ''}${c.closure.reason ? ` (${c.closure.reason})` : ''}.${c.closure.arrestRef ? ` Arrest report on RD ${c.closure.arrestRef.number}.` : ''}`;
     }
     // Open needs no explaining on the Details tab (v1.24).
     return c.status === 'Open' ? '' : K2.STATUS_HELP[c.status] || '';

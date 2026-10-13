@@ -211,7 +211,7 @@
       g('Arrest details', ['arrest.name', 'arrest.dob', 'arrest.description', 'arrest.charges', 'arrest.names', 'arrest.count',
         ...arrestKeys.filter((k) => !['dob'].includes(k)).map((k) => `arrest.${k}`), 'arrest.property', 'arrest.notes']
         .filter((k, i, all) => all.indexOf(k) === i)),
-      g('Closing', ['closure.disposition', 'closure.reason', 'closure.date', 'closure.note']),
+      g('Closing', ['closure.disposition', 'closure.reason', 'closure.date', 'closure.note', 'closure.arrestRd']),
       ...(reportKeys.length ? [g('Report fields', reportKeys)] : []),
       g('Ask yourself to check', ['confirm: what to check']),
     ];

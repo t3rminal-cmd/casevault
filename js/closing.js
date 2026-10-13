@@ -268,11 +268,22 @@
     return ctx;
   }
 
+  /** v1.84: an arrest report good enough to close by arrest: an arrestee's name and a charge. */
+  const arrestReady = (arrest) => ((arrest && arrest.arrestees) || []).some((a) => arresteeName(a) && chargesText(a.charges));
+  /** v1.115: closing several case numbers by arrest when only one RD has the arrest report.
+   * picked: [{ id }]; ready: Set of case ids with their own arrest report; ref: the case id whose
+   * report the others point to. -> { missing: [cases without their own], ok, refFor: [ids that point to ref] } */
+  function arrestCoverage(picked, ready, ref) {
+    const missing = (picked || []).filter((x) => !ready.has(x.id));
+    const refOk = !!ref && ready.has(ref);
+    return { missing, ok: !missing.length || refOk, refFor: refOk ? missing.map((x) => x.id) : [] };
+  }
+
   /** {{closure.*}} values from case.json's closure. */
   function closureContext(closure) {
     const c = closure || {};
     const d = disposition(c.disposition);
-    return { 'closure.disposition': d ? d.label : '', 'closure.reason': clean(c.reason), 'closure.date': US(c.date), 'closure.note': clean(c.note) };
+    return { 'closure.disposition': d ? d.label : '', 'closure.reason': clean(c.reason), 'closure.date': US(c.date), 'closure.note': clean(c.note), 'closure.arrestRd': clean(c.arrestRef && c.arrestRef.number) };
   }
 
   /**
@@ -377,7 +388,7 @@
   /** Charges are blank (nothing typed yet). */
   const chargesBlank = (a) => !(a && a.charges || []).some((x) => clean(x.statute) || clean(x.description));
 
-  const api = { PROPERTY_KINDS, PROPERTY_FIELDS, propertyLine, CHARGE_CLASSES, chargeClass, typeOfClass, withClass, victimChoices, STATE_VICTIM, isStateVictim, nonOffenderFields, splitName, arresteeChoices, personToArrestee, chargesBlank, personKey, peopleOfCase, sameSuspectCases,
+  const api = { arrestReady, arrestCoverage, PROPERTY_KINDS, PROPERTY_FIELDS, propertyLine, CHARGE_CLASSES, chargeClass, typeOfClass, withClass, victimChoices, STATE_VICTIM, isStateVictim, nonOffenderFields, splitName, arresteeChoices, personToArrestee, chargesBlank, personKey, peopleOfCase, sameSuspectCases,
     STATUS_HELP, FOLLOW_UP_REASONS, DISPOSITIONS, disposition, ARRESTEE_FIELDS, ARREST_FIELDS, CHARGE_FIELDS,
     NUMBER_FIELDS, INCIDENT_FIELDS, VEHICLE_FIELDS, COURT_FIELDS, BOND_FIELDS, PERSONNEL_FIELDS, NARCOTIC_FIELDS, WARRANT_FIELDS, NON_OFFENDER_FIELDS, LISTS,
     emptyArrest, emptyArrestee, emptyCharge, emptyItem, normalizeArrest, normalizeArrestee, itemFilled, ageOn, arresteeName, chargesText, arrestContext, closureContext, closeChecklist, followUpEvent, peopleOf,

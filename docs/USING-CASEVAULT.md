@@ -214,6 +214,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.115
+
+- **Close by arrest, one arrest report for several RDs:** closing by arrest still needs an arrest report (an arrestee and a charge), now for each case number ticked. A case number without Arrest Details of its own can point to the RD that has them: choose it in **Arrest report on RD** (it lists the Mission's case numbers and the same-suspect cases that have an arrest report, newest arrest first, and is set to that one already). Close then passes
+- Each case number closed this way keeps "Arrest report: see RD …" in its closing note and on its Details tab, and its **Arrest** tab says where the report is, with a button to open it. `{{closure.arrestRd}}` gives that RD in templates
+- **Close Mission** checks every case number ticked, not only the first one
+
 ### What's new in v1.114
 
 - **Arrest Details → Charges:** each charge is a box on two lines: Offense as cited, Class, Type and Counts, then Charge and Victim. Picking an Offense as cited or a Charge from the list fills in the other one and its **Class** and **Type** (for example 720 ILCS 570/402(c): Class 4, Felony). Federal charges come in as Felony. Where the statute alone doesn't set the class, only the Type is filled. Check the class against the amount and the arrestee's record (a repeat offense can raise it) and change it if needed

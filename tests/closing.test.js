@@ -44,7 +44,7 @@ test('arrest details become {{arrest.*}} template values', () => {
 
 test('closure values and the close checklist', () => {
   assert.deepStrictEqual(C.closureContext({ disposition: 'exceptional', reason: 'Prosecution declined', date: '2026-09-29', note: 'DA letter in Email.' }),
-    { 'closure.disposition': 'Exceptionally cleared', 'closure.reason': 'Prosecution declined', 'closure.date': 'September 29, 2026', 'closure.note': 'DA letter in Email.' });
+    { 'closure.disposition': 'Exceptionally cleared', 'closure.reason': 'Prosecution declined', 'closure.date': 'September 29, 2026', 'closure.note': 'DA letter in Email.', 'closure.arrestRd': '' });
   const list = C.closeChecklist({
     timeline: { events: [{ kind: 'deadline', title: 'File affidavit', done: false }, { kind: 'deadline', title: 'Old', done: true }, { kind: 'event', title: 'Arrest' }] },
     checks: [{ open: 2 }, { open: 1 }],
