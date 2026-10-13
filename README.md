@@ -15,12 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.114
+## What's New in v1.115
 
-- **Arrest Details tab:**
-  - **Charges:** each charge on two lines so nothing is cut off. Picking an Offense as cited (or a Charge) fills in its **Class** and **Type**; Class has its own list (Class X to Class C, petty offense, federal), and the Type follows it. Charges filled from the Draft tab bring their class and type too
-  - **Victim** on a charge: pick from the victims on the reports (Draft tab and sent reports) with the arrestee's **RD number**, the victims entered on the arrest, or the State of Illinois
-  - **Properties:** a row per item with its **Inventory #** and a **Description** to pick (Prisoner Personal Property, Prisoner Jewelry, Prisoner Money, Prisoner Other) or write in; listed on the Arrest Report PDF
+- **Closing several case numbers by arrest with one arrest report:** when only one RD has the Arrest Details (for example the most recent of four RDs on the same offender), the Close dialog asks **Arrest report on RD** for the others and lets them pass. Each of them notes "Arrest report: see RD …", and its Arrest tab links to that RD. Works from Close Case and from Close Mission
 
 ## What CaseVault Does
 
