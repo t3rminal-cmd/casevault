@@ -283,7 +283,11 @@
       text(CX, y - 9, 'Confiscated Properties :', 9.5, true); y -= 12;
       for (const l of wrap('All confiscated properties are recorded with their inventory numbers; the inventory number retrieves the records of evidence and recovered property.', 7.5, CW, true)) { text(CX, y - 7, l, 7.5, true); y -= 9; }
       y -= 4;
-      if (clean(a.property)) greyText(wrap(clean(a.property), 9, CW - 12), 9, 11.5); else big('NO PROPERTIES RECORDED');
+      // v1.114: a row per property (inventory number, description), then any text from before.
+      const props = (a.properties || []).filter(C.itemFilled);
+      if (props.length) tableRows([['Inventory #', 0, 0.3], ['Description', 0.3, 0.7]], props.map((x) => [clean(x.inventory), clean(x.description)]));
+      if (clean(a.property)) greyText(wrap(clean(a.property), 9, CW - 12), 9, 11.5);
+      if (!props.length && !clean(a.property)) big('NO PROPERTIES RECORDED');
       endSeg(56);
 
       // ---- incident narrative, carried over pages, on a grey ground

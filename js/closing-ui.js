@@ -77,6 +77,15 @@
     const draftForm = root.CVReportFieldsUI ? await CVReportFieldsUI.load(c).catch(() => null) : null;
     const isSee = (x) => root.CVReportFields && RFsee(x);
     const reportCharges = ((draftForm && draftForm.charges) || []).filter((x) => (x.statute || x.description) && !isSee(x));
+    // v1.114: the reports' victims (Draft and sent), offered on each charge by the arrestee's RD number.
+    const forms = [];
+    if (draftForm) forms.push({ rdNumber: draftForm.rdNumber || c.number || '', victimsList: draftForm.victimsList || [], title: 'Draft tab' });
+    if (!archived) {
+      for (const d of (await Vault.listDrafts(c.id).catch(() => [])).filter((x) => x.fromFields)) {
+        const f = await Vault.readCaseJSON(c.id, `report-fields-${d.slug}.json`).catch(() => null);
+        if (f) forms.push({ rdNumber: f.rdNumber || '', victimsList: f.victimsList || [], title: d.title });
+      }
+    }
     // v1.113: the people to pick the arrestee from: Details suspects and the Draft's offenders.
     const choices = K().arresteeChoices(c.suspects, (draftForm && draftForm.offendersList) || []);
     if (token !== ui.state.renderToken) return;
@@ -84,7 +93,7 @@
     let autoCharged = false;
     // Once only: charges you removed on purpose don't come back.
     if (!archived && reportCharges.length) for (const a of arrest.arrestees) if (!a.chargesAuto && K().chargesBlank(a)) {
-      a.charges = reportCharges.map((x) => ({ ...K().emptyCharge(), statute: x.statute || '', description: x.description || '' }));
+      a.charges = reportCharges.map((x) => K().withClass(K().emptyCharge(), x.statute || '', x.description || ''));
       a.chargesAuto = true;
       autoCharged = true;
     }
@@ -121,6 +130,8 @@
       el.addEventListener(f.type === 'select' || f.type === 'yn' ? 'change' : 'input', () => { obj[f.key] = el.value; changed(); if (onChange) onChange(); });
       // v1.113: a victim can be the State of Illinois (then only the officer's name is asked).
       if (f.victimPick && root.CVCombo) return CVCombo.attach(el, { items: () => [{ value: K().STATE_VICTIM, label: K().STATE_VICTIM, hint: 'Officer name only' }], onPick: () => { if (onChange) onChange(); } });
+      // v1.114: a property's description: pick one of the four or write your own.
+      if (f.propertyPick && root.CVCombo) return CVCombo.attach(el, { label: 'Show the descriptions', items: () => K().PROPERTY_KINDS.map((k) => ({ value: k, label: k })) });
       // v1.92: CB # and IR # can be DNA (does not apply), as on the Draft tab.
       if ((f.key === 'bookingNumber' || f.key === 'irNumber') && root.CVCombo) {
         return CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }] });
@@ -144,7 +155,7 @@
             const was = K().isStateVictim(it);
             const flip = () => { if (K().isStateVictim(it) !== was) { draw(); const el = box.querySelectorAll('.arrest-item')[i]; const n = el && el.querySelector('input'); if (n) { n.focus(); } } };
             return fieldset(it, K().nonOffenderFields(it), flip);
-          })() : fieldset(it, L.fields))) : [h('p', { class: 'muted small' }, noneText)]),
+          })() : fieldset(it, L.fields, null, listKey === 'properties' ? 'arrest-g-property' : ''))) : [h('p', { class: 'muted small' }, noneText)]),
         archived ? null : h('div', { class: 'row' },
           h('button', { class: 'btn small', type: 'button', onclick: () => { a[listKey].push(K().emptyItem(listKey)); changed(); draw(); } }, addLabel),
           listKey === 'nonOffenders' && !a.nonOffenders.some(K().isStateVictim) ? h('button', { class: 'btn small', type: 'button', title: 'The State of Illinois as the victim, with the officer\'s name', onclick: () => { a.nonOffenders.push({ ...K().emptyItem('nonOffenders'), role: 'Victim', name: K().STATE_VICTIM }); changed(); draw(); } }, '+ Add State of Illinois as Victim') : null));
@@ -210,17 +221,34 @@
     const list = h('div', { class: 'arrestees' });
     const draw = () => {
       list.replaceChildren(...arrest.arrestees.map((a, i) => {
-        const charges = h('tbody', {}, a.charges.map((ch, j) => h('tr', {},
-          K().CHARGE_FIELDS.map((f) => {
+        // v1.114: a charge on two lines (Offense and Charge; Class, Type, Counts and Victim), so nothing is cut off.
+        const cell = (f, el) => h('div', { class: `charge-${f.key}` }, ui.field(f.label, el));
+        const charges = h('tbody', {}, a.charges.map((ch, j) => h('tr', {}, h('td', { class: 'charge-card' },
+          h('div', { class: 'arrest-item-head' }, h('strong', {}, `Charge ${j + 1}`), h('div', { class: 'spacer' }),
+            archived ? null : h('button', { class: 'btn small ghost danger-text', type: 'button', title: 'Remove this charge', onclick: () => { a.charges.splice(j, 1); if (!a.charges.length) a.charges.push(K().emptyCharge()); changed(); draw(); } }, 'Remove Charge')),
+          h('div', { class: 'charge-grid' }, K().CHARGE_FIELDS.map((f) => {
             const el = input(ch, f);
-            if ((f.key !== 'statute' && f.key !== 'description') || !root.CVCombo) return h('td', { class: `charge-${f.key}` }, el);
-            const box = CVCombo.attach(el, { label: 'Show the charges', items: () => chargeItems(reportCharges).map((x) => ({ ...x, value: f.key === 'statute' ? x.statute : x.desc })), onPick: (x) => {
-              ch.statute = x.statute; ch.description = x.desc;
-              changed(); draw();
-            } });
-            return h('td', { class: `charge-${f.key}` }, box);
-          }),
-          h('td', {}, h('button', { class: 'btn small ghost', type: 'button', title: 'Remove this charge', onclick: () => { a.charges.splice(j, 1); if (!a.charges.length) a.charges.push(K().emptyCharge()); changed(); draw(); } }, '✕')))));
+            if (!root.CVCombo || !['statute', 'description', 'degree', 'victim'].includes(f.key)) return cell(f, el);
+            let box;
+            // v1.114: Class: pick from the list (or type); the Type follows it.
+            if (f.key === 'degree') {
+              box = CVCombo.attach(el, { label: 'Show the classes', items: () => K().CHARGE_CLASSES.map((k) => ({ value: k, label: k })), onPick: (x) => {
+                const t = K().typeOfClass(x.value);
+                if (t) ch.level = t;
+                changed(); draw();
+              } });
+            } else if (f.key === 'victim') {
+              // v1.114: the victims on the reports with this arrestee's RD number.
+              box = CVCombo.attach(el, { label: 'Show the victims', items: () => K().victimChoices(forms, a.rdNumber, a.nonOffenders).map((v) => ({ value: v.name, label: v.name, hint: v.hint })) });
+            } else {
+              box = CVCombo.attach(el, { label: 'Show the charges', items: () => chargeItems(reportCharges).map((x) => ({ ...x, value: f.key === 'statute' ? x.statute : x.desc })), onPick: (x) => {
+                // v1.114: the class and type come with the charge.
+                Object.assign(ch, K().withClass(ch, x.statute, x.desc));
+                changed(); draw();
+              } });
+            }
+            return cell(f, box);
+          }))))));
         const name = K().arresteeName(a) || `Arrestee ${i + 1}`;
         const ageOut = h('output', { class: 'arrest-age' });
         // v1.113: until the arrest date is in, the age today.
@@ -240,14 +268,13 @@
           section('Offender', personPick(a, draw), h('div', { class: 'arrest-offender' }, offender, photoPicker(a))),
           section('Incident', fieldset(a, K().INCIDENT_FIELDS, showAge, 'arrest-g-incident')),
           section('Charges',
-            h('div', { class: 'table-scroll' }, h('table', { class: 'files charges-table' },
-              h('thead', {}, h('tr', {}, K().CHARGE_FIELDS.map((f) => h('th', {}, f.label)), h('th', {}, ''))), charges)),
+            h('table', { class: 'charges-table' }, charges),
             archived ? null : h('div', { class: 'row' },
               h('button', { class: 'btn small', type: 'button', onclick: () => { a.charges.push(K().emptyCharge()); changed(); draw(); } }, '+ Add Charge'),
               reportCharges.length ? h('button', { class: 'btn small', type: 'button', title: 'Adds the charges from the Supplementary Report (Draft tab) that aren\'t here yet', onclick: () => {
                 const have = new Set(a.charges.map((x) => `${(x.statute || '').trim()}|${(x.description || '').trim()}`));
                 a.charges = a.charges.filter((x) => (x.statute || '').trim() || (x.description || '').trim());
-                for (const x of reportCharges) if (!have.has(`${(x.statute || '').trim()}|${(x.description || '').trim()}`)) a.charges.push({ ...K().emptyCharge(), statute: x.statute || '', description: x.description || '' });
+                for (const x of reportCharges) if (!have.has(`${(x.statute || '').trim()}|${(x.description || '').trim()}`)) a.charges.push(K().withClass(K().emptyCharge(), x.statute || '', x.description || ''));
                 if (!a.charges.length) a.charges.push(K().emptyCharge());
                 changed(); draw();
               } }, 'Use Report Charges') : null)),
@@ -255,7 +282,9 @@
           section('Warrant', ...noneBox(a, 'noWarrant', 'No warrant identified', listEditor(a, 'warrants', 'No warrant identified.', '+ Add Warrant'))),
           section('Victim and Complainant', listEditor(a, 'nonOffenders', 'None added.', '+ Add Victim or Complainant')),
           section('Arrestee Vehicle', ...noneBox(a, 'noVehicle', 'No arrestee vehicle information', fieldset(a, K().VEHICLE_FIELDS, null, 'arrest-g-4'))),
-          section('Properties', fieldset(a, [{ key: 'property', label: 'Confiscated properties: inventory numbers and description', type: 'textarea' }])),
+          // v1.114: one row per property: inventory number and description. Text from before stays below.
+          section('Properties', listEditor(a, 'properties', 'No properties recorded.', '+ Add Property'),
+            a.property ? fieldset(a, [{ key: 'property', label: 'Other confiscated properties', type: 'textarea' }]) : null),
           section('Incident Narrative', fieldset(a, [{ key: 'narrative', label: 'The facts for probable cause to arrest and to support the charges', type: 'textarea' }])),
           section('Court and Bond', fieldset(a, [...K().COURT_FIELDS, ...K().BOND_FIELDS], null, 'arrest-g-court')),
           section('Reporting Personnel', fieldset(a, K().PERSONNEL_FIELDS, null, 'arrest-g-personnel')));

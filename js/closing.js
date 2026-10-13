@@ -103,7 +103,7 @@
   // Lists, one entry per row on the report.
   const CHARGE_FIELDS = [
     { key: 'statute', label: 'Offense as cited' }, { key: 'description', label: 'Charge' },
-    { key: 'degree', label: 'Class' },
+    { key: 'degree', label: 'Class', classPick: true },
     { key: 'level', label: 'Type', type: 'select', options: ['', 'Felony', 'Misdemeanor', 'Infraction / violation', 'Other'] },
     { key: 'counts', label: 'Counts' }, { key: 'victim', label: 'Victim' },
   ];
@@ -116,6 +116,11 @@
     { key: 'number', label: 'Warrant #' },
     { key: 'kind', label: 'Type', type: 'select', options: ['', 'Arrest warrant', 'Bench warrant', 'Investigative alert', 'Other'] },
     { key: 'issuedBy', label: 'Issued by' }, { key: 'issued', label: 'Date issued', type: 'date' }, { key: 'offense', label: 'Offense' },
+  ];
+  // v1.114: confiscated properties, one row each: inventory number and a description to pick or type.
+  const PROPERTY_KINDS = ['Prisoner Personal Property', 'Prisoner Jewelry', 'Prisoner Money', 'Prisoner Other'];
+  const PROPERTY_FIELDS = [
+    { key: 'inventory', label: 'Inventory #' }, { key: 'description', label: 'Description', propertyPick: true },
   ];
   const NON_OFFENDER_FIELDS = [
     { key: 'role', label: 'Role', type: 'select', options: ['Victim', 'Complainant', 'Victim and complainant', 'Witness'] },
@@ -132,6 +137,7 @@
     narcotics: { fields: NARCOTIC_FIELDS, item: 'Narcotic', none: 'No narcotics recovered' },
     warrants: { fields: WARRANT_FIELDS, item: 'Warrant', none: 'No warrant identified' },
     nonOffenders: { fields: NON_OFFENDER_FIELDS, item: 'Person', none: 'None' },
+    properties: { fields: PROPERTY_FIELDS, item: 'Property', none: 'No properties recorded' },
   };
 
   const blank = (fields) => Object.fromEntries(fields.map((f) => [f.key, f.key === 'counts' ? '1' : f.key === 'role' ? 'Victim' : '']));
@@ -139,7 +145,7 @@
   const emptyItem = (list) => (list === 'charges' ? emptyCharge() : blank(LISTS[list].fields));
   const emptyArrestee = () => ({
     ...Object.fromEntries([...ARRESTEE_FIELDS, ...ARREST_FIELDS].map((f) => [f.key, ''])),
-    photo: '', charges: [emptyCharge()], narcotics: [], warrants: [], nonOffenders: [], property: '', narrative: '', notes: '',
+    photo: '', charges: [emptyCharge()], narcotics: [], warrants: [], nonOffenders: [], properties: [], property: '', narrative: '', notes: '',
     // v1.113: ticked when the part doesn't apply (the report then says so).
     noVehicle: false, noNarcotics: false, noWarrant: false,
   });
@@ -181,6 +187,64 @@
   // The long date, as everywhere in CaseVault (v1.32): "September 30, 2026".
   const US = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(clean(iso)); return m ? `${MONTHS[Number(m[2]) - 1]} ${m[3]}, ${m[1]}` : clean(iso); };
 
+  /** v1.114: a property row as one line: "Inv. 1234567, Prisoner Money". */
+  const propertyLine = (p) => [clean(p.inventory) && `Inv. ${clean(p.inventory)}`, clean(p.description)].filter(Boolean).join(', ');
+
+  // v1.114: the class of the Illinois and federal charges in the Reference list, by statute
+  // (longest match first). Only where the statute itself sets the class; check it against the
+  // amount and the arrestee's history (a second offense can raise it). Can be changed.
+  const CHARGE_CLASSES = ['Class X', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class A', 'Class B', 'Class C', 'Petty offense', 'Federal felony', 'Federal misdemeanor'];
+  const STATUTE_CLASS = [
+    ['720 ILCS 550/5(c)', 'Class 4'], ['720 ILCS 550/5(d)', 'Class 3'], ['720 ILCS 550/5(e)', 'Class 2'], ['720 ILCS 550/5(f)', 'Class 1'], ['720 ILCS 550/5(g)', 'Class X'],
+    ['720 ILCS 550/4(c)', 'Class A'], ['720 ILCS 550/4(d)', 'Class 4'], ['720 ILCS 550/4(e)', 'Class 3'], ['720 ILCS 550/4(f)', 'Class 2'], ['720 ILCS 550/4(g)', 'Class 1'],
+    ['720 ILCS 570/401(a)', 'Class X'], ['720 ILCS 570/401(c)', 'Class 1'], ['720 ILCS 570/401(d)', 'Class 2'], ['720 ILCS 570/401(e)', 'Class 3'],
+    ['720 ILCS 570/402(a)', 'Class 1'], ['720 ILCS 570/402(c)', 'Class 4'],
+    ['720 ILCS 646/55(a)(2)(A)', 'Class 2'], ['720 ILCS 646/55(a)(2)(B)', 'Class 1'], ['720 ILCS 646/55(a)(2)(C)', 'Class X'], ['720 ILCS 646/55(a)(2)(D)', 'Class X'], ['720 ILCS 646/55(a)(2)(E)', 'Class X'], ['720 ILCS 646/55(a)(2)(F)', 'Class X'],
+    ['720 ILCS 646/60(b)(1)', 'Class 3'], ['720 ILCS 646/60(b)(2)', 'Class 2'], ['720 ILCS 646/60(b)(3)', 'Class 1'], ['720 ILCS 646/60(b)(4)', 'Class X'], ['720 ILCS 646/60(b)(5)', 'Class X'], ['720 ILCS 646/60(b)(6)', 'Class X'],
+    ['720 ILCS 570/405', 'Class X'], ['720 ILCS 5/24-1.1', 'Class 3'], ['720 ILCS 5/24-1.6', 'Class 4'],
+    ['21 U.S.C. § 844', 'Federal misdemeanor'],
+  ].sort((a, b) => b[0].length - a[0].length);
+  const MISDEMEANOR_CLASSES = ['Class A', 'Class B', 'Class C', 'Federal misdemeanor'];
+  /** The Type that goes with a class: Felony, Misdemeanor, or '' when the class says nothing. */
+  function typeOfClass(cls) {
+    const c = clean(cls);
+    if (!c) return '';
+    if (MISDEMEANOR_CLASSES.includes(c)) return 'Misdemeanor';
+    if (c === 'Petty offense') return 'Infraction / violation';
+    return CHARGE_CLASSES.includes(c) ? 'Felony' : '';
+  }
+  /** v1.114: { degree, level } for a statute ('' each when unknown). Federal statutes are felonies
+   * unless listed; Illinois felony statutes with no fixed class get the Type only. */
+  function chargeClass(statute) {
+    const s = clean(statute).replace(/\s+/g, ' ');
+    if (!s) return { degree: '', level: '' };
+    const hit = STATUTE_CLASS.find(([k]) => s === k || (s.startsWith(k) && /^[(\s]/.test(s.slice(k.length)))); // 405 is not 405.1
+    if (hit) return { degree: hit[1], level: typeOfClass(hit[1]) };
+    if (/U\.S\.C\./.test(s)) return { degree: '', level: 'Felony' };
+    if (/^720 ILCS (570|646|550)\/|^720 ILCS 5\/29B/.test(s)) return { degree: '', level: 'Felony' };
+    return { degree: '', level: '' };
+  }
+  /** A charge picked from a statute and wording: its class and type go with it (another charge's go). */
+  function withClass(ch, statute, description) {
+    const k = chargeClass(statute);
+    return { ...ch, statute: clean(statute), description: clean(description), degree: k.degree, level: k.level };
+  }
+
+  // v1.114: the victims to pick for a charge: those on the reports (Draft and sent) with the
+  // arrestee's RD number, then the victims entered on this arrest, then the State of Illinois.
+  const rdKey = (s) => clean(s).toUpperCase().replace(/[\s-]/g, '');
+  const SEE_DEA6_RE = /^see dea ?6/i;
+  /** forms: [{ rdNumber, victimsList, title }] -> [{ name, hint }] without repeats. */
+  function victimChoices(forms, rdNumber, nonOffenders) {
+    const out = []; const seen = new Set();
+    const add = (name, hint) => { const n = clean(name); const k = n.toLowerCase(); if (!n || SEE_DEA6_RE.test(n) || seen.has(k)) return; seen.add(k); out.push({ name: n, hint }); };
+    const rd = rdKey(rdNumber);
+    for (const f of forms || []) if (f && rd && rdKey(f.rdNumber) === rd) for (const v of f.victimsList || []) add(v && v.name, `${f.title || 'Report'}, RD ${clean(f.rdNumber)}`);
+    for (const p of nonOffenders || []) if (p && /victim/i.test(p.role || 'Victim')) add(p.name, 'Victim on this arrest');
+    add(STATE_VICTIM, 'The State');
+    return out;
+  }
+
   /** {{arrest.*}} values: the first arrestee as arrest.x, every arrestee as arrest.N.x. */
   function arrestContext(arrest) {
     const ctx = {};
@@ -197,7 +261,7 @@
       put('narcotics', n.narcotics.filter(itemFilled).map((x) => [clean(x.drug), [clean(x.amount), clean(x.unit)].filter(Boolean).join(' '), clean(x.inventory) && `Inv. ${clean(x.inventory)}`].filter(Boolean).join(', ')).join('\n'));
       put('warrants', n.warrants.filter(itemFilled).map((x) => [clean(x.number), clean(x.kind), clean(x.offense)].filter(Boolean).join(', ')).join('\n'));
       if (!clean(n.warrantNumber) && n.warrants[0]) put('warrantNumber', clean(n.warrants[0].number));
-      put('property', clean(n.property)); put('narrative', clean(n.narrative)); put('notes', clean(n.narrative || n.notes));
+      put('property', [...n.properties.filter(itemFilled).map(propertyLine), clean(n.property)].filter(Boolean).join('\n')); put('narrative', clean(n.narrative)); put('notes', clean(n.narrative || n.notes));
     });
     ctx['arrest.count'] = String(list.filter((a) => arresteeName(a)).length);
     ctx['arrest.names'] = list.map(arresteeName).filter(Boolean).join('; ');
@@ -313,7 +377,7 @@
   /** Charges are blank (nothing typed yet). */
   const chargesBlank = (a) => !(a && a.charges || []).some((x) => clean(x.statute) || clean(x.description));
 
-  const api = { STATE_VICTIM, isStateVictim, nonOffenderFields, splitName, arresteeChoices, personToArrestee, chargesBlank, personKey, peopleOfCase, sameSuspectCases,
+  const api = { PROPERTY_KINDS, PROPERTY_FIELDS, propertyLine, CHARGE_CLASSES, chargeClass, typeOfClass, withClass, victimChoices, STATE_VICTIM, isStateVictim, nonOffenderFields, splitName, arresteeChoices, personToArrestee, chargesBlank, personKey, peopleOfCase, sameSuspectCases,
     STATUS_HELP, FOLLOW_UP_REASONS, DISPOSITIONS, disposition, ARRESTEE_FIELDS, ARREST_FIELDS, CHARGE_FIELDS,
     NUMBER_FIELDS, INCIDENT_FIELDS, VEHICLE_FIELDS, COURT_FIELDS, BOND_FIELDS, PERSONNEL_FIELDS, NARCOTIC_FIELDS, WARRANT_FIELDS, NON_OFFENDER_FIELDS, LISTS,
     emptyArrest, emptyArrestee, emptyCharge, emptyItem, normalizeArrest, normalizeArrestee, itemFilled, ageOn, arresteeName, chargesText, arrestContext, closureContext, closeChecklist, followUpEvent, peopleOf,
