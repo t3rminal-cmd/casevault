@@ -1380,11 +1380,11 @@
       generalYearFolders(cases),
       // v1.68: OTHER FILES: anything not tied to a case number or an Operation.
       otherFilesSection(),
-      secureLockerSection(),
       // v1.116: closed cases and Missions, then archived cases, in their own sections under Other
-      // Files (and the Secure Locker, which stays right under Other Files).
+      // Files; v1.120: the Secure Locker after them.
       closedFilesSection(cases),
       archivedSection(cases),
+      secureLockerSection(),
       // v1.71: Recently Updated as even columns, in the Quick Links' size, not bold.
       h('div', { class: 'dash-section ov-panel recent-section' }, panelHead('Recently Updated', 'The cases changed most recently. Clear empties the list.',
         recent.length ? h('button', { class: 'btn small', type: 'button', icon: 'x-circle', title: 'Empties this list. Cases you change after this show here again.', onclick: async () => {
