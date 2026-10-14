@@ -19,7 +19,7 @@ const SP = process.env.SP + '/v1111';
   await p.evaluate(async () => { await Vault.createCase({ number: 'EX-500', subject: 'Robert Allen Doe' }); await Vault.createCase({ number: 'EX-501', subject: 'DOE, John Q' }); });
   await p.evaluate(() => { location.hash = '#/general'; }); await p.waitForSelector('.general-table tbody tr');
   const heads = await p.$$eval('.general-table thead th', (x) => x.map((e) => e.textContent.trim()));
-  ok(heads.slice(1, 4).join('|') === 'Last Name|First Name|Middle Name', `columns: ${heads.join(' | ')}`);
+  ok(heads.slice(1, 4).join('|') === 'Last Name|First Name|Middle', `columns: ${heads.join(' | ')}`);
   const row = await p.$$eval('.general-table tbody tr', (rs) => { const r = rs.find((x) => /EX-500/.test(x.textContent)); return [...r.querySelectorAll('td')].slice(1, 4).map((t) => [t.textContent.trim(), getComputedStyle(t).textAlign]); });
   ok(row.map((x) => x[0]).join('|') === 'DOE|Robert|Allen' && row.every((x) => ['left', 'start'].includes(x[1])), `EX-500 split and left aligned: ${JSON.stringify(row)}`);
   await p.locator('.general-table').screenshot({ path: `${SP}/general.png` }).catch(() => {});

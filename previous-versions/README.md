@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.123)
+
+- **Quick Links:** one link per row, all the same size, no name cut off
+- **Lined-up tables:** on the Missions list, a Mission's page and General Files, the status labels are one width and dates sit in month / day / year columns; a Mission's page shows the subject as Last Name / First Name / M.I.
+
 ## Features (v1.122)
 
 - **Repository clean-up:** the unused Poppins font is removed (the app uses Consolas), older "What's new" notes moved to [previous-versions/WHATS-NEW.md](previous-versions/WHATS-NEW.md), and this README and the guide describe the current screens

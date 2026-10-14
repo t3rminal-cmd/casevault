@@ -4,6 +4,12 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.121
+
+- **Quick Links** are in a panel that slides in from the right. Open it with **Quick Links** on the home page (beside Reference) or the link icon in the sidebar's top row (next to Home), from any page. Reference / OSINT / LEO tabs and **Arrange** work as before. A link to a CaseVault page (Location Codes, Charges…) shows that page and closes the panel; outside sites open in a new browser tab. Close it with ×, Esc or a click outside. The bar at the bottom of the page is gone
+- **Settings** (gear, on the home page) is the window that was called Vault, with the Library in it: My Profile, Letterhead, Library, Templates, Quick links, mail, logs and backups. Where this guide says "Vault → …", look in Settings
+- **Sidebar:** no Closed / Archived area at the bottom. Closed and archived cases are on the home page (**CLOSED FILES** and **ARCHIVED**). A search in the sidebar's search box still finds them: they are listed under **Closed** and **Archived** below the open cases
+
 ## What's new in v1.120
 
 - **Landing page:** the **Secure Locker** section is now below **Archived** (Other Files, Closed Files, Archived, then Secure Locker)

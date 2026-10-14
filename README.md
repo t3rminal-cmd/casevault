@@ -15,10 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.123
+## What's New in v1.124
 
-- **Quick Links:** one link per row, all the same size, no name cut off
-- **Lined-up tables:** on the Missions list, a Mission's page and General Files, the status labels are one width and dates sit in month / day / year columns; a Mission's page shows the subject as Last Name / First Name / M.I.
+- **Navy Ledger theme:** deep navy on warm off-white, flat, square; dark mode to match. All colours live in one file, `css/theme.css`
+- **JetBrains Mono** bundled in `vendor/` (OFL), so the app looks the same on every PC, fully offline
+- **One colour per status everywhere:** Open blue, Pending amber, Closed green, Archived warm grey, Overdue red
 
 ## What CaseVault Does
 
@@ -107,7 +108,8 @@ CaseVault-Data/
 | Path | What |
 |---|---|
 | `index.html` | App shell and Content-Security-Policy |
-| `css/app.css` | Styles (square corners, off-white palette, light/dark) |
+| `css/app.css` | Styles (layout, square corners, light/dark) |
+| `css/theme.css` | The theme: every colour (light and dark), the status colours and the bundled font |
 | `js/fs.js` | Folder-handle storage (IndexedDB, handle only) and SSD file helpers |
 | `js/casefiles.js` | Document folders and the `2026-<CaseNo> <Type>` naming convention |
 | `js/secure/pii.js` | PII scanner (mail check, Document Anonymizer) and redaction to placeholders |

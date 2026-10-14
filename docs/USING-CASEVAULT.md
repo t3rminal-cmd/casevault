@@ -69,7 +69,7 @@ If the helper window was closed while Firefox was open, CaseVault shows **"The C
 
 ## Look and theme
 
-Every screen uses one font, **Consolas** (v1.33; it comes with Windows, so nothing is downloaded).
+Every screen uses one font, **JetBrains Mono** (v1.124; it comes with CaseVault in `vendor/`, so it looks the same on every PC and nothing is downloaded).
 
 The header has three parts:
 
@@ -213,6 +213,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.124
+
+- **New look, "Navy Ledger":** deep navy on a warm off-white, flatter (thin borders instead of shadows), with a navy welcome banner. Dark mode has the same colours in lighter tones
+- **Font:** JetBrains Mono, which comes with CaseVault, so the app looks the same on every PC (Consolas was only on Windows). Nothing is downloaded
+- **Status colours mean the same everywhere:** Open blue, Pending amber, Closed green, Archived warm grey, Overdue red. Mission sections are blue and General Files plum
+
 ### What's new in v1.123
 
 - **Quick Links:** one link per row, every link the same size, and the whole name on one line
@@ -223,12 +229,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 - **Housekeeping release:** nothing changes in how CaseVault works. The unused Poppins font files are gone (CaseVault uses Consolas), the older "What's new" notes moved to [previous-versions/WHATS-NEW.md](../previous-versions/WHATS-NEW.md), and the README describes the current screens (Settings, the Quick Links panel, the person view)
 - The check that stops case files being committed to the public code repository now also covers locker, chat, branding, export and log folders and the arrest, link chart, mail log, library and report-field files
-
-### What's new in v1.121
-
-- **Quick Links** are in a panel that slides in from the right. Open it with **Quick Links** on the home page (beside Reference) or the link icon in the sidebar's top row (next to Home), from any page. Reference / OSINT / LEO tabs and **Arrange** work as before. A link to a CaseVault page (Location Codes, Charges…) shows that page and closes the panel; outside sites open in a new browser tab. Close it with ×, Esc or a click outside. The bar at the bottom of the page is gone
-- **Settings** (gear, on the home page) is the window that was called Vault, with the Library in it: My Profile, Letterhead, Library, Templates, Quick links, mail, logs and backups. Where this guide says "Vault → …", look in Settings
-- **Sidebar:** no Closed / Archived area at the bottom. Closed and archived cases are on the home page (**CLOSED FILES** and **ARCHIVED**). A search in the sidebar's search box still finds them: they are listed under **Closed** and **Archived** below the open cases
 
 ### Earlier versions
 
