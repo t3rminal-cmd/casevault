@@ -1,7 +1,7 @@
 const boot = require('./boot');
 (async () => { const { b, p, ids, errs } = await boot();
-  // footer on every page
-  const foot = async () => p.evaluate(() => { const f = document.querySelector('#ql-footer'); return f && !f.hidden && f.childElementCount > 0; });
+  // v1.121: the Quick Links button (sidebar) on every page (the footer is gone).
+  const foot = async () => p.evaluate(() => { const f = document.querySelector('#btn-side-links'); return !!f && f.getClientRects().length > 0; });
   const seen = [];
   for (const h of ['#/', `#/case/${ids.c}/details`, `#/case/${ids.c}/draft`, '#/reference/ucr', '#/operations', `#/operation/${ids.op}`]) { await p.evaluate((x) => { location.hash = x; }, h); await p.waitForTimeout(700); seen.push(await foot()); }
   console.log('footer everywhere', seen.join(','));

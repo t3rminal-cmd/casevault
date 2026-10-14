@@ -293,12 +293,6 @@ body.sidebar-collapsed .rail-only { display: inline-flex; }
 .case.archived .tab-panel textarea[readonly], .case.archived .tab-panel input[readonly] { background: var(--surface-2); }
 
 /* Sidebar: the archived cases, folded away under the active list. */
-.archived-cases { border-top: 1px solid var(--border); flex-shrink: 0; max-height: 40%; overflow-y: auto; }
-.archived-cases[hidden] { display: none; }
-.archived-cases summary { cursor: pointer; padding: .55rem .9rem; font-size: .88rem; font-weight: 600; color: var(--muted); }
-.archived-cases summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.archived-cases .case-list { flex: none; padding-top: 0; }
-.archived-cases .case-item { opacity: .85; }
 
 /* notes */
 .toolbar { display: flex; align-items: center; gap: .5rem; margin-bottom: .6rem; }
@@ -2463,12 +2457,6 @@ input[list]::-webkit-calendar-picker-indicator { opacity: 0; cursor: pointer; }
 .op-cases .case-item { padding: .38rem .6rem; }
 .op-cases .case-item.active { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
 .case-item .pill, .case-item .status-pill { font-size: .66rem; padding: .08rem .4rem; letter-spacing: .03em; }
-.archived-cases { max-height: 30%; background: var(--surface-2); }
-.archived-cases summary { display: flex; align-items: center; gap: .5rem; padding: .6rem .9rem; font-size: .74rem; text-transform: uppercase; letter-spacing: .08em; }
-.archived-cases summary .count-pill { margin-left: auto; text-transform: none; letter-spacing: 0; }
-.archived-cases .op-group { border-left-color: var(--muted); }
-.closed-cases + .archived-cases { border-top: 1px solid var(--border); }
-.closed-cases .op-head > .op-folder { background: var(--surface-2); color: var(--muted); }
 /* Overview (v1.42): the open operation's case numbers, each with all of its tabs. */
 .op-timeline-section .section-head { justify-content: center; }
 .op-timeline-section .section-head .section-title { text-align: center; }
@@ -2621,14 +2609,11 @@ table.data-table .empty-cell { text-align: center; padding: 1.4rem; }
 :root[data-theme="dark"] { --gf: #e0a83a; --gf-soft: rgba(224, 168, 58, .16); }
 .year-tile .op-folder-art, .year-tile .op-folder-art svg, .year-tile.open .op-folder-art { color: var(--gf); }
 .op-head > .op-folder.gf-icon { background: var(--gf-soft); color: var(--gf); }
-.closed-cases .op-head > .op-folder.gf-icon { background: var(--surface-2); color: var(--muted); }
 .page-head .page-icon.gf-icon, .gf-link .bi, .case-op-label.gf-link .bi { color: var(--gf); }
 .year-tile.open { border-color: var(--gf); background: var(--gf-soft); }
 .op-head > .op-folder.gf-icon svg, .op-head > .op-folder.gf-icon .bi { color: var(--gf); }
-.closed-cases .op-head > .op-folder.gf-icon svg { color: var(--muted); }
 .year-tile .op-folder-count { border-color: var(--gf); color: var(--gf); }
 .op-group.general-group { border-left-color: var(--gf); }
-.closed-cases .op-group.general-group, .archived-cases .op-group.general-group { border-left-color: var(--muted); }
 
 /* v1.48: the list that drops down from a select is square too (Chrome and Edge draw it themselves
    once the select uses appearance: base-select; other browsers keep their own list). */
@@ -2767,14 +2752,6 @@ body.sidebar-collapsed #btn-side-search, body.sidebar-collapsed #btn-side-home {
 .move-dest:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 .move-dest .bi { color: var(--accent); }
 .move-dest.gf-link .bi { color: var(--gf); }
-.archived-cases > summary { list-style: none; }
-.archived-cases > summary::-webkit-details-marker { display: none; }
-.archived-cases > summary .sec-folder { display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem; background: var(--surface); border: 1px solid var(--border); color: var(--muted); flex: 0 0 auto; }
-.archived-cases > summary .sec-label { font-weight: 700; color: var(--text); }
-.archived-cases > summary .count-pill { margin-left: auto; }
-.archived-cases > summary .sec-chev { display: inline-grid; place-items: center; color: var(--muted); transition: transform .15s; }
-.archived-cases > summary .sec-chev svg { width: .8rem; height: .8rem; }
-.archived-cases:not([open]) > summary .sec-chev { transform: rotate(-90deg); }
 .disc-pane-head select { flex: 1 1 12rem; min-width: 8rem; }
 .disc-confirm { width: min(640px, calc(94vw / var(--z, 1))); }
 .disc-confirm-list { max-height: 45vh; overflow-y: auto; border: 1px solid var(--border); }
@@ -2799,10 +2776,7 @@ svg.ci > image { transform: scale(1.12); transform-origin: 50% 50%; }
 .partner-emblem.partner-art, .partner-badge.on .partner-emblem.partner-art { background: transparent; box-shadow: none; filter: none; }
 .partner-emblem.partner-art svg { width: 2.1rem; height: 2.1rem; }
 /* Closed and Archived: the green and the dark folder pictures, without a box around them. */
-.archived-cases > summary .sec-folder { background: transparent; border: 0; }
-.archived-cases > summary .sec-folder svg { width: 1.45rem; height: 1.45rem; }
-.archived-cases > summary .sec-folder { width: 1.5rem; height: 1.5rem; margin-right: .2rem; }
-.archived-cases > summary .sec-folder svg { width: 1.25rem; height: 1.25rem; }
+
 #fab-dock #btn-chat.fab, #fab-dock #btn-chat.fab:hover { background: var(--surface); color: var(--accent); border: 1px solid var(--border); }
 
 /* v1.52: Link Chart tab: the cards and the form on the left, the chart (as it prints) on the right. */
@@ -2881,7 +2855,7 @@ svg.ci > image { transform: scale(1.12); transform-origin: 50% 50%; }
 :root:not([data-theme="dark"]) { --bg: #f7f6f2; --surface: #ffffff; --surface-2: #efeee9; --border: #e2e0da; --topbar-bg: rgba(255, 255, 255, .92); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #161b22; --surface: #0d1117; --surface-2: #1f2630; --border: #30363d; --topbar-bg: rgba(13, 17, 23, .85); } }
 .ql-icon:has(> svg.ci),.fact-icon:has(> svg.ci),.chat-empty-icon:has(> svg.ci),.rpt-icon:has(> svg.ci),.page-icon:has(> svg.ci),.op-head > .op-folder:has(> svg.ci) { background: var(--surface); border: 1px solid var(--border); }
-.closed-cases .op-head > .op-folder:has(> svg.ci), .op-head > .op-folder.gf-icon:has(> svg.ci) { background: var(--surface); }
+.op-head > .op-folder.gf-icon:has(> svg.ci) { background: var(--surface); }
 .tb-status .tb-square:has(> svg.ci), .tb-status .net-status, .tb-status .engine-status, .tb-status .mem-status { background: var(--surface) !important; border: 1px solid var(--border); box-shadow: inset 0 -3px 0 var(--state, transparent); }
 .tb-status .net-status.off { --state: var(--ok); }
 .tb-status .engine-status.offline { --state: var(--danger); } .tb-status .engine-status.connected { --state: var(--ok); }
@@ -3186,47 +3160,9 @@ section.foldable.folded > .fold-head { margin-bottom: 0; }
    screen (Overview only). A top row (title, tabs, Arrange), then the links in five equal columns. */
 .main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
 .main-col > .main { flex: 1; min-height: 0; }
-.ql-footer { flex-shrink: 0; padding: .5rem clamp(1rem, calc(2vw / var(--z, 1)), 2rem) .55rem;
-  background: var(--surface); border-top: 1px solid var(--box-edge, var(--border)); box-shadow: inset 0 2px 0 var(--accent), 0 -6px 14px -10px rgba(0, 0, 0, .3); }
-.ql-footer[hidden] { display: none; }
-.ql-foot-title { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-strong, var(--accent)); white-space: nowrap; }
-.ql-foot-title .bi { width: 1.1rem; height: 1.1rem; }
-.ql-footer { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .6rem; }
-.ql-footer > .ql-foot-title { order: 0; margin-right: .3rem; }
-.quick-links-box.in-footer { display: contents; }
-.quick-links-box.in-footer > .ql-head { display: contents; }
-.quick-links-box.in-footer .ql-head > .spacer { display: none; }
-.quick-links-box.in-footer .ql-tabs { order: 1; }
-.quick-links-box.in-footer .ql-tabs .btn { min-width: 0; padding: .2rem .6rem; font-size: .78rem; }
-.quick-links-box.in-footer > .ql-note-sign { order: 2; }
-.quick-links-box.in-footer .ql-head > .small { order: 3; margin-left: auto; white-space: nowrap; }
-.quick-links-box.in-footer .ql-head > .btn { order: 4; margin-left: auto; font-size: .78rem; }
-.quick-links-box.in-footer .ql-head > .small + .btn { margin-left: 0; }
-.quick-links-box.in-footer > .quick-links, .quick-links-box.in-footer > p { order: 5; flex-basis: 100%; margin: 0; }
-.quick-links-box.in-footer > .quick-links { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .35rem; grid-auto-rows: 2.35rem; align-content: start; height: calc(4 * 2.35rem + 3 * .35rem); overflow-y: auto; scrollbar-width: thin; }
 /* v1.65: four rows of links (all of OSINT at five columns), the same height on every tab. */
-.quick-links-box.in-footer .quick-link { min-height: 2.35rem; height: 100%; padding: .2rem .5rem .2rem .3rem; gap: .4rem; box-shadow: none; }
-.quick-links-box.in-footer .quick-link:hover { transform: none; }
-.quick-links-box.in-footer .ql-icon { width: 1.55rem; height: 1.55rem; font-size: .85rem; border-radius: 0; flex-shrink: 0; }
-.quick-links-box.in-footer .ql-name { font-size: .8rem; line-height: 1.2; white-space: normal; overflow: visible; overflow-wrap: normal; }
-.quick-links-box.in-footer .ql-ext { margin-left: auto; flex-shrink: 0; }
-.quick-links-box.in-footer .ql-ext .bi { width: .75rem; height: .75rem; }
-.quick-links-box.in-footer.editing > .quick-links { height: auto; max-height: 40vh; grid-auto-rows: auto; }
-.quick-links-box.in-footer.editing .ql-edit-wrap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .2rem; }
-.quick-links-box.in-footer.editing .ql-edit-wrap > .quick-link { grid-column: 1 / -1; grid-row: 1; height: auto; }
-.quick-links-box.in-footer.editing .ql-edit-wrap > .ql-move { grid-row: 2; width: auto; height: 1.5rem; }
-.quick-links-box.in-footer.editing .ql-edit-wrap > .ql-move:first-child { grid-column: 1; }
-.quick-links-box.in-footer.editing .ql-edit-wrap > .ql-move:nth-of-type(2) { grid-column: 3; }
-.quick-links-box.in-footer.editing .ql-edit-wrap > .ql-toggle { position: static; grid-column: 2; grid-row: 2; width: auto; height: 1.5rem; border-radius: 0; box-shadow: none; }
-.quick-links-box.in-footer.editing .ql-edit-wrap > span.ql-toggle { visibility: hidden; }
-.ql-note-sign { display: inline-flex; align-items: center; gap: .3rem; padding: .15rem .45rem; background: var(--warn-soft); color: var(--warn); font-size: .72rem; font-weight: 700; white-space: nowrap; cursor: help; }
-.ql-note-sign .bi { width: .9rem; height: .9rem; }
+
 body .fab-dock { bottom: calc(var(--ql-dock-h, 0px) + 1.2rem); }
-@media (max-width: 1000px) { .quick-links-box.in-footer > .quick-links { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 640px) {
-  .ql-footer > .ql-foot-title { display: none; }
-  .quick-links-box.in-footer > .quick-links { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
 
 /* v1.64: the case tabs look like the Options tabs: boxes side by side with an icon; the open
    tab is white with a blue line along its top. */
@@ -3238,30 +3174,12 @@ body .fab-dock { bottom: calc(var(--ql-dock-h, 0px) + 1.2rem); }
 .tab svg.bi { width: 1rem; height: 1rem; flex-shrink: 0; }
 
 /* v1.66: Charges in the footer: one button; a click shows Federal and State in its place. */
-.quick-links-box.in-footer .ql-split-cell { display: grid; min-width: 0; }
-.quick-links-box.in-footer .ql-split-cell > .quick-link { width: 100%; font: inherit; text-align: left; cursor: pointer; }
-.quick-links-box.in-footer .ql-split-cell > [hidden] { display: none; }
-.quick-links-box.in-footer .ql-split-opts { display: grid; grid-template-columns: 1fr 1fr; gap: .25rem; }
-.quick-links-box.in-footer .ql-split-opt { display: flex; align-items: center; justify-content: center; border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent-strong, var(--accent)); font-size: .8rem; font-weight: 700; text-decoration: none; }
-.quick-links-box.in-footer .ql-split-opt:hover, .quick-links-box.in-footer .ql-split-opt:focus-visible { background: var(--accent); color: #fff; outline: none; }
 
 /* v1.66: footer layout: on the left "Quick Links" with the Reference / OSINT / LEO buttons
    under it (then the Outside Sites sign and Arrange); the links fill the rest. */
-@media (min-width: 641px) {
-  .ql-footer { display: grid; grid-template-columns: 10.5rem minmax(0, 1fr); grid-template-rows: auto auto auto 1fr; column-gap: 1rem; row-gap: .4rem; align-items: start; }
-  .ql-footer > .ql-foot-title { grid-column: 1; grid-row: 1; margin: 0; }
-  .quick-links-box.in-footer .ql-tabs { grid-column: 1; grid-row: 2; display: grid; grid-template-columns: 1fr; gap: .25rem; }
-  .quick-links-box.in-footer .ql-tabs .btn { width: 100%; min-width: 0; justify-content: space-between; padding: .3rem .6rem; }
-  .quick-links-box.in-footer > .ql-note-sign { grid-column: 1; grid-row: 3; justify-self: start; }
-  .quick-links-box.in-footer .ql-head > .small { grid-column: 1; grid-row: 4; align-self: end; margin: 0; }
-  .quick-links-box.in-footer .ql-head > .btn { grid-column: 1; grid-row: 4; align-self: end; justify-self: start; margin: 0; }
-  .quick-links-box.in-footer .ql-head > .small ~ .btn { grid-row: 5; }
-  .quick-links-box.in-footer > .quick-links, .quick-links-box.in-footer > p { grid-column: 2; grid-row: 1 / span 5; }
-  .quick-links-box.in-footer.editing > .quick-links { grid-row: 1 / span 5; }
-}
 
 /* v1.67 */
-.ql-note-sign.ql-note-off { visibility: hidden; }
+
 .hero-compact .hero-line { margin-bottom: .75rem; }
 .att-sol .att-what { display: inline-flex; align-items: center; gap: .3rem; font-weight: 700; color: var(--danger); }
 .att-sol .att-what .bi { width: 1rem; height: 1rem; flex-shrink: 0; }
@@ -3270,13 +3188,11 @@ body .fab-dock { bottom: calc(var(--ql-dock-h, 0px) + 1.2rem); }
 .arch-opt { display: flex; align-items: center; gap: .5rem; padding: .5rem .6rem; border: 1px solid var(--box-edge, var(--border)); background: var(--surface); cursor: pointer; font-weight: 600; }
 .arch-opt:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 .arch-opt .bi { width: 1.2rem; height: 1.2rem; }
-.arch-sub { list-style: none; }
 .arch-sub-head { display: flex; align-items: center; gap: .45rem; width: 100%; padding: .4rem .5rem; border: 1px solid var(--box-edge, var(--border)); background: var(--surface-2); color: var(--text); font: inherit; font-size: .8rem; font-weight: 800; letter-spacing: .05em; cursor: pointer; text-align: left; margin-bottom: .3rem; }
 .arch-sub-head:hover { border-color: var(--accent); }
 .arch-sub-head .arch-sub-name { flex: 1; }
 .arch-sub-head .count { font-size: .72rem; padding: .05rem .4rem; background: var(--surface); border: 1px solid var(--border); }
 .arch-sub-head .bi { width: .95rem; height: .95rem; }
-.arch-sub-head .sec-folder .bi { width: 1.15rem; height: 1.15rem; }
 .arch-expired .arch-sub-head { border-left: 3px solid var(--danger); }
 .arch-nolle .arch-sub-head { border-left: 3px solid var(--warn); }
 .arch-prosecution .arch-sub-head { border-left: 3px solid var(--ok); }
@@ -3421,14 +3337,12 @@ body .fab-dock { bottom: calc(var(--ql-dock-h, 0px) + 1.2rem); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --chrome: #141a23; --chrome-edge: #2a3341; --lift: 0 1px 2px rgba(0, 0, 0, .5), 0 2px 6px rgba(0, 0, 0, .35); --lift-hover: 0 3px 10px rgba(0, 0, 0, .6); } }
 :root[data-theme="dark"] { --chrome: #141a23; --chrome-edge: #2a3341; --lift: 0 1px 2px rgba(0, 0, 0, .5), 0 2px 6px rgba(0, 0, 0, .35); --lift-hover: 0 3px 10px rgba(0, 0, 0, .6); }
 .sidebar { background: var(--chrome) !important; border-right: 1px solid var(--chrome-edge); }
-#ql-footer.ql-footer { background: var(--chrome); border-top-color: var(--chrome-edge); }
 .sidebar .op-group { box-shadow: var(--lift); border-top-color: var(--chrome-edge); border-right-color: var(--chrome-edge); border-bottom-color: var(--chrome-edge); transition: box-shadow .15s; }
-.sidebar .case-item,.sidebar .archived-cases > summary,.sidebar .closed-cases > summary,#ql-footer .quick-link,#ql-footer .ql-tabs button,#ql-footer .ql-split-opt,#ql-footer .ql-arrange,#ql-footer button.ql-foot-btn {
+.sidebar .case-item {
   background: var(--surface); border: 1px solid var(--chrome-edge); box-shadow: var(--lift); transition: box-shadow .15s, transform .15s, border-color .15s; }
 .sidebar .op-group .case-item { box-shadow: none; }
 .sidebar .op-group:hover { box-shadow: var(--lift-hover); }
-.sidebar .case-item:hover, #ql-footer .quick-link:hover, #ql-footer .ql-tabs button:hover { box-shadow: var(--lift-hover); border-color: var(--accent); }
-#ql-footer .ql-tabs button.active, #ql-footer .ql-tabs button[aria-selected="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.sidebar .case-item:hover { box-shadow: var(--lift-hover); border-color: var(--accent); }
 .sidebar .case-item.active { background: var(--accent-soft); }
 .sidebar-tools .icon-btn { background: var(--surface); border: 1px solid var(--chrome-edge); box-shadow: var(--lift); }
 
@@ -3649,20 +3563,7 @@ html .tl-item.deadline::before { transform: none; }
 /* v1.83: CLOSED FILES and ARCHIVED look like the MISSION FILES and GENERAL FILES folders: a card
    with a coloured left edge, the folder icon in a box, the name in capitals with a line under it,
    the count and the arrow. */
-#sidebar .archived-cases { margin: .45rem .55rem 0; border: 1px solid var(--chrome-edge, var(--border)); border-left: 3px solid #8a94a6; background: var(--surface); box-shadow: var(--lift, var(--shadow)); max-height: 34%; }
-#sidebar .closed-cases { border-left-color: #5f9e8f; }
-#sidebar .closed-cases + .archived-cases { border-top: 1px solid var(--chrome-edge, var(--border)); margin-bottom: .55rem; }
-#sidebar .archived-cases:last-child { margin-bottom: .55rem; }
-#sidebar .archived-cases > summary { padding: .55rem .6rem .55rem .55rem; gap: .5rem; font-size: inherit; text-transform: none; letter-spacing: 0; background: var(--surface); position: sticky; top: 0; z-index: 1; }
-#sidebar .archived-cases > summary .sec-folder { width: 2rem; height: 2rem; border: 1px solid var(--border); background: var(--surface); margin: 0; }
-#sidebar .archived-cases > summary .sec-folder svg { width: 1.3rem; height: 1.3rem; }
-#sidebar .archived-cases > summary .sec-text { display: grid; gap: .05rem; min-width: 0; flex: 1; }
-#sidebar .archived-cases > summary .sec-label { font-size: .93rem; font-weight: 700; letter-spacing: .04em; color: var(--text); }
-#sidebar .archived-cases > summary .sec-meta { font-size: .72rem; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#sidebar .archived-cases:not([open]) > summary .sec-meta { display: none; }
-#sidebar .archived-cases > summary .count-pill { margin-left: 0; }
-#sidebar .archived-cases > .case-list { padding: .1rem .45rem .45rem; border-top: 1px solid var(--border); }
-#sidebar .archived-cases:hover { box-shadow: var(--lift-hover, var(--shadow-lg)); }
+
 .general-group > .op-head .general-add { flex: none; width: 1.7rem; height: 1.7rem; border: 1px solid var(--border); background: var(--surface); color: #7b4fd8; }
 .general-group > .op-head .general-add:hover { background: color-mix(in srgb, #7b4fd8 12%, var(--surface)); border-color: #7b4fd8; }
 .general-group > .op-head .general-add .bi { width: .85rem; height: .85rem; }
@@ -3674,9 +3575,6 @@ html .tl-item.deadline::before { transform: none; }
 /* v1.84: CLOSED FILES and ARCHIVED always sit at the bottom of the case list, in a panel whose
    height is dragged with the bar on its top edge; Quick Links has the same bar. A padlock on the bar
    keeps the height as it is. */
-.side-bottom { flex: none; display: flex; flex-direction: column; min-height: 0; max-height: 80%; overflow-y: auto; padding-bottom: .55rem; border-top: 1px solid var(--chrome-edge, var(--border)); }
-#sidebar .side-bottom .archived-cases { max-height: none; flex: none; overflow: visible; }
-.side-bottom { scrollbar-gutter: stable; scrollbar-width: thin; }
 
 /* v1.84: closing by arrest needs the arrest report; archiving needs a reason; Undo in the toast. */
 .close-form .arrest-required { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px; border: 1px solid #e0a43a; border-left: 4px solid #d97706; background: #fff7e6; color: #6b4300; }
@@ -3765,13 +3663,10 @@ html .tl-item.deadline::before { transform: none; }
 /* v1.88: Quick Links and CLOSED FILES / ARCHIVED: one fixed height, five Quick Links tiles high
    (--cv-panel-h is measured from a tile). The bottom area eases to whole cards when it stops
    scrolling (js/app.js), so the top one is never left cut in half. */
-#ql-footer.ql-footer { height: var(--cv-panel-h, 14rem); overflow-y: auto; box-sizing: border-box; }
-#sidebar .side-bottom { height: var(--cv-panel-h, 14rem); max-height: none; box-sizing: border-box; overscroll-behavior: contain; }
+
 /* One scroll box for the whole bottom area (the lists inside used to scroll on their own). */
-#sidebar .side-bottom > details, #sidebar .side-bottom .case-list { flex: none; max-height: none; min-height: 0; overflow: visible; }
-.side-bottom-spacer { flex: none; }
+
 /* The headings scroll with their lists here (a pinned heading left cards half hidden under it). */
-#sidebar .side-bottom > .archived-cases > summary { position: static; }
 
 /* v1.89: the Draft's floating bar sits right under the top toolbar (no gap the height of the
    page's top padding). */
@@ -4083,29 +3978,11 @@ a.locker-tile, a.locker-tile:hover, a.locker-tile * { text-decoration: none !imp
 
 /* v1.118: Quick Links as a slim bar (one row: title, tabs, the tab's links side by side, More).
    More opens the full panel as before; the sidebar's Closed / Archived row matches its height. */
-#ql-footer.ql-footer.ql-slim { display: flex; flex-wrap: nowrap; align-items: center; gap: .5rem; height: auto; overflow: hidden; padding-top: .4rem; padding-bottom: .4rem; }
-#ql-footer.ql-slim > .ql-foot-title { margin: 0 .2rem 0 0; }
-#ql-footer.ql-slim .quick-links-box.in-footer .ql-tabs { display: flex; flex-wrap: nowrap; gap: .25rem; }
-#ql-footer.ql-slim .quick-links-box.in-footer .ql-tabs .btn { width: auto; padding: .25rem .55rem; }
-#ql-footer.ql-slim .quick-links-box.in-footer > .ql-note-sign,
-#ql-footer.ql-slim .quick-links-box.in-footer .ql-head > .small,
-#ql-footer.ql-slim .quick-links-box.in-footer .ql-head > .btn { display: none; }
-#ql-footer.ql-slim .quick-links-box.in-footer > .quick-links { display: flex; flex-wrap: nowrap; gap: .3rem; flex: 1; min-width: 0; height: auto; overflow: hidden; }
-#ql-footer.ql-slim .quick-links-box.in-footer > .quick-links > .ql-cut { display: none; } /* v1.119: whole links only */
-#ql-footer.ql-slim .quick-links-box.in-footer > p { flex: 1; margin: 0; }
-#ql-footer.ql-slim .quick-links-box.in-footer .quick-link, #ql-footer.ql-slim .quick-links-box.in-footer .ql-split-cell { flex: none; width: auto; min-height: 2rem; height: 2rem; }
-#ql-footer.ql-slim .quick-links-box.in-footer .ql-name { white-space: nowrap; }
-#ql-footer .ql-more { flex: none; margin-left: auto; white-space: nowrap; }
-@media (min-width: 641px) { #ql-footer:not(.ql-slim) .ql-more { grid-column: 1; grid-row: 6; align-self: end; justify-self: start; margin: 0; } }
+ /* v1.119: whole links only */
+
 /* v1.118: the sidebar's CLOSED FILES and ARCHIVED side by side in one slim row while both are
    folded; opening one gives the panel room for its list. */
-#sidebar .side-bottom:not(:has(> details[open])) { flex-direction: row; gap: .4rem; padding: .35rem .5rem; overflow: hidden; }
-#sidebar .side-bottom:not(:has(> details[open])) > details { flex: 1 1 0; min-width: 0; }
-#sidebar .side-bottom:not(:has(> details[open])) > details > summary { padding: .3rem .45rem; min-height: 0; }
-#sidebar .side-bottom:not(:has(> details[open])) .sec-meta { display: none; }
-#sidebar .side-bottom:not(:has(> details[open])) .sec-label { font-size: .74rem; letter-spacing: .03em; }
-#sidebar .side-bottom:not(:has(> details[open])) .side-bottom-spacer { display: none; }
-#sidebar .side-bottom:has(> details[open]) { height: max(var(--cv-panel-h, 14rem), min(48vh, 26rem)); }
+
 /* v1.118: a warning toast (amber edge) and a close button on the longer ones. */
 .toast.warn { border-left-color: var(--warn); }
 .toast { position: relative; }
@@ -4117,22 +3994,8 @@ a.locker-tile, a.locker-tile:hover, a.locker-tile * { text-decoration: none !imp
 .fab-dock .fab, .fab-dock .notes-fab { width: 2.6rem; height: 2.6rem; }
 .fab-dock .top-fab svg.bi { width: 1.35rem; height: 1.35rem; }
 .fab-dock { gap: .4rem; }
-#ql-footer.ql-slim .ql-more { order: 9; }
 /* The two chips: a small folder, the name on one line, the count; no arrow. */
-#sidebar .side-bottom:not(:has(> details[open])) > details > summary { display: flex; align-items: center; gap: .3rem; white-space: nowrap; }
-#sidebar .side-bottom:not(:has(> details[open])) .sec-folder .bi, #sidebar .side-bottom:not(:has(> details[open])) .sec-folder svg { width: 1.15rem; height: 1.15rem; }
-#sidebar .side-bottom:not(:has(> details[open])) .sec-chev { display: none; }
-#sidebar .side-bottom:not(:has(> details[open])) .sec-text { min-width: 0; flex: 1; }
-#sidebar .side-bottom:not(:has(> details[open])) .count-pill { margin-left: auto; }
-#sidebar .archived-cases > summary .sec-short { display: none; }
-#sidebar .side-bottom:not(:has(> details[open])) .sec-label { display: none; }
-#sidebar .side-bottom:not(:has(> details[open])) .sec-short { display: inline; font-weight: 700; font-size: .74rem; letter-spacing: .03em; color: var(--text); }
-#sidebar .side-bottom:not(:has(> details[open])) > details > summary .sec-folder { width: 1.3rem; height: 1.3rem; border: 0; background: none; }
-#sidebar .side-bottom:not(:has(> details[open])) { gap: .3rem; padding: .3rem .4rem; }
-#sidebar .side-bottom:not(:has(> details[open])) > details { margin: 0; }
-#sidebar .side-bottom:not(:has(> details[open])) > details > summary { padding: .3rem .35rem; gap: .25rem; }
-#sidebar .side-bottom:not(:has(> details[open])) .count-pill { padding: 0 .3rem; min-width: 0; font-size: .7rem; }
-#sidebar .side-bottom:not(:has(> details[open])) { align-items: center; }
+
 /* v1.118: the letterhead as one slim line on the Draft, Arrest and Link Chart tabs. */
 .lh-summary { display: flex; align-items: center; gap: .6rem; padding: .4rem .7rem; margin: 0 0 .7rem; border: 1px solid var(--border); background: var(--surface); }
 .lh-thumb { width: 1.9rem; height: 1.9rem; display: grid; place-items: center; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); overflow: hidden; flex: none; }
@@ -4171,15 +4034,7 @@ a.locker-tile, a.locker-tile:hover, a.locker-tile * { text-decoration: none !imp
   :root:not([data-theme="light"]) .dashboard .ov-btn-other { color: #5fc4b8; }
 }
 
-/* v1.119: the round buttons sit in the right end of the slim Quick Links bar instead of over the page,
-   and messages rise above the bar and the buttons. (body.ql-slim-on is set by quickFooter(): a
-   body:has(...) rule here made every change on the page re-check the whole page, slowing typing.) */
-@media (min-width: 641px) {
-  body.ql-slim-on .fab-dock { bottom: calc((var(--ql-dock-h, 2.9rem) - 2.6rem) / 2); right: 1rem; }
-  #ql-footer.ql-footer.ql-slim { padding-right: 10.4rem; }
-}
 .toasts { bottom: calc(var(--ql-dock-h, 0px) + 4.4rem); }
-body.ql-slim-on .toasts { bottom: calc(var(--ql-dock-h, 0px) + .8rem); }
 .tb-status > .power-btn { width: 2.3rem; height: 2.3rem; } /* v1.119: as tall as the other top-bar icons, so the captions line up */
 /* v1.119: Details' first row: the Status hint as one line under it; no Closed box until closed. */
 .details-grid.details-row-title > .row-hint { grid-column: 1 / -1; margin: -.2rem 0 0; }
@@ -4226,3 +4081,18 @@ body.ql-slim-on .toasts { bottom: calc(var(--ql-dock-h, 0px) + .8rem); }
 .closing-state.archived { color: var(--muted); }
 /* v1.119: a tab with changes still on their way to the SSD. */
 .tabs a.tab.unsaved::after { content: ''; display: inline-block; width: .45rem; height: .45rem; margin-left: .35rem; background: var(--warn, #d08a16); vertical-align: middle; }
+
+/* v1.121: Quick Links slide in from the right (the bottom bar is gone). */
+.ql-panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 60; width: min(27rem, 94vw); box-sizing: border-box; padding: .9rem 1rem 1.2rem;
+  background: var(--surface); border-left: 1px solid var(--border); box-shadow: var(--shadow-lg); overflow-y: auto;
+  transform: translateX(100%); visibility: hidden; transition: transform .18s ease, visibility 0s linear .18s; }
+.ql-panel.open { transform: none; visibility: visible; transition: transform .18s ease; }
+@media (prefers-reduced-motion: reduce) { .ql-panel, .ql-panel.open { transition: none; } }
+.ql-panel-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .7rem; }
+.ql-panel-head h2 { display: flex; align-items: center; gap: .45rem; margin: 0; font-size: 1.05rem; text-transform: uppercase; letter-spacing: .04em; }
+.ql-panel-head .ql-panel-close { margin-left: auto; }
+.ql-panel .quick-links-box .ql-head { flex-wrap: wrap; row-gap: .4rem; }
+.ql-panel .quick-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; height: auto; }
+.ql-panel .quick-link .ql-name { white-space: normal; overflow-wrap: anywhere; }
+.qa-tile.ql-open-btn.on, #btn-side-links.on { border-color: var(--accent); color: var(--accent); }
+.side-found-head { list-style: none; padding: .5rem .4rem .15rem; text-transform: uppercase; letter-spacing: .05em; }

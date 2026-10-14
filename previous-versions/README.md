@@ -4,6 +4,10 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.120)
+
+- **Landing page:** the Secure Locker moved below Archived, so the order is Mission Files, General Files, Other Files, Closed Files, Archived, Secure Locker
+
 ## Features (v1.119)
 
 - **Buys on the timeline:** a timeline event can be a **Buy** with the narcotic, amount and money paid. **Buy Summary** lists each suspect's buys with totals (also as a PDF), and **Print Timeline** makes a PDF of just the events shown (one suspect, Upcoming, Past…), in their colours

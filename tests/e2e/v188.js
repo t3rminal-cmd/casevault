@@ -1,45 +1,25 @@
+// The sidebar's bottom area (v1.88, its CLOSED FILES / ARCHIVED panel) is gone in v1.121: closed and
+// archived cases are on the home page; a search in the sidebar still finds them. All data is made up.
 const boot = require('./boot');
 const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
 (async () => { const { b, p, errs } = await boot(1366, 900);
-  // Several closed and archived cases so the bottom area scrolls.
   await p.evaluate(async () => {
-    for (let i = 0; i < 6; i++) { const c = await Vault.createCase({ number: `EX-${500 + i}`, subject: `Rick Poe ${i}` }); c.status = 'Closed'; c.closure = { disposition: 'unfounded', date: '2026-10-01' }; c.dates.closed = '2026-10-01'; await Vault.saveCase(c); }
-    for (let i = 0; i < 4; i++) { const c = await Vault.createCase({ number: `EX-${700 + i}`, subject: `Jane Roe ${i}` }); await Vault.archiveCase(c.id, false, 'nolle', 'test'); }
+    for (let i = 0; i < 3; i++) { const c = await Vault.createCase({ number: `EX-${500 + i}`, subject: `Rick Poe ${i}` }); c.status = 'Closed'; c.closure = { disposition: 'unfounded', date: '2026-10-01' }; c.dates.closed = '2026-10-01'; await Vault.saveCase(c); }
+    for (let i = 0; i < 2; i++) { const c = await Vault.createCase({ number: `EX-${700 + i}`, subject: `Jane Roe ${i}` }); await Vault.archiveCase(c.id, false, 'nolle', 'test'); }
   });
   await p.evaluate(() => { document.querySelectorAll('.toast').forEach((t) => t.remove()); location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(1000);
-  // v1.118: folded, the Closed / Archived row is as tall as the slim Quick Links bar.
-  const hs0 = await p.evaluate(() => [document.getElementById('ql-footer').getBoundingClientRect().height, document.getElementById('side-bottom').getBoundingClientRect().height]);
-  ok(Math.abs(hs0[0] - hs0[1]) < 1.5, `folded: Quick Links and the bottom area are the same height (${hs0.map(Math.round)})`);
-  await p.evaluate(() => { document.getElementById('closed-cases').open = true; document.getElementById('archived-cases').open = true; document.querySelectorAll('#closed-list details').forEach((d) => { d.open = true; }); });
-  await p.waitForTimeout(400);
-  const hs = await p.evaluate(() => [document.getElementById('ql-footer').getBoundingClientRect().height, document.getElementById('side-bottom').getBoundingClientRect().height, getComputedStyle(document.body).getPropertyValue('--cv-panel-h')]);
-  console.log('heights', hs);
-  ok(hs[1] >= hs[0] - 1 && hs[1] > 150, 'open: the bottom area gets room, at least as tall as Quick Links');
-  ok(!(await p.$('.panel-grip, .panel-lock')), 'no drag bars or padlocks');
-  // Scroll the bottom area a little with the wheel; it should settle on a whole card.
-  const sb = await p.$('#side-bottom'); const box = await sb.boundingBox();
-  await p.mouse.move(box.x + 100, box.y + 60);
-  const tops = [];
-  for (let i = 0; i < 4; i++) {
-    await p.mouse.wheel(0, Number(process.env.STEP || 45)); await p.waitForTimeout(900);
-    tops.push(await p.evaluate(() => {
-      const el = document.getElementById('side-bottom'); const r = el.getBoundingClientRect();
-      // The heading pinned at the top, and the first card under it: is a card cut by the heading?
-      const heads = [...el.querySelectorAll(':scope > details > summary')].filter((x) => { const t = x.getBoundingClientRect().top - r.top; return t > -1 && t < 2; });
-      const hb = heads.length ? heads[0].getBoundingClientRect().bottom : r.top;
-      const cards = [...el.querySelectorAll('.case-item, .op-head, .arch-sub-head')].filter((x) => !heads.some((hd) => hd.contains(x)));
-      const cut = cards.filter((x) => { const b = x.getBoundingClientRect(); return b.top < hb - 1 && b.bottom > hb + 1; }).map((x) => x.textContent.trim().slice(0, 20))
-        .concat([...el.querySelectorAll('.op-group, :scope > details')].filter((x) => { const b = x.getBoundingClientRect(); return b.top < hb - 1 && b.bottom > hb + 1.5 && b.bottom - hb < 18; }).map((x) => 'sliver:' + x.className));
-      const aligned = !cut.length;
-      return { scrollTop: Math.round(el.scrollTop), aligned, cut };
-    }));
-  }
-  console.log(tops);
-  console.log('geom', await p.evaluate(() => { const el = document.getElementById('side-bottom'); const r = el.getBoundingClientRect(); const g = (x) => { const b = x.getBoundingClientRect(); return [Math.round(b.top - r.top), Math.round(b.bottom - r.top)]; }; const cd = document.getElementById('closed-cases'); const cs = getComputedStyle(cd); return { st: el.scrollTop, closed: g(cd), closedSum: g(cd.querySelector('summary')), list: g(document.getElementById('closed-list')), arch: g(document.getElementById('archived-cases')), pad: cs.paddingBottom, mb: cs.marginBottom, bb: cs.borderBottomWidth, listMb: getComputedStyle(document.getElementById('closed-list')).marginBottom + '/' + getComputedStyle(document.getElementById('closed-list')).paddingBottom }; }));
-  console.log('last card', await p.evaluate(() => { const el = document.getElementById('side-bottom'); const r = el.getBoundingClientRect(); const cards = [...el.querySelectorAll('.case-item, .op-head, .arch-sub-head, :scope > details > summary')].filter((x) => x.getClientRects().length); const last = cards[cards.length - 1].getBoundingClientRect(); return { lastBottom: Math.round(last.bottom - r.top), panel: Math.round(r.height), text: cards[cards.length - 1].textContent.trim().slice(0, 30) }; }));
-  ok(tops.every((t) => t.aligned || t.scrollTop === 0), 'every stop has a card starting at the top edge');
-  await p.locator('#side-bottom').screenshot({ path: process.env.SP + '/v188/sidebar.png' });
-  await p.setViewportSize({ width: 1920, height: 1080 }); await p.waitForTimeout(600);
-  const hs2 = await p.evaluate(() => [document.getElementById('ql-footer').getBoundingClientRect().height, document.getElementById('side-bottom').getBoundingClientRect().height]);
-  ok(hs2[1] >= hs2[0] - 1 && hs2[1] > 150, `still roomy at 1920 (${hs2.map(Math.round)})`);
-  console.log('errors', errs); await b.close(); })();
+  ok(!(await p.$('#side-bottom, #closed-cases, #archived-cases')), 'no Closed / Archived area in the sidebar');
+  const listText = await p.textContent('#case-list');
+  ok(!/EX-500|EX-700/.test(listText), 'closed and archived cases are not in the sidebar list');
+  ok((await p.locator('.closed-files-section').count()) === 1 && (await p.locator('.archived-section').count()) === 1, 'they are on the home page (CLOSED FILES, ARCHIVED)');
+  // A search finds them, under Closed and Archived headings.
+  await p.click('#btn-side-search'); await p.fill('#case-search', 'EX-50'); await p.waitForTimeout(500);
+  const closed = await p.evaluate(() => ({ head: [...document.querySelectorAll('#case-list .side-found-head')].map((x) => x.textContent), text: document.getElementById('case-list').textContent }));
+  ok(closed.head.includes('Closed') && /EX-500/.test(closed.text), `a search finds closed cases: ${closed.head.join(',')}`);
+  await p.fill('#case-search', 'EX-70'); await p.waitForTimeout(500);
+  const arch = await p.evaluate(() => ({ head: [...document.querySelectorAll('#case-list .side-found-head')].map((x) => x.textContent), text: document.getElementById('case-list').textContent }));
+  ok(arch.head.includes('Archived') && /EX-700/.test(arch.text) && /EX-701/.test(arch.text), `a search finds archived cases: ${arch.head.join(',')}`);
+  await p.fill('#case-search', ''); await p.waitForTimeout(400);
+  ok(!(await p.$('#case-list .side-found-head')), 'cleared search: back to the open cases only');
+  await p.locator('#sidebar').screenshot({ path: process.env.SP + '/v188/sidebar.png' }).catch(() => {});
+  console.log('errors', errs); await b.close(); })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

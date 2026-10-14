@@ -8,25 +8,13 @@ const SP = process.env.SP + '/v1119';
 
 (async () => {
   const { b, p, errs, ids } = await boot(1366, 768);
-  await p.evaluate(() => { try { localStorage.removeItem('cv-ql-open'); } catch { /* fine */ } location.hash = '#/x'; location.hash = '#/'; });
-  await p.waitForSelector('#ql-footer.ql-slim'); await p.waitForTimeout(500);
-  // 1. Only whole links on the slim bar; More says how many wait.
-  const ql = await p.evaluate(() => {
-    const row = document.querySelector('#ql-footer .quick-links'); const edge = row.getBoundingClientRect().right + 0.5;
-    const shown = [...row.children].filter((k) => getComputedStyle(k).display !== 'none');
-    return { cut: shown.filter((k) => k.getBoundingClientRect().right > edge).length, hidden: row.children.length - shown.length, more: document.querySelector('#ql-footer .ql-more').textContent };
-  });
-  ok(ql.cut === 0 && (ql.hidden === 0 ? /^More$/.test(ql.more) : ql.more.includes(`+${ql.hidden}`)), `whole links only on the slim bar: ${JSON.stringify(ql)}`);
-  // 2-3. Messages above the bar; the round buttons inside the bar's right end.
+  await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForSelector('.quick-actions'); await p.waitForTimeout(500);
+  // 1–3: v1.121 replaced the slim Quick Links bar with a side panel (tests/e2e/v163-quicklinks.js).
+  // Messages still rise above the round corner buttons.
   await p.evaluate(() => window.CaseVaultUI.toast('A message for the test.', 'warn', 30000));
   await p.waitForTimeout(300);
-  const geo = await p.evaluate(() => {
-    const r = (s) => document.querySelector(s).getBoundingClientRect();
-    const bar = r('#ql-footer'); const dock = r('#fab-dock'); const t = [...document.querySelectorAll('.toast')].pop().getBoundingClientRect();
-    const links = document.querySelector('#ql-footer .ql-more').getBoundingClientRect();
-    return { toastAbove: t.bottom <= bar.top + 0.5, dockInBar: dock.top >= bar.top - 0.5 && dock.bottom <= bar.bottom + 0.5, clearOfLinks: links.right <= dock.left };
-  });
-  ok(geo.toastAbove && geo.dockInBar && geo.clearOfLinks, `message above the bar; round buttons in the bar: ${JSON.stringify(geo)}`);
+  const geo = await p.evaluate(() => { const dock = document.querySelector('#fab-dock').getBoundingClientRect(); const t = [...document.querySelectorAll('.toast')].pop().getBoundingClientRect(); return { toastAbove: t.bottom <= dock.top + 0.5 }; });
+  ok(geo.toastAbove, `the message sits above the round buttons: ${JSON.stringify(geo)}`);
   await p.evaluate(() => document.querySelectorAll('.toast').forEach((t) => t.remove()));
   // 4. Top bar: Memory at once; captions on one line.
   const caps = await p.evaluate(() => [...document.querySelectorAll('.tb-status > [data-cap]:not([hidden])')].map((e) => [e.dataset.cap, Math.round(e.getBoundingClientRect().bottom)]));
