@@ -15,13 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.119
+## What's New in v1.120
 
-- **Buys on the timeline:** a timeline event can be a **Buy** with the narcotic, amount and money paid. **Buy Summary** lists each suspect's buys with totals (also as a PDF), and **Print Timeline** makes a PDF of just the events shown (one suspect, Upcoming, Past…), in their colours
-- **Person view:** the person button beside a suspect shows every case and Mission they are on (subject, suspect role or arrestee) and their timeline events; names written another way ("DOE, Jon") are flagged as possibly the same person
-- **Closing a Mission:** the Mission page shows "2 of 4 cases closed" and, for each case number, what it needs (its own arrest report, or close by arrest with another RD's report). On the Arrest tab, **Copy From Another Case** brings over an arrestee already entered on another case number of the Mission
-- **Unsaved mark:** a small square on a tab while its changes are still on their way to the SSD
-- **Fixes:** Quick Links shows only whole links (**More +3** for the rest); messages and the round buttons no longer cover the page; the top-bar icons line up and no longer shift; the Details tab's first row is even, with no Closed box until the case is closed and the Mission named once; the Mission table has a heading on every column
+- **Landing page:** the Secure Locker moved below Archived, so the order is Mission Files, General Files, Other Files, Closed Files, Archived, Secure Locker
 
 ## What CaseVault Does
 

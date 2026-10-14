@@ -9,7 +9,9 @@ const SP = process.env.SP + '/v1112';
   await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForSelector('.locker-section');
   const order = await p.$$eval('.dash-section.ov-panel', (x) => x.map((e) => (e.querySelector('h2') || {}).textContent || '').map((t) => t.trim().toUpperCase()));
   const oi = order.indexOf('OTHER FILES'); const li = order.indexOf('SECURE LOCKER');
-  ok(oi >= 0 && li === oi + 1, `Secure Locker has its own section right under Other Files: ${order.join(' | ')}`);
+  // v1.120: after the Archived section (Other Files, Closed Files, Archived, then the locker).
+  const ai = order.findIndex((t) => /^ARCHIVED/.test(t));
+  ok(oi >= 0 && li > oi && (ai < 0 || li === ai + 1), `Secure Locker has its own section after Archived: ${order.join(' | ')}`);
   ok(await p.locator('.other-files-section .locker-tile, .other-files-section .ov-btn-locker').count() === 0, 'nothing of the locker is left inside Other Files');
   const tile = (await p.textContent('.locker-section .locker-tile')).replace(/\s+/g, ' ').trim();
   ok(tile === 'Secure Locker', `the tile just says "Secure Locker" (${tile})`);

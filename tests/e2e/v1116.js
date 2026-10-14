@@ -21,7 +21,7 @@ const SP = process.env.SP + '/v1116';
   await p.waitForTimeout(500);
   const order = await p.$$eval('.dashboard > .dash-section', (x) => x.map((e) => e.className.match(/(op-folders-section|general-years-section|other-files-section|closed-files-section|archived-section|locker-section)/g)).filter(Boolean).map((m) => m[m.length - 1]));
   const iOther = order.indexOf('other-files-section');
-  ok(order[iOther + 1] === 'locker-section' && order[iOther + 2] === 'closed-files-section' && order[iOther + 3] === 'archived-section', `Closed Files, then Archived, under Other Files and the Secure Locker: ${order.join(' > ')}`);
+  ok(order[iOther + 1] === 'closed-files-section' && order[iOther + 2] === 'archived-section' && order[iOther + 3] === 'locker-section', `Closed Files, then Archived, then the Secure Locker (v1.120), under Other Files: ${order.join(' > ')}`);
   const missions = await p.$$eval('.op-folders-section:not(.closed-files-section):not(.archived-section):not(.general-years-section) .op-folder-tile', (x) => x.map((e) => e.textContent.trim()));
   ok(missions.length === 1 && /OP-1/.test(missions[0]), `Mission Files keeps the open Mission only: ${missions.join(' | ')}`);
   await p.click('.op-folders-section .op-folder-tile:has-text("OP-1")'); await p.waitForTimeout(300);
