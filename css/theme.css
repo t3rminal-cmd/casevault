@@ -1,0 +1,89 @@
+/* CaseVault — the theme (v1.124, "Navy Ledger").
+ *
+ * Loaded after app.css, so the colours and the font here win. One place for the palette: deep navy on
+ * a warm off-white, flat (thin borders instead of shadows), square corners, and one colour per meaning
+ * everywhere: Open blue, Pending amber, Closed green, Archived warm grey, Overdue red. The font is
+ * JetBrains Mono, bundled in vendor/ so it looks the same on every PC (and needs no internet).
+ */
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("../vendor/jetbrains-mono/jetbrains-mono-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: italic; font-weight: 400; font-display: swap; src: url("../vendor/jetbrains-mono/jetbrains-mono-latin-400-italic.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 600; font-display: swap; src: url("../vendor/jetbrains-mono/jetbrains-mono-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 700; font-display: swap; src: url("../vendor/jetbrains-mono/jetbrains-mono-latin-700-normal.woff2") format("woff2"); }
+
+/* Light. The selector matches app.css's palette rules, so this one (loaded later) wins. */
+:root, :root:not([data-theme="dark"]) {
+  --font: "JetBrains Mono", Consolas, "Cascadia Mono", "Liberation Mono", "DejaVu Sans Mono", monospace;
+  --mono: var(--font);
+  --bg: #f5f4f0;
+  --surface: #fffefb;
+  --surface-2: #ebe9e3;
+  --border: #d9d6cd;
+  --text: #1b2230;
+  --muted: #596172;
+  --accent: #1f3a5f;
+  --accent-text: #ffffff;
+  --accent-soft: rgba(31, 58, 95, .10);
+  --accent-strong: #1f3a5f;
+  --link: #2f6db5;
+  --btn-primary-bg: #e4eaf2;
+  --btn-primary-hover: #d6dfeb;
+  --danger: #b3261e;
+  --danger-soft: rgba(179, 38, 30, .10);
+  --danger-strong: #8f1d17;
+  --btn-danger-bg: #f8e3e1;
+  --btn-danger-hover: #f2d3cf;
+  --warn: #946200;
+  --warn-soft: rgba(148, 98, 0, .13);
+  --ok: #2e7d4f;
+  --ok-soft: rgba(46, 125, 79, .12);
+  --shadow: 0 1px 2px rgba(27, 34, 48, .06);
+  --shadow-lg: 0 .8rem 2.4rem rgba(27, 34, 48, .16);
+  --topbar-bg: rgba(255, 254, 251, .94);
+  --box-edge: #d2cec3;
+  --box-line: #c6c1b5;
+  /* Status: one colour per meaning, everywhere. */
+  --st-open: #2f6db5; --st-open-soft: rgba(47, 109, 181, .12);
+  --st-pending: #946200; --st-pending-soft: rgba(148, 98, 0, .13);
+  --st-closed: #2e7d4f; --st-closed-soft: rgba(46, 125, 79, .12);
+  --st-archived: #6b665c; --st-archived-soft: rgba(107, 102, 92, .14);
+  /* Sections: Missions navy-blue, General Files muted plum. */
+  --sec-mission: #2f6db5;
+  --sec-general: #6b5a8e;
+  --hero-1: #152a45;
+  --hero-2: #26476f;
+}
+/* Dark: the same tokens, for the system setting and for the toggle. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161e; --surface: #171d27; --surface-2: #1f2733; --border: #2c3644; --text: #e2e6ec; --muted: #9aa3b2;
+    --accent: #8fb3e0; --accent-text: #11161e; --accent-soft: rgba(143, 179, 224, .14); --accent-strong: #b7cfee; --link: #8fb3e0;
+    --btn-primary-bg: rgba(143, 179, 224, .16); --btn-primary-hover: rgba(143, 179, 224, .26);
+    --danger: #f2867d; --danger-soft: rgba(242, 134, 125, .15); --danger-strong: #f6a59e; --btn-danger-bg: rgba(242, 134, 125, .16); --btn-danger-hover: rgba(242, 134, 125, .26);
+    --warn: #e2b552; --warn-soft: rgba(226, 181, 82, .15); --ok: #6cc08f; --ok-soft: rgba(108, 192, 143, .14);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3); --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, .55); --topbar-bg: rgba(23, 29, 39, .92);
+    --box-edge: #34404f; --box-line: #435064;
+    --st-open: #8fb3e0; --st-open-soft: rgba(143, 179, 224, .15); --st-pending: #e2b552; --st-pending-soft: rgba(226, 181, 82, .15);
+    --st-closed: #6cc08f; --st-closed-soft: rgba(108, 192, 143, .14); --st-archived: #b1aa9d; --st-archived-soft: rgba(177, 170, 157, .14);
+    --sec-mission: #8fb3e0; --sec-general: #b3a3d6; --hero-1: #16233a; --hero-2: #213a5c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161e; --surface: #171d27; --surface-2: #1f2733; --border: #2c3644; --text: #e2e6ec; --muted: #9aa3b2;
+  --accent: #8fb3e0; --accent-text: #11161e; --accent-soft: rgba(143, 179, 224, .14); --accent-strong: #b7cfee; --link: #8fb3e0;
+  --btn-primary-bg: rgba(143, 179, 224, .16); --btn-primary-hover: rgba(143, 179, 224, .26);
+  --danger: #f2867d; --danger-soft: rgba(242, 134, 125, .15); --danger-strong: #f6a59e; --btn-danger-bg: rgba(242, 134, 125, .16); --btn-danger-hover: rgba(242, 134, 125, .26);
+  --warn: #e2b552; --warn-soft: rgba(226, 181, 82, .15); --ok: #6cc08f; --ok-soft: rgba(108, 192, 143, .14);
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3); --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, .55); --topbar-bg: rgba(23, 29, 39, .92);
+  --box-edge: #34404f; --box-line: #435064;
+  --st-open: #8fb3e0; --st-open-soft: rgba(143, 179, 224, .15); --st-pending: #e2b552; --st-pending-soft: rgba(226, 181, 82, .15);
+  --st-closed: #6cc08f; --st-closed-soft: rgba(108, 192, 143, .14); --st-archived: #b1aa9d; --st-archived-soft: rgba(177, 170, 157, .14);
+  --sec-mission: #8fb3e0; --sec-general: #b3a3d6; --hero-1: #16233a; --hero-2: #213a5c;
+  color-scheme: dark;
+}
+
+body { font-family: var(--font); }
+/* Pending in the same place as the others (it used the old warn colours). */
+.status-pending { background: var(--st-pending-soft); color: var(--st-pending); }
+/* The banner: navy, flat. */
+.hero { background: linear-gradient(135deg, var(--hero-1) 0%, var(--hero-2) 100%); box-shadow: none; }

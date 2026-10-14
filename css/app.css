@@ -576,7 +576,7 @@ button.quote:hover { border-color: var(--accent); }
   background: #0e1116;
   color: #60a5fa;
   outline: none;
-  font-family: Consolas, ui-monospace, "Courier New", monospace;
+  font-family: var(--font);
   overflow: hidden;
 }
 .privacy-screen:not([open]) { display: none; }
@@ -1404,7 +1404,7 @@ html.bright-adjusted dialog[open] { filter: brightness(var(--cv-brightness, 1));
 
 .dev-col { display: grid; gap: .45rem; align-content: start; min-width: 0; }
 
-.dev-src, .dev-out { min-height: 14rem; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: .85rem; }
+.dev-src, .dev-out { min-height: 14rem; resize: vertical; font-family: var(--font); font-size: .85rem; }
 .dev-actions, .dev-save { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
 .dev-save input[type="text"] { width: 16rem; }
 .dev-save select { width: auto; }
@@ -2826,7 +2826,7 @@ svg.ci > image { transform: scale(1.12); transform-origin: 50% 50%; }
 .lc-view.free .lc-card { cursor: grab; }
 .lc-view.free .lc-card:active { cursor: grabbing; }
 .lc-view.linking .lc-card { cursor: crosshair; }
-.lc-view .lc-card:hover > rect:first-child { stroke: #0d6efd; }
+.lc-view .lc-card:hover > rect:first-child { stroke: var(--accent); }
 .lc-view.linking { outline: 2px dashed #c98a12; outline-offset: -2px; }
 .lc-view { touch-action: none; user-select: none; }
 .lc-empty { align-self: center; }
@@ -3417,14 +3417,14 @@ body .fab-dock { bottom: calc(var(--ql-dock-h, 0px) + 1.2rem); }
 /* v1.74: MISSION FILES, GENERAL FILES and OTHER FILES the same width; each section's colour
    (blue, purple, green, as its folder icon) on its edge and its header button. */
 .dashboard .ov-files-title > span { display: inline-block; white-space: nowrap; }
-.dashboard .op-folders-section:not(.general-years-section) { border-left-color: #1f6fd1; }
-.dashboard .general-years-section { border-left-color: #7b4fd8; }
+.dashboard .op-folders-section:not(.general-years-section) { border-left-color: var(--sec-mission); }
+.dashboard .general-years-section { border-left-color: var(--sec-general); }
 .dashboard .other-files-section { border-left-color: #2a9d8f; }
-.dashboard .ov-btn-mission { color: #1f5fb8; border-color: color-mix(in srgb, #1f6fd1 45%, var(--border)); }
-.dashboard .ov-btn-general { color: #6a3fc8; border-color: color-mix(in srgb, #7b4fd8 45%, var(--border)); }
+.dashboard .ov-btn-mission { color: var(--sec-mission); border-color: color-mix(in srgb, var(--sec-mission) 45%, var(--border)); }
+.dashboard .ov-btn-general { color: var(--sec-general); border-color: color-mix(in srgb, var(--sec-general) 45%, var(--border)); }
 .dashboard .ov-btn-other { color: #1f7d72; border-color: color-mix(in srgb, #2a9d8f 45%, var(--border)); }
-.dashboard .ov-btn-mission:hover { background: color-mix(in srgb, #1f6fd1 12%, var(--surface)); }
-.dashboard .ov-btn-general:hover { background: color-mix(in srgb, #7b4fd8 12%, var(--surface)); }
+.dashboard .ov-btn-mission:hover { background: color-mix(in srgb, var(--sec-mission) 12%, var(--surface)); }
+.dashboard .ov-btn-general:hover { background: color-mix(in srgb, var(--sec-general) 12%, var(--surface)); }
 .dashboard .ov-btn-other:hover { background: color-mix(in srgb, #2a9d8f 12%, var(--surface)); }
 .op-folder-art .bi.ci { width: 3.6rem; height: 3.6rem; }
 
@@ -3497,12 +3497,12 @@ html .tl-item.deadline::before { transform: none; }
 .folder-reset.folder-arrange, .folder-reset.disc-open { width: 9.5rem; justify-content: center; }
 
 /* v1.78: MISSION FILES in the case list: the Missions inside one blue folder, with + New Mission. */
-.op-group.mission-group { border-left-color: #1f6fd1; }
+.op-group.mission-group { border-left-color: var(--sec-mission); }
 .mission-children { list-style: none; margin: 0; padding: .35rem .4rem .45rem .6rem; display: grid; gap: .4rem; border-top: 1px solid var(--border); }
 .mission-children > li { list-style: none; }
 .mission-children .empty { padding: .3rem .2rem; }
-.mission-group > .op-head .mission-add { flex: none; width: 1.7rem; height: 1.7rem; border: 1px solid var(--border); background: var(--surface); color: #1f6fd1; }
-.mission-group > .op-head .mission-add:hover { background: color-mix(in srgb, #1f6fd1 12%, var(--surface)); border-color: #1f6fd1; }
+.mission-group > .op-head .mission-add { flex: none; width: 1.7rem; height: 1.7rem; border: 1px solid var(--border); background: var(--surface); color: var(--sec-mission); }
+.mission-group > .op-head .mission-add:hover { background: color-mix(in srgb, var(--sec-mission) 12%, var(--surface)); border-color: var(--sec-mission); }
 .mission-group > .op-head .mission-add .bi { width: .85rem; height: .85rem; }
 .ov-head-actions { display: flex; gap: .4rem; align-items: center; }
 /* v1.78: the timeline dot sits exactly on the centre of the line (it was 3.5px to the right). */
@@ -3560,8 +3560,8 @@ html .tl-item.deadline::before { transform: none; }
    with a coloured left edge, the folder icon in a box, the name in capitals with a line under it,
    the count and the arrow. */
 
-.general-group > .op-head .general-add { flex: none; width: 1.7rem; height: 1.7rem; border: 1px solid var(--border); background: var(--surface); color: #7b4fd8; }
-.general-group > .op-head .general-add:hover { background: color-mix(in srgb, #7b4fd8 12%, var(--surface)); border-color: #7b4fd8; }
+.general-group > .op-head .general-add { flex: none; width: 1.7rem; height: 1.7rem; border: 1px solid var(--border); background: var(--surface); color: var(--sec-general); }
+.general-group > .op-head .general-add:hover { background: color-mix(in srgb, var(--sec-general) 12%, var(--surface)); border-color: var(--sec-general); }
 .general-group > .op-head .general-add .bi { width: .85rem; height: .85rem; }
 
 /* v1.83: Recently Updated: every status box the same width (Open, Pending, Closed, Archived). */
@@ -3710,8 +3710,8 @@ html .tl-item.deadline::before { transform: none; }
 .suspect-pick-list .sp-head { border: 0; background: none; padding: 0 .6rem; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); cursor: default; }
 .suspect-pick-list .sp-name { overflow-wrap: anywhere; }
 .suspect-pick-list .sp-role { justify-self: start; font-size: .75rem; font-weight: 700; padding: .05rem .5rem; border: 1px solid var(--border); background: var(--surface-2); }
-.suspect-pick-list .sp-role-primary { color: #1f5fb8; border-color: color-mix(in srgb, #1f6fd1 45%, var(--border)); }
-.suspect-pick-list .sp-role-secondary { color: #6a3fc8; border-color: color-mix(in srgb, #7b4fd8 45%, var(--border)); }
+.suspect-pick-list .sp-role-primary { color: var(--sec-mission); border-color: color-mix(in srgb, var(--sec-mission) 45%, var(--border)); }
+.suspect-pick-list .sp-role-secondary { color: var(--sec-general); border-color: color-mix(in srgb, var(--sec-general) 45%, var(--border)); }
 @media (max-width: 560px) { .suspect-pick-list .sp-row { grid-template-columns: 1.3rem minmax(0, 1fr) auto; } .suspect-pick-list .sp-note { grid-column: 2 / -1; } .suspect-pick-list .sp-head span:last-child { display: none; } }
 
 /* v1.94: Offender Vehicle(s): a card per vehicle, Impound / Tow / DNA click boxes beside its name. */
@@ -3900,10 +3900,10 @@ table.data-table.general-table th, table.data-table.general-table td { padding-l
 .locker-section .section-head input[type=search] { width: 16rem; max-width: 100%; }
 .locker-table td { vertical-align: middle; }
 .locker-table td.col-actions { text-align: right; }
-.secret-wrap { display: inline-flex; align-items: center; gap: .2rem; font-family: Consolas, monospace; }
+.secret-wrap { display: inline-flex; align-items: center; gap: .2rem; font-family: var(--font); }
 .secret-text { min-width: 8ch; }
 .secret-edit { display: flex; gap: .3rem; align-items: center; }
-.secret-edit input { flex: 1 1 auto; min-width: 0; font-family: Consolas, monospace; }
+.secret-edit input { flex: 1 1 auto; min-width: 0; font-family: var(--font); }
 .recovery-key { font: 700 1.3rem/1.6 Consolas, monospace; letter-spacing: .04em; padding: .7rem 1rem; margin: .6rem 0; background: var(--surface-2); border: 1px dashed var(--accent); text-align: center; word-break: break-all; user-select: all; }
 .locker-drop.drag { outline: 2px dashed var(--accent); outline-offset: 4px; }
 .locker-img { text-align: center; overflow: auto; max-height: 75vh; }

@@ -1679,7 +1679,7 @@
         draw();
       } }, label, h('span', { class: 'th-arrow', 'aria-hidden': 'true' })));
     // v1.111: the Subject Name in three columns: Last, First, Middle.
-    const head = h('thead', {}, h('tr', {}, sortTh('Case Number', 'number'), sortTh('Last Name', 'subject', 'name-cell'), sortTh('First Name', 'first', 'name-cell'), h('th', { class: 'name-cell' }, 'Middle Name'), h('th', {}, 'Mission'), h('th', {}, 'Status'),
+    const head = h('thead', {}, h('tr', {}, sortTh('Case Number', 'number'), sortTh('Last Name', 'subject', 'name-cell'), sortTh('First Name', 'first', 'name-cell'), h('th', { class: 'name-cell', title: 'Middle name' }, 'Middle'), h('th', {}, 'Mission'), h('th', {}, 'Status'),
       sortTh('Opened', 'opened', 'date-cell'), sortTh('Age', 'age', 'age-cell'), h('th', {}, '')));
     const draw = () => {
       state.generalQuery = q.value;

@@ -8,7 +8,7 @@
 
 // VERSION is bumped with each release; BUILD is replaced with the commit SHA by the GitHub Pages
 // workflow. Either change gives a new cache, so the installed app picks up the update.
-const VERSION = '1.123.0';
+const VERSION = '1.124.0';
 const BUILD = 'dev';
 const CACHE = `casevault-${VERSION}-${BUILD}`;
 
@@ -17,6 +17,11 @@ const APP_FILES = [
   './index.html',
   './manifest.webmanifest',
   './css/app.css',
+  './css/theme.css',
+  './vendor/jetbrains-mono/jetbrains-mono-latin-400-normal.woff2',
+  './vendor/jetbrains-mono/jetbrains-mono-latin-400-italic.woff2',
+  './vendor/jetbrains-mono/jetbrains-mono-latin-600-normal.woff2',
+  './vendor/jetbrains-mono/jetbrains-mono-latin-700-normal.woff2',
   './js/theme.js',
   './js/options.js',
   './js/icons-data.js',
