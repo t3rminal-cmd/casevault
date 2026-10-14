@@ -67,6 +67,8 @@
             h('div', { class: 'field' }, h('span', {}, 'Age'), age),
             field('Residence', input('residence', { maxlength: 200, 'aria-label': `${who} residence`, title: s.residence || '' })),
             field('Role', role),
+            // v1.119: every case and Mission this person is on.
+            h('button', { 'data-ro-ok': 'true', class: 'icon-btn person-btn', type: 'button', title: 'Every case this person is on', onclick: () => { if (!String(s.name || '').trim()) return; root.CVPersonView.open(s.name, root.CaseVaultUI); } }, I('person-lines-fill'), h('span', { class: 'sr-only' }, `Cases with ${who}`)),
             h('button', { class: 'icon-btn danger-icon contact-remove', type: 'button', title: 'Remove this suspect', onclick: () => { c.suspects.splice(i, 1); draw(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Remove ${who}`))),
             demo);
           showNotId();

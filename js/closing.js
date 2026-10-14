@@ -150,6 +150,15 @@
     noVehicle: false, noNarcotics: false, noWarrant: false,
   });
   const emptyArrest = () => ({ schema: 2, arrestees: [emptyArrestee()] });
+  /** v1.119: the same person arrested on another case of the Mission: their own details (name,
+   * residence, date of birth, description) on a new arrestee with this case's RD number. The charges,
+   * property, photo and narrative stay with the other case. */
+  function copyArrestee(src, rdNumber = '') {
+    const out = emptyArrestee();
+    for (const f of ARRESTEE_FIELDS) out[f.key] = clean(src && src[f.key]);
+    out.rdNumber = clean(rdNumber);
+    return out;
+  }
 
   /** An arrestee from any version: missing fields added; a warrant number from before v1.30 becomes a
    * Warrant entry; the old Notes become the Incident Narrative. */
@@ -270,6 +279,27 @@
 
   /** v1.84: an arrest report good enough to close by arrest: an arrestee's name and a charge. */
   const arrestReady = (arrest) => ((arrest && arrest.arrestees) || []).some((a) => arresteeName(a) && chargesText(a.charges));
+  /** v1.119: how far a Mission is from closed. cases: [{ id, number, status, archived, closure }];
+   * arrests: Map(case id -> arrest.json). -> { done, total, rows: Map(id -> { state, text }) } where
+   * state is closed | archived | ready (its own arrest report) | ref (can close by arrest with another
+   * case number's report) | open (no arrest report yet). */
+  function missionProgress(cases, arrests) {
+    const list = (cases || []).filter(Boolean);
+    const ready = list.filter((x) => x.status !== 'Closed' && !x.archived && arrestReady(arrests.get(x.id)));
+    const anyReport = list.find((x) => arrestReady(arrests.get(x.id)));
+    const rows = new Map();
+    for (const x of list) {
+      const ref = x.closure && x.closure.arrestRef;
+      if (x.archived) rows.set(x.id, { state: 'archived', text: 'Archived' });
+      else if (x.status === 'Closed') rows.set(x.id, { state: 'closed', text: ref ? `Closed by arrest (report on RD ${ref.number})` : 'Closed' });
+      else if (ready.includes(x)) rows.set(x.id, { state: 'ready', text: 'Arrest report ready' });
+      else if (anyReport) rows.set(x.id, { state: 'ref', text: `Can close by arrest with RD ${anyReport.number}'s report` });
+      else rows.set(x.id, { state: 'open', text: 'No arrest report yet' });
+    }
+    const done = [...rows.values()].filter((r) => r.state === 'closed' || r.state === 'archived').length;
+    return { done, total: list.length, rows };
+  }
+
   /** v1.115: closing several case numbers by arrest when only one RD has the arrest report.
    * picked: [{ id }]; ready: Set of case ids with their own arrest report; ref: the case id whose
    * report the others point to. -> { missing: [cases without their own], ok, refFor: [ids that point to ref] } */
@@ -388,8 +418,8 @@
   /** Charges are blank (nothing typed yet). */
   const chargesBlank = (a) => !(a && a.charges || []).some((x) => clean(x.statute) || clean(x.description));
 
-  const api = { arrestReady, arrestCoverage, PROPERTY_KINDS, PROPERTY_FIELDS, propertyLine, CHARGE_CLASSES, chargeClass, typeOfClass, withClass, victimChoices, STATE_VICTIM, isStateVictim, nonOffenderFields, splitName, arresteeChoices, personToArrestee, chargesBlank, personKey, peopleOfCase, sameSuspectCases,
-    STATUS_HELP, FOLLOW_UP_REASONS, DISPOSITIONS, disposition, ARRESTEE_FIELDS, ARREST_FIELDS, CHARGE_FIELDS,
+  const api = { missionProgress, arrestReady, arrestCoverage, PROPERTY_KINDS, PROPERTY_FIELDS, propertyLine, CHARGE_CLASSES, chargeClass, typeOfClass, withClass, victimChoices, STATE_VICTIM, isStateVictim, nonOffenderFields, splitName, arresteeChoices, personToArrestee, chargesBlank, personKey, peopleOfCase, sameSuspectCases,
+    STATUS_HELP, FOLLOW_UP_REASONS, DISPOSITIONS, disposition, copyArrestee, ARRESTEE_FIELDS, ARREST_FIELDS, CHARGE_FIELDS,
     NUMBER_FIELDS, INCIDENT_FIELDS, VEHICLE_FIELDS, COURT_FIELDS, BOND_FIELDS, PERSONNEL_FIELDS, NARCOTIC_FIELDS, WARRANT_FIELDS, NON_OFFENDER_FIELDS, LISTS,
     emptyArrest, emptyArrestee, emptyCharge, emptyItem, normalizeArrest, normalizeArrestee, itemFilled, ageOn, arresteeName, chargesText, arrestContext, closureContext, closeChecklist, followUpEvent, peopleOf,
   };

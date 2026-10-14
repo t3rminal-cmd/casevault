@@ -1,15 +1,21 @@
 // shared boot: a vault with synthetic cases
-// v1.118: tests read a case file through window.__readCaseJSON: it waits for the app's saves, and tries
+// v1.118: tests read a case file through window.__readCaseJSON: it waits for the app's saves (v1.119: also
+// one being written), and tries
 // again for a moment when the file is busy being written (NotReadableError when the run is under load).
 function readHelper(p) {
   return p.addInitScript(() => {
     window.__readCaseJSON = async (id, name) => {
       for (let i = 0; ; i += 1) {
         try {
-          if (window.CaseVaultUI && window.CaseVaultUI.Save) await window.CaseVaultUI.Save.flushAll();
+          const S = window.CaseVaultUI && window.CaseVaultUI.Save;
+          if (S) {
+            await S.flushAll();
+            // v1.119: and any save already being written (flushAll only starts the waiting ones).
+            for (let t = 0; S.running > 0 && t < 100; t += 1) await new Promise((r) => setTimeout(r, 50));
+          }
           return await Vault.readCaseJSON(id, name); // the app's Vault (a script-level const, not on window)
         } catch (e) {
-          if (i >= 8 || e.name !== 'NotReadableError') throw e;
+          if (i >= 8 || !['NotReadableError', 'NotFoundError'].includes(e.name)) throw e; // busy, or mid-replace
           await new Promise((r) => setTimeout(r, 250));
         }
       }

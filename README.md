@@ -15,12 +15,13 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.118
+## What's New in v1.119
 
-- **More room on every page:** Quick Links is a slim bar (the tabs and links in one row; **More** opens the full panel), and the sidebar's Closed / Archived are two small buttons in one row
-- **Less clutter:** the letterhead is one line on the Draft, Arrest and Link Chart tabs (**Edit Letterhead**; also in Vault → My Profile); empty landing sections are one line; hover boxes that only repeat a button's words are gone; the Files tab says "3 files in Photos" instead of a folder path
-- **Polish:** captions under the top-bar icons (Network, Local AI, Memory, SSD, Power Off); counts beside Suspects, Contacts, Deconfliction, Case History and LEO Partners on the Details tab; the Mission column of General Files shows just its number; smaller corner buttons; long messages have a × to close them; the backup reminder is a shorter amber note; section buttons readable in dark mode
-- **Clean-ups:** unused styles removed, and a stray brace that cancelled one style rule fixed; the browser tests read files more reliably
+- **Buys on the timeline:** a timeline event can be a **Buy** with the narcotic, amount and money paid. **Buy Summary** lists each suspect's buys with totals (also as a PDF), and **Print Timeline** makes a PDF of just the events shown (one suspect, Upcoming, Past…), in their colours
+- **Person view:** the person button beside a suspect shows every case and Mission they are on (subject, suspect role or arrestee) and their timeline events; names written another way ("DOE, Jon") are flagged as possibly the same person
+- **Closing a Mission:** the Mission page shows "2 of 4 cases closed" and, for each case number, what it needs (its own arrest report, or close by arrest with another RD's report). On the Arrest tab, **Copy From Another Case** brings over an arrestee already entered on another case number of the Mission
+- **Unsaved mark:** a small square on a tab while its changes are still on their way to the SSD
+- **Fixes:** Quick Links shows only whole links (**More +3** for the rest); messages and the round buttons no longer cover the page; the top-bar icons line up and no longer shift; the Details tab's first row is even, with no Closed box until the case is closed and the Mission named once; the Mission table has a heading on every column
 
 ## What CaseVault Does
 

@@ -88,6 +88,14 @@
     }
     // v1.113: the people to pick the arrestee from: Details suspects and the Draft's offenders.
     const choices = K().arresteeChoices(c.suspects, (draftForm && draftForm.offendersList) || []);
+    // v1.119: the arrestees already entered on the Mission's other case numbers, to copy over.
+    const elsewhere = [];
+    if (!archived && c.operationId) {
+      for (const o of (Vault.data.cases || []).filter((x) => x.id !== c.id && x.operationId === c.operationId)) {
+        const other = await Vault.readCaseJSON(o.id, 'arrest.json').catch(() => null);
+        for (const a of (other && other.arrestees) || []) if (K().arresteeName(a)) elsewhere.push({ a, number: o.number || '', rd: a.rdNumber || o.number || '' });
+      }
+    }
     if (token !== ui.state.renderToken) return;
     // v1.113: an arrestee with no charges typed yet gets the Draft tab's charges by itself.
     let autoCharged = false;
@@ -358,6 +366,25 @@
     } }, 'Save');
     const reportBtn = h('button', { class: 'btn small', type: 'button', onclick: () => startArrestReport(c) }, 'Start an arrest report draft');
 
+    // v1.119: copy an arrestee from another case number of the Mission (their own details; this
+    // case's RD number). A blank first arrestee is filled in instead of adding another.
+    const copyFromMission = () => ui.openDialog((done) => h('div', { class: 'copy-arrestee' },
+      h('h2', { icon: 'people' }, 'Copy From Another Case'),
+      h('p', { class: 'muted small' }, 'Arrestees on the other case numbers of this Mission. Their name, residence, date of birth and description are copied; the charges, property and narrative stay with that case.'),
+      h('div', { class: 'copy-list' }, ...elsewhere.map(({ a, number, rd }) => h('div', { class: 'copy-row' },
+        h('strong', {}, K().arresteeName(a)),
+        h('span', { class: 'muted small' }, [a.dob ? `DOB ${a.dob}` : '', `RD ${rd}`, number && number !== rd ? `case ${number}` : ''].filter(Boolean).join(' · ')),
+        h('span', { class: 'spacer' }),
+        h('button', { class: 'btn small primary', type: 'button', onclick: () => {
+          const copy = K().copyArrestee(a, c.number || '');
+          const blank = arrest.arrestees.findIndex((x) => !K().arresteeName(x));
+          if (blank >= 0 && arrest.arrestees.length === 1) arrest.arrestees[blank] = { ...arrest.arrestees[blank], ...Object.fromEntries(K().ARRESTEE_FIELDS.map((f) => [f.key, copy[f.key]])), rdNumber: copy.rdNumber || arrest.arrestees[blank].rdNumber };
+          else arrest.arrestees.push(copy);
+          changed(); draw(); done();
+          toast(`${K().arresteeName(a)} copied. Check the charges for this case.`, 'success', 5000);
+        } }, 'Copy')))),
+      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => done() }, 'Cancel'))));
+
     // v1.113: Show All / Hide All, as on the Draft tab.
     const foldAll = (want) => panel.querySelectorAll(`.arrest-section.foldable${want ? ':not(.folded)' : '.folded'} > .fold-head .fold-btn`).forEach((b) => b.click());
     const showAll = h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-down', title: 'Open every part on screen', onclick: () => foldAll(false) }, 'Show All');
@@ -378,6 +405,7 @@
       list,
       archived ? null : h('div', { class: 'row' },
         h('button', { class: 'btn', type: 'button', onclick: () => { const a = K().emptyArrestee(); if (c.number) a.rdNumber = c.number; arrest.arrestees.push(a); changed(); draw(); } }, '+ Add another arrestee'),
+        elsewhere.length ? h('button', { class: 'btn', type: 'button', icon: 'people', title: 'The same person was arrested on another case number of this Mission: copy their details here', onclick: () => copyFromMission() }, 'Copy From Another Case') : null,
         h('div', { class: 'spacer' }), reportBtn));
   }
 

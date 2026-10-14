@@ -296,6 +296,23 @@
       el.setAttribute('aria-label', el.textContent);
       el.tabIndex = 0;
       el.prepend(I({ error: 'exclamation-triangle-fill', saving: 'arrow-repeat', saved: 'hdd-fill' }[el.className.split(' ')[1]] || 'hdd'));
+      this.markTabs();
+    },
+
+    // v1.119: a small mark on a case's tab while it has changes not yet written to the SSD.
+    markTabs() {
+      const TAB_OF = { case: 'details', 'report-fields': 'draft', arrest: 'arrest', draft: 'reports', notes: 'reports', timeline: 'timeline', linkchart: 'linkchart', check: 'checks' };
+      const waiting = new Set();
+      for (const key of [...this.timers.keys(), ...this.failed.keys()]) {
+        const [kind, id] = String(key).split(':');
+        if (TAB_OF[kind] && id) waiting.add(`${id}/${TAB_OF[kind]}`);
+      }
+      for (const a of document.querySelectorAll('.tabs a.tab')) {
+        const m = /#\/case\/([^/]+)\/([^/?]+)/.exec(a.getAttribute('href') || '');
+        const on = !!m && waiting.has(`${decodeURIComponent(m[1])}/${m[2]}`);
+        a.classList.toggle('unsaved', on);
+        if (on) a.setAttribute('data-unsaved', 'Changes not saved to the SSD yet'); else a.removeAttribute('data-unsaved');
+      }
     },
   };
 
@@ -305,6 +322,7 @@
    * App state
    * ===================================================================== */
 
+  let memBox = null; // v1.119: the top bar's Memory icon (CVMemory.mount)
   const state = {
     connected: false,
     vaultId: null,
@@ -494,6 +512,8 @@
     if (MODE === 'direct') await HandleStore.save(dir);
     const sameVault = previousId === data.vaultId;
     state.connected = true;
+    // v1.119: the Memory icon shows with the others at once, not five seconds later (no jump).
+    if (memBox) memBox.tick();
     state.vaultId = data.vaultId;
     // Where the data is saved, e.g. W:\CaseVault-Data (helper mode knows the drive letter).
     $('#vault-name').textContent = MODE === 'helper' && state.drive ? CVFormat.pathText(`${state.drive.replace(/[\\/]+$/, '')}\\${dir.name}`) : dir.name;
@@ -1387,12 +1407,14 @@
   /** v1.63: the Quick Links footer: shown on the Overview, empty and hidden everywhere else.
    * The round Ask AI / Notes buttons sit just above it (--ql-dock-h). */
   let footerRO = null;
+  let footerMO = null;
   document.addEventListener('cv-links-changed', () => { if (state.connected && $('#ql-footer').childElementCount) quickFooter(true); });
   function quickFooter(on) {
     const foot = $('#ql-footer');
     if (!foot) return;
     if (footerRO) { footerRO.disconnect(); footerRO = null; }
-    if (!on) { foot.hidden = true; foot.replaceChildren(); document.body.style.removeProperty('--ql-dock-h'); return; }
+    if (footerMO) { footerMO.disconnect(); footerMO = null; }
+    if (!on) { foot.hidden = true; foot.replaceChildren(); document.body.style.removeProperty('--ql-dock-h'); document.body.classList.remove('ql-slim-on'); return; }
     // v1.118: a slim bar (one row: the tabs and the links side by side) unless opened with More.
     const slim = () => { try { return localStorage.getItem('cv-ql-open') !== '1'; } catch { return true; } };
     const toggle = h('button', { type: 'button', class: 'btn small ghost ql-more', 'aria-expanded': String(!slim()), title: 'Show the links in full (Arrange, every link at once) or back to one row' },
@@ -1402,12 +1424,38 @@
       quickFooter(true);
     });
     foot.classList.toggle('ql-slim', slim());
+    document.body.classList.toggle('ql-slim-on', slim()); // v1.119: the round buttons sit in the slim bar
     foot.replaceChildren(h('span', { class: 'ql-foot-title' }, I('link-45deg'), h('span', {}, 'Quick Links')), CVReferenceUI.quickLinks({ footer: true }), toggle);
     foot.hidden = false;
     requestAnimationFrame(panelHeight);
     const setH = () => document.body.style.setProperty('--ql-dock-h', foot.hidden ? '0px' : `${Math.ceil(foot.getBoundingClientRect().height)}px`);
-    if (typeof ResizeObserver === 'function') { footerRO = new ResizeObserver(setH); footerRO.observe(foot); }
-    setH();
+    // v1.119: on the slim bar a link that doesn't fit whole is left off (no cut-off words); More
+    // shows them all and says how many are waiting.
+    const fit = () => {
+      const row = foot.querySelector('.quick-links-box.in-footer > .quick-links');
+      const more = toggle.querySelector('span');
+      if (!row || !foot.classList.contains('ql-slim')) return;
+      const kids = [...row.children];
+      kids.forEach((k) => k.classList.remove('ql-cut'));
+      const edge = row.getBoundingClientRect().right + 0.5;
+      const first = kids.findIndex((k) => k.getBoundingClientRect().right > edge);
+      const cut = first < 0 ? [] : kids.slice(first);
+      cut.forEach((k) => k.classList.add('ql-cut'));
+      // Written only when it changes: the observer below would otherwise call fit() again, forever.
+      const label = cut.length ? `More +${cut.length}` : 'More';
+      if (more.textContent !== label) more.textContent = label;
+    };
+    const onSize = () => { setH(); fit(); };
+    if (typeof ResizeObserver === 'function') { footerRO = new ResizeObserver(onSize); footerRO.observe(foot); }
+    // A tab (Reference / OSINT / LEO) swaps the links: fit the new ones.
+    let fitQueued = false;
+    footerMO = new MutationObserver((list) => {
+      if (fitQueued || list.every((m) => toggle.contains(m.target))) return;
+      fitQueued = true;
+      requestAnimationFrame(() => { fitQueued = false; fit(); });
+    });
+    footerMO.observe(foot, { childList: true, subtree: true });
+    onSize();
   }
 
 
@@ -1566,6 +1614,27 @@
       setTimeout(() => renderTimeline(tlPanel, tlCase, tk).catch((err) => { if (FS.isDisconnectError(err)) onDriveLost(); else tlPanel.replaceChildren(h('p', { class: 'muted' }, `Could not read the timeline: ${err.message}`)); }), 0);
     }
     const info = (label, value) => h('div', { class: 'op-info-item' }, h('span', { class: 'op-info-label' }, label), h('span', { class: 'op-info-value' }, value || '—'));
+    // v1.119: how far the Mission is from closed, and what each case number still needs to close.
+    const progressBox = h('div', { class: 'op-progress', 'aria-live': 'polite' });
+    (async () => {
+      const tk = state.renderToken;
+      const arrests = new Map(); const full = [];
+      for (const m of members) {
+        arrests.set(m.id, await Vault.readCaseJSON(m.id, 'arrest.json').catch(() => null));
+        const x = await Vault.getCase(m.id).catch(() => m);
+        full.push({ ...x, archived: isArchivedEntry(m) });
+      }
+      if (tk !== state.renderToken) return;
+      const pr = CVClosing.missionProgress(full, arrests);
+      const bar = h('span', { class: 'op-progress-bar' }, h('span', { class: 'op-progress-fill' }));
+      bar.firstChild.style.width = `${pr.total ? Math.round((pr.done / pr.total) * 100) : 0}%`;
+      progressBox.replaceChildren(h('strong', {}, `${pr.done} of ${pr.total} case${pr.total === 1 ? '' : 's'} closed`), bar,
+        h('span', { class: 'muted small' }, pr.done === pr.total ? 'Everything is closed. Close the Mission when you are ready.' : [...pr.rows.values()].some((r) => r.state === 'ref') ? 'Cases without their own arrest report can close by arrest with the report on another RD.' : ''));
+      for (const td of document.querySelectorAll('.op-closing[data-case]')) {
+        const r = pr.rows.get(td.dataset.case);
+        if (r) td.replaceChildren(h('span', { class: `closing-state ${r.state}` }, r.text));
+      }
+    })().catch(() => progressBox.replaceChildren());
     $('#main').replaceChildren(h('section', { class: 'ops-page op-page' },
       h('a', { href: '#/operations', class: 'back-link' }, '← All Missions'),
       h('div', { class: 'page-head' },
@@ -1592,13 +1661,16 @@
       h('div', { class: 'section-head op-files-head' }, h('h2', { class: 'section-title caps' }, 'Files'), h('div', { class: 'spacer' }),
         h('button', { class: 'btn', type: 'button', icon: 'link-45deg', onclick: async () => { if (await addExistingDialog(op)) redraw(); } }, 'Add Existing Case'),
         h('button', { class: 'btn primary', type: 'button', icon: 'plus-lg', onclick: () => newCase({ operationId: op.id }) }, 'New Case in this Mission')),
+      members.length ? progressBox : null,
       members.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'data-table op-cases-table' },
-        h('thead', {}, h('tr', {}, ['Case Number', 'Subject Name', 'Status', 'Opened', 'Open', ''].map((x) => h('th', { class: x === 'Opened' ? 'date-cell' : '' }, x)))),
+        // v1.119: every column named and lined up on the left.
+        h('thead', {}, h('tr', {}, ['Case Number', 'Subject Name', 'Status', 'Opened', 'Closing', 'Go To', 'Move'].map((x) => h('th', {}, x)))),
         h('tbody', {}, members.map((c) => h('tr', { class: isArchivedEntry(c) ? 'archived-row' : '' },
           h('td', {}, h('a', { href: caseLink(c), class: 'case-num-link' }, c.number || 'No case number')),
           h('td', { class: c.subject ? 'subject-cell' : 'muted' }, subj(c) || 'No subject yet'),
           h('td', {}, statusPill(isArchivedEntry(c) ? 'Archived' : c.status)),
-          h('td', { class: 'nowrap date-cell' }, c.opened ? fmtDate(c.opened) : '—'),
+          h('td', { class: 'nowrap' }, c.opened ? fmtDate(c.opened) : '—'),
+          h('td', { class: 'op-closing', 'data-case': c.id }, h('span', { class: 'muted small' }, '…')),
           h('td', { class: 'nowrap' }, h('div', { class: 'op-case-links' }, OP_TABS.map(([tab, label]) => h('a', { class: 'op-tab-link', href: caseLink(c, tab) }, label)))),
           h('td', { class: 'nowrap' }, isArchivedEntry(c)
             ? h('span', { class: 'muted small', title: 'Archived cases are read-only. Restore it to unlink it.' }, 'Archived')
@@ -2441,6 +2513,7 @@
       h('nav', { class: 'tabs', role: 'tablist' }, tabs.map(([t, label]) =>
         h('a', { href: `#/case/${encodeURIComponent(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab), icon: TAB_ICONS[t] }, label, t === 'checks' ? betaTag() : null))),
       panel));
+    Save.markTabs();
     // Read-only: everything in the tab that could change the case is switched off, now and as
     // the tab redraws. (vault.js refuses the writes too.)
     if (archived) new MutationObserver(() => applyReadOnly(panel)).observe(panel, { childList: true, subtree: true });
@@ -2530,7 +2603,8 @@
       save();
     });
     const statusNote = h('span', { class: 'muted small block status-note' }, CVClosingUI.statusLine(c));
-    const statusHint = h('span', { class: 'muted small block status-hint' }, c.status === 'Closed' ? 'Pick Open to reopen. Archive uses its button.' : 'No leads left? Close it as Inactive. Close and Archive use the buttons below.');
+    // v1.119: the hint is one line under the row (it made the Status box, and the row, tall).
+    const statusHint = h('p', { class: 'muted small status-hint row-hint' }, c.status === 'Closed' ? 'Pick Open to reopen. Archive uses its button.' : 'No leads left? Close it as Inactive. Close and Archive use the buttons below.');
     const archived = Vault.isArchived(c.id);
 
     const members = archived ? [c] : [c, ...operationCases(c).filter((x) => x.id !== c.id)];
@@ -2553,17 +2627,20 @@
       // ---- the operation, the same on every one of its case numbers: name, status, dates
       h('section', { class: 'op-card' },
         h('div', { class: 'case-op-bar', 'data-ro-ok': archived ? null : 'true' },
-          h('span', { class: `case-op-label${op ? '' : ' gf-link'}` }, I(op ? 'op-folder' : 'folder-fill'), op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}` }, opLabel(op)) : 'General Files: not in a Mission'),
+          // v1.119: the Mission's name and link are in the header above; here, only where the case is filed.
+          h('span', { class: `case-op-label${op ? '' : ' gf-link'}` }, I(op ? 'op-folder' : 'folder-fill'), op ? `Filed in Mission ${op.number || ''}`.trim() : 'General Files: not in a Mission'),
           h('div', { class: 'spacer' }),
           // v1.50: Move File (it was "Assign to" / "Move to" and Unlink).
           archived ? null : h('button', { class: 'btn small', type: 'button', icon: 'folder-symlink', title: 'Move this case into a Mission, to another one, or back to General Files', onclick: async () => {
             if (await moveCaseDialog(Vault.data.cases.find((x) => x.id === c.id) || c)) { renderCaseList(); showCase(c.id, 'details'); }
           } }, 'Move File')),
-        h('form', { class: 'form-grid details-grid op-top details-row4 details-row-title', onsubmit: (e) => e.preventDefault() },
+        h('form', { class: `form-grid details-grid op-top details-row4 details-row-title${c.dates.closed ? '' : ' not-closed'}`, onsubmit: (e) => e.preventDefault() },
           field('Subject Name', subjectIn, '', 'The person the case is about. Shown under the Case Number. Several cases can have the same subject.'),
-          h('label', { class: 'field' }, h('span', {}, 'Status'), statusSelect, statusNote, archived ? null : statusHint),
+          h('label', { class: 'field' }, h('span', {}, 'Status'), statusSelect, statusNote),
           field('Opened', bind(h('input', { type: 'date', value: c.dates.opened || '' }), (v) => { c.dates.opened = v; })),
-          field('Closed', closedInput)),
+          // v1.119: the Closed date shows once the case is closed (not "Not closed" on every open case).
+          (() => { const f = field('Closed', closedInput); if (!c.dates.closed) f.hidden = true; return f; })(),
+          archived ? null : statusHint),
         caseTiles(c, members, archived)),
       miniTimeline(c, members, { mine: true }),
       // v1.111: the case's Field Notes, in plain view.
@@ -3674,7 +3751,7 @@
 
   // v1.98: the parts of the app kept in their own files get the helpers they use.
   PARTS.files = CVFilesTab.init({ state, h, I, toast, Save, showCase, FOLDER_ICONS, onDriveLost, confirmDialog, fmtDate, fileTypeLabel, fileKind, FILE_ICONS, fmtSize, fmtDateTime, fmtTime, openDialog, field });
-  PARTS.timeline = CVCaseTimeline.init({ operationCases, state, h, today, Save, field, dueLabel, fmtDate, confirmDialog });
+  PARTS.timeline = CVCaseTimeline.init({ operationCases, state, h, today, Save, field, dueLabel, fmtDate, confirmDialog, openDialog, icon: I, toast, opOf });
   PARTS.overview = CVCaseOverview.init({ h, field, dnaCombo, I, today, fmtDate, dueLabel, opOf, Save, newCase, openDialog, fmtDateTime });
 
   // Small toolkit shared with the consistency checker screen (js/checker/checks-ui.js).
@@ -3685,7 +3762,7 @@
   CVDiscoveryUI.init(window.CaseVaultUI);
   CVLinkChartUI.init(window.CaseVaultUI);
   CVSecureSettings.init(window.CaseVaultUI);
-  CVMemory.mount($('#mem-status'), {
+  memBox = CVMemory.mount($('#mem-status'), {
     isHelper: () => MODE === 'helper',
     engineConnected: () => CVChecks.Engine.status() === 'connected',
   });
