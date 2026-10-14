@@ -214,6 +214,17 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.119
+
+- **Timeline → Type "Buy":** a buy has its narcotic (pick or type), amount (g, kg, oz, lb, pills or units) and the money paid, shown on the event ("Cocaine · 3.5 g · $200")
+- **Buy Summary** (above the timeline): each suspect's buys in their colour, with the narcotic totals and money paid; **PDF** makes it a page to print or save to the case. With a suspect picked in the key, only theirs
+- **Print Timeline:** a PDF of the events shown now (the filter and suspect you picked), each with its colour square, followed by the buy summary of those events
+- **Person view:** the person button beside a suspect on the Details tab (and beside a name in the Buy Summary) lists every case they are on, with their role there, the Mission, and their timeline events. Names written another way are listed under "Possibly the same person"; check before treating them as one
+- **Mission page:** "N of M cases closed" with a bar, and a Closing column: Arrest report ready, Can close by arrest with RD …'s report, No arrest report yet, or Closed
+- **Arrest tab → Copy From Another Case:** pick an arrestee already entered on another case number of the Mission. Their name, residence, date of birth and description are copied with this case's RD number; the charges, property and narrative stay with the other case
+- **Unsaved mark:** a small amber square on a tab while its changes are waiting to be written to the SSD; it goes away once saved
+- **Fixes:** Quick Links' slim bar shows whole links only (**More +N** says how many more); messages rise above the bar and the round buttons sit in its right end; the Memory icon shows with the others; on the Details tab the Status hint is one line, the Closed date appears once the case is closed, and the Mission is named once (in the header); the Mission table's columns all have headings
+
 ### What's new in v1.118
 
 - **Quick Links** (bottom of the page) is now one slim row: the Reference / OSINT / LEO tabs and that tab's links side by side (scroll sideways for more). **More** opens the full panel with Arrange; **Less** goes back. Remembered on this PC

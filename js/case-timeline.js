@@ -4,7 +4,7 @@
 
 (function (root) {
   function init(kit) {
-    const { operationCases, state, h, today, Save, field, dueLabel, fmtDate, confirmDialog } = kit;
+    const { operationCases, state, h, today, Save, field, dueLabel, fmtDate, confirmDialog, openDialog, icon: I, toast, opOf } = kit;
 
     /* ---------- Timeline ---------- */
 
@@ -35,12 +35,24 @@
       const f = {
         date: h('input', { type: 'date', required: true, value: today() }),
         time: CVTimeField.create({ label: 'Time' }),
-        kind: h('select', {}, h('option', { value: 'event' }, 'Event'), h('option', { value: 'deadline' }, 'Deadline')),
+        kind: h('select', {}, h('option', { value: 'event' }, 'Event'), h('option', { value: 'buy' }, 'Buy'), h('option', { value: 'deadline' }, 'Deadline')),
         title: h('input', { required: true, maxlength: 200, 'aria-label': 'Title', class: 'tl-title-input' }),
         note: h('textarea', { rows: 2, maxlength: 4000, 'aria-label': 'Note' }),
         caseSel: h('select', { 'aria-label': 'Case number' }, [...tls.keys()].map((id) => h('option', { value: id, selected: id === c.id }, numberOf(id)))),
         suspect: h('input', { maxlength: 120, 'aria-label': 'Suspect', autocomplete: 'off', placeholder: 'Who the event is about' }),
+        // v1.119: a Buy's narcotic, amount and money paid (for the Buy Summary).
+        drug: h('input', { maxlength: 80, 'aria-label': 'Narcotic', autocomplete: 'off', placeholder: 'What was bought' }),
+        qty: h('input', { inputmode: 'decimal', maxlength: 12, 'aria-label': 'Amount', placeholder: '0' }),
+        unit: h('select', { 'aria-label': 'Unit' }, root.CVOperation.BUY_UNITS.map((u) => h('option', { value: u }, u))),
+        paid: h('input', { inputmode: 'decimal', maxlength: 14, 'aria-label': 'Paid', placeholder: '$0' }),
       };
+      const drugBox = root.CVCombo ? CVCombo.attach(f.drug, { label: 'Show the narcotics', items: () => ((root.CVReportFields && CVReportFields.DRUG_TYPES) || []).map((t) => ({ value: t, label: t })) }) : f.drug;
+      const buyRow = h('div', { class: 'tl-buy-row full', hidden: true },
+        field('Narcotic', drugBox, 'grow'),
+        field('Amount', h('div', { class: 'tl-qty' }, f.qty, f.unit)),
+        field('Paid', f.paid));
+      const showBuy = () => { buyRow.hidden = f.kind.value !== 'buy'; };
+      f.kind.addEventListener('change', showBuy);
       // v1.117: the event's colour: a swatch to pick, or None. Picking a suspect sets their colour.
       let pickedColor = '';
       let colorTouched = false;
@@ -86,6 +98,7 @@
         f.title.value = ''; f.note.value = ''; f.time.value = '';
         f.caseSel.value = c.id;
         f.suspect.value = ''; pickedColor = ''; colorTouched = false; drawSwatches();
+        f.drug.value = ''; f.qty.value = ''; f.paid.value = ''; f.unit.value = 'g';
         submit.textContent = 'Add to timeline';
         cancel.hidden = true;
       };
@@ -105,6 +118,8 @@
       const form = h('form', { class: 'timeline-form cv-boxed', onsubmit: async (e) => {
         e.preventDefault();
         const data = { date: f.date.value, time: f.time.value, kind: f.kind.value, title: f.title.value.trim(), note: f.note.value.trim(), suspect: f.suspect.value.trim(), color: pickedColor };
+        if (data.kind === 'buy') Object.assign(data, { drug: f.drug.value.trim(), qty: f.qty.value.trim(), unit: f.unit.value, paid: f.paid.value.trim().replace(/^\$/, '') });
+        else Object.assign(data, { drug: undefined, qty: undefined, unit: undefined, paid: undefined });
         if (!data.date || !data.title) return;
         const target = many ? f.caseSel.value : c.id;
         const touched = new Set([target]);
@@ -131,6 +146,7 @@
       field('Title', f.title, 'grow'),
       field('Suspect', suspectBox, 'tl-suspect-field', 'Who the event is about, such as the target of a buy. Events of the same suspect share a colour.'),
       field('Colour', swatches, 'tl-color-field', 'A colour to tell the events apart at a glance. Picking a suspect sets theirs.'),
+      buyRow,
       field('Note', f.note, 'full'),
       h('div', { class: 'full form-actions' }, cancel, clear, submit));
 
@@ -167,6 +183,50 @@
         setTimeout(() => document.addEventListener('click', function off(e) { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', off, true); } }, true), 0);
       }
 
+      let shownRows = [];
+      // v1.119: what the timeline is about (the Mission's or the case's number) for the PDFs.
+      const op = opOf ? opOf(c) : null;
+      const pdfHead = () => ({ number: many && op ? op.number || c.number : c.number, numberLabel: many && op ? 'Mission' : 'Case Number', many });
+      const suspectNote = () => (suspectFilter ? `Only ${(O.suspectColors(allRows()).get(suspectFilter) || {}).name || 'one suspect'}` : '');
+      async function showPdf(title, data, fileBase) {
+        const lh = root.CVLetterhead ? await CVLetterhead.forPdf().catch(() => null) : null;
+        const bytes = CVTimelinePdf.build({ ...pdfHead(), title, fmtDate, ...data }, { letterhead: lh, printed: fmtDate(today()) });
+        const name = `${fileBase} ${pdfHead().number || ''}.pdf`.replace(/\s+\.pdf$/, '.pdf').replace(/[\\/:*?"<>|]/g, '');
+        const viewer = CVPdfViewer.create(bytes, { h, icon: I, title, fileName: name });
+        await openDialog((done) => h('div', { class: 'pdf-view' }, h('h2', {}, title), viewer,
+          h('div', { class: 'dialog-actions' },
+            archivedCase ? null : h('button', { class: 'btn', type: 'button', icon: 'save', title: 'Save this PDF in the case\'s Files', onclick: async () => {
+              try { await Save.track(`files:${c.id}`, () => Vault.addFile(c.id, new File([bytes], name, { type: 'application/pdf' }), { folder: 'Supplementary Report', description: title, replace: true })); toast('Saved to Files → Supplementary Report.', 'success'); } catch (err) { toast(`Not saved: ${err.message}`, 'error'); }
+            } }, 'Save PDF to Case'),
+            h('button', { class: 'btn primary', type: 'button', onclick: () => done() }, 'Done'))));
+        viewer.destroy();
+      }
+      // v1.119: the buys of each suspect with what was bought and paid, and the totals.
+      function buySummaryDialog() {
+        const rows = suspectFilter ? allRows().filter(({ ev }) => O.suspectKey(ev.suspect) === suspectFilter) : allRows();
+        const groups = O.buySummary(rows);
+        return openDialog((done) => h('div', { class: 'buy-summary' },
+          h('h2', { icon: 'cash-coin' }, 'Buy Summary'),
+          h('p', { class: 'muted small' }, groups.length ? `The buys on this timeline by suspect${suspectFilter ? ` (${suspectNote().toLowerCase()})` : ''}. A buy is an event with the Type "Buy".` : 'No buys yet. Add an event with the Type "Buy" and its narcotic, amount and money paid.'),
+          ...groups.map((g) => {
+            const dot = h('span', { class: 'tl-legend-dot static' }); if (g.color) dot.style.setProperty('--sw', g.color);
+            return h('section', { class: 'buy-group' },
+              h('div', { class: 'buy-group-head' }, dot, h('strong', {}, g.name),
+                g.key ? h('button', { class: 'icon-btn person-btn', type: 'button', title: `Every case ${g.name} is on`, onclick: () => { done(); root.CVPersonView.open(g.name, root.CaseVaultUI); } }, I('person-lines-fill')) : null,
+                h('span', { class: 'spacer' }), h('span', { class: 'muted small' }, `${g.buys.length} buy${g.buys.length === 1 ? '' : 's'} · ${O.money(g.paid)} paid`)),
+              h('div', { class: 'table-wrap' }, h('table', { class: 'data-table buy-table' },
+                h('thead', {}, h('tr', {}, ...['Date', 'Case', 'Title', 'Narcotic', 'Amount', 'Paid'].map((t) => h('th', {}, t)))),
+                h('tbody', {}, ...g.buys.map((b) => h('tr', {}, h('td', { class: 'nowrap' }, b.date ? fmtDate(b.date) : '—'), h('td', { class: 'nowrap' }, b.number), h('td', {}, b.title), h('td', {}, b.drug || '—'), h('td', { class: 'nowrap' }, b.qty ? `${b.qty} ${b.unit}` : '—'), h('td', { class: 'nowrap' }, b.paid ? O.money(b.paid) : '—')))),
+                h('tfoot', {}, h('tr', {}, h('th', { colspan: 3 }, 'Total'), h('th', {}, g.drugs.map((d) => d.drug).join(', ') || '—'), h('th', { class: 'nowrap' }, g.drugs.map((d) => d.amounts.map((a) => `${a.qty} ${a.unit}`).join(' + ')).join('; ') || '—'), h('th', { class: 'nowrap' }, O.money(g.paid)))))));
+          }),
+          h('div', { class: 'dialog-actions' },
+            groups.length ? h('button', { class: 'btn', type: 'button', icon: 'file-earmark-pdf', onclick: () => { done(); showPdf('Buy Summary', { rows, timeline: false, subtitle: suspectNote() }, 'Buy Summary'); } }, 'PDF') : null,
+            h('button', { class: 'btn primary', type: 'button', onclick: () => done() }, 'Done'))));
+      }
+      const tools = h('div', { class: 'tl-tools' },
+        h('button', { class: 'btn small', type: 'button', icon: 'cash-coin', title: 'The buys of each suspect: what was bought and paid, with totals', onclick: buySummaryDialog }, 'Buy Summary'),
+        h('button', { class: 'btn small', type: 'button', icon: 'printer', title: 'A PDF of the events shown now (the filter and suspect you picked), in their colours', onclick: () => showPdf('Timeline', { rows: shownRows, subtitle: [suspectNote(), filter !== 'all' ? `${{ upcoming: 'Upcoming', deadline: 'Deadlines', past: 'Past' }[filter]} only` : ''].filter(Boolean).join(' · ') }, 'Timeline') }, 'Print Timeline'));
+
       function draw() {
         const everything = CVOperation.mergeEvents([...tls.entries()].map(([caseId, t]) => ({ caseId, number: numberOf(caseId), events: t.events })));
         const colors = O.suspectColors(everything);
@@ -183,6 +243,7 @@
           next ? stat((dueLabel(next.ev.date) || { text: fmtDate(next.ev.date) }).text, 'Next Due', 'nx', next.ev.title) : stat('—', 'Next Due', 'nx', 'Nothing due'));
         const keep = ({ ev }) => (!suspectFilter || O.suspectKey(ev.suspect) === suspectFilter) && (filter === 'all' ? true : filter === 'deadline' ? ev.kind === 'deadline' : filter === 'upcoming' ? ev.date >= now : ev.date < now);
         const all = everything.filter(keep);
+        shownRows = all;
         if (!all.length) {
           list.replaceChildren(h('li', { class: 'muted empty' }, everything.length ? 'Nothing to show with this filter.' : many ? 'No events yet for any case number of this mission. Add dates, hearings, filings, and deadlines above.' : 'No events yet. Add dates, hearings, filings, and deadlines above.'));
           return;
@@ -209,11 +270,12 @@
             h('div', { class: 'tl-body' },
               h('div', { class: 'tl-title' },
                 done,
-                h('span', { class: `badge ${ev.kind}` }, isDeadline ? 'Deadline' : 'Event'),
+                h('span', { class: `badge ${ev.kind}` }, isDeadline ? 'Deadline' : ev.kind === 'buy' ? 'Buy' : 'Event'),
                 many ? h('span', { class: `tl-case${caseId === c.id ? ' current' : ''}`, title: caseId === c.id ? 'This case number' : 'Another case number of this mission' }, numberOf(caseId)) : null,
                 h('strong', {}, ev.title),
                 ev.suspect ? h('span', { class: 'tl-suspect', title: 'Suspect' }, ev.suspect) : null,
                 due && h('span', { class: `due ${due.cls}` }, due.text)),
+              ev.kind === 'buy' && O.buyLine(ev) ? h('div', { class: 'tl-buy' }, O.buyLine(ev)) : null,
               ev.note && h('div', { class: 'tl-note' }, ev.note)),
             h('div', { class: 'tl-actions' },
               h('button', { class: 'btn small ghost', type: 'button', onclick: () => {
@@ -222,6 +284,7 @@
                 f.title.value = ev.title; f.note.value = ev.note || '';
                 f.caseSel.value = caseId;
                 f.suspect.value = ev.suspect || ''; pickedColor = O.isColor(ev.color) ? ev.color : ''; colorTouched = !!pickedColor; drawSwatches();
+                f.drug.value = ev.drug || ''; f.qty.value = ev.qty || ''; f.unit.value = ev.unit || 'g'; f.paid.value = ev.paid || ''; showBuy();
                 submit.textContent = 'Save changes'; cancel.hidden = false;
                 f.title.focus();
               } }, 'Edit'),
@@ -241,7 +304,7 @@
       }
 
       draw();
-      panel.replaceChildren(many ? h('p', { class: 'muted small tl-op-note' }, `The timeline of the whole mission: all ${tls.size} case numbers.`) : '', form, stats, filters, legend, list);
+      panel.replaceChildren(many ? h('p', { class: 'muted small tl-op-note' }, `The timeline of the whole mission: all ${tls.size} case numbers.`) : '', form, stats, h('div', { class: 'tl-filter-row' }, filters, tools), legend, list);
     }
 
     return { renderTimeline };

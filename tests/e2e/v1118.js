@@ -25,7 +25,7 @@ const SP = process.env.SP + '/v1118';
   await p.click('#archived-cases > summary'); await p.waitForTimeout(200);
   // 2. A long message can be closed.
   await p.evaluate(() => window.CaseVaultUI.toast('A long message for the test.', 'warn', 9000));
-  await p.click('.toast.warn .toast-close'); await p.waitForTimeout(150);
+  await p.click('.toast.warn:has-text("A long message for the test") .toast-close'); // v1.119: its own (the backup reminder is amber too) await p.waitForTimeout(150);
   ok(!(await p.locator('.toast.warn', { hasText: 'A long message for the test' }).count()), 'a long message closes with ×');
   // 6. Empty sections are one header line.
   const closed = await p.$eval('.closed-files-section', (e) => [e.classList.contains('ov-empty'), Math.round(e.getBoundingClientRect().height)]);

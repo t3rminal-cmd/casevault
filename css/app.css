@@ -4090,7 +4090,8 @@ a.locker-tile, a.locker-tile:hover, a.locker-tile * { text-decoration: none !imp
 #ql-footer.ql-slim .quick-links-box.in-footer > .ql-note-sign,
 #ql-footer.ql-slim .quick-links-box.in-footer .ql-head > .small,
 #ql-footer.ql-slim .quick-links-box.in-footer .ql-head > .btn { display: none; }
-#ql-footer.ql-slim .quick-links-box.in-footer > .quick-links { display: flex; flex-wrap: nowrap; gap: .3rem; flex: 1; min-width: 0; height: auto; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+#ql-footer.ql-slim .quick-links-box.in-footer > .quick-links { display: flex; flex-wrap: nowrap; gap: .3rem; flex: 1; min-width: 0; height: auto; overflow: hidden; }
+#ql-footer.ql-slim .quick-links-box.in-footer > .quick-links > .ql-cut { display: none; } /* v1.119: whole links only */
 #ql-footer.ql-slim .quick-links-box.in-footer > p { flex: 1; margin: 0; }
 #ql-footer.ql-slim .quick-links-box.in-footer .quick-link, #ql-footer.ql-slim .quick-links-box.in-footer .ql-split-cell { flex: none; width: auto; min-height: 2rem; height: 2rem; }
 #ql-footer.ql-slim .quick-links-box.in-footer .ql-name { white-space: nowrap; }
@@ -4169,3 +4170,59 @@ a.locker-tile, a.locker-tile:hover, a.locker-tile * { text-decoration: none !imp
   :root:not([data-theme="light"]) .dashboard .ov-btn-general { color: #b49af0; }
   :root:not([data-theme="light"]) .dashboard .ov-btn-other { color: #5fc4b8; }
 }
+
+/* v1.119: the round buttons sit in the right end of the slim Quick Links bar instead of over the page,
+   and messages rise above the bar and the buttons. (body.ql-slim-on is set by quickFooter(): a
+   body:has(...) rule here made every change on the page re-check the whole page, slowing typing.) */
+@media (min-width: 641px) {
+  body.ql-slim-on .fab-dock { bottom: calc((var(--ql-dock-h, 2.9rem) - 2.6rem) / 2); right: 1rem; }
+  #ql-footer.ql-footer.ql-slim { padding-right: 10.4rem; }
+}
+.toasts { bottom: calc(var(--ql-dock-h, 0px) + 4.4rem); }
+body.ql-slim-on .toasts { bottom: calc(var(--ql-dock-h, 0px) + .8rem); }
+.tb-status > .power-btn { width: 2.3rem; height: 2.3rem; } /* v1.119: as tall as the other top-bar icons, so the captions line up */
+/* v1.119: Details' first row: the Status hint as one line under it; no Closed box until closed. */
+.details-grid.details-row-title > .row-hint { grid-column: 1 / -1; margin: -.2rem 0 0; }
+.details-grid.details-row-title.not-closed { grid-template-columns: minmax(0, 1.6fr) minmax(0, .9fr) minmax(0, 1.1fr); }
+@media (max-width: 900px) { .details-grid.details-row-title.not-closed { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.details-grid > .field[hidden] { display: none; }
+
+/* v1.119: a Buy's narcotic, amount and money; the Buy Summary and Print Timeline buttons. */
+.timeline-form .tl-buy-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 1fr); gap: inherit; }
+.timeline-form .tl-buy-row[hidden] { display: none; }
+@media (max-width: 820px) { .timeline-form .tl-buy-row { grid-template-columns: 1fr; } }
+.tl-qty { display: flex; gap: .35rem; }
+.tl-qty > input { flex: 1; min-width: 0; }
+.tl-qty > select { width: 5.5rem; flex: none; }
+.tl-filter-row { display: flex; align-items: flex-start; gap: .6rem; flex-wrap: wrap; }
+.tl-filter-row > .tl-filters { flex: 1; }
+.tl-tools { display: flex; gap: .35rem; margin-bottom: .9rem; }
+.tl-buy { font-size: .85rem; font-weight: 600; color: var(--text); margin-top: .15rem; }
+.badge.buy { background: var(--ok-soft); color: var(--ok); }
+.buy-summary { min-width: min(46rem, 90vw); }
+.buy-group { margin: .8rem 0 1rem; }
+.buy-group-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .35rem; }
+.tl-legend-dot.static { display: inline-block; width: .9rem; height: .9rem; border: 1px solid var(--border); cursor: default; flex: none; }
+.buy-table tfoot th { text-align: left; border-top: 2px solid var(--border); }
+.copy-list { display: grid; gap: .35rem; margin: .6rem 0; } .copy-row { display: flex; align-items: center; gap: .6rem; padding: .45rem .6rem; border: 1px solid var(--border); background: var(--surface-2); }
+/* v1.119: the person view. */
+.person-view { min-width: min(48rem, 90vw); }
+.person-variants { padding: .45rem .6rem; background: var(--warn-soft, #fff4dc); border-left: 3px solid var(--warn, #b7791f); }
+.person-table tr.similar-row td { background: var(--warn-soft, #fff8e8); }
+.person-event-list { list-style: none; padding: 0; margin: .3rem 0 0; display: grid; gap: .25rem; }
+.person-event-list li { display: grid; grid-template-columns: 11rem minmax(0, 1fr) auto auto; gap: .6rem; align-items: baseline; padding: .3rem .5rem; background: var(--surface-2); }
+.suspect-row .person-btn, .buy-group-head .person-btn { align-self: end; color: var(--accent); }
+.suspect-row { grid-template-columns: minmax(11rem, 1.4fr) 13.5rem 2.4rem minmax(12rem, 2fr) 8.5rem 1.8rem 1.8rem; }
+@media (max-width: 1150px) { .suspect-row { grid-template-columns: 1fr 13.5rem 2.4rem; } }
+/* v1.119: the Mission's closing progress. */
+.op-progress { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; margin: 0 0 .6rem; }
+.op-progress:empty { display: none; }
+.op-progress-bar { width: 12rem; height: .55rem; background: var(--surface-2); border: 1px solid var(--border); }
+.op-progress-fill { display: block; height: 100%; background: var(--ok); }
+.closing-state { font-size: .82rem; font-weight: 600; }
+.closing-state.closed, .closing-state.ready { color: var(--ok); }
+.closing-state.ref { color: var(--accent); }
+.closing-state.open { color: var(--warn, #b7791f); }
+.closing-state.archived { color: var(--muted); }
+/* v1.119: a tab with changes still on their way to the SSD. */
+.tabs a.tab.unsaved::after { content: ''; display: inline-block; width: .45rem; height: .45rem; margin-left: .35rem; background: var(--warn, #d08a16); vertical-align: middle; }

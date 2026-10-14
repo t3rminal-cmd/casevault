@@ -283,7 +283,44 @@
   /** The colour an event shows: its own, else its suspect's, else none. */
   const eventColor = (ev, colors) => (ev && isColor(ev.color) ? ev.color : (colors && ev && colors.get(suspectKey(ev.suspect)) || {}).color || '');
 
+  /* v1.119: a Buy on the timeline carries what was bought and paid: { kind: 'buy', drug, qty, unit,
+   * paid }. buySummary() groups the buys by suspect, in the suspects' colours, with totals. */
+  const BUY_UNITS = ['g', 'kg', 'oz', 'lb', 'pills', 'units'];
+  const num = (v) => { const n = Number(String(v == null ? '' : v).replace(/[$,\s]/g, '')); return Number.isFinite(n) ? n : 0; };
+  const round = (n) => Math.round(n * 1000) / 1000;
+  /** "Cocaine · 3.5 g · $200" (only the parts given). */
+  function buyLine(ev) {
+    if (!ev) return '';
+    const amount = String(ev.qty == null ? '' : ev.qty).trim();
+    return [String(ev.drug || '').trim(), amount ? `${amount} ${ev.unit || 'g'}` : '', String(ev.paid == null ? '' : ev.paid).trim() ? money(num(ev.paid)) : ''].filter(Boolean).join(' · ');
+  }
+  function money(n) { return `$${n.toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`; }
+  /** rows: mergeEvents() output -> [{ key, name, color, buys: [{ date, time, number, title, drug, qty, unit, paid }],
+   * paid, drugs: [{ drug, amounts: [{ unit, qty }] }] }], suspects in order of their first buy; buys
+   * with no suspect named come last, as "No suspect named". */
+  function buySummary(rows) {
+    const buys = (rows || []).filter(({ ev }) => ev && ev.kind === 'buy');
+    const colors = suspectColors(rows);
+    const out = new Map();
+    for (const { ev, number } of buys) {
+      const key = suspectKey(ev.suspect);
+      const g = out.get(key) || { key, name: key ? String(ev.suspect).trim() : 'No suspect named', color: key ? (colors.get(key) || {}).color || '' : '', buys: [], paid: 0, byDrug: new Map() };
+      const b = { date: ev.date || '', time: ev.time || '', number: number || '', title: ev.title || '', drug: String(ev.drug || '').trim(), qty: num(ev.qty), unit: ev.unit || 'g', paid: num(ev.paid) };
+      g.buys.push(b);
+      g.paid = round(g.paid + b.paid);
+      if (b.drug || b.qty) {
+        const d = g.byDrug.get(b.drug || 'Not named') || new Map();
+        d.set(b.unit, round((d.get(b.unit) || 0) + b.qty));
+        g.byDrug.set(b.drug || 'Not named', d);
+      }
+      out.set(key, g);
+    }
+    const list = [...out.values()].map(({ byDrug, ...g }) => ({ ...g, drugs: [...byDrug.entries()].map(([drug, m]) => ({ drug, amounts: [...m.entries()].map(([unit, qty]) => ({ unit, qty })) })) }));
+    return [...list.filter((g) => g.key), ...list.filter((g) => !g.key)];
+  }
+
   const api = {
+    BUY_UNITS, buyLine, buySummary, money,
     subjectLabel, nameParts, TL_COLORS, isColor, suspectKey, suspectColors, eventColor,
     opKey, mergeOverview, sameOverview, mergeEvents,
     OP_STATUSES, normNumber, opLabel, normName, nameMatch, subjectMatches, caseWithNumber, duplicateNumbers,

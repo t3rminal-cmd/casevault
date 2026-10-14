@@ -4,6 +4,13 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.118)
+
+- **More room on every page:** Quick Links is a slim bar (the tabs and links in one row; **More** opens the full panel), and the sidebar's Closed / Archived are two small buttons in one row
+- **Less clutter:** the letterhead is one line on the Draft, Arrest and Link Chart tabs (**Edit Letterhead**; also in Vault → My Profile); empty landing sections are one line; hover boxes that only repeat a button's words are gone; the Files tab says "3 files in Photos" instead of a folder path
+- **Polish:** captions under the top-bar icons (Network, Local AI, Memory, SSD, Power Off); counts beside Suspects, Contacts, Deconfliction, Case History and LEO Partners on the Details tab; the Mission column of General Files shows just its number; smaller corner buttons; long messages have a × to close them; the backup reminder is a shorter amber note; section buttons readable in dark mode
+- **Clean-ups:** unused styles removed, and a stray brace that cancelled one style rule fixed; the browser tests read files more reliably
+
 ## Features (v1.117)
 
 - **Timeline colours by suspect:** each event can name a **Suspect** and take a **Colour**; picking a suspect gives their colour. A key of the suspects above the list shows each one's colour: click a name to see only their events, click the colour to change it on all of them. The small timelines on the Details tab and the Mission page use the colours too
