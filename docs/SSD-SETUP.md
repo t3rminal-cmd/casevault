@@ -34,6 +34,8 @@ Windows remembers the letter you gave each partition, **per computer**. Repeat s
 1. On the **Lenovo L14** (and any other PC), plug in the SSD and open **Disk Management**.
 2. Right-click each SanDisk partition and choose **Change Drive Letter and Paths… → Change**. Set CASEVAULT to **V** and CV-AI to **W**.
 
+**Why a letter changes by itself** (CV-AI was E: and is now F:, for example): Windows hands out the next free letter to a drive it hasn't been told a letter for. A phone, card reader or USB stick plugged in first, a different USB port or hub, or a PC where step 2 was never done can each shift the letter. Fixing the letter in Disk Management as above stops it; Windows then keeps that letter on that PC.
+
 If a letter is already taken on some PC (a network drive, for example), choose any free letter. **Nothing breaks:**
 
 - **CaseVault** doesn't use drive letters. If it can't find the vault, click **Reconnect**. If that fails, click **Choose folder…** and pick `CaseVault-Data` on the SSD once. The app recognises the vault by its ID, not its letter.

@@ -213,6 +213,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.123
+
+- **Quick Links:** one link per row, every link the same size, and the whole name on one line
+- **Missions list, a Mission's page and General Files:** the status labels (Open, Closed, Archived) are all one width, and dates sit in columns, months under months, days under days, years under years
+- **A Mission's page:** the subject is split into **Last Name**, **First Name** and **M.I.** columns, as in General Files. On a smaller screen the Details / Reports / Files buttons stack, so the table fits without scrolling sideways
+
 ### What's new in v1.122
 
 - **Housekeeping release:** nothing changes in how CaseVault works. The unused Poppins font files are gone (CaseVault uses Consolas), the older "What's new" notes moved to [previous-versions/WHATS-NEW.md](../previous-versions/WHATS-NEW.md), and the README describes the current screens (Settings, the Quick Links panel, the person view)
@@ -223,10 +229,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Quick Links** are in a panel that slides in from the right. Open it with **Quick Links** on the home page (beside Reference) or the link icon in the sidebar's top row (next to Home), from any page. Reference / OSINT / LEO tabs and **Arrange** work as before. A link to a CaseVault page (Location Codes, Charges…) shows that page and closes the panel; outside sites open in a new browser tab. Close it with ×, Esc or a click outside. The bar at the bottom of the page is gone
 - **Settings** (gear, on the home page) is the window that was called Vault, with the Library in it: My Profile, Letterhead, Library, Templates, Quick links, mail, logs and backups. Where this guide says "Vault → …", look in Settings
 - **Sidebar:** no Closed / Archived area at the bottom. Closed and archived cases are on the home page (**CLOSED FILES** and **ARCHIVED**). A search in the sidebar's search box still finds them: they are listed under **Closed** and **Archived** below the open cases
-
-### What's new in v1.120
-
-- **Landing page:** the **Secure Locker** section is now below **Archived** (Other Files, Closed Files, Archived, then Secure Locker)
 
 ### Earlier versions
 

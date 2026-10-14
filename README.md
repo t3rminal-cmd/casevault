@@ -15,10 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.122
+## What's New in v1.123
 
-- **Repository clean-up:** the unused Poppins font is removed (the app uses Consolas), older "What's new" notes moved to [previous-versions/WHATS-NEW.md](previous-versions/WHATS-NEW.md), and this README and the guide describe the current screens
-- **Privacy check:** every test name is a Doe / Roe / Poe placeholder, and the case-data guard (`scripts/check-no-case-data.sh`, also in `.gitignore`) now blocks locker, chat, branding, export and log folders and the arrest, link chart, mail log, library and report-field files
+- **Quick Links:** one link per row, all the same size, no name cut off
+- **Lined-up tables:** on the Missions list, a Mission's page and General Files, the status labels are one width and dates sit in month / day / year columns; a Mission's page shows the subject as Last Name / First Name / M.I.
 
 ## What CaseVault Does
 
