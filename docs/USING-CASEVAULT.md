@@ -214,6 +214,19 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.118
+
+- **Quick Links** (bottom of the page) is now one slim row: the Reference / OSINT / LEO tabs and that tab's links side by side (scroll sideways for more). **More** opens the full panel with Arrange; **Less** goes back. Remembered on this PC
+- **Sidebar:** CLOSED and ARCHIVED sit side by side in one small row, with their counts. Click one to open its list (the panel grows); click again to fold it
+- **Letterhead:** on the Draft, Arrest and Link Chart tabs it is one line (logo and the first line of the header) with **Edit Letterhead**. It is also in ⋮ → Vault → My Profile, under Letterhead
+- **Landing page:** a section with nothing in it (no closed cases, nothing archived, no open Mission) is a single header line
+- **Details tab:** Suspects, Contacts, Deconfliction, Case History and LEO Partners show how many entries they hold beside their titles, so you can see without opening them
+- **Top bar:** each status icon has a caption under it: Network, Local AI, Memory, SSD and Power Off
+- **Files tab:** the line above the files says the folder in words ("2 files in Photos"); point at it for where it is on the SSD
+- **General Files:** the Mission column shows the Mission's number; point at it for the name
+- **Messages** that stay a few seconds have a × to close them. The once-a-day backup reminder is a shorter amber note; the banner's **No Backup** chip keeps showing it
+- The round buttons in the corner (Top, Ask AI, Notes) are a little smaller, and hover boxes that only repeat a button's own words no longer pop up
+
 ### What's new in v1.117
 
 - **Timeline → Suspect and Colour:** each event can say which suspect it is about (pick from the suspects of every case number of the Mission, or type a name) and take a colour (ten to pick from, or none). Picking a suspect gives the event that suspect's colour; a new suspect gets the next free one. The event's edge, marker and suspect tag are in that colour

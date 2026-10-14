@@ -8,7 +8,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   ok(!(await p.$('.rf-lines .field:has-text("IR Number")')), 'no IR Number line in the Officer\'s Report');
   await p.click('.rf-second-toggle input'); await p.waitForTimeout(1500);
   ok(await p.$$eval('.rf-second', (e) => e.every((x) => x.hidden)), 'secondary fields hidden after untick');
-  const saved = await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'report-fields.json')).hidden, ids.c);
+  const saved = await p.evaluate(async (id) => (await window.__readCaseJSON(id, 'report-fields.json')).hidden, ids.c);
   ok(saved.includes('secondOfficer'), 'saved as hidden');
   await p.locator('.rf-second-toggle').screenshot({ path: process.env.SP + '/v186/toggle.png' });
   await p.evaluate((id) => { location.hash = '#/x'; location.hash = `#/case/${id}/draft`; }, ids.c); await p.waitForTimeout(1200);

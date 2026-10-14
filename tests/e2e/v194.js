@@ -19,7 +19,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   await p.click('.rf-veh-add'); await p.waitForTimeout(300);
   await p.fill('input[aria-label="Offender 1 vehicle 3 Make"]', 'Nissan'); await p.fill('input[aria-label="Offender 1 vehicle 3 VIN"]', 'jn1az4eh0fm000000');
   await p.waitForTimeout(1200);
-  const v = await p.evaluate(async (id) => { await window.CaseVaultUI.Save.flushAll(); await new Promise((r) => setTimeout(r, 300)); return (await Vault.readCaseJSON(id, 'report-fields.json')).offendersList[0].vehicles; }, ids.c);
+  const v = await p.evaluate(async (id) => { await window.CaseVaultUI.Save.flushAll(); await new Promise((r) => setTimeout(r, 300)); return (await window.__readCaseJSON(id, 'report-fields.json')).offendersList[0].vehicles; }, ids.c);
   ok(v.length === 3 && v[0].disposition === 'DNA' && v[2].make === 'Nissan' && v[2].vin === 'JN1AZ4EH0FM000000', `saved: ${JSON.stringify(v.map((x) => [x.make, x.disposition, x.vin]))}`);
   ok(await p.evaluate(() => !document.querySelector('label label')), 'no tick box inside another label');
   await p.locator('.rf-vehicles').screenshot({ path: process.env.SP + '/v194/cards.png' });

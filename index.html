@@ -41,12 +41,12 @@
       </a>
     </div>
     <div class="tb-status" aria-label="Status">
-      <button id="net-status" class="net-status" type="button" hidden></button>
-      <button id="engine-status" class="engine-status" type="button" hidden></button>
+      <button id="net-status" class="net-status" type="button" data-cap="Network" hidden></button>
+      <button id="engine-status" class="engine-status" type="button" data-cap="Local AI" hidden></button>
       <span id="ai-activity" class="ai-activity" hidden></span>
-      <span id="mem-status" class="mem-status" hidden></span>
-      <div id="save-status" class="save-status" role="status" aria-live="polite"></div>
-      <button id="btn-power" class="icon-btn power-btn" type="button" data-icon="power" title="Power Off: save, close, eject drives"><span class="sr-only">Power Off</span></button>
+      <span id="mem-status" class="mem-status" data-cap="Memory" hidden></span>
+      <div id="save-status" class="save-status" role="status" aria-live="polite" data-cap="SSD"></div>
+      <button id="btn-power" class="icon-btn power-btn" type="button" data-icon="power" data-cap="Power Off" title="Power Off: save, close, eject drives"><span class="sr-only">Power Off</span></button>
     </div>
     <div class="tb-right">
       <button id="btn-chat" class="icon-btn tb-square" type="button" data-icon="chat-dots-fill" aria-controls="chat-float" aria-expanded="false" title="Ask AI: ask the AI on this computer anything, or about a case, in a box you can keep open while you work. Nothing leaves this PC."><span class="sr-only">Ask AI</span></button>

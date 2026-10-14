@@ -54,8 +54,8 @@ const SP = process.env.SP + '/v1107';
   await p.locator('#dialog[open]').screenshot({ path: `${SP}/date-order.png` }).catch(() => {});
   await p.click('#dialog[open] button:has-text("Renumber")'); await p.waitForTimeout(2500);
   const after = await p.evaluate(async (pr) => ({
-    a: (await Vault.readCaseJSON(pr.a, 'report-fields.json')).evidence.map((e) => [e.number, e.description, e.photos]),
-    b: (await Vault.readCaseJSON(pr.b, 'report-fields.json')).evidence.map((e) => [e.number, e.description]),
+    a: (await window.__readCaseJSON(pr.a, 'report-fields.json')).evidence.map((e) => [e.number, e.description, e.photos]),
+    b: (await window.__readCaseJSON(pr.b, 'report-fields.json')).evidence.map((e) => [e.number, e.description]),
     files: (await Vault.listFiles(pr.a)).map((f) => f.name),
   }), pair);
   ok(JSON.stringify(after.b) === JSON.stringify([[1, 'Item 3']]) && after.a.map((x) => x[0]).join(',') === '2,3' && after.a[0][1] === 'Item 1', `renumbered: EX-600 ${JSON.stringify(after.b)}, EX-500 ${JSON.stringify(after.a.map((x) => x.slice(0, 2)))}`);

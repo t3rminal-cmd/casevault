@@ -369,7 +369,7 @@
         printBtn, archived ? null : pdfCaseBtn, archived ? null : signBtn,
         h('div', { class: 'spacer' }), showAll, hideAll, status, archived ? null : saveBtn,
         archived ? null : h('button', { class: 'btn small danger-ghost', type: 'button', title: 'Deletes all the arrest details of this case and takes the tab off', onclick: () => deleteArrest(c) }, 'Delete Arrest')),
-      archived || !root.CVLetterhead ? null : root.CVLetterhead.editor(), // v1.85
+      archived || !root.CVLetterhead ? null : root.CVLetterhead.summary(), // v1.85; v1.118: one line, edited in a popup or Vault → My Profile
       // v1.115: closed by arrest with the arrest report on another RD.
       c.closure && c.closure.arrestRef ? h('div', { class: 'card arrest-ref-card' },
         h('strong', {}, `The arrest report for this case is on RD ${c.closure.arrestRef.number}.`),

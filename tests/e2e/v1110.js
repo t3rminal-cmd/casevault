@@ -29,7 +29,7 @@ const HAL = 'Manufacture and Delivery: Hallucinogen';
   const offs = await p.$$eval('.combo-list .combo-opt', (x) => x.filter((e) => e.offsetParent).map((e) => e.textContent.trim()));
   ok(offs.length === 2 && offs[0].startsWith(HAL) && /LSD/.test(offs[1]), `Offense Classification offers: ${offs.join(' | ')}`);
   await p.keyboard.press('Escape');
-  const saved = await p.evaluate(async (i) => { await new Promise((r) => setTimeout(r, 800)); return Vault.readCaseJSON(i, 'report-fields.json'); }, id);
+  const saved = await p.evaluate(async (i) => { await new Promise((r) => setTimeout(r, 800)); return window.__readCaseJSON(i, 'report-fields.json'); }, id);
   ok(saved.ucr === '2015' && saved.offense === HAL && saved.offenseFrom === 'ucr', `saved: ${saved.ucr} / ${saved.offense}`);
   // A Draft form saved before v1.110 with the old short wording opens written out.
   const old = await p.evaluate(async () => { const c = await Vault.createCase({ number: 'EX-901', subject: 'Mary Doe' }); await Vault.writeCaseJSON(c.id, 'report-fields.json', { ucr: '2025', offense: 'Poss: Hallucinogens' }); return c.id; });

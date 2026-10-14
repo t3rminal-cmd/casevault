@@ -27,6 +27,6 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   await p.waitForTimeout(600);
   ok(await val() === C1, `after removing that charge: "${await val()}"`);
   await p.evaluate(async () => { await window.CaseVaultUI.Save.flushAll(); }); await p.waitForTimeout(500);
-  const saved = await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'report-fields.json')).offense, ids.c);
+  const saved = await p.evaluate(async (id) => (await window.__readCaseJSON(id, 'report-fields.json')).offense, ids.c);
   ok(saved === C1, `saved on the SSD: "${saved}"`);
   console.log('errors', errs); await b.close(); })();

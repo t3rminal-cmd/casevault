@@ -58,7 +58,7 @@ const SP = process.env.SP + '/v1114';
   await items.nth(1).locator('input').nth(1).fill('Black cell phone, written in'); await p.waitForTimeout(200);
   await propSec.screenshot({ path: `${SP}/properties.png` }).catch(() => {});
   await p.click('.arrest-toolbar button:has-text("Save")'); await p.waitForTimeout(800);
-  const saved = await p.evaluate(async (id) => (await window.CaseVaultUI.Save.flushAll(), await Vault.readCaseJSON(id, 'arrest.json')).arrestees[0], ids.c);
+  const saved = await p.evaluate(async (id) => (await window.__readCaseJSON(id, 'arrest.json')).arrestees[0], ids.c);
   ok(saved.charges.length === 2 && saved.charges[0].victim === 'Rick Poe' && saved.charges[1].degree === 'Class A'
     && JSON.stringify(saved.properties) === JSON.stringify([{ inventory: '7000001', description: 'Prisoner Money' }, { inventory: '7000002', description: 'Black cell phone, written in' }]), `saved: ${JSON.stringify(saved.properties)}`);
   const pdf = await p.evaluate(async (a) => { const b = CVArrestPdf.build({ arrestees: [a] }, {}); return [...b].map((x) => String.fromCharCode(x)).join(''); }, saved);

@@ -70,6 +70,11 @@
     // A heading's explanation (data-tip-long) shows up to three sentences; any other box: one.
     const text = el.dataset.tipLong ? shorten(textOf(el), 3, 320) : shorten(textOf(el));
     if (!text) return;
+    // v1.118: a box that only repeats what the element already says (a folder named
+    // "Deconfliction" with the tip "Deconfliction") isn't shown; one that is cut off on screen is.
+    const norm = (x) => String(x || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const cut = el.scrollWidth > el.clientWidth + 1 || [...el.querySelectorAll('*')].some((c) => c.scrollWidth > c.clientWidth + 1 && getComputedStyle(c).overflow !== 'visible');
+    if (!cut && norm(text) === norm(el.textContent)) return;
     timer = setTimeout(() => {
       if (!el.isConnected) return;
       // Never over an open suggestion list (v1.38): the list is what you're looking at.

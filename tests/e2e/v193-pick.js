@@ -13,19 +13,19 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   ok(await p.isDisabled('#dialog[open] button[type=submit]'), 'Add is off with nothing ticked');
   await p.click('#dialog[open] .rf-suspect-pick:has-text("Second Roe") input');
   await p.click('#dialog[open] button[type=submit]'); await p.waitForTimeout(1500);
-  let d = await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'report-fields.json')), ids.c);
+  let d = await p.evaluate(async (id) => (await window.__readCaseJSON(id, 'report-fields.json')), ids.c);
   ok(d.offendersList.map((o) => o.name).filter(Boolean).join(',') === 'Second Roe', `only the picked suspect added: ${d.offendersList.map((o) => o.name)}`);
   // again: Second Roe marked as already in; tick Main Doe
   await p.click('button:has-text("Add From Suspects")'); await p.waitForTimeout(500);
   const note = await p.textContent('#dialog[open] .rf-suspect-pick:has-text("Second Roe")');
   ok(/already in this report/i.test(note), 'a suspect already in the report is marked');
   await p.click('#dialog[open] button[type=submit]'); await p.waitForTimeout(1500);
-  d = await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'report-fields.json')), ids.c);
+  d = await p.evaluate(async (id) => (await window.__readCaseJSON(id, 'report-fields.json')), ids.c);
   ok(d.offendersList.map((o) => o.name).filter(Boolean).join(',') === 'Second Roe,Main Doe' && d.offendersList[1].hair === 'Black', `Main Doe added with details: ${d.offendersList.map((o) => o.name)}`);
   // Cancel adds nothing
   await p.click('button:has-text("Add From Suspects")'); await p.waitForTimeout(400);
   await p.click('#dialog[open] .rf-suspect-pick:has-text("Other Poe") input');
   await p.click('#dialog[open] button:has-text("Cancel")'); await p.waitForTimeout(800);
-  d = await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'report-fields.json')), ids.c);
+  d = await p.evaluate(async (id) => (await window.__readCaseJSON(id, 'report-fields.json')), ids.c);
   ok(d.offendersList.filter((o) => o.name).length === 2, 'Cancel adds nothing');
   console.log('errors', errs); await b.close(); })();

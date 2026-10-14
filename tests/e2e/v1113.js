@@ -45,7 +45,7 @@ const SP = process.env.SP + '/v1113';
   await p.evaluate(() => { const it = [...document.querySelectorAll('.arrest-item')].find((x) => [...x.querySelectorAll('input')].some((i) => i.value === 'State of Illinois')); const f = [...it.querySelectorAll('.field')].find((x) => x.querySelector('span').textContent.trim() === 'Officer name'); const i = f.querySelector('input'); i.value = 'P.O. Example #1234'; i.dispatchEvent(new Event('input', { bubbles: true })); });
   await p.locator('.arrest-section', { hasText: 'Victim and Complainant' }).first().screenshot({ path: `${SP}/victim.png` }).catch(() => {});
   await p.click('.arrest-toolbar button:has-text("Save")'); await p.waitForTimeout(800);
-  const saved = await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'arrest.json')).arrestees[0], ids.c);
+  const saved = await p.evaluate(async (id) => (await window.__readCaseJSON(id, 'arrest.json')).arrestees[0], ids.c);
   ok(saved.noNarcotics && saved.noWarrant && saved.noVehicle && saved.lastName === 'DOE' && saved.nonOffenders[0].officer === 'P.O. Example #1234' && saved.charges.length === 1, 'all of it is saved');
   // The PDF.
   const pdf = await p.evaluate(async (a) => { const b = CVArrestPdf.build({ arrestees: [a] }, {}); return [...b].map((x) => String.fromCharCode(x)).join(''); }, saved);

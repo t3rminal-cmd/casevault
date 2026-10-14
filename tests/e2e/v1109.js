@@ -51,7 +51,7 @@ const SEE = 'See DEA 6 for further information';
   const all = await p.$$eval('.combo-list .combo-opt', (x) => x.filter((e) => e.offsetParent).map((e) => e.firstChild ? e.firstChild.textContent.trim() : e.textContent.trim()));
   const txt = all.join(' | ');
   ok(/Marijuana \(Domestic\)/.test(txt) && !/(^|\| )Cannabis/.test(txt) && !/(^|\| )Cocaine( \||$)/.test(txt) && !/MDMA \/ Ecstasy/.test(txt), `no doubles: ${txt}`);
-  const saved = await p.evaluate(async (i) => { await new Promise((r) => setTimeout(r, 800)); return Vault.readCaseJSON(i, 'report-fields.json'); }, id);
+  const saved = await p.evaluate(async (i) => { await new Promise((r) => setTimeout(r, 800)); return window.__readCaseJSON(i, 'report-fields.json'); }, id);
   ok(saved.offendersList[0].name === SEE && saved.charges[0].description === SEE && saved.charges[0].statute === '', 'saved as See DEA 6');
   console.log('errors', errs); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

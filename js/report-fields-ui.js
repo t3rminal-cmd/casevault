@@ -1339,7 +1339,7 @@
       h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case: fill it in, then Send Draft to Reports puts it under Reports and its PDF under Files. Clear All starts another one. Saved as report-fields.json.'),
       h('div', { class: 'rf-actions' }, archived ? null : sendBtn, printBtn, archived ? null : clearBtn, archived ? null : dea6Btn, h('div', { class: 'spacer' }), archived ? null : nextBtn, archived ? null : saveBtn),
       // v1.85: the department letterhead, as at the top of the PDF.
-      archived || !root.CVLetterhead ? null : root.CVLetterhead.editor(),
+      archived || !root.CVLetterhead ? null : root.CVLetterhead.summary(), // v1.118: one line; the editor is in Vault → My Profile
       ...sections.slice(0, -1),
       part('evidence', 'Evidence Inventoried', 'box-seam', evNoteBox, evRows, archived ? null : h('div', { class: 'contact-add rf-evidence-add' }, addExhibit, numbering), extrasBox),
       part('summary', 'Summary of Investigation', 'journal-text', fmt, rich.el, narrative),
