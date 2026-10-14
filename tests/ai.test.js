@@ -33,14 +33,14 @@ test('review: contradictions, not-found, and hallucinated quotes are discarded',
   const base = `http://127.0.0.1:${server.address().port}`;
   const docs = [
     doc(0, 'Affidavit.docx', 'affidavit',
-      'Witness Robert Lee told Officer Diaz that he heard three shots and saw a male run south on Oak Street.',
-      'Officer Diaz observed a blue Honda Civic parked in the driveway of the house.',
+      'Witness Rick Poe told Officer Poez that he heard three shots and saw a male run south on Oak Street.',
+      'Officer Poez observed a blue Honda Civic parked in the driveway of the house.',
       'The affiant saw a hallucinated figure climbing the fence behind the garage.',
       'The suspect later posted bail at the county courthouse on Friday morning.',
       'Sworn and subscribed before me this day.'),
     doc(1, 'Report 26-4481.pdf', 'report',
-      'Officer Dias observed a blue Honda Civic parked in the driveway. The vehicle was unoccupied.',
-      'Witness Robert Lee stated he heard two shots and saw a male run north on Oak Street toward Elm Avenue.',
+      'Officer Poes observed a blue Honda Civic parked in the driveway. The vehicle was unoccupied.',
+      'Witness Rick Poe stated he heard two shots and saw a male run north on Oak Street toward Elm Avenue.',
       'The garage door was closed and the fence was undamaged.'),
   ];
   const progress = [];
@@ -53,7 +53,7 @@ test('review: contradictions, not-found, and hallucinated quotes are discarded',
   assert.strictEqual(contra.length, 1);
   assert.strictEqual(contra[0].severity, 'Medium');
   assert.strictEqual(contra[0].source.doc, 'Report 26-4481.pdf');
-  assert.strictEqual(contra[0].source.text, 'Witness Robert Lee stated he heard two shots and saw a male run north on Oak Street toward Elm Avenue.');
+  assert.strictEqual(contra[0].source.text, 'Witness Rick Poe stated he heard two shots and saw a male run north on Oak Street toward Elm Avenue.');
   const [h0, h1] = contra[0].source.highlight;
   assert.ok(contra[0].source.text.slice(h0, h1).includes('two shots'));
 

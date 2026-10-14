@@ -98,11 +98,11 @@
     { type: 'ip', re: /\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g, ok: (v) => !/^(?:127\.|0\.)/.test(v) },
     { type: 'casenum', re: /\b(?:case|report|incident|file|cad|event|complaint|warrant|docket|citation|arrest|booking|IR|CR|RMS|OCA)\s*(?:no\.?|number|num|#)\s*[:#]?\s*([A-Z0-9][A-Z0-9-]{2,24})\b/gi, group: 1, ok: (v) => /\d/.test(v) },
     { type: 'casenum', re: /\b(?:19|20)\d{2}-[A-Z]{0,4}\d{3,10}\b/g },
-    // Names after a title ("Det. John Smith", "suspect Maria Lopez", "Victim DOE, Jane").
+    // Names after a title ("Det. John Doe", "suspect Mary Roe", "Victim DOE, Jane").
     { type: 'person', re: new RegExp(`\\b(?:${TITLES})\\.?\\s+((?:${NAME_WORD}|${NAME_WORD_CAPS})(?:,?\\s+(?:[A-Z]\\.\\s*)?(?:${NAME_WORD}|${NAME_WORD_CAPS})){0,2})`, 'g'), group: 1, ok: (v) => !v.split(/[\s,]+/).every((w) => NOT_NAMES.has(w.replace(/\.$/, '').toLowerCase())) },
     // "SMITH, John" — the usual way reports write a person's name.
     { type: 'person', re: new RegExp(`\\b(${NAME_WORD_CAPS},\\s*${NAME_WORD}(?:\\s+[A-Z]\\.?|\\s+${NAME_WORD})?)`, 'g'), group: 1, ok: (v) => !NOT_NAMES.has(v.split(',')[0].toLowerCase()) },
-    // Two or three capitalised words in a row ("John Smith", "Maria de la Cruz" is partly caught).
+    // Two or three capitalised words in a row ("John Doe", "Maria de la Cruz" is partly caught).
     { type: 'person', re: new RegExp(`\\b(${NAME_WORD}(?:\\s+[A-Z]\\.)?\\s+${NAME_WORD}(?:\\s+${NAME_WORD})?)\\b`, 'g'), group: 1, ok: (v, text, at) => {
       const words = v.split(/\s+/).map((w) => w.replace(/\.$/, '').toLowerCase());
       if (words.some((w) => NOT_NAMES.has(w))) return false;
@@ -200,7 +200,7 @@
    * Replace findings with placeholders. The same value always gets the same placeholder, and a
    * map passed in is reused, so a conversation stays consistent across several messages.
    * skip: indexes (into findings) the user chose to leave as they are (never a locked type).
-   * Returns { text, map, replaced }  where map = { '[NAME_1]': 'John Smith', ... }.
+   * Returns { text, map, replaced }  where map = { '[NAME_1]': 'John Doe', ... }.
    */
   function redact(text, findings, { map = {}, skip = new Set() } = {}) {
     const s = String(text || '');
@@ -272,7 +272,7 @@
     for (const c of caseIndex || []) { push(c.number, 'casenum'); push(c.fileNumber, 'casenum'); push(c.agencyNumber, 'casenum'); push(c.client); }
     if (affiant) { push(affiant.name); push(affiant.phone, 'phone'); push(affiant.email, 'email'); push(affiant.address, 'address'); }
     for (const w of watchlist || []) push(w);
-    // Longest first, so "Maria Lopez-Diaz" is matched before "Maria".
+    // Longest first, so "Mary Roe-Poez" is matched before "Maria".
     const seen = new Set();
     return out.filter((x) => { const k = `${x.type}:${x.value.toLowerCase()}`; if (seen.has(k)) return false; seen.add(k); return true; })
       .sort((a, b) => b.value.length - a.value.length);

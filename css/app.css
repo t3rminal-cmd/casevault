@@ -1,11 +1,7 @@
 /* CaseVault — styles. The LE Cyber-Docs look: Consolas everywhere (v1.33; built into Windows), a blue accent,
-   rounded cards, and light and dark themes. The theme follows Windows unless it's set with the
+   square corners, and light and dark themes. The theme follows Windows unless it's set with the
    sun/moon button (js/theme.js puts data-theme="light" or "dark" on <html>). */
 
-@font-face { font-family: "Poppins"; font-style: normal; font-weight: 400; font-display: swap; src: url("../vendor/poppins/poppins-latin-400-normal.woff2") format("woff2"); }
-@font-face { font-family: "Poppins"; font-style: normal; font-weight: 500; font-display: swap; src: url("../vendor/poppins/poppins-latin-500-normal.woff2") format("woff2"); }
-@font-face { font-family: "Poppins"; font-style: normal; font-weight: 600; font-display: swap; src: url("../vendor/poppins/poppins-latin-600-normal.woff2") format("woff2"); }
-@font-face { font-family: "Poppins"; font-style: normal; font-weight: 700; font-display: swap; src: url("../vendor/poppins/poppins-latin-700-normal.woff2") format("woff2"); }
 
 :root {
   --bg: #f8f9fa;

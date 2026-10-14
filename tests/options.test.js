@@ -5,7 +5,7 @@ const O = require('../js/options.js');
 
 test('Dev Tools: personal details become consistent fictitious fillers', () => {
   const text = 'On 03/14/2026 Det. Alex Sample met Casey Placeholder (DOB 04/12/1990) at 742 Evergreen Terrace. '
-    + 'Call (312) 555-8841 or email casey.p@mail.example. Casey Placeholder drove plate IL ZX98765. PLACEHOLDER, Casey signed.';
+    + 'Call (312) 555-0141 or email casey.p@mail.example. Casey Placeholder drove plate IL ZX98765. PLACEHOLDER, Casey signed.';
   const r = O.fictitious(text, { known: ['Casey Placeholder'] });
   assert.doesNotMatch(r.text, /Casey|Placeholder|PLACEHOLDER|Evergreen|8841|mail\.example|04\/12\/1990/i);
   assert.match(r.text, /John Doe/);

@@ -22,7 +22,7 @@ function harness(reply = () => ' responded to 1420 Oak Street.') {
   return { g, calls, fire, timers, changes: () => changes };
 }
 
-const TEXT = 'On March 14, 2026, Officer Diaz';
+const TEXT = 'On March 14, 2026, Officer Poez';
 
 test('suggests after the pause, Tab accepts', async () => {
   const { g, calls, fire } = harness();
@@ -86,9 +86,9 @@ test('only suggests at the end of a line, with enough text, when enabled and foc
 });
 
 test('cleanSuggestion: one sentence, no quotes, no echo, correct spacing, ~40 tokens max', () => {
-  assert.strictEqual(G.cleanSuggestion('"responded to the scene. Then he left."', 'Officer Diaz'), ' responded to the scene.');
-  assert.strictEqual(G.cleanSuggestion('Continuation: responded quickly', 'Officer Diaz '), 'responded quickly');
-  assert.strictEqual(G.cleanSuggestion('Officer Diaz responded.', 'On March 14, Officer Diaz'), ' responded.');
+  assert.strictEqual(G.cleanSuggestion('"responded to the scene. Then he left."', 'Officer Poez'), ' responded to the scene.');
+  assert.strictEqual(G.cleanSuggestion('Continuation: responded quickly', 'Officer Poez '), 'responded quickly');
+  assert.strictEqual(G.cleanSuggestion('Officer Poez responded.', 'On March 14, Officer Poez'), ' responded.');
   assert.strictEqual(G.cleanSuggestion(', 2026, at 21:40.', 'On March 14'), ', 2026, at 21:40.');
   assert.strictEqual(G.cleanSuggestion('   \n\n', 'x'), '');
   const long = G.cleanSuggestion('word '.repeat(100), 'x ');
@@ -129,15 +129,15 @@ test('draft prompt: only case material, [CONFIRM: ...] rule, template and passag
     instructions: 'Keep it short.',
     caseObj: { title: 'State v. Lee', number: 'CR-1', client: 'DA', status: 'Open', tags: [], dates: { opened: '2026-03-15' } },
     timeline: { events: [{ date: '2026-03-14', time: '21:40', kind: 'event', title: 'Shots fired call' }] },
-    notes: 'Witness Robert Lee.',
-    passages: [{ docName: 'Report.pdf', page: 1, text: 'Officer Dias responded.' }, { docName: 'log.xlsx', sheet: 'Evidence', row: 2, text: 'Evidence row 2: Plate=ABC-1284' }],
+    notes: 'Witness Rick Poe.',
+    passages: [{ docName: 'Report.pdf', page: 1, text: 'Officer Poes responded.' }, { docName: 'log.xlsx', sheet: 'Evidence', row: 2, text: 'Evidence row 2: Plate=ABC-1284' }],
   });
   assert.strictEqual(msgs[0].role, 'system');
   assert.match(msgs[0].content, /Use ONLY facts/);
   assert.match(msgs[0].content, /\[CONFIRM: what is needed\]/);
   assert.match(msgs[0].content, /Never invent/);
   const u = msgs[1].content;
-  for (const s of ['Case number: CR-1', '2026-03-14 21:40 [event] Shots fired call', 'Witness Robert Lee.', '[Report.pdf, page 1]', '[log.xlsx, Evidence row 2]', 'Affidavit', 'Keep it short.', 'Case {{x}} [CONFIRM: court]']) {
+  for (const s of ['Case number: CR-1', '2026-03-14 21:40 [event] Shots fired call', 'Witness Rick Poe.', '[Report.pdf, page 1]', '[log.xlsx, Evidence row 2]', 'Affidavit', 'Keep it short.', 'Case {{x}} [CONFIRM: court]']) {
     assert.ok(u.includes(s), `prompt includes ${s}`);
   }
 });

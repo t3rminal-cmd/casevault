@@ -4,7 +4,7 @@ An offline, browser-based case file manager that stores everything on your own e
 
 - **Your data stays on your SSD.** CaseVault reads and writes the vault folder directly through the browser's File System Access API. The browser remembers only *which folder* to reconnect to, never its contents.
 - **Works offline.** Install it as an app from GitHub Pages, or run the copy on the SSD. There's no build step and nothing to download at runtime; every library is bundled in `vendor/`.
-- **Private by design.** No CDNs, web fonts, analytics, or network calls. A Content-Security-Policy restricts the page to its own files and the local AI engine on `127.0.0.1:11434`. CaseVault never connects to the internet.
+- **Private by design.** No CDNs, downloaded fonts, analytics, or network calls. A Content-Security-Policy restricts the page to its own files and the local AI engine on `127.0.0.1:11434`. CaseVault never connects to the internet.
 
 **Open it:** https://t3rminal-cmd.github.io/casevault/ (Chrome or Edge on desktop), or `W:\Start-CaseVault.bat` (Firefox, or any browser).
 
@@ -15,11 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.121
+## What's New in v1.122
 
-- **Quick Links in a side panel:** the bar at the bottom of the page is gone. Click **Quick Links** (beside Reference on the home page, or the link icon in the sidebar's top row) and the links slide in from the right; × , Esc or a click outside closes them
-- **Settings:** Library and Vault were one window; they are now one **Settings** tile with a gear. Anything these notes call "Vault → …" is in Settings
-- **Sidebar:** the Closed / Archived area at the bottom is gone, so the case list has the whole height. Closed and archived cases are on the home page (CLOSED FILES, ARCHIVED); a search in the sidebar still finds them, listed under Closed and Archived
+- **Repository clean-up:** the unused Poppins font is removed (the app uses Consolas), older "What's new" notes moved to [previous-versions/WHATS-NEW.md](previous-versions/WHATS-NEW.md), and this README and the guide describe the current screens
+- **Privacy check:** every test name is a Doe / Roe / Poe placeholder, and the case-data guard (`scripts/check-no-case-data.sh`, also in `.gitignore`) now blocks locker, chat, branding, export and log folders and the arrest, link chart, mail log, library and report-field files
 
 ## What CaseVault Does
 
@@ -27,8 +26,11 @@ The app detects the browser and picks the mode by itself. The data format on the
 - Cases with a Case Number, File Number, Agency Case Number, subject, client and status (Open, Closed, Archived); several case numbers grouped under a **Mission**, or kept as **Independent Cases**
 - Details tab: suspects, contacts (Case Officer, ASA/AUSA and others), LEO partners, deconfliction, and **Case History** with your own dated notes
 - Closing asks for a disposition and the arrest report; archiving asks for a reason (EXPIRED, NOLLE PROSEQUI, PROSECUTION or your own); a closed case can be reopened and an archived one restored
-- Timeline of events and deadlines, a red bell for anything due, and the statute of limitations for narcotic charges
-- Delete Case asks twice
+- Timeline of events, buys and deadlines, coloured by suspect, a red bell for anything due, and the statute of limitations for narcotic charges
+- **Buy Summary** (each suspect's buys with narcotic and money totals) and a **Timeline PDF** of just the events shown
+- **Person view**: every case and Mission a person is on, with other spellings of the name flagged
+- A Mission's closing progress, and closing several case numbers by one arrest report
+- Delete Case asks twice (deleted cases go to a recycle bin first)
 
 **Reports and PDFs**
 - **Draft** tab: the Officer's Report entered once (offense, victims, offenders, narcotics, pre-recorded funds, evidence and exhibits, personnel, approvals), with green checks as each part is complete; Send to Files makes the PDF and empties the form (Undo brings it back)
@@ -39,6 +41,11 @@ The app detects the browser and picks the mode by itself. The data format on the
 **Files and Discovery**
 - Every case's documents in named folders (`2026-<CaseNo> <Type>.ext`), previewed in the app: PDF (CaseVault's own viewer), images, Word, Excel, audio and video
 - **Discovery**: an encrypted, Bates-numbered production with its own viewer and a printable receipt; burns to CD or DVD
+
+**Also**
+- **Quick Links** (Reference, OSINT, LEO) in a panel that slides in from the right; **Reference** charts, codes and the narcotic street-value calculator
+- **Secure Locker**: passwords, aliases and files kept encrypted on the SSD
+- **Settings** (gear on the home page): My Profile, letterhead, Library and templates, Quick links, mail, logs and backups
 
 **Data safety**
 - Everything is saved on the SSD as you type, with a **Saved to SSD** indicator; changes wait and are written when a disconnected SSD comes back
@@ -66,7 +73,7 @@ Use ⋮ → Report a Problem to save a report (with case details scrubbed) for t
 - [docs/AI-SETUP.md](docs/AI-SETUP.md): the launcher, the Firefox helper, portable Ollama and models on the CV-AI partition
 - [docs/BACKUP-TO-ANOTHER-PC.md](docs/BACKUP-TO-ANOTHER-PC.md): backing up to a shared folder on another PC at home (e.g. a Beelink)
 - [docs/SECURITY.md](docs/SECURITY.md): what protects your cases and the code, and the GitHub settings to turn on
-- [previous-versions/](previous-versions/README.md): what each earlier version added
+- [previous-versions/](previous-versions/README.md): what each earlier version added, and [the What's New notes](previous-versions/WHATS-NEW.md) version by version
 
 ## Data layout on the SSD
 
@@ -106,7 +113,8 @@ CaseVault-Data/
 | `js/secure/pii.js` | PII scanner (mail check, Document Anonymizer) and redaction to placeholders |
 | `js/secure/outbound.js` | Department mail check: the review screen (recipients, attachments, personal details) and the outbound log |
 | `js/secure/mail.js`, `js/secure/mail-ui.js` | Department mail: domain rules, `.eml` Outlook draft builder, the Mail tab |
-| `js/secure/settings-ui.js` | Vault panel: PII watch list, department mail, outbound log |
+| `js/secure/settings-ui.js` | Settings window: PII watch list, department mail, outbound log |
+| `js/secure/locker-core.js`, `js/locker-ui.js` | The Secure Locker: encryption (AES-GCM, a password and a recovery key) and its page |
 | `js/ai/memory.js` | Memory indicator (app, Ollama model GPU/RAM, PC RAM and disk) |
 | `js/vault.js` | Vault data model: cases, notes, timeline, files, index, backups, archive (verified folder moves) |
 | `js/ai/activity.js` | AI activity tracker: header indicator, shared AI queue, tokens/s |
@@ -115,11 +123,12 @@ CaseVault-Data/
 | `js/markdown.js` | Minimal, escaping Markdown previewer for notes |
 | `js/report-pdf.js` | The Supplementary Report as a PDF (its own small PDF writer; signature fields for e-sign; the letterhead) |
 | `js/report-fields.js`, `js/report-fields-ui.js` | The Draft tab: the Officer's Report fields, their checks, and the form |
-| `js/arrest-pdf.js`, `js/draft-pdf.js`, `js/case-summary.js` | The Arrest Report, a written report, and the Case Summary as PDFs |
+| `js/arrest-pdf.js`, `js/draft-pdf.js`, `js/case-summary.js`, `js/timeline-pdf.js` | The Arrest Report, a written report, the Case Summary, and the Timeline / Buy Summary as PDFs |
 | `js/letterhead.js` | The department letterhead: logo square and header lines, for every PDF |
 | `js/pdf-viewer.js` | CaseVault's own PDF viewer (zoom, pages, print, download) |
 | `js/linkchart.js`, `js/linkchart-ui.js` | The Link Chart: layout and PDF, and the tab |
-| `js/operation.js` | Missions: several case numbers under one Operation |
+| `js/operation.js` | Missions: several case numbers under one Operation; timeline colours and the buy summary |
+| `js/person-view.js` | The person view: every case a name is on, other spellings flagged |
 | `js/limitations.js` | Statute of limitations for narcotic charges |
 | `js/discovery-core.js`, `js/discovery-ui.js`, `js/discovery-receipt.js` | Discovery: encrypted Bates-numbered packages, the dialog, and the receipt PDF |
 | `js/formats.js`, `js/combo.js`, `js/select.js` | One way to write dates, phones and SSNs; type-in drop-downs; square drop-down lists |
@@ -155,16 +164,18 @@ CaseVault-Data/
 | `js/drafts/ghost.js` | Inline suggestion (ghost text) logic |
 | `js/drafts/copilot.js` | Local-AI calls for suggestions and Draft with AI |
 | `js/drafts/drafts-ui.js` | Drafts tab, editor, export, template settings |
-| `vendor/` | Bundled pdf.js, Tesseract.js, SheetJS, the Bootstrap Icons license and the Poppins font (see `vendor/README.md` for versions, licenses and provenance) |
+| `vendor/` | Bundled pdf.js, Tesseract.js, SheetJS and the Bootstrap Icons license (see `vendor/README.md` for versions, licenses and provenance) |
 | `tools/Start-CaseVault.bat` | Launcher for the CV-AI partition: starts the helper and Ollama |
-| `tools/casevault-helper/` | The Firefox helper (Windows PowerShell 5.1, 127.0.0.1 only); also opens `.eml` mail drafts from a case's Email folder in Outlook, and reports RAM and disk space for the memory indicator, and (1.11) copies and checks Back Up Everything onto another drive, and (1.13) says whether each drive has BitLocker |
+| `tools/casevault-helper/` | The Firefox helper (Windows PowerShell 5.1, 127.0.0.1 only). It also opens `.eml` mail drafts in Outlook, reports RAM and disk space for the memory indicator, copies and checks Back Up Everything onto another drive, and says whether each drive has BitLocker |
+| `updater/` | The updater (Python, bundled on the SSD): checks GitHub for a new version and installs only the changed files; see `updater/README.md` |
+| `discovery/viewer.html` | The recipient's viewer copied into every Discovery package |
 | `tests/` | Unit tests (`node --test tests/*.test.js`) and a mock Ollama server |
 | `tests/e2e/` | Browser tests: `node tests/e2e/run.js` drives the app in Chromium (Playwright) with made-up Doe/Roe/Poe cases; CI runs them before every publish |
 | `scripts/check-no-case-data.sh` | CI guard: fails if anything resembling case data is committed |
 
 Plain HTML, CSS, and JavaScript with classic `<script>` tags, so it also runs from `file://` (PDF reading and OCR need `http(s)`). To work on it locally, serve the folder (for example `python -m http.server`) and open it in Chrome or Edge. For the AI layer without a real model, run `node tests/mock-ollama.js`.
 
-**Never commit case data.** `.gitignore` blocks it, and CI refuses to deploy if any slips through.
+**Never commit case data.** This repository is public. `.gitignore` blocks case folders and documents, CI refuses to deploy if any slips through, and every test uses made-up people (Doe, Roe, Poe) in Example City.
 
 ## Deployment
 

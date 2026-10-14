@@ -10,7 +10,6 @@ Everything CaseVault needs is stored here, so the app never loads code from the 
 | English OCR model (`@tesseract.js-data/eng`, 4.0.0_best_int) | 1.0.0 | OCR language data | Apache-2.0 |
 | [SheetJS Community Edition](https://sheetjs.com) (`xlsx.full.min.js`) | 0.20.3 | Reading Excel (.xlsx/.xls/.ods) and CSV files | Apache-2.0 (`sheetjs/LICENSE`) |
 | [Bootstrap Icons](https://icons.getbootstrap.com) | 1.13.1 | The icons, as inline SVG. Only the icons CaseVault uses are kept, in `js/icons-data.js` (made by `scripts/make-icons.js`) | MIT (`bootstrap-icons/LICENSE`) |
-| [Poppins](https://github.com/itfoundry/Poppins) (`@fontsource/poppins`, Latin subset) | 5.3.0 | The app's font (regular, medium, semibold, bold) | SIL Open Font License 1.1 (`poppins/OFL.txt`) |
 
 ### SheetJS provenance
 

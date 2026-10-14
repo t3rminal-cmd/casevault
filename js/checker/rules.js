@@ -400,7 +400,7 @@
       }
     }
 
-    // Names: the same person spelled differently (Diaz / Dias, Katherine / Catherine).
+    // Names: the same person spelled differently (Poez / Poes, Katherine / Catherine).
     const occurrences = new Map(); // value -> [{ sent, fact }]
     for (const d of docs) {
       for (const sent of d.sentences) {
