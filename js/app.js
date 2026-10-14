@@ -108,6 +108,19 @@
   const dnaCombo = (el) => (window.CVCombo ? CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }] }) : el);
   const STATUS_ICONS = { Open: 'folder2-open', Closed: 'lock-fill', Archived: 'archive' };
   const statusPill = (status) => h('span', { class: `pill status-${String(status).toLowerCase()}`, icon: STATUS_ICONS[status] }, status);
+  // v1.123: a date in three fixed columns (month, day, year), so a column of dates lines up.
+  const dateCols = (iso) => {
+    const m = /^(\w+) (\d{2}), (\d{4})$/.exec(fmtDate(iso));
+    return m ? h('span', { class: 'date-cols' }, h('span', { class: 'dc-m' }, m[1]), h('span', { class: 'dc-d' }, `${m[2]},`), h('span', { class: 'dc-y' }, m[3])) : (iso ? fmtDate(iso) : '—');
+  };
+  // v1.123: the subject as Last / First / Middle cells (one cell across all three when it isn't one person's name).
+  const nameCells = (subject, { initial = false } = {}) => {
+    const p = CVOperation.nameParts(subject);
+    if (!String(subject || '').trim()) return [h('td', { class: 'muted name-cell', colspan: 3 }, 'No subject yet')];
+    if (p.whole) return [h('td', { class: 'subject-cell name-cell', colspan: 3, title: 'Not a single person\'s name, so it isn\'t split' }, p.last)];
+    const mid = initial && p.middle ? `${p.middle[0].toUpperCase()}.` : p.middle;
+    return [h('td', { class: 'subject-cell name-cell name-last' }, p.last), h('td', { class: 'name-cell' }, p.first), h('td', { class: 'name-cell name-mid' }, mid || h('span', { class: 'muted' }, '—'))];
+  };
   const I = (name, opts) => CVIcons.icon(name, opts);
   // v1.85: still being worked on (Templates, the Checker, the Anonymizer).
   const betaTag = () => h('span', { class: 'beta-tag', title: 'Beta: still being worked on. Check what it gives you before you rely on it.' }, 'Beta');
@@ -1468,8 +1481,8 @@
         h('tbody', {}, ops.map((op) => h('tr', {},
           h('td', {}, h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, class: 'op-row-link' }, I('op-folder'), opLabel(op))),
           h('td', {}, statusPill(op.status)),
-          h('td', { class: 'nowrap date-cell' }, op.start ? fmtDate(op.start) : '—'),
-          h('td', { class: 'nowrap date-cell' }, op.end ? fmtDate(op.end) : '—'),
+          h('td', { class: 'nowrap date-cell' }, dateCols(op.start)),
+          h('td', { class: 'nowrap date-cell' }, dateCols(op.end)),
           h('td', { class: 'num' }, String(count(op))))))))
         : h('div', { class: 'empty-state' }, h('p', {}, 'No Missions yet.'), h('p', { class: 'muted small' }, 'New Mission makes one. Then create cases inside it, or link cases from General Files.'))));
   }
@@ -1600,12 +1613,13 @@
       members.length ? progressBox : null,
       members.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'data-table op-cases-table' },
         // v1.119: every column named and lined up on the left.
-        h('thead', {}, h('tr', {}, ['Case Number', 'Subject Name', 'Status', 'Opened', 'Closing', 'Go To', 'Move'].map((x) => h('th', {}, x)))),
+        // v1.123: the subject in Last / First / M.I. columns and the dates in month / day / year columns, all lined up.
+        h('thead', {}, h('tr', {}, ['Case Number', 'Last Name', 'First Name', 'M.I.', 'Status', 'Opened', 'Closing', 'Go To', 'Move'].map((x) => h('th', { class: /Name$|M\.I\./.test(x) ? 'name-cell' : '' }, x)))),
         h('tbody', {}, members.map((c) => h('tr', { class: isArchivedEntry(c) ? 'archived-row' : '' },
           h('td', {}, h('a', { href: caseLink(c), class: 'case-num-link' }, c.number || 'No case number')),
-          h('td', { class: c.subject ? 'subject-cell' : 'muted' }, subj(c) || 'No subject yet'),
+          ...nameCells(c.subject, { initial: true }),
           h('td', {}, statusPill(isArchivedEntry(c) ? 'Archived' : c.status)),
-          h('td', { class: 'nowrap' }, c.opened ? fmtDate(c.opened) : '—'),
+          h('td', { class: 'nowrap' }, dateCols(c.opened)),
           h('td', { class: 'op-closing', 'data-case': c.id }, h('span', { class: 'muted small' }, '…')),
           h('td', { class: 'nowrap' }, h('div', { class: 'op-case-links' }, OP_TABS.map(([tab, label]) => h('a', { class: 'op-tab-link', href: caseLink(c, tab) }, label)))),
           h('td', { class: 'nowrap' }, isArchivedEntry(c)
@@ -1703,16 +1717,11 @@
         return h('tr', { class: arch ? 'archived-row' : '' },
           h('td', {}, h('a', { href: caseLink(c), class: 'case-num-link' }, c.number || 'No case number'),
             dup ? h('span', { class: 'dup-flag', title: 'Another case has the same Case Number (made before numbers had to be unique). Nothing was changed.' }, I('exclamation-triangle-fill'), 'Duplicate') : null),
-          ...(() => {
-            const p = CVOperation.nameParts(c.subject);
-            if (!String(c.subject || '').trim()) return [h('td', { class: 'muted name-cell', colspan: 3 }, 'No subject yet')];
-            if (p.whole) return [h('td', { class: 'subject-cell name-cell', colspan: 3, title: 'Not a single person\'s name, so it isn\'t split' }, p.last)];
-            return [h('td', { class: 'subject-cell name-cell name-last' }, p.last), h('td', { class: 'name-cell' }, p.first), h('td', { class: 'name-cell' }, p.middle || h('span', { class: 'muted' }, '—'))];
-          })(),
+          ...nameCells(c.subject),
           // v1.118: the Mission's number on one line; its name in the hover box.
           h('td', { class: 'gen-mission' }, op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, title: opLabel(op) }, op.number || op.name || 'Mission') : h('span', { class: 'muted' }, '—')),
           h('td', {}, statusPill(arch ? 'Archived' : c.status)),
-          h('td', { class: 'nowrap date-cell' }, c.opened ? fmtDate(c.opened) : '—'),
+          h('td', { class: 'nowrap date-cell' }, dateCols(c.opened)),
           h('td', { class: 'nowrap age-cell' }, (() => { const o = openedAge(c.opened); return o ? h('span', { title: `${o.days} day${o.days === 1 ? '' : 's'} since it was opened` }, o.ageLong) : '—'; })()),
           h('td', { class: 'nowrap' }, action));
       }) : [h('tr', {}, h('td', { colspan: 9, class: 'muted empty-cell' }, Vault.data.cases.length ? 'No cases match.' : 'No cases yet. New Case makes one.'))]));

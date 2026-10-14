@@ -4,6 +4,10 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.120
+
+- **Landing page:** the **Secure Locker** section is now below **Archived** (Other Files, Closed Files, Archived, then Secure Locker)
+
 ## What's new in v1.119
 
 - **Timeline → Type "Buy":** a buy has its narcotic (pick or type), amount (g, kg, oz, lb, pills or units) and the money paid, shown on the event ("Cocaine · 3.5 g · $200")

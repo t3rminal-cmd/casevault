@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.122)
+
+- **Repository clean-up:** the unused Poppins font is removed (the app uses Consolas), older "What's new" notes moved to [previous-versions/WHATS-NEW.md](previous-versions/WHATS-NEW.md), and this README and the guide describe the current screens
+- **Privacy check:** every test name is a Doe / Roe / Poe placeholder, and the case-data guard (`scripts/check-no-case-data.sh`, also in `.gitignore`) now blocks locker, chat, branding, export and log folders and the arrest, link chart, mail log, library and report-field files
+
 ## Features (v1.121)
 
 - **Quick Links in a side panel:** the bar at the bottom of the page is gone. Click **Quick Links** (beside Reference on the home page, or the link icon in the sidebar's top row) and the links slide in from the right; × , Esc or a click outside closes them

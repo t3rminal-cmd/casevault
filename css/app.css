@@ -4088,7 +4088,27 @@ a.locker-tile, a.locker-tile:hover, a.locker-tile * { text-decoration: none !imp
 .ql-panel-head h2 { display: flex; align-items: center; gap: .45rem; margin: 0; font-size: 1.05rem; text-transform: uppercase; letter-spacing: .04em; }
 .ql-panel-head .ql-panel-close { margin-left: auto; }
 .ql-panel .quick-links-box .ql-head { flex-wrap: wrap; row-gap: .4rem; }
-.ql-panel .quick-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; height: auto; }
-.ql-panel .quick-link .ql-name { white-space: normal; overflow-wrap: anywhere; }
+/* v1.123: one link per row, all the same size, the name on one line. */
+.ql-panel .quick-links { display: grid; grid-template-columns: minmax(0, 1fr); gap: .35rem; height: auto; }
+.ql-panel .quick-link, .ql-panel .ql-edit-wrap > .quick-link, .ql-panel .ql-choice-wrap > .quick-link { min-height: 0; height: 2.9rem; padding: .35rem .7rem; gap: .65rem; }
+.ql-panel .quick-link .ql-icon { width: 2rem; height: 2rem; font-size: 1rem; }
+.ql-panel .quick-link .ql-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qa-tile.ql-open-btn.on, #btn-side-links.on { border-color: var(--accent); color: var(--accent); }
 .side-found-head { list-style: none; padding: .5rem .4rem .15rem; text-transform: uppercase; letter-spacing: .05em; }
+
+/* v1.123: tables line up. Dates in fixed month / day / year columns (Consolas: one ch per letter);
+   status pills all one width; subject names in Last / First / Middle columns. */
+.date-cols { display: inline-grid; grid-template-columns: 9.1ch 3.1ch 4.1ch; column-gap: .35ch; text-align: left; font-variant-numeric: tabular-nums; }
+.date-cols > span { white-space: nowrap; }
+:is(.ops-table, .op-cases-table, .general-table) .pill { display: inline-flex; justify-content: center; box-sizing: border-box; width: 7.3em; white-space: nowrap; }
+.op-cases-table :is(th, td).name-cell { text-align: left; }
+.op-cases-table td.name-last { white-space: nowrap; }
+.op-cases-table td.name-mid { width: 3rem; }
+table.op-cases-table :is(th, td) { padding-left: .45rem; padding-right: .45rem; }
+table.op-cases-table td.op-closing { width: 9.5rem; min-width: 9.5rem; line-height: 1.25; }
+.op-cases-table .op-case-links { flex-wrap: nowrap; gap: .3rem; margin-top: 0; }
+.op-cases-table .op-tab-link { padding: .25rem .5rem; }
+@media (max-width: 1500px) {
+  .op-cases-table .op-case-links { display: grid; grid-template-columns: 1fr; gap: .25rem; }
+  .op-cases-table .op-tab-link { justify-content: center; }
+}
