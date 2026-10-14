@@ -19,6 +19,17 @@ case.json
 timeline.json
 notes.md
 *-check.json
+arrest.json
+report-fields*.json
+linkchart.json
+mail-log.json
+library.json
+# Vault folders added later: the Secure Locker, saved chats, logo, exports, logs
+locker/
+chats/
+branding/
+exports/
+logs/
 
 # Case documents and evidence (the app itself only ships the icons below)
 *.[pP][dD][fF]

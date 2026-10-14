@@ -9,8 +9,8 @@ const facts = (s, type) => R.extractFacts(s).filter((f) => !type || f.type === t
 const doc = (name, role, ...paras) => ({ id: name, name, role, paragraphs: paras.map((text, index) => ({ index, page: 1, text })) });
 
 test('sentences: abbreviations and initials do not split', () => {
-  const s = T.sentences('Ofc. J. Diaz arrived at approx. 9:40 p.m. on Mar. 3. He spoke to Mr. Lee. Done!');
-  assert.deepStrictEqual(s.map((x) => x.text), ['Ofc. J. Diaz arrived at approx. 9:40 p.m. on Mar. 3.', 'He spoke to Mr. Lee.', 'Done!']);
+  const s = T.sentences('Ofc. J. Poez arrived at approx. 9:40 p.m. on Mar. 3. He spoke to Mr. Poe. Done!');
+  assert.deepStrictEqual(s.map((x) => x.text), ['Ofc. J. Poez arrived at approx. 9:40 p.m. on Mar. 3.', 'He spoke to Mr. Poe.', 'Done!']);
 });
 
 test('dates in many formats normalize to ISO', () => {
@@ -42,30 +42,30 @@ test('phones, money, plates, numbers, addresses, counts', () => {
 });
 
 test('names: titled and capitalised sequences', () => {
-  assert.deepStrictEqual(facts('Officer Maria Diaz spoke with the victim, John Smith.', 'name'), ['maria', 'diaz', 'john', 'smith']);
-  assert.ok(R.isNameVariant('diaz', 'dias'));
+  assert.deepStrictEqual(facts('Officer Mary Poez spoke with the victim, John Doe.', 'name'), ['mary', 'poez', 'john', 'doe']);
+  assert.ok(R.isNameVariant('poez', 'poes'));
   assert.ok(R.isNameVariant('katherine', 'catherine'));
-  assert.ok(!R.isNameVariant('smith', 'smiths'));
+  assert.ok(!R.isNameVariant('doe', 'smiths'));
   assert.ok(!R.isNameVariant('john', 'jane'));
 });
 
 test('compare: flags mismatches, supports matches, lists unsupported facts', () => {
   const flags = R.compare([
     doc('Affidavit.docx', 'affidavit',
-      'On March 14, 2026, at approximately 9:40 PM, Officer Maria Diaz responded to 1420 Oak Street.',
-      'Ofc. Diaz observed a blue Honda bearing license plate ABC-1234.',
+      'On March 14, 2026, at approximately 9:40 PM, Officer Mary Poez responded to 1420 Oak Street.',
+      'Ofc. Poez observed a blue Honda bearing license plate ABC-1234.',
       'The suspect fired three shots at the victim.',
       'Your affiant was sworn on 2026-09-01.'),
     doc('Report 26-4481.pdf', 'report',
-      'On 03/14/2026 at 2140 hours Officer Maria Dias responded to 1420 Oak St.',
-      'Officer Dias observed a blue Honda, plate ABC-1284.',
+      'On 03/14/2026 at 2140 hours Officer Mary Poes responded to 1420 Oak St.',
+      'Officer Poes observed a blue Honda, plate ABC-1284.',
       'Witnesses heard two shots fired at the victim.'),
     doc('Supplement.pdf', 'report',
-      'On March 15, 2026 at 21:40 Officer Dias responded to 1420 Oak Street.',
+      'On March 15, 2026 at 21:40 Officer Poes responded to 1420 Oak Street.',
       'The suspect fired two shots at the victim.'),
   ]);
   const titles = flags.map((f) => `${f.severity} ${f.title}`);
-  assert.ok(titles.includes('High Name spelled differently: "Diaz" vs "Dias"'), titles.join('\n'));
+  assert.ok(titles.includes('High Name spelled differently: "Poez" vs "Poes"'), titles.join('\n'));
   assert.ok(titles.includes('High Licence plate mismatch: "ABC-1234" vs "ABC-1284"'), titles.join('\n'));
   assert.ok(titles.some((t) => /^High Count mismatch: "three shots" vs "two shots/.test(t)), titles.join('\n'));
   assert.ok(titles.some((t) => /^High Date mismatch: "03\/14\/2026" vs "March 15, 2026"/.test(t)), titles.join('\n'));
@@ -82,7 +82,7 @@ test('compare: flags mismatches, supports matches, lists unsupported facts', () 
 });
 
 test('findVerbatim ignores whitespace and typographic differences only', () => {
-  const src = 'Officer Diaz stated: “I saw   the\nsuspect run—fast.”';
+  const src = 'Officer Poez stated: “I saw   the\nsuspect run—fast.”';
   assert.ok(T.findVerbatim(src, 'I saw the suspect run-fast.'));
   assert.strictEqual(T.findVerbatim(src, 'I saw the suspect walk'), null);
   const at = T.findVerbatim(src, 'saw the suspect');
@@ -90,8 +90,8 @@ test('findVerbatim ignores whitespace and typographic differences only', () => {
 });
 
 test('BM25 index finds the relevant passage', () => {
-  const idx = T.createIndex([{ id: 1, text: 'The weather was clear.' }, { id: 2, text: 'Diaz observed the Honda plate.' }, { id: 3, text: 'Shots were fired near the store.' }]);
-  assert.strictEqual(idx.search('What did Diaz observe about the Honda?')[0].id, 2);
+  const idx = T.createIndex([{ id: 1, text: 'The weather was clear.' }, { id: 2, text: 'Poez observed the Honda plate.' }, { id: 3, text: 'Shots were fired near the store.' }]);
+  assert.strictEqual(idx.search('What did Poez observe about the Honda?')[0].id, 2);
 });
 
 /* ---------------- v1.9.1 ---------------- */

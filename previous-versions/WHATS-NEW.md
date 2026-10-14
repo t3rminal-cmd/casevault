@@ -1,0 +1,711 @@
+# CaseVault: What's New, Version by Version
+
+The day-to-day notes for each earlier version, newest first (moved here from [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md), which keeps the latest few). The feature summary for each version is in [README.md](README.md).
+
+Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
+
+## What's new in v1.119
+
+- **Timeline → Type "Buy":** a buy has its narcotic (pick or type), amount (g, kg, oz, lb, pills or units) and the money paid, shown on the event ("Cocaine · 3.5 g · $200")
+- **Buy Summary** (above the timeline): each suspect's buys in their colour, with the narcotic totals and money paid; **PDF** makes it a page to print or save to the case. With a suspect picked in the key, only theirs
+- **Print Timeline:** a PDF of the events shown now (the filter and suspect you picked), each with its colour square, followed by the buy summary of those events
+- **Person view:** the person button beside a suspect on the Details tab (and beside a name in the Buy Summary) lists every case they are on, with their role there, the Mission, and their timeline events. Names written another way are listed under "Possibly the same person"; check before treating them as one
+- **Mission page:** "N of M cases closed" with a bar, and a Closing column: Arrest report ready, Can close by arrest with RD …'s report, No arrest report yet, or Closed
+- **Arrest tab → Copy From Another Case:** pick an arrestee already entered on another case number of the Mission. Their name, residence, date of birth and description are copied with this case's RD number; the charges, property and narrative stay with the other case
+- **Unsaved mark:** a small amber square on a tab while its changes are waiting to be written to the SSD; it goes away once saved
+- **Fixes:** Quick Links' slim bar shows whole links only (**More +N** says how many more); messages rise above the bar and the round buttons sit in its right end; the Memory icon shows with the others; on the Details tab the Status hint is one line, the Closed date appears once the case is closed, and the Mission is named once (in the header); the Mission table's columns all have headings
+
+## What's new in v1.118
+
+- **Quick Links** (bottom of the page) is now one slim row: the Reference / OSINT / LEO tabs and that tab's links side by side (scroll sideways for more). **More** opens the full panel with Arrange; **Less** goes back. Remembered on this PC
+- **Sidebar:** CLOSED and ARCHIVED sit side by side in one small row, with their counts. Click one to open its list (the panel grows); click again to fold it
+- **Letterhead:** on the Draft, Arrest and Link Chart tabs it is one line (logo and the first line of the header) with **Edit Letterhead**. It is also in Settings → My Profile, under Letterhead
+- **Landing page:** a section with nothing in it (no closed cases, nothing archived, no open Mission) is a single header line
+- **Details tab:** Suspects, Contacts, Deconfliction, Case History and LEO Partners show how many entries they hold beside their titles, so you can see without opening them
+- **Top bar:** each status icon has a caption under it: Network, Local AI, Memory, SSD and Power Off
+- **Files tab:** the line above the files says the folder in words ("2 files in Photos"); point at it for where it is on the SSD
+- **General Files:** the Mission column shows the Mission's number; point at it for the name
+- **Messages** that stay a few seconds have a × to close them. The once-a-day backup reminder is a shorter amber note; the banner's **No Backup** chip keeps showing it
+- The round buttons in the corner (Top, Ask AI, Notes) are a little smaller, and hover boxes that only repeat a button's own words no longer pop up
+
+## What's new in v1.117
+
+- **Timeline → Suspect and Colour:** each event can say which suspect it is about (pick from the suspects of every case number of the Mission, or type a name) and take a colour (ten to pick from, or none). Picking a suspect gives the event that suspect's colour; a new suspect gets the next free one. The event's edge, marker and suspect tag are in that colour
+- **Timeline → Suspects key** (above the list): each suspect with their colour and how many events. Click a name to see only that suspect's events (**Show All** to go back); click the colour square to change it on all their events at once
+- The small timelines on the **Details** tab and the **Mission** page show each circle in its suspect's colour, and the suspect in the hover box
+- **Draft → Offenders → Add From Suspects:** the popup lists Name, Role and In Report in their own columns, so Primary, Secondary and Other line up
+
+## What's new in v1.116
+
+- **Landing page → CLOSED FILES** (under Other Files and the Secure Locker): a grey folder for each closed Mission (with all its case numbers), one for each Mission still going that has closed case numbers ("OP-1 · 1 closed"), and one per year for closed cases not in a Mission. Click a folder to see its cases; the Mission's name links to its page. **All Closed** lists every closed case
+- **Landing page → ARCHIVED** (under Closed Files): a folder for each archive reason (EXPIRED, NOLLE PROSEQUI, PROSECUTION, and Other). **All Archived** lists every archived case
+- **Mission Files** and **General Files** on the landing page now show open work only: a closed case or a closed Mission moves to CLOSED FILES, and comes back when reopened. The sidebar is unchanged
+
+## What's new in v1.115
+
+- **Close by arrest, one arrest report for several RDs:** closing by arrest still needs an arrest report (an arrestee and a charge), now for each case number ticked. A case number without Arrest Details of its own can point to the RD that has them: choose it in **Arrest report on RD** (it lists the Mission's case numbers and the same-suspect cases that have an arrest report, newest arrest first, and is set to that one already). Close then passes
+- Each case number closed this way keeps "Arrest report: see RD …" in its closing note and on its Details tab, and its **Arrest** tab says where the report is, with a button to open it. `{{closure.arrestRd}}` gives that RD in templates
+- **Close Mission** checks every case number ticked, not only the first one
+
+## What's new in v1.114
+
+- **Arrest Details → Charges:** each charge is a box on two lines: Offense as cited, Class, Type and Counts, then Charge and Victim. Picking an Offense as cited or a Charge from the list fills in the other one and its **Class** and **Type** (for example 720 ILCS 570/402(c): Class 4, Felony). Federal charges come in as Felony. Where the statute alone doesn't set the class, only the Type is filled. Check the class against the amount and the arrestee's record (a repeat offense can raise it) and change it if needed
+- **Class** has a list (Class X, 1, 2, 3, 4, A, B, C, Petty offense, Federal felony, Federal misdemeanor), or type your own. Picking one sets the Type (Felony or Misdemeanor)
+- **Victim** on a charge: the arrow lists the victims on the Draft tab and on sent reports whose **R.D. Number** is the arrestee's RD # (Report Numbers), then the victims on this arrest, then the State of Illinois. You can still type a name
+- **Properties:** **+ Add Property** adds a row with **Inventory #** and **Description**; pick Prisoner Personal Property, Prisoner Jewelry, Prisoner Money or Prisoner Other, or write your own. The Arrest Report PDF lists them in a table. Text written in the old Properties box before v1.114 stays, under the rows
+
+## What's new in v1.113
+
+- **Arrest Details → Show All / Hide All** (top right) open or fold every part, as on the Draft tab
+- **Arrest Details → Charges:** when an arrestee has no charges typed yet, the Draft tab's charges fill in by themselves when the tab opens (once: charges you remove don't come back). **Use Report Charges** still adds any new ones
+- **Arrest Details → Offender → Pick from Suspects:** lists the suspects on the Details tab and the offenders on the Draft tab (one line per person). Picking one fills Last, First and Middle name, date of birth, sex, race, height, weight, eyes, hair, complexion, residence, phone, IR # and CB # from what is there. Check them before printing. Age now shows even before the arrest date is in (counted to today)
+- **Arrest Details → Recovered Narcotics, Warrant, Arrestee Vehicle:** tick **No narcotics recovered**, **No warrant identified** or **No arrestee vehicle information** when it doesn't apply: the boxes fold away (what was typed is kept) and the PDF prints NO NARCOTICS RECOVERED, NO WARRANT IDENTIFIED or NO VEHICLE
+- **Arrest Details → Victim and Complainant → + Add State of Illinois as Victim** (or pick *State of Illinois* in a person's Name): only Role, Name and **Officer name** are asked, and the PDF prints the State of Illinois with the officer's name
+
+## What's new in v1.112
+
+- **Home page → SECURE LOCKER:** the Secure Locker has its own section (below Archived since v1.120): click its **Secure Locker** tile or **Open Locker**. (In v1.111 it was a tile and a button inside Other Files.)
+- **Home page → GENERAL FILES:** when every case is in a Mission, General Files still shows a folder for this year, greyed out. Open it: it says it is empty, and New Case is there
+
+## What's new in v1.111
+
+- **Secure Locker** (home page → **SECURE LOCKER** section, below Archived):
+  - **The first time**, choose a locker password (at least 10 characters; not your PIN). CaseVault then shows a **recovery key** once: Print it or write it down, keep it away from the SSD, tick the box and click Done. Nothing is made until you do.
+  - **Password Manager**: Add Password (Site / System, Username, Password, Web Address, Notes). **Generate** makes a strong 20-character password. In the table the password shows as dots: the eye shows it for 20 seconds, Copy copies it and clears the clipboard after 30 seconds. Search finds any word but the passwords.
+  - **Confidential Files**: Add Files (or drop them on the list) for informant files and anything else to keep locked; each is encrypted on the SSD. Give each an **Informant / Label** (CI-1234) with the pencil. Click a name to read it (PDF, pictures, text); other files, or **Save a Copy**, go to Downloads *not encrypted*: delete them when done. The original you picked is not deleted: delete it yourself.
+  - **Covert**: Covert Aliases (alias name, date of birth and address used, ID number, phone, email, backstory) and Covert Accounts (platform, handle, password, the alias it belongs to, phone, email, notes).
+  - **Lock** locks it now; it also locks when you leave the page, after 5 minutes without use, with the privacy screen and when the SSD is unplugged. **Change Password** needs the current one; **New Recovery Key** makes a new key (the old one stops working).
+  - **Forgot the password?** on the locked page: type the recovery key and a new password.
+  - Kept in `CaseVault-Data\locker` (locker.json, data.bin, f-…bin), encrypted: a copied SSD or a full backup shows nothing readable. Without the password and the recovery key nobody, you included, can open it.
+- **Details tab → Field Notes:** the case's Field Notes, formatted, under the timeline. **Edit** opens the Field Notes page; **Notes Box** opens the floating box. On a **Mission's page**, the Field Notes of each case number that has some, under the Timeline
+- **Close Case → Other open cases on the same suspect:** CaseVault lists the other open cases whose Subject Name or an identified suspect is the same person (*DOE, John* = *John Doe*; a middle initial left off still matches, so check). None is ticked; tick the ones to close with this disposition and date. Each gets *Closed together with EX-100 (same suspect: John Doe)* in its closing note, and each can be reopened on its own. Cleared by arrest gives each an Arrest details tab
+- **General Files:** Last Name, First Name and Middle Name columns (left aligned; *John Michael Doe* and *DOE, John Michael* both read DOE | John | Michael). Something that isn't one person's name (*State v. Doe*, a crew) stays whole across the three columns. Sort by Last Name or First Name
+
+## What's new in v1.110
+
+- **Draft → Offense → IUCR Code:** the list is written out (*2015 Manufacture and Delivery: Hallucinogen*, *2025 Possession: Hallucinogen*, *1811 Possession: Cannabis, 30 Grams or Less*…); search by code or by any word. Reference → UCR shows the same wording
+- **Offense Classification follows the IUCR code:** pick (or type) a code and its wording goes in Offense Classification, also on the PDF and the report sent to Reports. Adding charges afterwards doesn't replace it. To use a charge's wording instead, pick it from Offense Classification's arrow (the IUCR wording is first in that list, then each charge's Statute Description). Emptying the IUCR Code puts the charge's wording back. A Draft form saved before with the old short wording (*Delv: Hallucinogens*, *Poss: Cannabis 30 grms or less*…) shows the written-out wording when it opens; wording you typed yourself, a charge's wording, and reports already sent are not changed
+- **Offense layout:** Offense Classification and IUCR Code on the first row, Address of Occurrence and Location Code on the second, Type of Location and Date on the third, then Time and the two Beats; the long boxes are two columns wide so nothing is cut off
+
+## What's new in v1.109
+
+- **Draft → Offense → Address of Occurrence:** the list is *99 N Confidential Street* and *99 S Confidential Street*
+- **Draft → Offenders, Victims and Charges:** pick *See DEA 6 for further information* from an offender's or victim's Name list, or from a charge's Statute list (or type it). That entry then shows only that one box, which is enough for the part's green check. Change the words and the other boxes come back (anything typed in them before is still there). On the PDF it is one line
+- **Draft → Narcotics Recovered:** the Narcotics Type list has no doubles: the calculator's names (*Marijuana (Domestic)*, *Cocaine (Powder)*, *Heroin (Tan)*…) once each, then *PCP* and *Other Controlled Substance*. A type typed before stays as it was
+
+## What's new in v1.108
+
+- **Draft → Offense → Address of Occurrence:** click the box (or its arrow) and pick *99 N Confidential* or *99 N Confidential Street*; any other address can still be typed
+- **Draft → Victims:** the Name list offers the *Federal Government* as well as the *State of Illinois*. Both show only Name, Relation Code and Officer Name (the State fills Relation Code 024; the Federal Government leaves it for you)
+- **Draft → See DEA 6** (next to Clear All): for a report kept for statistics only. Victims, Offenders, Charges and Evidence Inventoried open on screen and read *See DEA 6 for further information* in their grey boxes (a list that already has an entry keeps it; no exhibit number is used, the words go in an Evidence Note), and the Summary of Investigation becomes: *This report is for statistical purposes only. For further information see DEA 6 reports under Federal Case Number (the case's Federal Jacket Number). THIS CASE IS CLEAR/CLOSED.* The Offense Classification is left as it is. **Undo** on the message puts the form back. Then Print / PDF or Send Draft to Reports as usual
+
+## What's new in v1.107
+
+- **Banner:** the backup chip says *Backed Up*, *Backup: 9d* or *No Backup* (point at it for the full sentence); no chip clips its words at any window width
+- **Details tab → Timeline:** the circles of the case number you have open glow green; the other case numbers of the Mission stay blue. The green key next to *Timeline* names the case number. (The home page's Mission timeline has no green: no case is open there)
+- **Draft → Evidence → Put in Date Order:** exhibit numbers run on across every case with the same federal jacket number, in the order they were entered. If a case dated earlier was entered later, click **Put in Date Order**: CaseVault lists each case by its Date of Occurrence (or opened date) with *old → new* numbers; **Renumber** applies it and renames the exhibit photos and PDFs (Exhibit 2a…). Reports already sent keep the numbers they were sent with, and an exhibit number typed into a narrative is not changed. Archived cases are read-only and left as they are
+
+## What's new in v1.106
+
+- **Delete Case → Recently Deleted:** a deleted case waits 30 days in Settings → **Recently Deleted** (`CaseVault-Data\deleted`). **Restore** puts it back where it was (cases or the archive; its Mission too, made again if needed). **Delete Now** removes it for good. After 30 days CaseVault empties it by itself the next time the vault opens
+- **Settings → Backups → Restore Cases…:** pick a `CaseVault-Backup-<date>` folder from a full backup (the browser asks to "upload" it: nothing leaves the PC, it only reads the files). Tick the cases to bring back and click **Restore**. Each comes back with its notes, timeline, reports and files; one that is in the vault now goes to Recently Deleted first. The files are copied in full before the case appears, so an interrupted restore never leaves half a case
+- **Search Inside Cases:** type in the case list's search box, then press **Enter** or click **Search Inside Cases** under it. It reads every case's notes, timeline, reports, Draft form, arrest details, suspects, contacts and file names; every word has to be in the same place. Click a result to open that tab
+- **Add Follow-up** (Details → Case actions, for an Open case): pick what you're waiting on, add details and the date; it goes on the Timeline as *Follow up: Lab results — …*
+- **Privacy screen:** the PIN is now stored with PBKDF2 (600,000 rounds) instead of one SHA-256, so a copied vault.json can't be guessed quickly; an older PIN still works and is upgraded the next time it unlocks. Text you copied from CaseVault is cleared from the clipboard when the screen comes on (always with Hide; with the idle timer when the window is in front)
+- **Look:** Open blue, Closed slate grey, Archived purple on every status label, the banner and the sidebar's left edge; the banner chips are the same width; empty lists show an icon and a hint; every section heading is in capitals; grey hint text is darker; the keyboard focus has a clear blue outline
+
+## What's new in v1.105
+
+- **No more Pending.** A case is Open, Closed or Archived; a Mission is Open or Closed. The Pending option, its hourglass icon, the Pending box in the banner and the Pending filter in General Files are gone. Cases and Missions that were Pending are Open again the first time v1.105 opens the vault; their follow-up deadlines stay on the Timeline, and each case's history notes the change. Waiting on a lab or the DA? Keep the case Open and put the follow-up date on its Timeline. (The Draft's **Court Date → Pending** box is unchanged: it means the court date isn't set yet.)
+
+## What's new in v1.104
+
+- **Draft → Evidence → Add Photos or PDF:** an exhibit (or an Additional Exhibit) can have PDFs as well as photos. Pick one or more in the same window. A PDF gets the next letter (1b, 1c), shows its first page with a red **PDF** badge, and has a label box like a photo. Every page of it goes into the report's Exhibit Attachments, captioned with the page (*page 2 of 3*). The ✕ takes it off the exhibit; the file stays in the case files
+
+## What's new in v1.103
+
+- **Home page → a Mission folder:** the timeline is now the slim line with small circles from a case's Details tab (one circle per event, close ones grouped with a count, red when overdue, a red Today mark), with no sideways scrolling. Point at a circle for the details; click it to open that case's Timeline tab. This replaces the vertical list from v1.102
+- **Back up to C:\CaseVault-Backups (Firefox, helper 1.15):** **Back Up Everything** → **Add Backup Folder** (the box is open and says `C:\CaseVault-Backups` until a folder is added) → **Add** → pick it → **Back Up to This Drive**. The folder is made if needed, its drive's BitLocker is shown, and the backups go straight into it. A shared folder on another PC (`\\BEELINK\CaseVault-Backups`) still works the same way
+
+## What's new in v1.102
+
+- **Back up to another PC (e.g. a Beelink):** Settings → Backups → **Back Up Everything** → **Add Network Folder** → type `\\BEELINK\CaseVault-Backups` → **Add**. Pick it (globe icon) and back up. The first time, tick that the PC is encrypted and the folder is only yours. Off or unreachable: greyed out. **Remove** takes it off the list and leaves its backups there. In Chrome or Edge, map the folder to a drive letter (Z:) and pick that. Set up the other PC first: [BACKUP-TO-ANOTHER-PC.md](BACKUP-TO-ANOTHER-PC.md)
+- **Home page → a Mission folder:** its timeline is now the vertical one from the Timeline tab (month headings, date boxes, cards, the red Today line) instead of a strip you scroll sideways. Click an event to open it on its case's Timeline tab
+- Links no longer underline when the mouse is over them; they turn blue
+
+## What's new in v1.101
+
+- **Draft → Next Missing:** after Save Changes, the red **Next Missing (N)** button (left of Save Changes) jumps to the first blank field, then the next one each time you click. A folded part opens by itself. N counts down as you fill fields in, and the button goes away when nothing is blank
+- **General Files:** the **Age** column says how long ago each case was opened. Click a column heading (Case Number, Subject Name, Opened, Age) to sort; click it again to reverse. The arrow beside the heading shows which way
+- **Sidebar order:** the list icon at the top of the sidebar (after Hide) switches the case lists between *By case number*, *Oldest opened first* and *Newest opened first*. It applies to Mission folders and Independent Cases, and this PC remembers it
+- **INDEPENDENT CASES** in the sidebar: the bell for a deadline now sits on the folder's corner, and the line under the name just says how many cases
+- **"No full backup yet"** pops up at most once a day. The **No Backup** chip in the banner stays until you back up
+
+## What's new in v1.100
+
+- **Sidebar:** each case shows when it was opened, under its Subject Name: the date and how long ago (*today*, *5d* days, *2mo* months, *2y* years). Point at it for the full date and the exact number of days. Cases in a Mission folder show it too
+- **Draft → Save Changes:** if a part still has no green check, its blank fields are outlined in red so you can see what's missing. An empty list (no charges, no personnel) or *No evidence yet* is outlined too. The message after saving says how many fields are blank. Fill a field and its outline goes; untick a part that doesn't apply and its outlines go. Nothing is outlined before you click Save Changes
+
+## What's new in v1.99
+
+- **Home page banner:** the backup reminder is now a chip in the row of counts, right after **Overdue**, so the reminders are together. It reads **No Backup** (never backed up) or **Backup 9d Ago** in red once a full backup is more than 7 days old, and **Backed Up Today** / **Backup 3d Ago** otherwise. If the SSD has no BitLocker, a red **Not Encrypted** chip follows it. Point at a chip for the details; click it for Settings → Backups
+
+## What's new in v1.98
+
+- **Is the SSD encrypted?** In Firefox (with the helper), CaseVault asks Windows. If the CASEVAULT drive has no BitLocker, the home page shows a red **Not Encrypted** chip and a warning at startup. Click the chip for Settings → Backups, which says how to turn BitLocker on. If BitLocker is paused, it says so and how to resume it. Chrome and Edge can't ask Windows, so there the Backups page says to look for the padlock on the drive in File Explorer
+- **Back Up Everything** lists each drive as **Encrypted (BitLocker on)** or **Not encrypted**. Picking one without BitLocker asks first, because the backup is a full copy of every case: **Cancel** (the default) or **Back Up Anyway**
+- **[SECURITY.md](SECURITY.md)** explains what keeps your cases safe, the BitLocker settings to use, and the GitHub settings that protect the code
+- Behind the scenes: the update checks are stricter (browser tests must pass before anything is published) and the code is split into smaller files. Nothing else changes on screen. The helper is now **1.13**: copy the new `casevault-helper` folder to `W:\`
+
+## What's new in v1.97
+
+- **Subject Names line up as LAST, First** in the sidebar, General Files, Mission folders, Needs Attention and at the top of a case: "John Doe" shows as **DOE, John**, "Mary Ann Roe" as **ROE, Mary Ann**, "John Doe Jr" as **DOE, John Jr**. Nothing is changed in the Subject Name box. One-word names, "Unknown Offender", "Not Identified", case captions ("State v. Doe"), group names and names with numbers show as you typed them
+- **Details → Timeline line:** events on the same day, or a day or two apart, no longer sit on top of each other. They share one marker with a number (how many); point at it for the list, click it to open the Timeline tab
+
+## What's new in v1.96
+
+- **Details → Deconfliction is in date order**, oldest check first; checks with no date go last. When you change a date, the check moves to its place after you click outside the Deconfliction list, so it doesn't jump while you type. **Add Deconfliction** puts the new check (today's date) where it belongs and takes you to it
+
+## What's new in v1.95
+
+- **Offense Classification = a charge's Statute Description, exactly.** Older drafts are corrected the moment they open (the first charge's wording), and the PDF always prints the charge wording. To use another charge's wording, pick it from the arrow on the Offense Classification box. Wording that isn't a charge's goes back when you leave the box. If the Charges list is ticked off, the box keeps what you type
+
+## What's new in v1.94
+
+- **Draft → Offenders → Offender Vehicle(s):** click **Add Vehicle** on an offender for each car: Year, Make, Model, Color, License Plate, Plate State, VIN, Registered Owner, and tick **Impound**, **Tow** or **DNA** (Does Not Apply) — ticking one clears the others. **Add Another Vehicle** for the next one; the trash can removes one; **No Vehicle** hides them all
+- The offender's old Vehicle / VIN / Plates boxes and the separate **Vehicles** list in the Officer's Report are gone; anything entered there is moved onto the offender's vehicles the first time the Draft opens
+- On the PDF each vehicle is a line under its offender
+
+## What's new in v1.93
+
+- **Victim: State of Illinois** gets Relation Code **024** by itself (you can change it); the PDF line reads *State of Illinois · Relation Code: 024 · Officer Name*
+- **Offense Classification** takes the exact wording of the first charge's **Statute Description** when you pick or type the charge; picking an IUCR code no longer replaces it, and the box's arrow lists every charge's Statute Description. Your own wording is never overwritten
+- **Officer's Report green check:** an empty list that is still ticked in (no Police Personnel, no charges…) stops the check; untick the list when it doesn't apply
+- **Details → Suspects** stay in order: Primary, then Secondary, then Other. Change a role and the card moves; a new suspect lands in its role's place
+- **Draft → Offenders → Add From Suspects** opens a list: tick the suspects for this report (Primary ones start ticked; ones already in the report are marked), then **Add to Offenders**
+
+## What's new in v1.92
+
+- **Draft → Court Date → Pending:** ticking Pending no longer unticks the Court Date line itself (it happened in Firefox)
+- **CB Number can be DNA** (Does Not Apply): pick it from the arrow on an offender's CB Number on the Draft tab, or on the Arrest tab's CB # and IR #
+
+## What's new in v1.91
+
+- **CaseVault is offline only.** The optional online AI (Claude, Gemini and OpenRouter: the Online button in the header, the online research page and the API keys in the Vault) is gone. The page may now only talk to the AI engine on this PC
+- **No in-browser AI.** The small fallback model that ran in the browser (WebLLM) is gone. Start CaseVault with `W:\Start-CaseVault.bat` so the local AI engine (Ollama) runs; without it, Checks still run their rule-based checks
+- If an older version saved an online AI key on the SSD (`CaseVault-Data\secrets`), it is deleted the first time v1.91 opens the vault, and a message says so once
+- The header's green **Offline** shield stays, as a reminder that nothing leaves the PC
+- Department mail is unchanged: the review screen before an Outlook draft, and the Outbound Log
+- **Helper 1.12** (copy `tools\casevault-helper\` to `W:\casevault-helper\`): no longer serves in-browser models. You can delete `W:\webllm` and `W:\Get-WebLLM-Model.bat` to free the space
+
+## What's new in v1.90
+
+- **Back up before Power Off:** when the vault hasn't had a full backup in over a week (or ever), Power Off asks first: **Back Up First** opens Settings → Backups, **Power Off Anyway** carries on
+- **Undo after Clear All** on the Draft tab, as after Send to Files
+- **Change a Case History note:** click the pencil beside it to change its date or words (Enter saves, Esc cancels); × deletes it
+- **Search finds Case History notes:** Ctrl+K and type a word from a note, e.g. "migrated"
+- The README shows the current version only; earlier versions are listed in the `previous-versions` folder
+
+## What's new in v1.89
+
+- Send to Files clears the Draft by itself once the PDF is saved; the toast has an Undo button that brings the Draft back
+- The floating Draft bar (Send to Files, PDF View...) now sits right under the top toolbar, with no gap
+- Case History: the date and the entry have their own columns, so nothing runs together. "Opened as Open" now reads "Added to CaseVault (Open)", and when the Opened date on the Details tab is earlier there is a "Case opened" row on that date
+- Case History: **Add Note** with its own date (for example "Case started on paper; migrated to CaseVault"); notes sort by their date, show on the Case Summary PDF, and can be deleted with ×
+- Details: the Case Officer name in Contacts uses the same font size as the other boxes
+- Files preview of a PDF uses CaseVault's own square viewer (zoom % and page boxes square, no rounded browser controls)
+- Keyboard shortcuts: every key box is the same width and height
+- Clean-up: about 60 unused style rules and an unused date function removed
+
+## What's new in v1.88
+
+- Quick Links and the CLOSED FILES / ARCHIVED area: one fixed height, five Quick Links tiles high; the drag bars and padlocks are gone
+- CLOSED FILES and ARCHIVED scroll as one list, and when the scrolling stops the top card is shown whole (never cut off at the top); the headings scroll with their lists
+
+## What's new in v1.87
+
+- **Back Up Everything in Firefox** (needs helper 1.11): CaseVault lists the other drives (not the SSD's own partitions or the Windows drive), the helper copies the whole CaseVault-Data folder to `<drive>\CaseVault-Backups\CaseVault-Backup-<date>` and checks every file's SHA-256 against the original, in the background with a progress count; the banner then shows the backup as checked. With an older helper the File Explorer steps still show
+- Helper 1.11: new `backup-drives`, `backup-start` and `backup-status` calls; a backup can only go to one of the drives it lists
+
+## What's new in v1.86
+
+- Supplementary Report PDF, Officer's Report:
+  - **Victim**: a State of Illinois victim and the Officer Name on one line
+  - **Narcotics Recovered (Total Weight & Value)**: the narcotic, the amount, then Street Value and Purchase Price under each other
+  - **Pre-Recorded Funds**: a table with QTY (two digits), Denomination ($20.00) and each Serial Number on its own line, then Recovered or Not Recovered
+- The Officer's Report has no IR Number line any more: the IR Number is in each offender's info (one typed there before goes to the first offender without one)
+- Submission and Approval: untick **Secondary Reporting Officer** when there is none; the name, star and signature boxes then come off the PDF
+
+## What's new in v1.85
+
+- **Back Up Everything** (Settings → Backups): copies the whole CaseVault-Data folder to a second drive and checks every file byte for byte (Chrome or Edge; in Firefox it shows the File Explorer steps and records the date). The banner shows when the last full backup was, red after 7 days, and a reminder appears at start-up
+- Restore a vault.json backup from the Backups list (the current one is backed up first)
+- Start-up checks: today's vault.json backup, the last full backup, and free space on the SSD (Firefox)
+- A Mission is Closed only when its cases are: **Close Mission** is on the Mission page (each open case gets a disposition), with **Reopen Mission** when it is closed; the Edit form refuses Closed while a case is open
+- The sidebar's GENERAL FILES folder is now **INDEPENDENT CASES** (the cases not in a Mission); General Files is still the page with every case
+- Pending and Inactive explained where you choose them; the Closed date on the Details tab is filled in by Close Case, not typed
+- Delete Case asks twice; the last question comes with a skull and crossbones
+- **Report a Problem** (⋮ menu): the app version, browser and recent errors with case numbers, names and Missions taken out, saved to the SSD or copied, to send with Contact Dev
+- **Case History** on the Details tab: each status change, closing, reopening, archiving and Mission move, with the date and time
+- **Case Summary** (Case Actions): one PDF page for a supervisor with the case, arrestees and charges, exhibits, timeline and history; Save PDF to Case puts it in Files
+- Keyboard shortcuts: Ctrl+K search, N new case, ? the list (also in the ⋮ menu)
+- **Department letterhead**: a square for the department logo (click to add it) and the Department Header beside it, at the top of the Draft, Arrest and Link Chart tabs and across the top of their PDFs; one letterhead for every case, kept on the SSD
+- Templates, the Checks tab and the Document Anonymizer are marked Beta
+- Removed: the second Restore button on archived cases and Close Mission on each case's Details tab
+
+## What's new in v1.84
+
+- CLOSED FILES and ARCHIVED always sit at the bottom of the sidebar; drag the bar above them to make that area taller or shorter, and lock it with the padlock (double-click the bar to reset)
+- Quick Links: drag the bar above them to change their height, and lock it
+- Closing needs a disposition; closing by arrest needs the arrest report (an arrestee and at least one charge) first, with a button to open the Arrest details tab
+- Archiving needs a reason: EXPIRED, NOLLE PROSEQUI, PROSECUTION, or Other with the reason written in; the reason shows on the archived case
+- After closing, the message has Undo for a few seconds
+- Closing the last open case of a Mission asks whether to close the Mission too; reopening a case of a closed Mission asks whether to reopen the Mission
+- A closed case stays in its Mission's folder, greyed with a padlock, under the open ones; in CLOSED FILES it is listed under the Mission's own name
+- The Status drop-down offers Open and Pending; closing and archiving use their buttons
+- Banner: glass status boxes with a colour edge, a red Overdue count, and each count opens General Files showing just those cases
+
+## What's new in v1.83
+
+- **CLOSED FILES and ARCHIVED** in the sidebar now look like MISSION FILES and GENERAL FILES: a card with the folder icon, the name in capitals with a line under it (how many closed or archived cases), the count and the arrow. The CLOSED FILES count is the number of closed cases, the same as the banner.
+- **+ on GENERAL FILES** starts a new case, like + on MISSION FILES starts a new Mission.
+- **Recently Updated:** the status boxes (Open, Pending, Closed, Archived) are all the same width.
+- **Reopen a case:** the message shows the closing date written out ("October 04, 2026").
+
+## What's new in v1.82
+
+- **Sidebar folders stay as you left them:** a folder you open or fold (MISSION FILES, a Mission, GENERAL FILES) stays that way until you click it again, even when you go to another page.
+- **All Files for a Mission:** on a Mission's page, **All Files** (beside MISSION FOLDER) lists every file on the SSD tied to that Mission: each case number's Files tab and the Mission Folder, newest first. Click a name to open it.
+- **Notifications** have a **Time** box.
+- **No Vehicle:** tick it on an offender to hide Vehicle, VIN and Plates; they are left off the PDF too.
+- **Pre-Recorded Funds:** an Electronic Funds line no longer runs into its reference numbers.
+- **Timeline:** **Clear** empties the whole form, and also stops an edit in progress.
+
+## What's new in v1.81
+
+- **Supplementary Report PDF layout:** each offender has a sheet of their own: In Custody or Not in Custody, then Name and A.K.A., gender | race | age, height and weight, DOB, eyes and hair, complexion and tattoos/scars, what they were wearing, residence, phone, IR and CB numbers, vehicle, VIN and plates. **Police Personnel** is a table (Name, Star, Unit, Role), each **Charge** is its statute over its description, and each **Exhibit** shows its inventory number, type and description (additional exhibits as Exhibit 13a, 13b… with their photo labels).
+- **Status and How Cleared** on the PDF use square boxes with an X, like Update Information.
+- **Offenders** on the Draft have **Custody** (In Custody / Not in Custody), **Residence**, **CB Number**, **Vehicle**, **VIN** and **Plates**.
+- **Subject Data** fills itself from the reports: the Name box suggests the suspects (Details) and offenders (Draft) of the Mission's cases; pick one to fill the empty boxes. **Add From Reports** adds everyone not on the sheet yet.
+- **Mission Folder** has an **Other** folder next to Vehicle List.
+
+## What's new in v1.80
+
+- **Subject Data sheet:** open a Mission, then **Subject Data** in its Mission Folder. Each subject gets a demographics sheet (name, alias, date of birth, gender, race, height, weight, hair, eyes, phone, IR/FBI/IDOC numbers, address, tattoos/scars, notes) with **Add Photo** on the right. **Add Subject** adds as many as you need; the sheet saves as you type, in the folder on the SSD.
+- **Rename or Move:** in the Files tab the row's pencil button opens **Rename or Move**; type a new name, pick another folder, or both, then **Save**. A case number with hyphens (2026-EX-100) is no longer put in the new name twice.
+- **Dates:** days always have two digits ("October 04, 2026"), everywhere, and dates line up on the right in tables (Updated, Opened, Start and End Date).
+- **Pre-Recorded Funds:** **Electronic Funds** is now a denomination; its numbers are transaction / reference numbers instead of serial numbers.
+
+## What's new in v1.79
+
+- **Files tab:** the **Document** column now shows each file's icon (hover it for the document type and file type). **Arrange** works in every view, **All documents** included, and so does dragging rows when the order is **Custom**. A file you rename keeps its place.
+- **Renaming:** a name like **Exhibit 3b** now shows as typed. Only names in the form "Type - Description" (e.g. "Supplementary Report - Purchase") leave the type out, since the Document column shows it.
+- **Timeline:** the date square is wider so the time never clips, and the date, the dot on the line and the event box are evenly spaced.
+- **Drop-down lists** fit inside the window when you make it narrower; long choices wrap.
+- **Officer's Report:** Gang Affiliations, Persons Present Not Arrested, Police Personnel on Scene, Vehicles and Notifications each sit in one grey box.
+
+## What's new in v1.78
+
+- **Operations are now Missions.** Every label, button and message says Mission: New Mission, Mission Number, Mission Name, Mission Folder, Mission Plans, Delete Mission. Your existing Operations simply show as Missions; nothing on the SSD is renamed.
+- **MISSION FILES in the sidebar.** Every Mission sits inside one **MISSION FILES** folder, like **GENERAL FILES**. Click **+** on it to make a new Mission. Click the folder's name to see all Missions; the arrow folds it. **New Mission** is also beside **All Missions** on the home page.
+- **A Mission's Timeline on its page.** Open a Mission: its **TIMELINE** (every case number in it) is right under Files. Add, edit and tick off entries there.
+- **Timeline dots** now sit exactly on the centre of the line.
+
+## What's new in v1.77
+
+- **Sidebar folder names in capitals:** **MISSION FILES** (the closed cases of Operations that are still going on; it was "Operation Files"), **GENERAL FILES**, **CLOSED FILES** (it was "Closed") and **ARCHIVED**.
+
+## What's new in v1.76
+
+- **DNA** (Does Not Apply) is offered for the **Federal Jacket Number** (new case and Details) and for the **IR, FBI and IDOC Numbers** of suspects, offenders and the Officer's Report: click the arrow in the box.
+- **Timeline:** every marker is a circle now, deadlines included.
+- **Draft:** Victim/Offender/Property/Circumstances **Verified** and **Updated** sit together in one grey box. Hover a part's checkbox to see whether it is in the report, left out, or hidden on screen. **Not in the report** has its own column, next to the green check.
+- **Files tab:** a file's name leaves out the document type, which the Document column already shows, so it reads `2026-EX-100 | Purchase`. **Updated** has the time under the date. The table text is the same size as the rest of CaseVault.
+- **Arrange files:** open a folder and click **Arrange** above the table to put its files in your own order (arrows or drag). The folder list's button is now just **Arrange**, boxed like **Discovery**.
+- **Adding files:** the File name box has no cut-off hint any more, and the boxes stay put while you type.
+
+## What's new in v1.75
+
+- **Shield folder icons everywhere.** The new folder icons now appear wherever a folder does: the sidebar, the case page header, the Files tab, Operation folders, and the Move and New Folder buttons. Blue means an Operation (MISSION FILES), purple means General Files and ordinary folders, green means Other Files. Closed uses a muted green shield and Archived a grey one.
+
+## What's new in v1.74
+
+- **Needs Attention** can fold into one slim bar: click the arrow on its right. The bar still says how many items there are and how many are overdue (in red). Click the bar or the arrow to open it again. CaseVault remembers which way you left it.
+- **MISSION FILES:**
+  - The Operations section is now **MISSION FILES**. **MISSION FILES**, **GENERAL FILES** and **OTHER FILES** have headings of the same width.
+  - Their folders have new icons: blue for Mission Files (and the Operation Folder), purple for General Files, green for Other Files. Each section's edge and its header button (All Operations, All Cases, New Folder) are in the same colour.
+  - **New Folder** for Other Files is now in the section's header, top right.
+- **Quick Links:** **REFERENCE** is in capitals, like OSINT and LEO.
+- **Operation page:** **FILES** and **OPERATION FOLDER** have plain headers without the icon. The short explanation of each is now a small line under its section.
+- **Clickable things show it:** when the mouse is over a link, it underlines; buttons, folders, tiles and list rows take the accent colour.
+- **Link Chart:** a line carrying narcotics shows the cannabis icon, and one carrying money shows the money icon (also in the PDF).
+
+## What's new in v1.73
+
+- **Easier to see:** the case list and the Quick Links bar have a cool slate shade, and their buttons (Operations, cases, links, tabs) are white with a soft shadow that lifts when you point at them. Works in dark mode too.
+- **Timeline, redesigned:**
+  - A summary strip on top: **Events**, **Open Deadlines**, **Overdue** and **Next Due** (with its name).
+  - Filters: **All**, **Upcoming**, **Deadlines**, **Past**.
+  - The entries hang on a rail under month headings, each with a date chip (day, weekday, time). The marker on the rail is blue for an event, an amber diamond for a deadline, red when overdue and green when done.
+  - A red **Today** line shows where the past ends. Edit and Delete appear when you point at an entry.
+- **Operation Folder** shows its folders as folder icons, each with what it's for. Click one to open it; its files and Add Files show only then. Click it again, or **Close**, to close it.
+- **Vehicle List** (was Running Vehicle List; files already in it are moved over):
+  - **Add Vehicle** makes a card with the Draft's vehicle fields (Year, Make, Model, Color, License Plate, Plate State, VIN, Impound / Tow), plus **Registered Owner**, **Registered Owner Address** and Notes.
+  - On the right of each card is **Add Photo** for a picture of the vehicle; click the photo to view it, or Replace / Remove it.
+- **Draft → Vehicles** also has **Registered Owner** and **Registered Owner Address** (Owner and Notes is now Notes).
+
+## What's new in v1.72
+
+- **OTHER FILES** shows its folders as folder icons, like Operations and General Files: **USPIS Files**, **DEA Files**, **INET Files**, **Training** and **Other**, each with what it's for under its name and its file count on the icon. Click a folder to open it: its files show below, with Add Files (or drop files on it). Click the folder again, or **Close**, to close it. **New Folder** makes your own; one you made can be removed with **Remove Folder** once it's empty.
+
+## What's new in v1.71
+
+- **Back to Top** is always there, bottom right beside Ask AI: an up caret (**^**). Click it from anywhere in a long form.
+- **Pages line up:** every page (Overview, Operations, General Files, a case, Reference) starts at the left, next to the case list, at the same width. Going from a folder to a case no longer shifts everything to the middle.
+- **OTHER FILES folders:**
+  - **USPIS Files** (US Postal Inspection Service), **DEA Files** (Drug Enforcement Administration), **INET Files** (Internet Narcotics Enforcement Team), **Training** and **Other**. Each tab shows what the folder is for.
+  - Files added to Other Files before v1.71 are under **Other**.
+  - **New Folder** makes your own folder. A folder you made can be removed with **Remove Folder** once it is empty.
+- **Overview:** Operations, General Files, Other Files and Recently Updated are matching panels. Each header has the title, a one-line description and its button in the same place.
+- **Recently Updated** is an even table (Subject, Case Number, File Number, Status, Updated) in the Quick Links' smaller, regular type.
+- **Draft:** a finished part no longer has a green bar against its checkbox. The green check on the right still shows it's complete.
+
+## What's new in v1.70
+
+- **Overview:** the **OPERATIONS**, **GENERAL FILES** and **OTHER FILES** headings no longer have folder icons.
+- **Files tab:** an Additional Exhibit's photos are listed as *Exhibit 1a*, *1b*… (the files keep their names on the SSD). The eye button is gone: click a file's name to open it.
+- **Back to Top:** once you scroll down a page, an up arrow appears at the bottom right, beside Ask AI. Click it to go back to the top.
+
+## What's new in v1.69
+
+- **Quick Links** stay at the bottom of every page, not only the Overview. Changes in Vault → Quick links show at once.
+- **Operation Folder:** the folders (Subpoenas, Affidavits, Operation Plans, Maps, Subject Data, Running Vehicle List) are tabs like a case's Details, Timeline, Draft… tabs, each with its count.
+- **Sidebar:** case numbers and the archive sub-folders (EXPIRED, NOLLE PROSEQUI, PROSECUTION) are the same size as the folder names.
+- **One look for every field**, the Draft's: a grey box, the heading small and grey at its top, and what you type at the same size. This is on every page and popup (Details, New Case, New Operation, Timeline, Mail, Vault…), and the Operation page's details match.
+- **Dates:** type the first letters of a month and it's predicted (*sep* → *September*); press **Tab** to take it, type the day, and **Tab** again to fill in this year (*September 30, 2026*). Typing numbers (12.01.2026) works as before.
+- **Suspects and Offenders have the same fields**, the Offender also has Clothing Description:
+  - **Hair Style** is new on both, with a list to pick from or type over.
+  - Suspects gain Gender Identity, Veteran, Relation Code and Moniker / Social Media. Offenders gain IR, FBI and IDOC Numbers.
+  - **Add From Suspects** copies all of them; the moniker joins the offender's Monikers / Social Media.
+- **Draft:**
+  - *Hidden on screen* now sits beside the part's checkbox, in its own column, so the titles line up.
+  - **Arrest Unit** and **If Residence, Where** offer **DNA** (Does Not Apply).
+  - **Court Branch and Court Officer** offers **Pending**, and **Court Date** has a **Pending** box.
+  - **Adderall** is in the Narcotic Type list.
+  - The **Search Warrant Number / Subpoena GJ Number** label switch (and ASA / AUSA, Judge / Magistrate) is always wide enough for its words.
+- **Checks (AI):** a photo is read only for the words written in it. OCR lines it isn't sure of, or that aren't real words, are dropped, and a photo with no writing is skipped. The AI sees the photo as *Photo 2*, never by its file name, so camera names like *IMG_20250312_1430* can't be read as a date and time. No hidden camera data is ever read.
+- The **Power Off** hover text is shorter.
+
+## What's new in v1.68
+
+- **Additional Exhibits** (Draft → Evidence Inventoried): photographs or screenshots that aren't tied to an inventory number.
+  - Click **Add Additional Exhibit**, pick **Photographs** or **Text Messages**, give it a title and a description, and add the pictures. Each picture can be labelled like the exhibit photos.
+  - They're numbered on their own: **Additional Exhibit 1, 2…**, the pictures **1a, 1b…**. **Next Additional No.** starts the numbers anywhere; **Reset to 1** and **Automatic** work like the exhibit numbers.
+  - The pictures are saved in the case's **Other Exhibits** folder. They're listed in the report's Evidence Inventoried and printed on its Exhibit Attachments pages.
+- **Text Message PDF:** on a Text Messages exhibit, **Text Message PDF** makes a portrait PDF of the screenshots, two side by side on each page, each with its label (*Additional Exhibit 1a - Text Messages: …*). It's saved under **Files → Other Exhibits** and opens to view or print.
+- **Power Off** (the red button next to the SSD icon at the top): saves everything, then closes CaseVault and its browser window, stops the CaseVault helper and the AI engine, and locks and ejects the **V:** and **W:** drives. Wait for Windows to say it's safe, then unplug the SSD. It needs the new helper (1.10.0, see *SSD update* below); without the helper it just saves and closes.
+- **Overview:** the headings are **OPERATIONS**, **GENERAL FILES** and the new **OTHER FILES**: a place for files that don't belong to any case (forms, training, reference sheets). Add, open and delete them there.
+- **Operation Folder:** every Operation has its own folder, not tied to a case number, with **Subpoenas**, **Affidavits**, **Operation Plans**, **Maps**, **Subject Data** and **Running Vehicle List**. Open it from the Operation's page or the first card under the Operation on the Overview. These files are kept on the SSD in `CaseVault-Data\shared`.
+- **Draft green checks:** a part or a line you've unticked counts as done; an empty phone number box you didn't add a number to doesn't count against it; photo labels and Additional Exhibits are optional. The checks sit in one column next to the fold arrows.
+- **How Cleared:** new choice **6 - On Going**.
+- **Files:** the **Added** column is now **Updated**: the last time the file changed.
+- **Street value chart:** each drug category has its own colour icon. Every page and popup was checked for the theme (colour icons, Consolas, square corners).
+
+## What's new in v1.67
+
+- **Statute of limitations (narcotic charges):** a narcotic charge has to be brought within **3 years of the Date of Occurrence**.
+  - CaseVault reads the **Date of Occurrence** on the Draft tab. Without one, it uses the earliest **arrest date** in Arrest details.
+  - It counts a charge as narcotic when it's under the Illinois Controlled Substances, Cannabis or Methamphetamine Acts (720 ILCS 570, 550, 646), or federal Title 21 (21 U.S.C.), or when its description names a drug.
+  - **5 days before** the 3 years run out, **Needs Attention** shows *CASE NUMBER — Warning: Statute of Limitations Expiring* with a live count-down (days, hours, minutes and seconds). The last day counts.
+  - The case gets the red border in the case list, and a reminder pops up once when you open the Overview.
+  - Once the time has passed, the row says *Statute of Limitations Expired* until the case is closed or archived.
+  - It doesn't apply to Closed or Archived cases.
+- **Archived sub-folders: EXPIRED, NOLLE PROSEQUI and PROSECUTION.**
+  - **Archive Case** asks which folder (or none). **EXPIRED** is picked already when the statute of limitations has passed.
+  - In the case list, **Archived** shows each folder with its count; click a folder to open it.
+  - An archived case can be moved between folders with **Archive Folder** at the top of the case.
+- **Suspects → Not Identified:** tick it beside **Name** when the suspect isn't identified yet. The name box is set aside, and templates and the Draft's Add From Suspects say "Not Identified".
+- **Draft:** a green check appears in a part's header once every field in it is filled in. You can see it with the part minimized.
+- **Search Warrant Number** (and Subpoena GJ Number) now has twice the room of ASA and Judge, so long warrant numbers aren't cut off. Below 1400 pixels wide, the three lines stack.
+- **Quick Links footer** stays the same height on every tab: the Outside Sites sign keeps its place, hidden on Reference.
+- **Overview banner:** more space between the greeting and the Open / Pending / Closed / Archived boxes.
+- Fixed: an archived case showed the word "null" under Deconfliction.
+
+## What's new in v1.66
+
+- **Quick Links footer:** on the left, the **Quick Links** name with the **Reference**, **OSINT** and **LEO** buttons stacked under it, then the Outside Sites sign and **Arrange**. The links fill the rest of the footer.
+- **Charges** in the footer is one button again. Click it and it turns into **Federal** and **State**; click one to open those statutes. Click anywhere else or press Esc to put it back.
+- **One place for reminders:** the "deadlines due" line is gone from the blue banner, and so is the count beside **Needs Attention**. The Needs Attention list shows them all.
+- The due labels in Needs Attention are in Title Case: **Due Today**, **Due Tomorrow**, **In 3 Days**, **2 Days Overdue**.
+
+## What's new in v1.65
+
+- **Quick Links footer, taller:** four rows of links instead of two, so all the OSINT links show without scrolling (five columns). The footer keeps the same height when you switch between Reference, OSINT and LEO, so the page doesn't jump. If a tab ever holds more than 20 links, scroll inside the footer.
+
+## What's new in v1.64
+
+- **Case tabs look like the Options tabs:** square boxes side by side, each with its own icon (Details, Arrest, Timeline, Draft, Reports, Files, Link Chart, Mail, Checks). The open tab is white with a blue line along its top. **Arrest details** is now just **Arrest**. All nine fit on one row at 1280 pixels wide and up; on a narrow window they wrap.
+
+## What's new in v1.63
+
+- **Quick Links footer.** On the Overview, Quick Links sit in a footer bar under the page, running from the case list to the right edge of the screen. The bar has a blue top line.
+  - The top row holds **Quick Links**, the Reference / OSINT / LEO tabs and **Arrange**. On the OSINT and LEO tabs, a small **Outside Sites** sign carries the warning about outside websites (point at it to read it).
+  - The links are in **five equal columns**. Two rows show at a time; if a tab has more links, scroll inside the footer.
+  - **Charges** has its **Federal** and **State** buttons inside it.
+  - **Arrange** opens the footer up. Each link gets ‹ (move left), the eye (show or hide) and › (move right) underneath it, and you can still drag links.
+  - The round Ask AI and Notes buttons sit just above the footer.
+  - The footer shows only on the Overview. On a narrow window the links use three columns, and on a phone two.
+
+## What's new in v1.62
+
+- **Quick Links stay at the bottom** of the Overview screen while you scroll. The tabs and links are on one compact bar, and the round Ask AI and Notes buttons sit just above it. If you have more links than fit in two rows, the bar scrolls. On a phone-sized window the links stay at the end of the page.
+- **Street value chart:** the form in brackets has its own **Form** column (Cocaine | Powder, Heroin | Black Tar…). Every category has the same columns at the same widths, so prices line up down the whole chart. The calculator sits above the chart.
+- The note under the calculator now reads "HIDTA 2022 street values. ≈ Estimates (gram price × 454)."
+- **Popups redesigned** (New Case, New Operation, the case picker, confirm boxes and others): a tinted title bar with an icon and a blue line, sections with a small heading (Case, File Details…), blue hint boxes, and the buttons on a bar at the bottom that stays in view while you scroll. New Case puts Client, Status and Opened on one row. The New Operation window was cut off on the right; it now fits.
+- **Link Chart: one line per direction.** Each line has one arrow. For narcotics one way and money back, use two lines: they run side by side and never cross, even when the cards aren't level. Badges and labels sit on the longest part of the line, clear of the cards.
+  - **Link Cards:** click A then B, then B then A. The line back gets the other badge on its own (Narcotics → Money).
+  - Each connection card has **Turn Around** and **Add Return Line**.
+  - Charts saved with an old **Both Ways** arrow open as two lines, and an old **Arrow From** is turned round.
+
+## What's new in v1.61
+
+- **A smaller banner** on the Overview. The Open, Pending, Closed and Archived counts are now in the banner, so the separate row of boxes is gone.
+- **Quick actions:** one row of same-size buttons under the banner: **New Case**, **Draft**, **Discovery**, **Link Chart**, **Ask AI**, **Reference**, **Library** and **Vault**. Draft, Discovery and Link Chart ask which case first. Type part of a case number, subject or Operation number to find it, then click it or press Enter. Discovery opens the case's Files with the Discovery window on top.
+- **Needs Attention:** deadlines that are overdue or due within the next 7 days, soonest first. Each row shows the case, what is due, the date and how long is left. Overdue ones have a red edge and a pink background, today's and tomorrow's a red edge, the rest an amber edge. Click a row to open that case's Timeline. When nothing is due, it says so in one line.
+
+## What's new in v1.60
+
+- **Operation names on two lines:** the Operation Number on top, the name below, in the case list and in the Overview's Operations folders.
+- **Reminder border:** a case with a deadline coming up gets a thin red border in the case list, and so does its Operation, so you can find it while the Operation is folded. The bell is still there too.
+- **Incognito icon:** the privacy screen button at the top of the case list is now an incognito icon. All the icons there are the same size.
+- **A full case list** scrolls inside its own box with a thin scrollbar. The icons at the top don't move, and Closed and Archived stay at the bottom. Fold Operations you're not working on to keep it short.
+- **Sharper text:** the header no longer blurs what's behind it, and the big Ask AI window sits on whole pixels. If text still looks soft, set Options → Zoom and Brightness to 100%, the browser zoom to 100% (`Ctrl + 0`), and check Windows display scaling (Settings → System → Display).
+
+## What's new in v1.59
+
+- **Link Chart:**
+  - **Right-angle lines.** Connections turn at right angles and leave a card from its side, top or bottom, so they don't run across the photos. Each connection has **Line: Right Angles / Straight**.
+  - **Two lines between the same two cards** sit side by side, one above the other, with their labels above and below. For example, *narcotics* from the subject to the police, and *money* tendered from the police back to the subject.
+  - **Link Cards:** click A then B for an arrow from A to B. Click B then A to add the line back (it's drawn beside the first). Click A then B again to take the A→B line away.
+  - **Connections** are folded cards: one line each (who → who, Money or Narcotics). The **eye** shows or hides that line on the chart and in the PDF. The arrow opens it to change it.
+  - **Save PDF to Case** now saves the chart in **Files → Link Charts** and under **Reports** (type *Link Chart*, with the chart in words). To change it, use **Send Back to Link Chart** in Reports (or **Open in Link Chart** in Files), make the changes, then **Save PDF to Case** again. Files and Reports are both updated.
+- **Every form starts minimized:** the Case Overview sections, every part of the Draft tab, Arrest details and the Vault's sections start folded. Open one with its arrow; CaseVault remembers the ones you open, on this PC. **Show All** on the Draft tab opens them all. Clicking a Vault section on the left opens it.
+- **Discovery → How to Burn a CD or DVD (Windows):** with **The SSD, for a DVD**, the box has the steps (also in the box shown when the package is made):
+  1. Put a blank CD-R or DVD-R in the drive.
+  2. In File Explorer, go to CaseVault-Data → exports.
+  3. Right-click the package folder → (Show more options) → Send to → the DVD RW drive.
+  4. Type a title, choose **With a CD/DVD player**, then Next.
+  5. Click **Finish burning** (Drive Tools tab).
+  6. Choose a speed, then Next, wait, and Finish.
+  7. Check the disc by opening "Open Discovery.html" on it.
+- **Checks tab:** a new look, with an icon header, the document to check and the AI choice on the left, the documents to compare against on the right, and past checks in their own box.
+- **Ask AI:** the four suggestions are boxes of the same size, without the blue line.
+- **Vault → Outbound Log:** shows how many months are on the SSD and their size. **Delete Older Months** keeps only this month; **Delete All** empties the log.
+  - Does deleting free space? Yes, but very little: each month is usually a few KB.
+  - The log is your record of what left this PC (online AI requests and mail hand-offs), so check your agency's rules before deleting it.
+
+## What's new in v1.58
+
+- **Link Chart zoom and moving around:** the mouse wheel zooms in and out around the pointer; drag the empty background to move around a big chart. The − / + buttons and Fit still work.
+- **Grid:** the chart sits on small, faint olive-green squares (on screen only; the PDF is white). In **Free** layout the **Snap** button makes dragged cards land on the squares so they line up; turn it off to place cards exactly.
+- **Platforms:** **Facebook** and **Instagram** are now separate (cards saved as "Facebook / Instagram" become Facebook; change the ones that are Instagram). New: **Grindr**, **Cash App**, **Venmo**, **Zelle**, **Apple Pay**, **Coinbase** and **MoonPay**, each with its own picture. **Dark Web** is still there.
+- **Money and narcotics on a connection:** each connection has **Carries**: Nothing, **Money** or **Narcotics**. Money draws a green line with a small round **$** badge; narcotics an orange line with a small round **capsule** badge. The arrow says who sends and who receives. With **Link Cards** on, pick what new links carry in the **Carries** list next to it.
+
+## What's new in v1.57
+
+- **Icons and buttons.** Every icon is now in the colour style: the Ask AI window's buttons, Options, the Overview banner (its buttons are white now), Suspects, Case Actions, the arrows, plus and minus, close, warnings and info, file types, and the theme switch. Only small arrows that open lists and the text-formatting buttons stay plain.
+  - The blue buttons (Save, Close Case, Create…) and the red ones (Delete Case, Purge…) are a light tint with a coloured border and coloured words, so their colour icons sit on them without a white square.
+- **Field boxes** (Draft, Arrest details, Mail, Timeline, Contacts, Vault…) have a thin border and a faint line under them, so boxes next to each other don't run together.
+- **Header.** The drive name ("V: | CaseVault-Data") no longer shows under the CaseVault logo; point at the SSD square at the top to see where the data is saved.
+- **Options** has a new look: an icon header, tabs, and each setting in its own card.
+- **Ask AI window**: a header bar with square buttons, the model and case in a grey box, and framed prompt suggestions and message box.
+- **No double close buttons.** A box that has Done, Close, Cancel or OK no longer also has an X. Esc still closes every box.
+- **Quick links:**
+  - LEO: **Illinois Compiled Statutes**, **Chicago Cop**, **NW3C**.
+  - OSINT: **ZetX**, **Bandwidth**, **TextNow**, **Blockchain Explorer**, **TRM Labs**.
+  - **Geotime LIVE** now opens https://live.geotime.com/#/login. If you saved your own address for it earlier, yours is kept.
+  - Accurint and Chicago HIDTA have new icons.
+- **Discovery → Where To → A CD or DVD drive.** Put a blank CD or DVD in. If Windows asks how to use the disc, choose **Like a USB flash drive**. Then pick the disc drive in the window that opens, and CaseVault writes the package to it like a USB drive. Before you take it out, choose **Eject** (or **Close session**) in File Explorer so other computers can read it.
+  - CaseVault does not format or burn discs; Windows does. For a disc made the other way (a mastered disc that plays in any player or older computer), use **The SSD, for a DVD** and burn the package folder with File Explorer (Share → Burn to disc), as before.
+- **Updater 1.2.1:** the logo on the right of the Updater's banner is gone.
+
+## What's new in v1.56
+
+- **Link Chart overhaul** (see *Link Chart* under *Files* for the details):
+  - **Subject** is now **Primary** (Add Primary).
+  - **Tree** or **Free** layout. In Free, drag cards anywhere. In Tree, **Move Left / Move Right** set the order and **Per Row** sets how many cards sit side by side.
+  - **Link Cards**: click a card, then another, to draw an arrow; click two linked cards to unlink them. Each connection is one line with one arrow (or none); for both ways, draw a second line back (it sits beside the first).
+  - **Zoom** in and out, and **Fit**, for big organization charts. A line under the chart says how big the names will print, and when the chart is too crowded to read (up to 4 in a row print full size, up to 6 stay readable).
+  - **Clear Chart** button. The Chart Title has no sample text.
+  - No more cut-off words: names, aliases, web addresses and labels wrap. The form boxes and connection labels show the whole text.
+  - Phone cards use the same phone format as the rest of CaseVault.
+  - **Open in Link Chart** in Files → Link Charts sends a saved chart back to the tab. The PDF is named after the chart title, so you can keep more than one.
+
+## What's new in v1.55
+
+- **Discovery receipt.** In **Files → Discovery**, the **Options** box has **Make a receipt to sign (PDF to Downloads)**, on by default. When the package is made, CaseVault also makes the **Discovery Receipt** PDF:
+  - It shows the case, date produced, Bates range, package, number of files and size, storage medium, **Turned Over By** (your name and title from My Profile) and **Turned Over To**.
+  - **Date of Receipt** and **Time of Receipt** are blank boxes, filled in by hand at the hand-off.
+  - Every item is listed with its Bates numbers, pages and SHA-256 fingerprint.
+  - An **Acknowledgment of Receipt** says the recipient received the items and that they are accurate and complete as listed.
+  - Signature lines (sign in ink) for the **Recipient**, the **Officer** and a **Witness**, each with printed name and date/time.
+  - The PDF is saved to **this computer's Downloads folder** (the browser's download), ready to print. That copy is on the PC, not the SSD: once it is printed and signed, delete it from Downloads. A copy is also kept with the case (Files → Discovery → Earlier productions → **Receipt**). The Done box has **Download Receipt** and **Print Receipt**. Productions made before v1.55 get a receipt the first time you click Receipt.
+  - The agency name comes from My Profile; there is no seal or form number.
+- **Discovery popups** have a new look: an icon header, the options grouped in three boxes (Recipient And Bates, Where And Password, Options), and summary tiles (files, size, Bates, produced to) in **Ready to Copy** and **Discovery Package Ready**.
+- **Closed folder and Operations.** A closed case whose Operation is still going used to show under the Operation's name in Closed, which looked like the Operation was closed. Now these cases are listed by case number under one folder, **Operation Files**, in Closed ("N closed cases of ongoing Operations"). When the Operation itself is closed, it moves to Closed with its name as before.
+
+## What's new in v1.54
+
+- **Draft tab, Officer's Report:**
+  - **Court Branch and Court Officer** and **Court Date** share one line.
+  - Three boxes share the next line, and each label is a switch: **Search Warrant Number / Subpoena GJ Number**, **ASA Approving / AUSA Approving**, and **Judge Approving / Magistrate Approving**. Click the label to pick. The text stays when you switch, only the one you picked goes in the report and the PDF, and the PDF's label follows (e.g. *AUSA Approving Subpoena*).
+  - **Pre-Recorded Funds:** **Add Funds** opens a small box. Pick the denomination and enter the serial numbers, one per line; the quantity counts them, or type it when not every bill was recorded. Each denomination shows as one line (e.g. *$20 × 3 AA01, AA02, AA03*) with Change and Delete. One **Recovered / Not Recovered** list at the lower right covers them all. Bills entered one by one before v1.54 are grouped by denomination by themselves.
+  - The label under an evidence photo is one line.
+  - **Extra Copies Required** is gone, from the form and from the PDF's signature table. That table now has the reporting officer's name with a tall signature box under it.
+- **Reports → New Report:** the Type is **Case Summary**, **Affidavits** or **Other**, and the Title box is empty. Reports made before keep their type.
+- **Arrest Report PDF:** *2nd Arresting Officer* is written like the 1st, so it no longer runs into the star box, and there is room before *Approving Supervisor*.
+- **Mail tab** and **Vault:** fields are in grey boxes like the Draft tab. Each Vault section is a card that folds away with ▾ / ▸, and so do **LEO Partners**, **Suspects**, **Contacts** and **Deconfliction** on the Details tab. What you fold stays folded on this PC.
+- **LEO Partners** shows only the agencies working this case. **Show All Agencies** brings back the others to pick from; **Show Only Working This Case** hides them again.
+- **Quick Links:**
+  - **OSINT** has **Geotime LIVE**. Its address isn't known to CaseVault: add your agency's in Vault → Quick links.
+  - **LEO** has **Chicago HIDTA** going to its submission form (https://www.chicago-hidta.org/submission-form-2). It is fixed: always shown, and its address can't be changed.
+
+## What's new in v1.53
+
+- **Square drop-down lists everywhere.** Clicking a drop-down (or Alt+↓, F4, Space or Enter) now opens CaseVault's own square list instead of the browser's rounded one. ↑ ↓ choose, a letter jumps to it, Enter picks, Esc closes.
+- **More colour icons:** search, hide, offline, the AI robot, PDF View, Word View, Draft with AI, Review, Export, Save, the Files folders and others are drawn in the same style as the rest. On a blue button the icon sits on a small white square.
+- **Colours:** the page is a softer off-white, and icons sit on white tiles. The header buttons show their state with a coloured line under them: green is fine, red is off or a problem. The deadline bell is red.
+
+## What's new in v1.52
+
+- **Link Chart** tab on every case (after Files): who is under whom, with photos, monikers and webpages, ready to print in portrait. See *Link Chart* under *Files*.
+
+## What's new in v1.51
+
+- **New icons:** CaseVault has a new set of colour icons. Folders are coloured: Operations blue, General Files yellow, Closed green with a check, Archived dark. Trash, calendar, phone, map, notebook, chat, settings and more are in colour too. On blue (filled) buttons and on the Overview banner, the icons stay white. The banner itself is unchanged.
+- **LEO Partners:** each agency has its own colour badge (CaseVault's drawings, not official seals). They never go on a report or PDF.
+- **New logo:** the safe with the document is on the browser tab, at the top left and on the installed app.
+- **Field Notes and Ask AI** (bottom right) are white squares with the colour notebook and chat bubble.
+- **Updater:** the window opens with a blue fading banner like the Overview's: the title, the version on the SSD, and a shield with a padlock. The CaseVault logo is gone from it; it is still on the window's title bar.
+
+## What's new in v1.50
+
+- **Privacy screen:** the blue 1s and 0s now fall on a muted near-black. With a PIN, a thin box in the lower right says **AUTHENTICATE**, and each digit shows as an asterisk.
+- **Supplementary Report PDF:** each box's label is on a grey band, and what you filled in is on white under it. This covers the signature table too (Extra Copies, Date Submitted, Reporting Officer…), as well as Update Information, Status and How Cleared. The Officer's Report part is unchanged.
+- **Arrest details, Timeline, Contacts and Deconfliction** look like the Draft tab: each field is a grey box with its label small inside it, and the section headers are in capitals.
+- **Dates:** the calendar button opens CaseVault's own square calendar. **«** and **»** change the year, **‹** and **›** the month; it also has **Today** and **Clear**, and works with the arrow keys and Page Up / Page Down.
+- **Case list:**
+  - The folders start folded. The folder holding the case, Operation or General Files on screen is open. A folder you open with its arrow stays open until you go to another page.
+  - **Search** is an icon; click it to show the search box (Esc clears and hides it).
+  - **Home** and **Hide** (the privacy screen) are next to Search; the header keeps only the menu ⋮.
+  - A closed case of an Operation that is still open stays in that Operation's folder and also shows under **Closed**.
+  - **Closed** and **Archived** at the bottom are grey folders with a drop-down arrow.
+- **Move File** replaces Assign to… and Unlink. It moves a case into an Operation, from one Operation to another, or back to General Files. See *Operations and General Files*.
+- **Discovery:** the list on the left can show files from this case, its whole Operation, another Operation, all cases or one other case, and the search box also finds case numbers and subjects. **Create Discovery Package** first opens **Ready to Copy**, a list of every file with its case and size and the total. **Copy Now** starts; **Back** changes nothing.
+
+## What's new in v1.49
+
+- **Discovery** on the Files tab: choose files on the left and they go to the list on the right. CaseVault then writes a password-protected package to a USB drive or folder, or onto the SSD for a DVD. The recipient opens it in Chrome or Edge with the password and can view and print, not download. Every page carries its Bates number. Video and audio play in the window, and an index lists every item with its fingerprint. A portable VLC can go along, and each production is logged in the case. See *Discovery* under *Files*.
+
+## What's new in v1.48
+
+- **Supplementary Report PDF:** the box at the top right is the **R.D. Number**. Event, Incident and Raid Number share the row under it. A form saved before keeps the number from that box as its R.D. Number. On the Draft tab the R.D. Number starts as the case's Case Number.
+- **Draft tab:**
+  - Every field is its own grey box with its label inside it. An empty box shows its label as the placeholder; once there is a value, the label sits small at the top of the box. A label too long to fit as a placeholder stays at the top, in full.
+  - The section headers are in capitals.
+  - An offender's phone numbers start folded away: **Show Phone Numbers** (with how many there are) opens them.
+  - **Status** and **How Cleared** are spelled out (0 - In Progress, 3 - Cleared Closed, 3 - Referred for Prosecution…). Forms saved before read the same. The PDF keeps the short codes in its row of circles, as on the printed form.
+- **Square drop-down lists** everywhere in Chrome and Edge: the list that opens under a box such as Status no longer has rounded corners.
+- **Every report you send is its own:** sending the Draft tab again always asks **New Report** (the default) or **Update**. New Report leaves the report sent before exactly as it was, with its own sections, evidence and PDF. For example, a Purchase report without Evidence Inventoried and then a Surveillance report with it, or two Purchase reports (the UCO's and the surveillance officer's).
+- **Templates:**
+  - Only your DEA 6 sample stays. The first time v1.48 opens your vault, every other template is moved, not deleted, to `CaseVault-Data\templates\removed-v1.48`. Copy one back to `templates` to use it again.
+  - There are no built-in starter templates.
+  - The DEA 6 document type is now called **DEA Style**.
+
+## What's new in v1.47
+
+- **Overview:** a new **General Files** section sits between Operations and Recently Updated. It has a folder for each year (newest first) holding the cases that aren't in an Operation, filed by the year they were opened. Click a year to see its cases, each with Details, Reports and Files. **All Cases** opens the General Files page. The Operations section now holds only Operations.
+- **General Files folders are amber** (Operations stay blue): on the Overview, in the case list, on the General Files page and on a case's header and Details bar.
+- **Supplementary Report PDF:** the caption under each exhibit photo is no longer bold. Before, only its first line was.
+
+## What's new in v1.46
+
+- **Operations and General Files** (see *Operations and General Files* above): an Operation is now its own record (number, name, status, start and end dates, notes) and cases are linked to it. General Files lists every case. Link, unlink, add a new or an existing case, edit the Operation once for all its cases, and delete an Operation without losing a case or a file.
+- **Case Number and Subject Name:** each case shows its Case Number with the subject under it, in the case list, the case's header, the Overview and General Files. Case Numbers must be unique; the same subject on another case asks first, and a similar name is pointed out.
+- **First time you open your vault with v1.46:** vault.json is backed up, then cases that share a Title become an Operation. Nothing on the SSD moves; no file is copied.
+- **Search** finds the subject and the Operation's number and name too.
+
+## What's new in v1.45
+
+- **Supplementary Report PDF**: same sections and order, laid out more neatly.
+  - Every row of boxes sits on the same eight columns, so the lines run straight down the page.
+  - Each label fits on one line.
+  - Status and How Cleared take half the width each.
+  - The Event, Incident, Raid and R.D. numbers are four equal boxes.
+  - The officer's report labels are all one width, so the grey boxes start in the same place.
+- **Arrest Report PDF**: every value is now in a light grey box.
+  - Within each section the labels share one width, so the boxes line up.
+  - Incident, Arrestee Vehicle, Court Info and Bond Info have two columns of the same width.
+  - Charges, Recovered Narcotics and Warrants are grey rows on fixed columns.
+  - The narrative and the properties sit on a grey background.
+- **Draft tab and Arrest Details tab**: the entry boxes are more compact (tighter rows, shorter boxes).
+  - On the Draft tab, Status and How Cleared fill a row together; Veteran shares a row with Tattoos / Scars; and a charge's Statute shares a row with its description.
+  - On Arrest Details, every section uses four columns, and the arrestee's photo is the fourth column beside the offender's details. No box is left alone on a row.
+
+## What's new in v1.44
+
+- **PDFs:** times print as military time without the colon (**1435**), in both reports and in the report text. On the Supplementary Report every value sits in a light grey box (no dotted lines). Each offender, victim, officer or person present has their name in bold on its own line, with the details under it. The officer's report lines come in blocks with a little space between them: who; the court and the warrant; who else was there; the evidence and the money; the record numbers; vehicles and notifications. The layout is the same as v1.43.
+- **Details tab:** **Title or Operation Name**, **Status**, **Opened** and **Closed** share one row, and **File Number**, **Original Case Number**, **Federal Jacket Number** and **Client** share the next. The Tags box is gone (tags saved before are kept and still found by the search box). The U.S. Marshals badge is now a star in a ring.
+- **Overview:** an open operation's case numbers have three buttons: **Details**, **Reports** and **Files**.
+- **Draft tab:**
+  - **Method Code** and **Safe Method** have a list with **DNA** (does not apply); anything else can still be typed.
+  - Number of Victims, Number of Offenders, Number Arrested and Method Code fit in one row.
+  - For a person, Gender, Gender Identity, Race and Complexion fit in one row, and so do Height, Weight, Hair Color and Eye Color. The long race names are shortened on screen; the full name is what is saved.
+  - In Assignment, Method Assigned, Unit Number, Safe Method, Arrest Unit and If Residence, Where share a row, and Adults, Juveniles, Fire and Gang Related share the next.
+  - **Not Recovered** is no longer cut off in Pre-Recorded Funds.
+- **Files:** the Size column is wide enough for "000 KB".
+
+## What's new in v1.43
+
+- **Supplementary Report PDF** (Draft tab → Print / PDF, Reports, Files) now looks like a narcotics division supplementary report form. It is set in Times, with the title and the **Agency Report Number** box at the top. Below that comes a ruled grid where each box has its small label: offense, IUCR, occurrence, victims, offenders and assignment. Then the **Update Information** tick boxes, **Status** and **How Cleared** with a round mark under the choice, and the Event, Incident, Raid and R.D. numbers. The officer's report follows as **LABEL:** lines, with each offender, officer, bill or vehicle on a line of its own, then the **Summary of Investigation** and a three-column signature table. Every other page starts with the four numbers and ends with **Preparer** and **Approval** initial boxes.
+- **Arrest Report PDF** (Arrest Details → Print / PDF) now looks like a records-system arrest report. **ARREST REPORT** and the agency are at the top left, with the CB, IR, YD, RD and Event numbers stacked on the right and an **ARREST REPORTING** band under them. Each section is framed and named on a grey tab down the left: Offender (with the description in a column and the photo on the right), Incident, Charges, Recovered Narcotics, Warrant, Non-Offender(s), Arrestee Vehicle, Properties, Incident Narrative, Court Info beside Bond Info, and Reporting Personnel with the signature fields. Later pages repeat the CB number and the arrestee's name.
+- Neither PDF has any agency's name, seal or form number built in: the agency comes from Vault → My Profile.
+
+## What's new in v1.42
+
+- **Overview:** the Upcoming Deadlines list is gone; the banner at the top already says what's due. Click an operation's folder and its case numbers show where that list was, each with buttons for every tab (**Details, Timeline, Draft, Reports, Files, Mail, Checks**), under the operation's timeline. The folders themselves stay where they are. The timeline's title and each event's title are centered.
+- **Sidebar:** a cleaner look, with a new folder icon for each operation. An operation whose case numbers are all **Closed** moves to the **Closed** section at the bottom of the list, just above **Archived**.
+- **Field Notes** are single spaced (no blank space between paragraphs), and the preview on the Reports tab no longer fades out at the bottom. Hovering over the Field Notes or a report no longer shows a hover box.
+- **Reports list:** a report sent from the Draft tab shows by its type of activity (**Purchase**, **Surveillance**…); "Supplementary Report" is already in the Type column. The folder button on each row (and **Send to Files** in the report window) saves its PDF to Files, in place of the copy saved before.
+- **Draft tab:**
+  - **IUCR Code** holds just the code. The list shows each code with its description, and picking one puts the description in **Offense Classification**.
+  - **Pre-Recorded Funds** is one compact row per bill: Denomination, Serial Number, Recovered. Quantity is gone.
+  - **Notifications** no longer have a Notes box; notes written before become the Person Notified when that was empty.
+  - **Exhibit numbering:** next to **Add Exhibit**, **Next Exhibit No.** shows the number the next exhibit gets. Type a number to start from there, click **Reset to 1** to start again (numbers this case already uses are skipped), or **Automatic** to number on as before (shared by cases with the same federal jacket number).
+- **Files:** the Document column breaks only between words, so "Supplementary Report" is never cut.
+- **Dev Tools:** the Document Anonymizer is laid out in numbered steps (Original, Fictitious, Keep It), and **Emergency Purge** sits apart in red with a skull and crossbones.
+
+## What's new in v1.41
+
+- **One draft, several reports:** each report sent from the Draft tab is named after its heading, such as **Supplementary Report - Purchase**, and so is its PDF in Files. If you change the **Officer Report Type** after sending (Purchase to Surveillance, say) and click **Send Draft to Reports**, CaseVault asks: **New Report** keeps the Purchase report as it was sent and adds a Surveillance report next to it; **Update** replaces the Purchase report (and its PDF). Sending again with the same type just updates that report. Two reports of the same type get "2", "3" on the end, so a PDF is never overwritten by another report's.
+- **Exhibit photo names match the Draft tab:** a photo added to Exhibit 1 is saved as **Exhibit 1a**, the next as **Exhibit 1b**. Photos saved before as "Exhibit 1" and "Exhibit 1 (2)" are renamed to 1a and 1b the next time you open the Draft tab (only when that name is free).
+
+## What's new in v1.40
+
+- **Timeline:** **Clear** (next to Add to Timeline) empties the form: today's date, Event, no time, title or note. The date of each event now stays on one line next to its marker.
+- **Reports are view only** (the Field Notes stay editable). Click a report, or its eye button, to see it as a PDF in the same window the Files tab uses. A report sent from the Draft tab has **Send Back to Draft** (in the list and in that window) to correct it; a report made with **New Report** has **Edit**.
+- **Your own order:** drag a report by its grip (or focus the grip and press Alt+Up / Alt+Down). The order is kept on the SSD in the case's `reports-order.json`; new reports appear at the top.
+- **Same PDF as the Draft tab:** every report sent from the Draft tab, not just the latest, prints from the form it was sent with, so it looks exactly like the Draft tab's Print / PDF.
+
+## What's new in v1.39
+
+- **Sidebar:** click an operation's name to open its Details; the arrow on the right folds it.
+- **Suspects** (Details): IR Number, FBI Number, IDOC Number and Phone Number, with the description in even columns.
+- **Offenders** (Draft): **Phone Numbers** (Add Another Phone) and **Monikers / Social Media** (a name and the app it's used on). Add From Suspects brings a suspect's phone along.
+- **IUCR Code:** picking one (or typing a code in the list) fills **Offense Classification** with its description, for example *Delv: Synthetic Drugs*.
+- **Officer Report Type:** the Draft tab's heading, the PDF and the report follow it: *Supplementary Report - Purchase*.
+- **Purchase Price** (Officer's Report, above Pre-Recorded Fund Sheet): the wording (*$100.00 prerecorded 1505 funds in the form of:*), then **Add Bill** for each bill: quantity, denomination, serial number, and Recovered or Not Recovered. They print in the PDF and the report; both can be ticked off like every other line.
+- **Draft buttons:** Show All and Hide All are at the top right; **Save Changes** is with Send Draft to Reports, Print / PDF and Clear All (the other two Save buttons are gone).
+- **View-only reports:** a report sent from the Draft tab can't be edited under Reports. **Send Back to Draft** puts its form back on the Draft tab (asking first if another report is there); Send Draft to Reports then updates the same report and PDF. Reports sent before v1.39 didn't keep their form, so send them again from the Draft tab once.
+- **Close Case:** asks who closed it (from My Profile), lists the operation's other open case numbers to tick, and, unless you untick **Update the Draft tab**, fills each one's Status and How Cleared (from the disposition, changeable) and ticks the Update Information boxes you choose.
+- **Files:** a new exhibit photo is named *Exhibit 1* (no "photo"); the Added date stays on one line.

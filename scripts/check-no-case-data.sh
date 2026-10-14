@@ -3,8 +3,8 @@
 # Runs in CI before every deploy. You can also run it locally:  bash scripts/check-no-case-data.sh
 set -euo pipefail
 
-pattern='(^|/)(CaseVault-Data|CaseVault-AI|CV-AI|cases|backups|checks|models|ollama)/'
-pattern+='|(^|/)(vault|case|timeline)\.json$|(^|/)notes\.md$|-check\.json$'
+pattern='(^|/)(CaseVault-Data|CaseVault-AI|CV-AI|cases|backups|checks|models|ollama|locker|chats|branding|exports)/'
+pattern+='|(^|/)(vault|case|timeline|arrest|linkchart|mail-log|library)\.json$|(^|/)report-fields[^/]*\.json$|(^|/)notes\.md$|-check\.json$'
 pattern+='|\.(pdf|docx?|rtf|odt|xlsx?|csv|pptx?|msg|eml|pst|jpe?g|gif|bmp|tiff?|heic|webp|mp3|m4a|wav|mp4|mov|avi|zip|7z|rar|gguf|safetensors|bek)$'
 
 # App icons are the only images the repo is allowed to contain: icons/*.png|svg and, from v1.51,

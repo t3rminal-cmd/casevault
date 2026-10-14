@@ -2,7 +2,13 @@
 
 What each earlier version of CaseVault added or changed, newest first. The main [README](../README.md) describes only the current version.
 
-The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
+The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
+
+## Features (v1.121)
+
+- **Quick Links in a side panel:** the bar at the bottom of the page is gone. Click **Quick Links** (beside Reference on the home page, or the link icon in the sidebar's top row) and the links slide in from the right; × , Esc or a click outside closes them
+- **Settings:** Library and Vault were one window; they are now one **Settings** tile with a gear. Anything these notes call "Vault → …" is in Settings
+- **Sidebar:** the Closed / Archived area at the bottom is gone, so the case list has the whole height. Closed and archived cases are on the home page (CLOSED FILES, ARCHIVED); a search in the sidebar still finds them, listed under Closed and Archived
 
 ## Features (v1.120)
 

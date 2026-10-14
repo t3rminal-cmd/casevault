@@ -8,10 +8,10 @@ const M = require('../js/secure/mail.js');
 const Mem = require('../js/ai/memory.js');
 const CF = require('../js/casefiles.js');
 
-const SAMPLE = `On March 14, 2026 at 21:40, Det. John Smith and Officer Maria Lopez-Diaz responded to 1423 N Oak Street, Apt 4B, Richmond, VA 23220 regarding case no. 2026-00123.
+const SAMPLE = `On March 14, 2026 at 21:40, Det. John Doe and Officer Mary Roe-Poez responded to 1423 N Oak Street, Apt 4B, Richmond, VA 23220 regarding case no. 2026-00123.
 The suspect, DOE, Jane (DOB 04/12/1990, SSN 123-45-6789) was driving a black Honda Civic, VA plate UXK-4412, VIN 1HGCM82633A004352.
 Her cell is (804) 555-0142 and email jane.doe@example.com. Cash in the amount of $4,500 was seized. Card 4111 1111 1111 1111.
-Driver's license T12345678. The Police Department notified Richmond Circuit Court. Witness Carlos Mendez said he saw 3 bags.
+Driver's license T12345678. The Police Department notified Richmond Circuit Court. Witness Carl Roe said he saw 3 bags.
 Routing number 051000017. Report # RMS26-4417.`;
 
 test('PII: finds the usual personal and case details', () => {
@@ -28,7 +28,7 @@ test('PII: finds the usual personal and case details', () => {
   assert.deepStrictEqual(by('bank'), ['051000017']);
   assert.deepStrictEqual(by('address'), ['1423 N Oak Street, Apt 4B, Richmond, VA 23220']);
   assert.deepStrictEqual(by('casenum'), ['2026-00123', 'RMS26-4417']);
-  assert.deepStrictEqual(by('person'), ['John Smith', 'Maria Lopez-Diaz', 'DOE, Jane', 'Carlos Mendez']);
+  assert.deepStrictEqual(by('person'), ['John Doe', 'Mary Roe-Poez', 'DOE, Jane', 'Carl Roe']);
 });
 
 test('PII: leaves ordinary police wording alone', () => {
@@ -39,9 +39,9 @@ test('PII: leaves ordinary police wording alone', () => {
 });
 
 test('PII: known names from the case are found in every form, and win over patterns', () => {
-  const known = P.knownTerms({ caseObj: { client: 'Maria Lopez', number: '00123', id: '2026-00123' }, watchlist: ['Big Mike'] });
-  const found = P.scan('LOPEZ, Maria met big mike. Lopez left. Case 00123.', { known });
-  assert.deepStrictEqual(found.map((f) => [f.type, f.value]), [['known', 'LOPEZ, Maria'], ['known', 'big mike'], ['known', 'Lopez'], ['casenum', '00123']]);
+  const known = P.knownTerms({ caseObj: { client: 'Mary Roeland', number: '00123', id: '2026-00123' }, watchlist: ['Big Mike'] });
+  const found = P.scan('ROELAND, Mary met big mike. Roeland left. Case 00123.', { known });
+  assert.deepStrictEqual(found.map((f) => [f.type, f.value]), [['known', 'ROELAND, Mary'], ['known', 'big mike'], ['known', 'Roeland'], ['casenum', '00123']]);
 });
 
 test('PII: a known word inside an address or email hides the whole address or email (v1.9.1 leak)', () => {
@@ -52,8 +52,8 @@ test('PII: a known word inside an address or email hides the whole address or em
   assert.strictEqual(r.text, 'Vehicle [PLATE_1] at [ADDRESS_1] Call me at [PHONE_1] or [EMAIL_1].');
   assert.strictEqual(P.rehydrate(r.text, r.map), text);
   // The agency's city is also a word in the street address.
-  const known2 = P.knownTerms({ affiant: { name: 'Det. Sam Austin' } });
-  const t2 = 'He lives at 1420 Oak Street, Austin, TX 78701. Det. Sam Austin took the call.';
+  const known2 = P.knownTerms({ affiant: { name: 'Det. Sam Poe' } });
+  const t2 = 'He lives at 1420 Oak Street, Poe, TX 78701. Det. Sam Poe took the call.';
   const r2 = P.redact(t2, P.scan(t2, { known: known2 }));
   assert.ok(!/1420|Oak/.test(r2.text), r2.text);
   assert.ok(r2.text.startsWith('He lives at [ADDRESS_1].'), r2.text);
@@ -73,7 +73,7 @@ test('PII: redaction is consistent, reversible, and keeps locked types hidden', 
   const found = P.scan(SAMPLE);
   const everyName = new Set(found.map((f, i) => (f.type === 'person' ? i : -1)).filter((i) => i >= 0));
   const r = P.redact(SAMPLE, found, { skip: everyName });
-  assert.ok(r.text.includes('Det. John Smith'), 'an un-ticked possible name is left as it is');
+  assert.ok(r.text.includes('Det. John Doe'), 'an un-ticked possible name is left as it is');
   assert.ok(!r.text.includes('123-45-6789') && r.text.includes('[SSN_1]'));
   assert.ok(!r.text.includes('(804) 555-0142') && r.text.includes('[PHONE_1]'));
 

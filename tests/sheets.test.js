@@ -40,13 +40,13 @@ test('xlsx: one checker paragraph per row with sheet + row location', () => {
 });
 
 test('csv: raw values kept exactly (leading zeros, dates)', () => {
-  const csv = 'Badge,Officer,Date\n0012,Maria Dias,03/14/2026\n0457,"Lee, Robert",2026-03-15\n';
+  const csv = 'Badge,Officer,Date\n0012,Mary Poes,03/14/2026\n0457,"Poe, Rick",2026-03-15\n';
   const sheets = S.parse(XLSX, csv, 'roster.csv');
   assert.strictEqual(sheets.length, 1);
-  assert.deepStrictEqual(sheets[0].rows[1].cells, ['0012', 'Maria Dias', '03/14/2026']);
-  assert.deepStrictEqual(sheets[0].rows[2].cells, ['0457', 'Lee, Robert', '2026-03-15']);
+  assert.deepStrictEqual(sheets[0].rows[1].cells, ['0012', 'Mary Poes', '03/14/2026']);
+  assert.deepStrictEqual(sheets[0].rows[2].cells, ['0457', 'Poe, Rick', '2026-03-15']);
   const paras = S.paragraphs(sheets);
-  assert.strictEqual(paras[0].text, 'Sheet1 row 2: Badge=0012; Officer=Maria Dias; Date=03/14/2026');
+  assert.strictEqual(paras[0].text, 'Sheet1 row 2: Badge=0012; Officer=Mary Poes; Date=03/14/2026');
 });
 
 test('checker flags point at the sheet and row', () => {

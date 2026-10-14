@@ -44,10 +44,10 @@ function answer(prompt) {
 // A canned first draft that only uses facts present in the prompt and marks the rest [CONFIRM: ...].
 function draftFor(prompt) {
   const number = (/Case number: (.+)/.exec(prompt) || [])[1] || '[CONFIRM: case number]';
-  const dias = /Officer Maria Dias/.test(prompt) ? 'Officer Maria Dias' : '[CONFIRM: responding officer]';
+  const dias = /Officer Mary Poes/.test(prompt) ? 'Officer Mary Poes' : '[CONFIRM: responding officer]';
   return `# AFFIDAVIT IN SUPPORT OF SEARCH WARRANT\n\nCase No. ${number}\n\nI, [CONFIRM: affiant name and rank], being duly sworn, state:\n\n` +
     `1. On 03/14/2026 at 2140 hours, ${dias} responded to 1420 Oak St. regarding shots fired.\n` +
-    '2. Witness Robert Lee stated he heard two shots.\n\n' +
+    '2. Witness Rick Poe stated he heard two shots.\n\n' +
     '______________________________\n[CONFIRM: affiant signature and badge number]\n';
 }
 

@@ -1,7 +1,7 @@
 /* CaseVault — spreadsheets (.xlsx, .xls, .ods, .csv) via the bundled SheetJS library.
  *
  * Used by the file preview (one table per sheet) and by the consistency checker, which gets one
- * "paragraph" per row: "Sheet1 row 5: Name=Maria Diaz; Date=03/14/2026", with the sheet name and
+ * "paragraph" per row: "Sheet1 row 5: Name=Mary Poez; Date=03/14/2026", with the sheet name and
  * row number kept as the location so click-to-jump works.
  *
  * SheetJS is loaded lazily from vendor/sheetjs/ the first time a spreadsheet is opened.
