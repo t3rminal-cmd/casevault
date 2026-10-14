@@ -1,9 +1,9 @@
 /* CaseVault — the department letterhead (v1.85).
  *
  * A clickable square for the department logo, and the Department Header to its right (up to four
- * lines: the department, the division or unit, an address and phone). It sits at the top of the
- * Draft tab (the Report), the Arrest details tab and the Link Chart tab, and goes across the top of
- * their PDFs. One letterhead for the whole vault: the logo is kept as CaseVault-Data\branding\logo.jpg
+ * lines: the department, the division or unit, an address and phone). It goes across the top of the
+ * Report, Arrest Report and Link Chart PDFs. v1.118: edited in Vault → My Profile; those tabs show
+ * one slim line with Edit Letterhead. One letterhead for the whole vault: the logo is kept as CaseVault-Data\branding\logo.jpg
  * and the header text in the vault's settings. Nothing is built in: no agency's name or seal.
  * Uses the small UI kit app.js exposes as window.CaseVaultUI.
  */
@@ -102,7 +102,31 @@
         h('span', { class: 'muted small' }, 'On the Report, Arrest Report and Link Chart PDFs. One letterhead for every case.')));
   }
 
+  /** v1.118: one slim line for the top of a tab: the logo, the header's first line, Edit Letterhead. */
+  function summary() {
+    const { h, icon } = ui;
+    const thumb = h('span', { class: 'lh-thumb' }, icon('image'));
+    const line = h('span', { class: 'lh-sum-text' });
+    const draw = () => {
+      const first = headerText().split('\n').map((x) => x.trim()).find(Boolean);
+      line.replaceChildren(first ? h('span', {}, h('span', { class: 'muted small' }, 'Letterhead: '), h('strong', {}, first)) : h('span', { class: 'muted' }, 'No letterhead yet: the PDFs have no department header.'));
+      Vault.readLetterheadLogo().then((f) => {
+        thumb.replaceChildren(f ? Object.assign(h('img', { alt: 'Department logo' }), { src: URL.createObjectURL(f) }) : icon('image'));
+      }).catch(() => {});
+    };
+    draw();
+    const edit = h('button', { class: 'btn small', type: 'button', icon: 'pencil-square', title: 'The department logo and header on the Report, Arrest Report and Link Chart PDFs (also in Vault → My Profile)', onclick: async () => {
+      await ui.openDialog((close) => h('div', { class: 'lh-dialog' },
+        h('h2', { icon: 'image' }, 'Letterhead'),
+        h('p', { class: 'muted small' }, 'One letterhead for every case: on the Report, Arrest Report and Link Chart PDFs. Saved as you type.'),
+        editor(),
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close(true) }, 'Done'))));
+      draw();
+    } }, 'Edit Letterhead');
+    return h('div', { class: 'lh-summary', 'data-ro-ok': 'true' }, thumb, line, h('div', { class: 'spacer' }), edit);
+  }
+
   function init(kit) { ui = kit; }
 
-  root.CVLetterhead = { init, editor, forPdf, toJpeg };
+  root.CVLetterhead = { init, editor, summary, forPdf, toJpeg };
 })(this);

@@ -7,11 +7,14 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
     for (let i = 0; i < 4; i++) { const c = await Vault.createCase({ number: `EX-${700 + i}`, subject: `Jane Roe ${i}` }); await Vault.archiveCase(c.id, false, 'nolle', 'test'); }
   });
   await p.evaluate(() => { document.querySelectorAll('.toast').forEach((t) => t.remove()); location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(1000);
+  // v1.118: folded, the Closed / Archived row is as tall as the slim Quick Links bar.
+  const hs0 = await p.evaluate(() => [document.getElementById('ql-footer').getBoundingClientRect().height, document.getElementById('side-bottom').getBoundingClientRect().height]);
+  ok(Math.abs(hs0[0] - hs0[1]) < 1.5, `folded: Quick Links and the bottom area are the same height (${hs0.map(Math.round)})`);
   await p.evaluate(() => { document.getElementById('closed-cases').open = true; document.getElementById('archived-cases').open = true; document.querySelectorAll('#closed-list details').forEach((d) => { d.open = true; }); });
   await p.waitForTimeout(400);
   const hs = await p.evaluate(() => [document.getElementById('ql-footer').getBoundingClientRect().height, document.getElementById('side-bottom').getBoundingClientRect().height, getComputedStyle(document.body).getPropertyValue('--cv-panel-h')]);
   console.log('heights', hs);
-  ok(Math.abs(hs[0] - hs[1]) < 1.5, 'Quick Links and the bottom area are the same height');
+  ok(hs[1] >= hs[0] - 1 && hs[1] > 150, 'open: the bottom area gets room, at least as tall as Quick Links');
   ok(!(await p.$('.panel-grip, .panel-lock')), 'no drag bars or padlocks');
   // Scroll the bottom area a little with the wheel; it should settle on a whole card.
   const sb = await p.$('#side-bottom'); const box = await sb.boundingBox();
@@ -38,5 +41,5 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   await p.locator('#side-bottom').screenshot({ path: process.env.SP + '/v188/sidebar.png' });
   await p.setViewportSize({ width: 1920, height: 1080 }); await p.waitForTimeout(600);
   const hs2 = await p.evaluate(() => [document.getElementById('ql-footer').getBoundingClientRect().height, document.getElementById('side-bottom').getBoundingClientRect().height]);
-  ok(Math.abs(hs2[0] - hs2[1]) < 1.5, `still equal at 1920 (${hs2.map(Math.round)})`);
+  ok(hs2[1] >= hs2[0] - 1 && hs2[1] > 150, `still roomy at 1920 (${hs2.map(Math.round)})`);
   console.log('errors', errs); await b.close(); })();

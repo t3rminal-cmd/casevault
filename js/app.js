@@ -124,6 +124,8 @@
   function toast(message, kind = 'info', ms = 4000) {
     if (kind === 'error') noteProblem('message', typeof message === 'string' ? message : (message && message.textContent) || '');
     const el = h('div', { class: `toast ${kind}`, role: kind === 'error' ? 'alert' : 'status' }, message);
+    // v1.118: a message that stays a while can be closed right away.
+    if (ms >= 6000) el.append(h('button', { type: 'button', class: 'toast-close', title: 'Close', 'aria-label': 'Close this message', onclick: () => el.remove() }, '×'));
     $('#toasts').append(el);
     setTimeout(() => el.remove(), ms);
     return el;
@@ -551,7 +553,8 @@
       let told = '';
       try { told = localStorage.getItem('cv-backup-nag') || ''; } catch { /* not kept: say it */ }
       if (told !== Vault.localDay()) {
-        warn.push(`${fullBackupText()}. Back up the whole vault to a second drive: ⋮ → Vault → Backups.`);
+        // v1.118: on its own, shorter, and not in red: the banner's No Backup chip keeps saying it.
+        setTimeout(() => toast(`${fullBackupText()}. Back up the whole vault to a second drive: ⋮ → Vault → Backups.`, 'warn', 7000), warn.length ? 600 : 0);
         try { localStorage.setItem('cv-backup-nag', Vault.localDay()); } catch { /* not kept */ }
       }
     }
@@ -1040,7 +1043,7 @@
     const label = sum.querySelector('.sec-label');
     const text = h('span', { class: 'sec-text' });
     label.before(text);
-    text.append(label, h('span', { class: 'sec-meta muted' }));
+    text.append(label, h('span', { class: 'sec-short' }, sec === '#closed-cases' ? 'CLOSED' : 'ARCHIVED'), h('span', { class: 'sec-meta muted' })); // v1.118: the short name in the slim row
     sum.append(h('span', { class: 'sec-chev' }, I('chevron-down')));
   }
 
@@ -1390,7 +1393,16 @@
     if (!foot) return;
     if (footerRO) { footerRO.disconnect(); footerRO = null; }
     if (!on) { foot.hidden = true; foot.replaceChildren(); document.body.style.removeProperty('--ql-dock-h'); return; }
-    foot.replaceChildren(h('span', { class: 'ql-foot-title' }, I('link-45deg'), h('span', {}, 'Quick Links')), CVReferenceUI.quickLinks({ footer: true }));
+    // v1.118: a slim bar (one row: the tabs and the links side by side) unless opened with More.
+    const slim = () => { try { return localStorage.getItem('cv-ql-open') !== '1'; } catch { return true; } };
+    const toggle = h('button', { type: 'button', class: 'btn small ghost ql-more', 'aria-expanded': String(!slim()), title: 'Show the links in full (Arrange, every link at once) or back to one row' },
+      I(slim() ? 'chevron-up' : 'chevron-down'), h('span', {}, slim() ? 'More' : 'Less'));
+    toggle.addEventListener('click', () => {
+      try { localStorage.setItem('cv-ql-open', slim() ? '1' : '0'); } catch { /* this visit only */ }
+      quickFooter(true);
+    });
+    foot.classList.toggle('ql-slim', slim());
+    foot.replaceChildren(h('span', { class: 'ql-foot-title' }, I('link-45deg'), h('span', {}, 'Quick Links')), CVReferenceUI.quickLinks({ footer: true }), toggle);
     foot.hidden = false;
     requestAnimationFrame(panelHeight);
     const setH = () => document.body.style.setProperty('--ql-dock-h', foot.hidden ? '0px' : `${Math.ceil(foot.getBoundingClientRect().height)}px`);
@@ -1689,7 +1701,8 @@
             if (p.whole) return [h('td', { class: 'subject-cell name-cell', colspan: 3, title: 'Not a single person\'s name, so it isn\'t split' }, p.last)];
             return [h('td', { class: 'subject-cell name-cell name-last' }, p.last), h('td', { class: 'name-cell' }, p.first), h('td', { class: 'name-cell' }, p.middle || h('span', { class: 'muted' }, '—'))];
           })(),
-          h('td', {}, op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}` }, opLabel(op)) : h('span', { class: 'muted' }, '—')),
+          // v1.118: the Mission's number on one line; its name in the hover box.
+          h('td', { class: 'gen-mission' }, op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, title: opLabel(op) }, op.number || op.name || 'Mission') : h('span', { class: 'muted' }, '—')),
           h('td', {}, statusPill(arch ? 'Archived' : c.status)),
           h('td', { class: 'nowrap date-cell' }, c.opened ? fmtDate(c.opened) : '—'),
           h('td', { class: 'nowrap age-cell' }, (() => { const o = openedAge(c.opened); return o ? h('span', { title: `${o.days} day${o.days === 1 ? '' : 's'} since it was opened` }, o.ageLong) : '—'; })()),
@@ -1793,7 +1806,9 @@
         h('div', { class: 'op-open-head' }, open.href ? h('a', { href: open.href, class: 'op-open-name' }, h('strong', {}, open.label || open.name)) : h('strong', {}, open.label || open.name),
           h('span', { class: 'muted small' }, `${open.group.length} case number${open.group.length === 1 ? '' : 's'}`)),
         h('div', { class: 'op-open-cases' }, open.group.map((c) => overviewCard(c)))) : null;
-      box.replaceChildren(...[panelHead(title, desc, action), list.length ? tiles : h('p', { class: 'muted empty-note' }, I(empty[0]), h('span', {}, empty[1])), inside].filter(Boolean));
+      // v1.118: an empty section is just its header line, saying so.
+      box.classList.toggle('ov-empty', !list.length);
+      box.replaceChildren(...[panelHead(title, list.length ? desc : empty[1], action), list.length ? tiles : null, inside].filter(Boolean));
     };
     st.close = () => { if (st.open && box.isConnected) { st.open = ''; draw(); } };
     if (st.open && !list.some((o) => o.k === st.open)) st.open = '';
@@ -1896,7 +1911,9 @@
           // v1.78: New Mission right here, beside All Missions.
           h('button', { class: 'btn small ov-btn-mission', type: 'button', icon: 'plus-lg', onclick: async () => { const op = await operationDialog(); if (op) { renderCaseList(); location.hash = `#/operation/${encodeURIComponent(op.id)}`; } } }, 'New Mission'),
           h('a', { class: 'btn small ov-btn-mission', href: '#/operations', icon: 'folder-mission' }, 'All Missions'))),
-        list.length ? tiles : h('p', { class: 'muted empty-note' }, I('folder-mission'), h('span', {}, 'No Missions yet. New Mission (above) makes one.')), opBox ? null : inside].filter(Boolean));
+        list.length ? tiles : null, opBox ? null : inside].filter(Boolean));
+      box.classList.toggle('ov-empty', !list.length); // v1.118: no open Mission: just the header line
+      if (!list.length) { const d = box.querySelector('.ov-desc'); if (d) d.textContent = 'No open Missions. New Mission makes one; closed ones are under Closed Files.'; }
       if (opBox) { opBox.hidden = !inside; opBox.replaceChildren(...(inside ? [inside] : [])); }
       if (tlBox) drawTimeline(open);
     };
@@ -2255,7 +2272,7 @@
    * screen preference of this PC (localStorage), never case data. */
   const FOLD_STORE = 'casevault-folded-sections';
   const foldedSet = () => { try { return new Set(JSON.parse(localStorage.getItem(FOLD_STORE) || '[]')); } catch { return new Set(); } };
-  function makeFoldable(section, key, { open: startOpen = false } = {}) { // v1.59: every form starts folded
+  function makeFoldable(section, key, { open: startOpen = false, count = null } = {}) { // v1.59: every form starts folded
     const head = section.querySelector(':scope > h3');
     if (!head || section.querySelector(':scope > .fold-body')) return section;
     const body = h('div', { class: 'fold-body' });
@@ -2263,8 +2280,12 @@
     const btn = h('button', { class: 'icon-btn fold-btn', type: 'button' });
     const row = h('div', { class: 'fold-head' });
     head.replaceWith(row);
-    row.append(head, h('div', { class: 'spacer' }), btn);
+    // v1.118: how many entries, beside the title (kept up to date as entries are added or removed).
+    const pill = count ? h('span', { class: 'fold-count count-pill', 'aria-label': 'Entries' }) : null;
+    const recount = () => { if (!pill) return; const n = Number(count()) || 0; pill.textContent = String(n); pill.classList.toggle('zero', !n); };
+    row.append(...[head, pill, h('div', { class: 'spacer' }), btn].filter(Boolean));
     section.append(body);
+    if (pill) { recount(); new MutationObserver(recount).observe(body, { childList: true, subtree: true }); }
     section.classList.add('foldable');
     const set = foldedSet();
     let folded = set.has(key) || (!startOpen && !set.has(`open:${key}`));
@@ -2558,15 +2579,16 @@
         h('p', { class: 'muted span-2 small' },
           `Folder: ${CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}`)}`
           + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),
-      makeFoldable(partnersSection(c, save), 'overview-partners'),
+      makeFoldable(partnersSection(c, save), 'overview-partners', { count: () => (c.partners || []).length }),
       // ---- Case Overview: shared by the operation's case numbers (v1.27)
       h('hr', { class: 'overview-sep' }),
       h('div', { class: 'overview-head' }, h('h2', {}, 'Case Overview'),
         h('p', { class: 'muted small' }, members.length > 1 ? `Suspects, contacts and deconfliction for the whole Mission: the same on all ${members.length} case numbers.` : op ? 'Suspects, contacts and deconfliction. Case numbers added to this Mission share them.' : 'Suspects, contacts and deconfliction for this case.')),
-      makeFoldable(suspectsSection(c, save), 'overview-suspects'),
-      makeFoldable(contactsSection(c, save), 'overview-contacts'),
-      makeFoldable(deconflictionSection(c, save), 'overview-deconfliction'),
-      makeFoldable(caseHistorySection(c, archived ? null : save), 'case-history'),
+      // v1.118: each with how many entries it holds, so you can see without opening it.
+      makeFoldable(suspectsSection(c, save), 'overview-suspects', { count: () => (c.suspects || []).length }),
+      makeFoldable(contactsSection(c, save), 'overview-contacts', { count: () => { const k = c.contacts || {}; const has = (o) => !!o && Object.values(o).some((v) => String(v || '').trim()); return (has(k.officer) ? 1 : 0) + (has(k.prosecutor) ? 1 : 0) + (k.others || []).filter(has).length; } }),
+      makeFoldable(deconflictionSection(c, save), 'overview-deconfliction', { count: () => (c.deconfliction || []).length }),
+      makeFoldable(caseHistorySection(c, archived ? null : save), 'case-history', { count: () => (c.activity || []).length }),
       // Everything saves by itself as you type; the button saves now and says so.
       // (An archived case gets an empty string here: a null would show as the word "null".)
       archived ? '' : h('div', { class: 'details-save' },
@@ -3185,6 +3207,8 @@
       h('h3', {}, 'My Profile'),
       h('p', { class: 'muted small explain' }, 'Filled into templates wherever they say ', h('code', {}, '{{affiant.name}}'), ' and so on. Anything left empty becomes a [CONFIRM: ...] placeholder. Stored in vault.json on the SSD.'),
       h('div', { class: 'affiant-grid' }, rows),
+      // v1.118: the department letterhead lives here (the Draft, Arrest and Link Chart tabs show one line).
+      window.CVLetterhead ? h('div', { class: 'profile-letterhead' }, h('h4', {}, 'Letterhead'), CVLetterhead.editor()) : null,
       h('div', { class: 'row profile-actions' }, h('div', { class: 'spacer' }),
         h('button', { class: 'btn primary vault-save', type: 'button', icon: 'save', title: 'Save your profile to vault.json on the SSD. Each box also saves when you leave it.', onclick: async () => {
           try { await save(); toast('Profile saved to the SSD.', 'success'); } catch { /* reported by Save */ }
@@ -3429,6 +3453,8 @@
   try { for (const k of ['cv-side-bottom-h', 'cv-side-bottom-h-lock', 'cv-ql-h', 'cv-ql-h-lock']) localStorage.removeItem(k); } catch { /* nothing kept */ }
   function panelHeight() {
     const foot = $('#ql-footer');
+    // v1.118: with the slim bar, the sidebar's Closed / Archived row is as tall as the bar.
+    if (foot && !foot.hidden && foot.classList.contains('ql-slim')) { const hh = Math.ceil(foot.getBoundingClientRect().height); if (hh > 20) document.body.style.setProperty('--cv-panel-h', `${hh}px`); return; }
     const tile = foot && !foot.hidden ? foot.querySelector('.quick-link') : null;
     if (!tile) return;
     const grid = tile.parentElement;

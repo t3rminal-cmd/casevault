@@ -8,9 +8,9 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   await p.evaluate((id) => { location.hash = `#/case/${id}/draft`; }, ids.c); await p.waitForTimeout(1500);
   await p.click('.rf-actions button:has-text("Clear All")'); await p.waitForTimeout(400);
   await p.click('#dialog[open] button.danger'); await p.waitForTimeout(1500);
-  ok(!(await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'report-fields.json')).offense, ids.c)), 'Clear All empties the form');
+  ok(!(await p.evaluate(async (id) => (await window.__readCaseJSON(id, 'report-fields.json')).offense, ids.c)), 'Clear All empties the form');
   await p.click('.toast .toast-undo'); await p.waitForTimeout(1500);
-  ok(await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'report-fields.json')).offense, ids.c) === 'Possession of a controlled substance', 'Undo after Clear All brings it back');
+  ok(await p.evaluate(async (id) => (await window.__readCaseJSON(id, 'report-fields.json')).offense, ids.c) === 'Possession of a controlled substance', 'Undo after Clear All brings it back');
   await clearToasts();
   // 3. Edit a note
   await p.evaluate((id) => { location.hash = `#/case/${id}/details`; }, ids.c); await p.waitForTimeout(1200);

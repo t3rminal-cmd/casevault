@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes for each version are also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md).
 
+## Features (v1.117)
+
+- **Timeline colours by suspect:** each event can name a **Suspect** and take a **Colour**; picking a suspect gives their colour. A key of the suspects above the list shows each one's colour: click a name to see only their events, click the colour to change it on all of them. The small timelines on the Details tab and the Mission page use the colours too
+- **Add Suspects to This Report** (Draft tab): Name, Role and In Report each in their own column, so the roles line up
+
 ## Features (v1.116)
 
 - **Landing page: CLOSED FILES and ARCHIVED sections** under Other Files and the Secure Locker. Closed Missions, the closed case numbers of Missions still going, and closed cases not in a Mission (by year) are in CLOSED FILES. Archived cases are in ARCHIVED, by reason (EXPIRED, NOLLE PROSEQUI, PROSECUTION). Mission Files and General Files now show open work only. **All Closed** and **All Archived** open the full list

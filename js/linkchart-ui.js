@@ -476,7 +476,7 @@
     };
 
     panel.replaceChildren(h('section', { class: 'lc' },
-      archived || !root.CVLetterhead ? null : root.CVLetterhead.editor(), // v1.85: the letterhead on the PDF
+      archived || !root.CVLetterhead ? null : root.CVLetterhead.summary(), // v1.85: the letterhead on the PDF (v1.118: one line)
       h('div', { class: 'lc-head cv-boxed' },
         h('label', { class: 'field lc-title' }, h('span', {}, 'Chart Title'), title),
         h('div', { class: 'lc-head-actions' }, status,

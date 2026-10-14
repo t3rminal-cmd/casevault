@@ -35,7 +35,7 @@ const SP = process.env.SP + '/v1108';
   ok(/statistical purposes only.*Federal Case Number FJ-88/s.test(await p.textContent('#dialog[open]')), 'the dialog shows the summary it writes, with the Federal Case Number');
   await p.locator('#dialog[open]').screenshot({ path: `${SP}/dialog.png` }).catch(() => {});
   await p.click('#dialog[open] button:has-text("See DEA 6")'); await p.waitForTimeout(1500);
-  const saved = await p.evaluate(async (i) => Vault.readCaseJSON(i, 'report-fields.json'), id);
+  const saved = await p.evaluate(async (i) => window.__readCaseJSON(i, 'report-fields.json'), id);
   const SEE = 'See DEA 6 for further information';
   ok(saved.victimsList[0].name === SEE && saved.offendersList[0].name === SEE && saved.charges[0].description === SEE && saved.evidenceNote === SEE && saved.evidence.length === 0,
     'Victims, Offenders, Charges and Evidence say See DEA 6 (no exhibit number used)');

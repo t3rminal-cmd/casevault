@@ -16,7 +16,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   const s2 = await st();
   ok(!s2.pending && s2.include, `Pending unticked by its word, Court Date still included ${JSON.stringify(s2)}`);
   await p.click('.rf-pending input'); await p.waitForTimeout(1200);
-  const saved = await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'report-fields.json')), ids.c);
+  const saved = await p.evaluate(async (id) => (await window.__readCaseJSON(id, 'report-fields.json')), ids.c);
   ok(saved.courtDate === 'Pending' && !(saved.hidden || []).includes('courtDate'), 'saved: Court Date Pending and still on the report');
   // Offender CB Number: DNA
   const cb = p.locator('.rf-items input').filter({ has: p.locator('xpath=.') }).first();
@@ -26,7 +26,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   ok(items.some((t) => /^DNA/.test(t)), `CB Number offers DNA (${items.join(' | ')})`);
   await cbInput.asElement().evaluate((el) => el.closest('.combo').querySelector('.combo-list li').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))); await p.waitForTimeout(200);
   await cbInput.asElement().evaluate((el) => { const li = el.closest('.combo').querySelector('.combo-list li'); if (li && !el.value) li.click(); }); await p.waitForTimeout(1200);
-  const off = await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'report-fields.json')).offendersList[0].cbNumber, ids.c);
+  const off = await p.evaluate(async (id) => (await window.__readCaseJSON(id, 'report-fields.json')).offendersList[0].cbNumber, ids.c);
   ok(off === 'DNA', `offender CB Number saved as DNA (${off})`);
   await p.screenshot({ path: process.env.SP + '/v192/draft.png' });
   // Arrest tab CB #
@@ -38,7 +38,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   if (ab.asElement()) {
     await ab.asElement().evaluate((el) => el.closest('.combo').querySelector('.combo-toggle').click()); await p.waitForTimeout(300);
     await ab.asElement().evaluate((el) => { const li = el.closest('.combo').querySelector('.combo-list li'); li.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); if (!el.value) li.click(); }); await p.waitForTimeout(1500);
-    const ar = await p.evaluate(async (id) => (await Vault.readCaseJSON(id, 'arrest.json')), ids.c);
+    const ar = await p.evaluate(async (id) => (await window.__readCaseJSON(id, 'arrest.json')), ids.c);
     const v = ar && (ar.bookingNumber || (ar.arrestees && ar.arrestees[0] && ar.arrestees[0].bookingNumber));
     ok(v === 'DNA', `Arrest CB # saved as DNA (${v})`);
   } else ok(false, 'Arrest CB # box not found');

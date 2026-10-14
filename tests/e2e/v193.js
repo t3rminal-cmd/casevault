@@ -1,9 +1,6 @@
 const boot = require('./boot');
 const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
 (async () => { const { b, p, ids, errs } = await boot(1366, 900);
-  // Reading report-fields.json while the app is still writing it fails with NotReadableError under
-  // load: wait for the saves, and try again for a moment if the file is busy.
-  await p.evaluate(() => { window.__readRF = async (id) => { for (let i = 0; ; i += 1) { try { await window.CaseVaultUI.Save.flushAll(); return await Vault.readCaseJSON(id, 'report-fields.json'); } catch (e) { if (i >= 8 || e.name !== 'NotReadableError') throw e; await new Promise((r) => setTimeout(r, 250)); } } }; });
   const open = () => p.evaluate(() => { document.querySelectorAll('details').forEach((d) => { d.open = true; }); document.querySelectorAll('[aria-expanded="false"]').forEach((x) => { if (x.closest('main')) x.click(); }); });
   const RF = await p.evaluate(() => ({ lines: CVReportFields.OPTIONAL_LINES, lists: CVReportFields.OPTIONAL_LISTS }));
   const hidden = [...RF.lines, ...RF.lists.filter((k) => k !== 'personnel' && k !== 'charges')];
@@ -18,15 +15,15 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   const desc = await st.evaluate((el) => { const li = el.closest('.combo').querySelector('.combo-list li'); li.click(); return null; });
   await p.waitForTimeout(800);
   const chargeDesc = await p.inputValue('input[aria-label="Charge 1 Statute Description"], textarea[aria-label="Charge 1 Statute Description"]');
-  const offense = await p.evaluate(() => document.querySelector('.rf-offense input, [aria-label="Offense Classification / Last Report"]') && null) || await p.evaluate(async (id) => (await window.__readRF(id)).offense, ids.c);
+  const offense = await p.evaluate(() => document.querySelector('.rf-offense input, [aria-label="Offense Classification / Last Report"]') && null) || await p.evaluate(async (id) => (await window.__readCaseJSON(id, 'report-fields.json')).offense, ids.c);
   await p.waitForTimeout(800);
-  const saved = await p.evaluate(async (id) => (await window.__readRF(id)), ids.c);
+  const saved = await p.evaluate(async (id) => (await window.__readCaseJSON(id, 'report-fields.json')), ids.c);
   ok(chargeDesc && saved.offense === chargeDesc, `Offense Classification = "${saved.offense}" (Statute Description "${chargeDesc}")`);
   // v1.110: a UCR pick afterwards writes the IUCR description instead (it wins over the statute wording)
   const ucr = await p.evaluateHandle(() => [...document.querySelectorAll('main .field')].find((f) => /IUCR|UCR/.test(f.querySelector('span').textContent)).querySelector('input'));
   await ucr.asElement().evaluate((el) => el.closest('.combo').querySelector('.combo-toggle').click()); await p.waitForTimeout(300);
   await ucr.asElement().evaluate((el) => el.closest('.combo').querySelector('.combo-list li').click()); await p.waitForTimeout(1200);
-  const s2 = await p.evaluate(async (id) => (await window.__readRF(id)), ids.c);
+  const s2 = await p.evaluate(async (id) => (await window.__readCaseJSON(id, 'report-fields.json')), ids.c);
   const ucrDesc = await p.evaluate((code) => CVRefData.UCR_CODES.flatMap((g) => g.codes).find(([c]) => c === code)[1], s2.ucr);
   ok(s2.ucr && s2.offense === ucrDesc && s2.offenseFrom === 'ucr', `after an IUCR pick (${s2.ucr}) the offense is its description: ${s2.offense}`);
   // 3. Officer's Report: no personnel -> no green check; add a filled officer -> green

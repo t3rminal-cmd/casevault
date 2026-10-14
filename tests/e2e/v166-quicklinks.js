@@ -4,6 +4,7 @@ const SP = process.env.SP + '/v166'; const TAG = process.env.TAG || 'ql';
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: +(process.env.W || 1366), height: 768 } })).newPage(); const errs = [];
   p.on('pageerror', (e) => errs.push(e.message));
   await p.addInitScript(() => { window.__pick = async () => (await navigator.storage.getDirectory()).getDirectoryHandle('Q' + Date.now(), { create: true }); });
+  await p.addInitScript(() => { try { localStorage.setItem('cv-ql-open', '1'); } catch { /* fine */ } }); // v1.118: the full Quick Links panel
   await p.goto('http://localhost:8765/');
   await p.evaluate(() => { window.showDirectoryPicker = window.__pick; });
   await p.click('text=Choose folder…'); await p.click('text=Create vault here'); await p.waitForSelector('#gate', { state: 'hidden' });

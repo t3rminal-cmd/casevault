@@ -24,14 +24,14 @@ const boot = require('./boot');
   await p.evaluate(() => document.querySelectorAll('.rf-fold[aria-expanded="false"]').forEach((b) => b.click())); await p.waitForTimeout(300);
   await p.click('button:has-text("Add From Suspects")').catch((e) => console.log('no add-from', e.message.slice(0, 60))); await p.waitForTimeout(800);
   await p.evaluate(() => document.querySelectorAll('dialog[open] button').forEach((b) => { if (/add|copy/i.test(b.textContent) && !/cancel/i.test(b.textContent)) b.click(); })); await p.waitForTimeout(800);
-  console.log('offender', await p.evaluate(async (i) => { await new Promise((r) => setTimeout(r, 1500)); const d = await Vault.readCaseJSON(i, 'report-fields.json'); const o = (d.offendersList || [])[0] || {}; return JSON.stringify({ name: o.name, hairStyle: o.hairStyle, ir: o.irNumber, socials: o.socials }); }, ids.c));
+  console.log('offender', await p.evaluate(async (i) => { await new Promise((r) => setTimeout(r, 1500)); const d = await window.__readCaseJSON(i, 'report-fields.json'); const o = (d.offendersList || [])[0] || {}; return JSON.stringify({ name: o.name, hairStyle: o.hairStyle, ir: o.irNumber, socials: o.socials }); }, ids.c));
   console.log('offender labels', await p.evaluate(() => [...document.querySelectorAll('.rf-items .field > span')].map((s) => s.textContent.trim()).filter((t) => /Hair Style|IR Number|IDOC|FBI/.test(t)).slice(0, 6).join(',')));
   // DNA on Arrest Unit / Residence, Pending court
   const combos = await p.evaluate(() => ['Arrest Unit', 'If Residence, Where'].map((l) => { const f = [...document.querySelectorAll('.rf-section .field')].find((x) => x.textContent.trim().startsWith(l)); return f ? !!f.querySelector('.combo, .combo-toggle') : 'missing'; }));
   console.log('DNA combos', combos);
   await p.check('.rf-pending input'); await p.waitForTimeout(500);
-  console.log('court pending', await p.evaluate(async (i) => { await new Promise((r) => setTimeout(r, 1500)); return (await Vault.readCaseJSON(i, 'report-fields.json')).courtDate; }, ids.c));
+  console.log('court pending', await p.evaluate(async (i) => { await new Promise((r) => setTimeout(r, 1500)); return (await window.__readCaseJSON(i, 'report-fields.json')).courtDate; }, ids.c));
   console.log('adderall', await p.evaluate(() => CVReportFields.DRUG_TYPES.includes('Adderall')));
   console.log('switch widths', await p.evaluate(() => [...document.querySelectorAll('select.rf-switch')].map((s) => `${s.offsetWidth}/${s.scrollWidth}`).join(' ')));
-  console.log('pdf court line', await p.evaluate(async (i) => { const d = CVReportFields.normalize(await Vault.readCaseJSON(i, 'report-fields.json')); return CVReportFields.toMarkdown(d).split('\n').filter((l) => /Court/.test(l)).join(' | '); }, ids.c));
+  console.log('pdf court line', await p.evaluate(async (i) => { const d = CVReportFields.normalize(await window.__readCaseJSON(i, 'report-fields.json')); return CVReportFields.toMarkdown(d).split('\n').filter((l) => /Court/.test(l)).join(' | '); }, ids.c));
   console.log('errors', errs); await b.close(); })();

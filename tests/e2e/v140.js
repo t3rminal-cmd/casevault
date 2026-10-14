@@ -4,6 +4,7 @@ const SP = process.env.SP;
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1366, height: 800 } })).newPage(); await require("./openall.js")(p); const errs = [];
   p.on('pageerror', (e) => errs.push(e.stack.slice(0, 300))); p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load|ERR_/.test(m.text())) errs.push(m.text().slice(0, 160)); });
   await p.addInitScript(() => { window.showDirectoryPicker = async () => (await navigator.storage.getDirectory()).getDirectoryHandle('V40' + Date.now(), { create: true }); });
+  await require('./boot.js').readHelper(p);
   await p.goto('http://localhost:8765/'); await p.click('text=Choose folder…'); await p.click('text=Create vault here'); await p.waitForSelector('#gate', { state: 'hidden' });
   await p.click('.quick-actions button:has-text("New Case")'); await (async (T) => { await p.fill('input[name=subject]', T); await p.evaluate(async (t) => { let op = Vault.listOperations().find((o) => o.name === t); if (!op) op = await Vault.createOperation({ number: 'OP-' + String(Vault.listOperations().length + 1).padStart(3, '0'), name: t }); const s = document.querySelector('select[name=operationId]'); if (![...s.options].some((o) => o.value === op.id)) s.add(new Option(op.number + ' - ' + op.name, op.id)); s.value = op.id; s.dispatchEvent(new Event('change')); }, T); })('Alpha Op'); await p.fill('input[name=number]', 'JH1'); await p.click('text=Create case'); for (let i = 0; i < 4; i++) { await p.waitForTimeout(150); if (await p.isVisible('.subject-warn')) await p.click('.subject-warn .btn.primary'); else break; } await p.waitForSelector('#case-title');
   const id = await p.evaluate(() => Vault.data.cases[0].id);
@@ -44,7 +45,7 @@ const SP = process.env.SP;
   console.log('5 after alt-down:', await rowsOf());
   const src = p.locator('.reports-table tbody tr').nth(2); const dst = p.locator('.reports-table tbody tr').nth(0);
   await src.dragTo(dst, { targetPosition: { x: 50, y: 3 } }); await p.waitForTimeout(800);
-  console.log('  after drag last->top:', await rowsOf(), '| file:', JSON.stringify(await p.evaluate((id) => Vault.readCaseJSON(id, 'reports-order.json'), id)));
+  console.log('  after drag last->top:', await rowsOf(), '| file:', JSON.stringify(await p.evaluate((id) => window.__readCaseJSON(id, 'reports-order.json'), id)));
   // send back from list
   await p.click('.reports-table tr[data-slug="supplementary-report"] button[title^="Send Back"]'); await p.waitForTimeout(400);
   const ok = await p.$('.dialog button:has-text("Send Back")'); if (ok) await ok.click();

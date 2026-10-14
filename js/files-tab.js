@@ -317,7 +317,8 @@
         h('div', { class: 'files-layout' }, nav,
           h('div', { class: 'files-main' }, drop, input,
             h('div', { class: 'files-where-row' },
-              h('p', { class: 'muted small files-where' }, `${shown.length} file${shown.length === 1 ? '' : 's'} · ${where}${dragRows ? ' · drag rows to arrange them' : ''}${!archived ? ' · drag a file onto a folder to move it' : ''}`),
+              // v1.118: the folder in words; where it is on the SSD in the hover box.
+              h('p', { class: 'muted small files-where', title: `On the SSD: CaseVault-Data\\${where}` }, `${shown.length} file${shown.length === 1 ? '' : 's'} in ${!current ? 'All Documents' : current === 'photos' ? 'Photos' : current === 'unsorted' ? 'Unsorted' : current.replace('/', ' › ')}${dragRows && shown.length > 1 ? ' · drag rows to arrange them' : ''}${!archived && shown.length ? ' · drag a file onto a folder to move it' : ''}`),
               // v1.76: arrange the files of a folder (up and down buttons, or drag), like the folders.
               !archived && shown.length > 1 ? h('button', { class: 'btn small files-arrange', type: 'button', icon: 'list-ol', title: 'Put the files of this folder in your own order', onclick: async () => {
                 const ordered = [...shown].sort(byCustom).map((f) => f.base);
