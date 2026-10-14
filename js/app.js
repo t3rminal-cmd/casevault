@@ -760,7 +760,7 @@
   function onDriveLost() {
     if (!state.connected) return;
     state.connected = false;
-    quickFooter(false);
+    quickLinksPanel(false);
     CVChatUI.reset();
     CVNotesFloat.reset();
     if (window.CVLockerUI) CVLockerUI.lock();
@@ -1005,7 +1005,6 @@
 
   function renderCaseList() {
     const list = $('#case-list');
-    const section = $('#archived-cases');
     if (!Vault.data) { list.replaceChildren(); return; }
     const cases = filteredCases();
     const activeCount = Vault.data.cases.filter((c) => !isArchivedEntry(c)).length;
@@ -1019,54 +1018,17 @@
     const otherGroups = openGroups.filter((g) => !g.op);
     list.replaceChildren(missionFolder(missionGroups), ...(otherGroups.length ? otherGroups.map((g) => operationGroup(g)) : missionGroups.length ? [] : [h('li', { class: 'empty muted' },
       closedGroups.length ? 'Every Mission is closed.' : activeCount ? 'No cases match.' : Vault.data.cases.length ? 'No active cases.' : 'No cases yet. Click "New case".')]));
-    // Closed Operations (and closed independent cases): above Archived, at the bottom (v1.42).
-    const closedSec = $('#closed-cases');
-    const allClosed = opGroups(Vault.data.cases.filter((c) => !isArchivedEntry(c))).filter(isClosedGroup);
-    closedSec.hidden = false; // v1.84: always at the bottom, even when empty
-    // v1.83: the badge counts closed cases (as the banner does), not folders.
-    $('#closed-count').textContent = String(closedGroups.reduce((t, g) => t + g.cases.length, 0));
-    { const n = allClosed.reduce((t, g) => t + g.cases.length, 0); const m = $('#closed-cases .sec-meta'); if (m) m.textContent = `${n} closed case${n === 1 ? '' : 's'}`; }
-    $('#closed-list').replaceChildren(...(closedGroups.length ? closedGroups.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted' }, 'No closed missions match.')]));
-    if ((state.caseId && closedGroups.some((g) => g.cases.some((c) => c.id === state.caseId))) || ($('#case-search').value.trim() && closedGroups.length)) closedSec.open = true;
-
-    // Archived cases: a collapsible section, searched with the same box.
+    // v1.121: no Closed / Archived area in the sidebar (they are on the home page: CLOSED FILES and
+    // ARCHIVED). A search still finds closed and archived cases: they are listed under the open ones.
     const q = $('#case-search').value.trim().toLowerCase();
-    const archived = Vault.data.cases.filter(isArchivedEntry).sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
-    const shown = archived.filter((c) => matchesSearch(c, q));
-    section.hidden = false; // v1.84: always at the bottom, even when empty
-    $('#archived-count').textContent = q ? `${shown.length} of ${archived.length}` : String(archived.length);
-    { const m = $('#archived-cases .sec-meta'); if (m) m.textContent = `${archived.length} archived case${archived.length === 1 ? '' : 's'}`; }
-    // v1.67: EXPIRED, NOLLE PROSEQUI and PROSECUTION sub-folders; cases without one below them.
-    const subs = Vault.ARCHIVE_FOLDERS.map(([k, label]) => {
-      const inIt = shown.filter((c) => c.archiveFolder === k);
-      if (!inIt.length) return null;
-      const open = state.archOpen.has(k) || !!q || inIt.some((c) => c.id === state.caseId);
-      const list = h('ul', { class: 'case-list arch-sub-list', hidden: !open }, inIt.map(caseItem));
-      const head = h('button', { type: 'button', class: 'arch-sub-head', 'aria-expanded': String(open), onclick: () => {
-        if (state.archOpen.has(k)) state.archOpen.delete(k); else state.archOpen.add(k);
-        renderCaseList();
-      } }, h('span', { class: 'sec-folder' }, I('folder-archived')), h('span', { class: 'arch-sub-name' }, label), h('span', { class: 'count' }, String(inIt.length)), I(open ? 'chevron-down' : 'chevron-right'));
-      return h('li', { class: `arch-sub arch-${k}` }, head, list);
-    }).filter(Boolean);
-    const loose = shown.filter((c) => !Vault.ARCHIVE_FOLDERS.some(([k]) => k === c.archiveFolder));
-    $('#archived-list').replaceChildren(...(shown.length ? [...subs, ...loose.map(caseItem)] : [h('li', { class: 'empty muted' }, 'No archived cases match.')]));
-    // Open the section when the case on screen is archived, or a search finds archived cases.
-    if ((state.caseId && archived.some((c) => c.id === state.caseId)) || (q && shown.length)) section.open = true;
+    if (q) {
+      const archived = Vault.data.cases.filter(isArchivedEntry).filter((c) => matchesSearch(c, q));
+      if (closedGroups.length) list.append(h('li', { class: 'side-found-head muted small' }, 'Closed'), ...closedGroups.map((g) => operationGroup(g)));
+      if (archived.length) list.append(h('li', { class: 'side-found-head muted small' }, 'Archived'), ...archived.map(caseItem));
+    }
   }
 
   $('#case-search').addEventListener('input', debounce(renderCaseList, 120));
-  // v1.50: Closed and Archived at the bottom: a grey folder, the word in capitals, a drop-down arrow.
-  for (const sec of ['#closed-cases', '#archived-cases']) {
-    const sum = $(`${sec} > summary`);
-    sum.prepend(h('span', { class: 'sec-folder' }, I(sec === '#closed-cases' ? 'folder-closed' : 'folder-archived')));
-    // v1.83: the name and a line under it, like the MISSION FILES and GENERAL FILES folders.
-    const label = sum.querySelector('.sec-label');
-    const text = h('span', { class: 'sec-text' });
-    label.before(text);
-    text.append(label, h('span', { class: 'sec-short' }, sec === '#closed-cases' ? 'CLOSED' : 'ARCHIVED'), h('span', { class: 'sec-meta muted' })); // v1.118: the short name in the slim row
-    sum.append(h('span', { class: 'sec-chev' }, I('chevron-down')));
-  }
-
   /* =====================================================================
    * Routing: #/  or  #/case/<id>/<tab>
    * ===================================================================== */
@@ -1077,8 +1039,6 @@
 
   function route() {
     if (!state.connected) return;
-    // v1.69: the Quick Links footer stays on every page, like the case list.
-    if (!$('#ql-footer').childElementCount) quickFooter(true);
     // v1.91: the online page is gone; old #/online links open the overview.
     if (/^#\/online\b/.test(location.hash)) history.replaceState(null, '', '#/');
     // Old #/chat links open the floating Ask AI box over the overview.
@@ -1404,60 +1364,36 @@
     // v1.63: Quick Links in the footer bar under the page, from the case list to the right edge.
   }
 
-  /** v1.63: the Quick Links footer: shown on the Overview, empty and hidden everywhere else.
-   * The round Ask AI / Notes buttons sit just above it (--ql-dock-h). */
-  let footerRO = null;
-  let footerMO = null;
-  document.addEventListener('cv-links-changed', () => { if (state.connected && $('#ql-footer').childElementCount) quickFooter(true); });
-  function quickFooter(on) {
-    const foot = $('#ql-footer');
-    if (!foot) return;
-    if (footerRO) { footerRO.disconnect(); footerRO = null; }
-    if (footerMO) { footerMO.disconnect(); footerMO = null; }
-    if (!on) { foot.hidden = true; foot.replaceChildren(); document.body.style.removeProperty('--ql-dock-h'); document.body.classList.remove('ql-slim-on'); return; }
-    // v1.118: a slim bar (one row: the tabs and the links side by side) unless opened with More.
-    const slim = () => { try { return localStorage.getItem('cv-ql-open') !== '1'; } catch { return true; } };
-    const toggle = h('button', { type: 'button', class: 'btn small ghost ql-more', 'aria-expanded': String(!slim()), title: 'Show the links in full (Arrange, every link at once) or back to one row' },
-      I(slim() ? 'chevron-up' : 'chevron-down'), h('span', {}, slim() ? 'More' : 'Less'));
-    toggle.addEventListener('click', () => {
-      try { localStorage.setItem('cv-ql-open', slim() ? '1' : '0'); } catch { /* this visit only */ }
-      quickFooter(true);
-    });
-    foot.classList.toggle('ql-slim', slim());
-    document.body.classList.toggle('ql-slim-on', slim()); // v1.119: the round buttons sit in the slim bar
-    foot.replaceChildren(h('span', { class: 'ql-foot-title' }, I('link-45deg'), h('span', {}, 'Quick Links')), CVReferenceUI.quickLinks({ footer: true }), toggle);
-    foot.hidden = false;
-    requestAnimationFrame(panelHeight);
-    const setH = () => document.body.style.setProperty('--ql-dock-h', foot.hidden ? '0px' : `${Math.ceil(foot.getBoundingClientRect().height)}px`);
-    // v1.119: on the slim bar a link that doesn't fit whole is left off (no cut-off words); More
-    // shows them all and says how many are waiting.
-    const fit = () => {
-      const row = foot.querySelector('.quick-links-box.in-footer > .quick-links');
-      const more = toggle.querySelector('span');
-      if (!row || !foot.classList.contains('ql-slim')) return;
-      const kids = [...row.children];
-      kids.forEach((k) => k.classList.remove('ql-cut'));
-      const edge = row.getBoundingClientRect().right + 0.5;
-      const first = kids.findIndex((k) => k.getBoundingClientRect().right > edge);
-      const cut = first < 0 ? [] : kids.slice(first);
-      cut.forEach((k) => k.classList.add('ql-cut'));
-      // Written only when it changes: the observer below would otherwise call fit() again, forever.
-      const label = cut.length ? `More +${cut.length}` : 'More';
-      if (more.textContent !== label) more.textContent = label;
-    };
-    const onSize = () => { setH(); fit(); };
-    if (typeof ResizeObserver === 'function') { footerRO = new ResizeObserver(onSize); footerRO.observe(foot); }
-    // A tab (Reference / OSINT / LEO) swaps the links: fit the new ones.
-    let fitQueued = false;
-    footerMO = new MutationObserver((list) => {
-      if (fitQueued || list.every((m) => toggle.contains(m.target))) return;
-      fitQueued = true;
-      requestAnimationFrame(() => { fitQueued = false; fit(); });
-    });
-    footerMO.observe(foot, { childList: true, subtree: true });
-    onSize();
+  /** v1.121: Quick Links in a panel that slides in from the right, opened by the Quick Links
+   * buttons (beside Reference on the home page, and in the sidebar's icon row). It takes no room
+   * until it is opened; Esc, × or a click outside it closes it. (The bottom bar of v1.63–v1.120 is gone.) */
+  let qlPanel = null;
+  document.addEventListener('cv-links-changed', () => { if (qlPanel && qlPanel.classList.contains('open')) quickLinksPanel(true); });
+  function quickLinksPanel(open) {
+    if (!qlPanel) {
+      qlPanel = h('aside', { id: 'ql-panel', class: 'ql-panel', 'aria-label': 'Quick Links', 'aria-hidden': 'true', inert: '' });
+      document.body.append(qlPanel);
+      // A link to a page of CaseVault (Location Codes, Charges…) closes the panel to show it; links to
+      // outside sites open in a new browser tab and leave it open.
+      qlPanel.addEventListener('click', (e) => { const a = e.target.closest('a[href^="#"]'); if (a) setTimeout(() => quickLinksPanel(false), 0); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && qlPanel.classList.contains('open') && !document.querySelector('dialog[open]')) quickLinksPanel(false); });
+      document.addEventListener('pointerdown', (e) => {
+        if (!qlPanel.classList.contains('open') || qlPanel.contains(e.target) || e.target.closest('.ql-open-btn, dialog, .combo-list')) return;
+        quickLinksPanel(false);
+      }, true);
+    }
+    const want = open === undefined ? !qlPanel.classList.contains('open') : !!open;
+    if (want) {
+      qlPanel.replaceChildren(
+        h('div', { class: 'ql-panel-head' }, h('h2', {}, I('link-45deg'), 'Quick Links'),
+          h('button', { type: 'button', class: 'icon-btn ql-panel-close', title: 'Close Quick Links (Esc)', onclick: () => quickLinksPanel(false) }, I('x-lg'), h('span', { class: 'sr-only' }, 'Close Quick Links'))),
+        CVReferenceUI.quickLinks());
+      qlPanel.removeAttribute('inert');
+    } else qlPanel.setAttribute('inert', '');
+    qlPanel.classList.toggle('open', want);
+    qlPanel.setAttribute('aria-hidden', String(!want));
+    document.querySelectorAll('.ql-open-btn').forEach((b) => { b.setAttribute('aria-expanded', String(want)); b.classList.toggle('on', want); });
   }
-
 
   /* =====================================================================
    * Operations (#/operations, #/operation/<id>) and General Files (#/general), v1.46
@@ -2064,6 +2000,7 @@
    * which case first. */
   function quickActions() {
     const tile = (label, icon, onclick, tip) => h('button', { type: 'button', class: 'qa-tile', title: tip, onclick }, h('span', { class: 'qa-icon' }, I(icon)), h('span', { class: 'qa-label' }, label));
+    const qlTile = () => { const t = tile('Quick Links', 'link-45deg', () => quickLinksPanel(), 'Reference, OSINT and LEO links, in a panel from the right'); t.classList.add('ql-open-btn'); t.setAttribute('aria-expanded', 'false'); t.setAttribute('aria-controls', 'ql-panel'); return t; };
     const toTab = (tab) => async () => { const c = await pickCase(tab === 'draft' ? 'Draft: Which Case?' : 'Link Chart: Which Case?', tab === 'draft' ? 'pencil-square' : 'diagram-3-fill'); if (c) location.hash = caseLink(c, tab); };
     const discovery = async () => {
       const c = await pickCase('Discovery: Which Case?', 'shield-lock-fill');
@@ -2078,8 +2015,10 @@
       tile('Link Chart', 'diagram-3-fill', toTab('linkchart'), 'Open the Link Chart of a case'),
       tile('Ask AI', 'chat-dots-fill', () => { const b = document.getElementById('btn-chat'); if (b) b.click(); }, 'Open the Ask AI window'),
       tile('Reference', 'book', () => { location.hash = '#/reference'; }, 'Charts, codes and calculators'),
-      tile('Library', 'bookshelf', () => showVaultPanel('library'), 'Examples and directives for the AI'),
-      tile('Vault', 'safe2', () => showVaultPanel(), 'Vault settings, profile and logs'));
+      // v1.121: Quick Links open in a panel from the right; Library and Vault are one Settings tile
+      // (they opened the same window).
+      qlTile(),
+      tile('Settings', 'gear', () => showVaultPanel(), 'Vault settings, My Profile, the Library for the AI, Quick Links, logs and backups'));
   }
 
   /** v1.61: pick a case (newest change first; type to filter). Resolves to an index entry or null. */
@@ -3223,7 +3162,8 @@
       // v1.54: each section is a card that folds away with the button in its heading.
       sections.forEach((sec) => { sec.classList.add('vault-sec', 'cv-boxed'); makeFoldable(sec, `vault-${sec.dataset.section}`); });
       return h('div', { class: 'vault-panel' },
-        h('div', { class: 'vault-panel-head' }, h('span', { class: 'vault-badge' }, I('safe2')), h('div', {}, h('h2', {}, 'Vault'), h('p', { class: 'muted small explain' }, `${Vault.root.name} · ${v.cases.length} case${v.cases.length === 1 ? '' : 's'}`)),
+        h('div', { class: 'vault-panel-head' }, h('span', { class: 'vault-badge' }, I('gear')), h('div', {}, h('h2', {}, 'Settings'), // v1.121: Vault and Library together as Settings
+          h('p', { class: 'muted small explain' }, `${Vault.root.name} · ${v.cases.length} case${v.cases.length === 1 ? '' : 's'}`)),
           h('div', { class: 'spacer' }), h('button', { class: 'btn primary', type: 'button', icon: 'check2', onclick: () => close() }, 'Done')),
         h('div', { class: 'vault-panel-body' }, nav, scroller));
     });
@@ -3525,64 +3465,8 @@
       Save.track('settings', () => Vault.updateSettings({ sidebarCollapsed: collapsed })).catch(() => {});
     }
   }
-  // v1.88: Quick Links and the CLOSED FILES / ARCHIVED area have one fixed height, five Quick Links
-  // tiles high (v1.84's drag bars and padlocks are gone). Measured from a tile, so it follows the zoom.
-  try { for (const k of ['cv-side-bottom-h', 'cv-side-bottom-h-lock', 'cv-ql-h', 'cv-ql-h-lock']) localStorage.removeItem(k); } catch { /* nothing kept */ }
-  function panelHeight() {
-    const foot = $('#ql-footer');
-    // v1.118: with the slim bar, the sidebar's Closed / Archived row is as tall as the bar.
-    if (foot && !foot.hidden && foot.classList.contains('ql-slim')) { const hh = Math.ceil(foot.getBoundingClientRect().height); if (hh > 20) document.body.style.setProperty('--cv-panel-h', `${hh}px`); return; }
-    const tile = foot && !foot.hidden ? foot.querySelector('.quick-link') : null;
-    if (!tile) return;
-    const grid = tile.parentElement;
-    const gap = parseFloat(getComputedStyle(grid).rowGap) || 0;
-    const fcs = getComputedStyle(foot);
-    const pad = (parseFloat(fcs.paddingTop) || 0) + (parseFloat(fcs.paddingBottom) || 0) + (parseFloat(fcs.borderTopWidth) || 0);
-    const px = Math.ceil(tile.getBoundingClientRect().height * 5 + gap * 4 + pad);
-    if (px > 40) document.body.style.setProperty('--cv-panel-h', `${px}px`);
-  }
-  window.addEventListener('resize', debounce(panelHeight, 150));
-  // The CLOSED FILES / ARCHIVED heading stays at the top while its list scrolls. When the scrolling
-  // stops with a card half hidden behind the heading (or the top edge), the list eases to show it
-  // whole, or on to the next card when most of it had already gone by.
-  {
-    const sb = $('#side-bottom');
-    const spacer = h('div', { class: 'side-bottom-spacer', 'aria-hidden': 'true' });
-    if (sb) sb.append(spacer);
-    // Opening or folding a folder changes the list: the extra space starts again from none.
-    if (sb) sb.addEventListener('toggle', () => spacer.style.removeProperty('height'), true);
-    let easing = false;
-    const settle = () => {
-      if (easing || !sb) return;
-      const r = sb.getBoundingClientRect();
-      const pinned = [...sb.querySelectorAll(':scope > details > summary')].find((x) => Math.abs(x.getBoundingClientRect().top - r.top) < 2);
-      const line = pinned ? pinned.getBoundingClientRect().bottom : r.top;
-      const cards = [...sb.querySelectorAll(':scope > details > summary, .op-head, .case-item, .arch-sub-head')].filter((x) => x !== pinned && x.getClientRects().length);
-      let cut = cards.find((x) => { const b = x.getBoundingClientRect(); return b.top < line - 1 && b.bottom > line + 1; });
-      // Only the bottom edge of a folder or section box left showing counts as cut too.
-      let sliver = false;
-      if (!cut) {
-        cut = [...sb.querySelectorAll('.op-group, :scope > details')].find((x) => { const b = x.getBoundingClientRect(); return b.top < line - 1 && b.bottom > line + 1.5 && b.bottom - line < 18; });
-        sliver = !!cut;
-      }
-      if (!cut) return;
-      const b = cut.getBoundingClientRect();
-      // At the end of the list there may be no room to move on to the next card: a little empty
-      // space below makes the room, so the last cards can still be read whole.
-      const room = sb.scrollHeight - sb.clientHeight - sb.scrollTop;
-      const forward = sliver || (line - b.top) > b.height / 2 || room < 1;
-      if (forward && room < b.bottom - line) spacer.style.setProperty('height', `${Math.ceil((parseFloat(spacer.style.height) || 0) + (b.bottom - line) - room + 1)}px`);
-      // Forward: on to the top of the next card (past any gap); back: to the cut card's own top.
-      const next = forward ? cards.map((x) => x.getBoundingClientRect().top).filter((t) => t >= b.bottom - 0.5).sort((x, y) => x - y)[0] : null;
-      const delta = forward ? (next != null && next - line <= room + (b.bottom - line) ? next - line : b.bottom - line) : b.top - line;
-      if (Math.abs(delta) < 1) return;
-      easing = true;
-      sb.scrollBy({ top: delta, behavior: 'smooth' });
-      setTimeout(() => { easing = false; settle(); }, 450);
-    };
-    // When the scrolling has stopped (scrollend in Chrome, Edge and Firefox; a short pause elsewhere).
-    if (sb) sb.addEventListener('onscrollend' in window ? 'scrollend' : 'scroll', 'onscrollend' in window ? () => setTimeout(settle, 30) : debounce(settle, 160));
-  }
+  // v1.121: the Quick Links bar and the sidebar's Closed / Archived area are gone; their old saved sizes too.
+  try { for (const k of ['cv-side-bottom-h', 'cv-side-bottom-h-lock', 'cv-ql-h', 'cv-ql-h-lock', 'cv-ql-open']) localStorage.removeItem(k); } catch { /* nothing kept */ }
 
   // Lock (v1.24): the case list stays exactly as it is, shown or hidden and at its width, until
   // it's unlocked with the padlock. Remembered in vault.json.
@@ -3606,6 +3490,8 @@
   // Hide (the privacy screen, moved here from the header, so the header keeps just the menu).
   const searchBtn = h('button', { id: 'btn-side-search', class: 'icon-btn', type: 'button', title: 'Search cases', 'aria-controls': 'case-search', 'aria-expanded': 'false' }, I('search'), h('span', { class: 'sr-only' }, 'Search cases'));
   const homeBtn = h('a', { id: 'btn-side-home', class: 'icon-btn', href: '#/', title: 'Home: the Overview' }, I('house-door'), h('span', { class: 'sr-only' }, 'Home'));
+  // v1.121: Quick Links from any page.
+  const linksBtn = h('button', { id: 'btn-side-links', class: 'icon-btn ql-open-btn', type: 'button', title: 'Quick Links', 'aria-controls': 'ql-panel', 'aria-expanded': 'false', onclick: () => quickLinksPanel() }, I('link-45deg'), h('span', { class: 'sr-only' }, 'Quick Links'));
   // v1.68: Power Off (next to the SSD icon): saves everything, then the helper stops itself, the
   // browser window, Ollama, and locks and ejects the V: and W: drives.
   $('#btn-power').addEventListener('click', async () => {
@@ -3653,7 +3539,7 @@
     toast(`Cases: ${SIDE_ORDERS.find((o) => o[0] === sideOrder)[2].toLowerCase()}.`, 'info', 1800);
   });
   drawSort();
-  $('#btn-sidebar-collapse').after(searchBtn, homeBtn, privacyBtn, sortBtn);
+  $('#btn-sidebar-collapse').after(searchBtn, homeBtn, linksBtn, privacyBtn, sortBtn);
   const tools = $('.sidebar-tools');
   const showSearch = (on) => {
     tools.classList.toggle('search-open', on);

@@ -23,10 +23,11 @@ const SP = process.env.SP + '/v167'; const W = +(process.env.W || 1366);
   console.log('toasts', await p.evaluate(() => [...document.querySelectorAll('.toast')].map((t) => t.innerText)));
   console.log('reminder borders', await p.evaluate(() => [...document.querySelectorAll('#case-list .case-item.has-reminder strong, #case-list .case-item.has-reminder')].length));
   await p.screenshot({ path: `${SP}/${W}-home.png` });
-  // footer height same on every tab
-  const hts = [];
-  for (const t of ['Reference', 'OSINT', 'LEO', 'Reference']) { await p.click(`#ql-footer .ql-tabs button:has-text("${t}")`); await p.waitForTimeout(250); hts.push(await p.evaluate(() => Math.round(document.querySelector('#ql-footer').getBoundingClientRect().height))); }
-  console.log('footer heights', hts.join(','));
+  // v1.121: Quick Links are in the side panel: each tab switches there.
+  await p.click('#btn-side-links'); await p.waitForTimeout(300);
+  for (const t of ['Reference', 'OSINT', 'LEO', 'Reference']) { await p.click(`#ql-panel .ql-tabs button:has-text("${t}")`); await p.waitForTimeout(250); }
+  console.log('panel tabs', await p.evaluate(() => document.querySelector('#ql-panel .ql-tabs [aria-selected="true"]').textContent));
+  await p.keyboard.press('Escape'); await p.waitForTimeout(200);
   // hero gap
   console.log('hero gap', await p.evaluate(() => Math.round(document.querySelector('.hero-counts').getBoundingClientRect().top - document.querySelector('.hero-line').getBoundingClientRect().bottom)));
   // Not Identified

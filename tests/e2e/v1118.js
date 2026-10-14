@@ -7,22 +7,9 @@ const SP = process.env.SP + '/v1118';
 
 (async () => {
   const { b, p, errs, ids } = await boot(1366, 900);
-  await p.evaluate(() => { try { localStorage.removeItem('cv-ql-open'); } catch { /* fine */ } location.hash = '#/x'; location.hash = '#/'; });
-  await p.waitForSelector('#ql-footer.ql-slim');
-  // 1. Quick Links: one slim row; More opens the full panel; Less brings the row back.
-  const slimH = await p.$eval('#ql-footer', (e) => e.getBoundingClientRect().height);
-  ok(slimH < 60, `Quick Links is a slim bar (${Math.round(slimH)} px)`);
-  await p.click('#ql-footer .ql-more'); await p.waitForTimeout(300);
-  const fullH = await p.$eval('#ql-footer', (e) => e.getBoundingClientRect().height);
-  ok(!(await p.$eval('#ql-footer', (e) => e.classList.contains('ql-slim'))) && fullH > 150, `More opens the full panel (${Math.round(fullH)} px)`);
-  await p.click('#ql-footer .ql-more'); await p.waitForTimeout(300);
-  ok(await p.$eval('#ql-footer', (e) => e.classList.contains('ql-slim')), 'Less brings the slim bar back');
-  // 4. The sidebar's Closed / Archived: one row as tall as the bar, short names.
-  const side = await p.evaluate(() => { const sb = document.querySelector('#side-bottom'); const [a, b2] = sb.querySelectorAll(':scope > details'); return { h: sb.getBoundingClientRect().height, sameRow: Math.abs(a.getBoundingClientRect().top - b2.getBoundingClientRect().top) < 2, words: [...sb.querySelectorAll('.sec-short')].map((x) => getComputedStyle(x).display !== 'none' && x.textContent) }; });
-  ok(side.sameRow && side.h < 70 && side.words.join() === 'CLOSED,ARCHIVED', `the sidebar's Closed / Archived in one slim row: ${JSON.stringify(side)}`);
-  await p.click('#archived-cases > summary'); await p.waitForTimeout(300);
-  ok(await p.$eval('#side-bottom', (e) => e.getBoundingClientRect().height) > 150, 'opening Archived gives it room');
-  await p.click('#archived-cases > summary'); await p.waitForTimeout(200);
+  // 1 and 4 (the slim Quick Links bar and the sidebar's Closed / Archived row) were replaced in v1.121
+  // by the Quick Links side panel and the home page's sections: tests/e2e/v163-quicklinks.js, v188.js.
+  await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForSelector('.closed-files-section');
   // 2. A long message can be closed.
   await p.evaluate(() => window.CaseVaultUI.toast('A long message for the test.', 'warn', 9000));
   await p.click('.toast.warn:has-text("A long message for the test") .toast-close'); // v1.119: its own (the backup reminder is amber too) await p.waitForTimeout(150);

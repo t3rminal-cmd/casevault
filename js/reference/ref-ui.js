@@ -33,23 +33,12 @@
 
   /* ---------- Quick links (bottom of the Overview) ---------- */
 
-  function linkTile(l, { editing, redraw, footer }) {
+  function linkTile(l, { editing, redraw }) {
     const { h } = ui;
     const inner = [h('span', { class: `ql-icon ql-${l.tab}` }, ui.icon(l.icon)), h('span', { class: 'ql-name' }, l.name)];
     const tip = `${l.note || l.name}${l.url ? `\n${l.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}` : ''}${l.url ? '\nOpens in a new browser tab.' : ''}`;
     let tile;
     // Charges asks which (v1.28): Federal Statute or State Statute.
-    // v1.63: in the footer, the choices sit inside the button (no menu to be cut off).
-    if (l.choices && !editing && footer) {
-      // v1.66: a click on Charges turns the button into its two choices; a click elsewhere or Esc turns it back.
-      const opts = h('span', { class: 'ql-split-opts', hidden: true }, l.choices.map(([label, hash]) => h('a', { class: 'ql-split-opt', href: hash }, label.replace(/\s*Statutes?$/i, ''))));
-      const btn = h('button', { type: 'button', class: 'quick-link ql-split', title: tip, 'aria-expanded': 'false' }, ...inner);
-      const cell = h('div', { class: 'ql-split-cell' }, btn, opts);
-      const shut = (e) => { if (e && cell.contains(e.target)) return; opts.hidden = true; btn.hidden = false; btn.setAttribute('aria-expanded', 'false'); document.removeEventListener('pointerdown', shut, true); };
-      btn.addEventListener('click', () => { btn.hidden = true; opts.hidden = false; btn.setAttribute('aria-expanded', 'true'); opts.querySelector('a').focus(); document.addEventListener('pointerdown', shut, true); });
-      opts.addEventListener('keydown', (e) => { if (e.key === 'Escape') { shut(); btn.focus(); } });
-      return cell;
-    }
     if (l.choices && !editing) {
       const menu = h('div', { class: 'ql-choices', role: 'menu', hidden: true }, l.choices.map(([label, hash]) => h('a', { class: 'ql-choice', role: 'menuitem', href: hash }, label)));
       const btn = h('button', { type: 'button', class: 'quick-link', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title: tip }, ...inner);
@@ -95,7 +84,7 @@
 
   function quickLinks(opts = {}) {
     const { h } = ui;
-    const wrap = h('div', { class: `quick-links-box${opts.footer ? ' in-footer' : ''}` });
+    const wrap = h('div', { class: 'quick-links-box' });
     const draw = () => {
       const all = LK().linksOf(savedLinks());
       const tab = savedLinks().tab && LK().TABS.some((t) => t.key === savedLinks().tab) ? savedLinks().tab : 'reference';
@@ -114,12 +103,9 @@
           h('div', { class: 'spacer' }),
           !editing && hiddenCount ? h('span', { class: 'small muted' }, `${hiddenCount} hidden`) : null,
           h('button', { type: 'button', class: `btn small ${editing ? 'primary' : 'ghost'}`, icon: editing ? 'check2' : 'arrow-left-right', title: editing ? 'Finish' : 'Move the buttons (arrows or drag) and choose which to show. Addresses and your own links: Vault → Quick links.', onclick: () => { mem.editLinks = !mem.editLinks; draw(); } }, editing ? 'Done' : 'Arrange')),
-        // v1.63: in the footer the warning is a small sign (hover or focus for the words).
-        // v1.67: the sign keeps its place on every tab (hidden on Reference), so the footer never changes height.
-        opts.footer
-          ? h('span', { class: `ql-note-sign${tab === 'reference' ? ' ql-note-off' : ''}`, tabindex: tab === 'reference' ? null : '0', role: 'note', 'aria-hidden': tab === 'reference' ? 'true' : null, title: 'These open outside CaseVault, in a new browser tab. Never paste case details into outside websites unless your policy allows it.' }, ui.icon('exclamation-triangle-fill'), h('span', {}, 'Outside Sites'))
-          : tab !== 'reference' ? h('p', { class: 'muted small ql-note' }, 'These open outside CaseVault, in a new browser tab. Never paste case details into outside websites unless your policy allows it.') : null,
-        shown.length ? h('div', { class: 'quick-links' }, shown.map((l) => linkTile(l, { editing, redraw: draw, footer: !!opts.footer })))
+        // v1.121: the footer's small sign is gone with the footer (Quick Links open in a side panel).
+        tab !== 'reference' ? h('p', { class: 'muted small ql-note' }, 'These open outside CaseVault, in a new browser tab. Never paste case details into outside websites unless your policy allows it.') : null,
+        shown.length ? h('div', { class: 'quick-links' }, shown.map((l) => linkTile(l, { editing, redraw: draw })))
           : h('p', { class: 'muted small' }, inTab.length ? 'All the links here are hidden. Click Arrange to bring them back.' : 'No links here yet. Add one in Vault → Quick links.')].filter(Boolean));
     };
     draw();

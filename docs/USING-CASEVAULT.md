@@ -214,6 +214,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.121
+
+- **Quick Links** are in a panel that slides in from the right. Open it with **Quick Links** on the home page (beside Reference) or the link icon in the sidebar's top row (next to Home), from any page. Reference / OSINT / LEO tabs and **Arrange** work as before. A link to a CaseVault page (Location Codes, Charges…) shows that page and closes the panel; outside sites open in a new browser tab. Close it with ×, Esc or a click outside. The bar at the bottom of the page is gone
+- **Settings** (gear, on the home page) is the window that was called Vault, with the Library in it: My Profile, Letterhead, Library, Templates, Quick links, mail, logs and backups. Where this guide says "Vault → …", look in Settings
+- **Sidebar:** no Closed / Archived area at the bottom. Closed and archived cases are on the home page (**CLOSED FILES** and **ARCHIVED**). A search in the sidebar's search box still finds them: they are listed under **Closed** and **Archived** below the open cases
+
 ### What's new in v1.120
 
 - **Landing page:** the **Secure Locker** section is now below **Archived** (Other Files, Closed Files, Archived, then Secure Locker)
@@ -233,7 +239,7 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 - **Quick Links** (bottom of the page) is now one slim row: the Reference / OSINT / LEO tabs and that tab's links side by side (scroll sideways for more). **More** opens the full panel with Arrange; **Less** goes back. Remembered on this PC
 - **Sidebar:** CLOSED and ARCHIVED sit side by side in one small row, with their counts. Click one to open its list (the panel grows); click again to fold it
-- **Letterhead:** on the Draft, Arrest and Link Chart tabs it is one line (logo and the first line of the header) with **Edit Letterhead**. It is also in ⋮ → Vault → My Profile, under Letterhead
+- **Letterhead:** on the Draft, Arrest and Link Chart tabs it is one line (logo and the first line of the header) with **Edit Letterhead**. It is also in Settings → My Profile, under Letterhead
 - **Landing page:** a section with nothing in it (no closed cases, nothing archived, no open Mission) is a single header line
 - **Details tab:** Suspects, Contacts, Deconfliction, Case History and LEO Partners show how many entries they hold beside their titles, so you can see without opening them
 - **Top bar:** each status icon has a caption under it: Network, Local AI, Memory, SSD and Power Off
@@ -321,8 +327,8 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 ### What's new in v1.106
 
-- **Delete Case → Recently Deleted:** a deleted case waits 30 days in ⋮ → Vault → **Recently Deleted** (`CaseVault-Data\deleted`). **Restore** puts it back where it was (cases or the archive; its Mission too, made again if needed). **Delete Now** removes it for good. After 30 days CaseVault empties it by itself the next time the vault opens
-- **⋮ → Vault → Backups → Restore Cases…:** pick a `CaseVault-Backup-<date>` folder from a full backup (the browser asks to "upload" it: nothing leaves the PC, it only reads the files). Tick the cases to bring back and click **Restore**. Each comes back with its notes, timeline, reports and files; one that is in the vault now goes to Recently Deleted first. The files are copied in full before the case appears, so an interrupted restore never leaves half a case
+- **Delete Case → Recently Deleted:** a deleted case waits 30 days in Settings → **Recently Deleted** (`CaseVault-Data\deleted`). **Restore** puts it back where it was (cases or the archive; its Mission too, made again if needed). **Delete Now** removes it for good. After 30 days CaseVault empties it by itself the next time the vault opens
+- **Settings → Backups → Restore Cases…:** pick a `CaseVault-Backup-<date>` folder from a full backup (the browser asks to "upload" it: nothing leaves the PC, it only reads the files). Tick the cases to bring back and click **Restore**. Each comes back with its notes, timeline, reports and files; one that is in the vault now goes to Recently Deleted first. The files are copied in full before the case appears, so an interrupted restore never leaves half a case
 - **Search Inside Cases:** type in the case list's search box, then press **Enter** or click **Search Inside Cases** under it. It reads every case's notes, timeline, reports, Draft form, arrest details, suspects, contacts and file names; every word has to be in the same place. Click a result to open that tab
 - **Add Follow-up** (Details → Case actions, for an Open case): pick what you're waiting on, add details and the date; it goes on the Timeline as *Follow up: Lab results — …*
 - **Privacy screen:** the PIN is now stored with PBKDF2 (600,000 rounds) instead of one SHA-256, so a copied vault.json can't be guessed quickly; an older PIN still works and is upgraded the next time it unlocks. Text you copied from CaseVault is cleared from the clipboard when the screen comes on (always with Hide; with the idle timer when the window is in front)
@@ -343,7 +349,7 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 ### What's new in v1.102
 
-- **Back up to another PC (e.g. a Beelink):** ⋮ → Vault → Backups → **Back Up Everything** → **Add Network Folder** → type `\\BEELINK\CaseVault-Backups` → **Add**. Pick it (globe icon) and back up. The first time, tick that the PC is encrypted and the folder is only yours. Off or unreachable: greyed out. **Remove** takes it off the list and leaves its backups there. In Chrome or Edge, map the folder to a drive letter (Z:) and pick that. Set up the other PC first: [BACKUP-TO-ANOTHER-PC.md](BACKUP-TO-ANOTHER-PC.md)
+- **Back up to another PC (e.g. a Beelink):** Settings → Backups → **Back Up Everything** → **Add Network Folder** → type `\\BEELINK\CaseVault-Backups` → **Add**. Pick it (globe icon) and back up. The first time, tick that the PC is encrypted and the folder is only yours. Off or unreachable: greyed out. **Remove** takes it off the list and leaves its backups there. In Chrome or Edge, map the folder to a drive letter (Z:) and pick that. Set up the other PC first: [BACKUP-TO-ANOTHER-PC.md](BACKUP-TO-ANOTHER-PC.md)
 - **Home page → a Mission folder:** its timeline is now the vertical one from the Timeline tab (month headings, date boxes, cards, the red Today line) instead of a strip you scroll sideways. Click an event to open it on its case's Timeline tab
 - Links no longer underline when the mouse is over them; they turn blue
 
@@ -362,11 +368,11 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 ### What's new in v1.99
 
-- **Home page banner:** the backup reminder is now a chip in the row of counts, right after **Overdue**, so the reminders are together. It reads **No Backup** (never backed up) or **Backup 9d Ago** in red once a full backup is more than 7 days old, and **Backed Up Today** / **Backup 3d Ago** otherwise. If the SSD has no BitLocker, a red **Not Encrypted** chip follows it. Point at a chip for the details; click it for ⋮ → Vault → Backups
+- **Home page banner:** the backup reminder is now a chip in the row of counts, right after **Overdue**, so the reminders are together. It reads **No Backup** (never backed up) or **Backup 9d Ago** in red once a full backup is more than 7 days old, and **Backed Up Today** / **Backup 3d Ago** otherwise. If the SSD has no BitLocker, a red **Not Encrypted** chip follows it. Point at a chip for the details; click it for Settings → Backups
 
 ### What's new in v1.98
 
-- **Is the SSD encrypted?** In Firefox (with the helper), CaseVault asks Windows. If the CASEVAULT drive has no BitLocker, the home page shows a red **Not Encrypted** chip and a warning at startup. Click the chip for ⋮ → Vault → Backups, which says how to turn BitLocker on. If BitLocker is paused, it says so and how to resume it. Chrome and Edge can't ask Windows, so there the Backups page says to look for the padlock on the drive in File Explorer
+- **Is the SSD encrypted?** In Firefox (with the helper), CaseVault asks Windows. If the CASEVAULT drive has no BitLocker, the home page shows a red **Not Encrypted** chip and a warning at startup. Click the chip for Settings → Backups, which says how to turn BitLocker on. If BitLocker is paused, it says so and how to resume it. Chrome and Edge can't ask Windows, so there the Backups page says to look for the padlock on the drive in File Explorer
 - **Back Up Everything** lists each drive as **Encrypted (BitLocker on)** or **Not encrypted**. Picking one without BitLocker asks first, because the backup is a full copy of every case: **Cancel** (the default) or **Back Up Anyway**
 - **[SECURITY.md](SECURITY.md)** explains what keeps your cases safe, the BitLocker settings to use, and the GitHub settings that protect the code
 - Behind the scenes: the update checks are stricter (browser tests must pass before anything is published) and the code is split into smaller files. Nothing else changes on screen. The helper is now **1.13**: copy the new `casevault-helper` folder to `W:\`
@@ -414,7 +420,7 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 ### What's new in v1.90
 
-- **Back up before Power Off:** when the vault hasn't had a full backup in over a week (or ever), Power Off asks first: **Back Up First** opens ⋮ → Vault → Backups, **Power Off Anyway** carries on
+- **Back up before Power Off:** when the vault hasn't had a full backup in over a week (or ever), Power Off asks first: **Back Up First** opens Settings → Backups, **Power Off Anyway** carries on
 - **Undo after Clear All** on the Draft tab, as after Send to Files
 - **Change a Case History note:** click the pencil beside it to change its date or words (Enter saves, Esc cancels); × deletes it
 - **Search finds Case History notes:** Ctrl+K and type a word from a note, e.g. "migrated"
@@ -452,7 +458,7 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 ### What's new in v1.85
 
-- **Back Up Everything** (⋮ → Vault → Backups): copies the whole CaseVault-Data folder to a second drive and checks every file byte for byte (Chrome or Edge; in Firefox it shows the File Explorer steps and records the date). The banner shows when the last full backup was, red after 7 days, and a reminder appears at start-up
+- **Back Up Everything** (Settings → Backups): copies the whole CaseVault-Data folder to a second drive and checks every file byte for byte (Chrome or Edge; in Firefox it shows the File Explorer steps and records the date). The banner shows when the last full backup was, red after 7 days, and a reminder appears at start-up
 - Restore a vault.json backup from the Backups list (the current one is backed up first)
 - Start-up checks: today's vault.json backup, the last full backup, and free space on the SSD (Firefox)
 - A Mission is Closed only when its cases are: **Close Mission** is on the Mission page (each open case gets a disposition), with **Reopen Mission** when it is closed; the Edit form refuses Closed while a case is open

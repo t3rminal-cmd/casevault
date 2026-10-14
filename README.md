@@ -15,9 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.120
+## What's New in v1.121
 
-- **Landing page:** the Secure Locker moved below Archived, so the order is Mission Files, General Files, Other Files, Closed Files, Archived, Secure Locker
+- **Quick Links in a side panel:** the bar at the bottom of the page is gone. Click **Quick Links** (beside Reference on the home page, or the link icon in the sidebar's top row) and the links slide in from the right; × , Esc or a click outside closes them
+- **Settings:** Library and Vault were one window; they are now one **Settings** tile with a gear. Anything these notes call "Vault → …" is in Settings
+- **Sidebar:** the Closed / Archived area at the bottom is gone, so the case list has the whole height. Closed and archived cases are on the home page (CLOSED FILES, ARCHIVED); a search in the sidebar still finds them, listed under Closed and Archived
 
 ## What CaseVault Does
 
@@ -50,7 +52,7 @@ The app detects the browser and picks the mode by itself. The data format on the
 
 Case management (cases, Missions, the Draft and its PDFs, Files, Discovery, backups) is ready for beta testing. These parts carry a **Beta** tag in the app and still need work:
 
-- **Templates** (⋮ → Vault → Templates): placeholder filling is basic, and imported Word templates lose some layout
+- **Templates** (Settings → Templates): placeholder filling is basic, and imported Word templates lose some layout
 - **Consistency Checker** (Checks tab): expect false alarms on names and addresses; the AI layer is slow on a PC without a graphics card
 - **Document Anonymizer** (⋮ → Options → Dev Tools): unusual names and some addresses can slip through; check the result before sharing it
 - **Ask AI and Draft with AI** depend on the model installed; small models make mistakes, so read every answer

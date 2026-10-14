@@ -66,8 +66,9 @@ const ok = (cond, msg) => console.log(cond ? 'PASS' : 'FAIL', msg);
   await p.click('.close-form button[type=submit]'); await p.waitForTimeout(900);
   ok(!(await p.$('dialog[open] h2:has-text("Close the Mission too?")')), 'no Mission prompt while a case is open');
   console.log('mission folder items', await p.$$eval('.mission-children .case-item', (e) => e.map((x) => x.className.replace('case-item', '').trim() + ':' + x.querySelector('.case-item-title').textContent)));
-  console.log('closed files', await p.$$eval('#closed-list .op-head', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim())));
-  await p.evaluate(() => { document.getElementById('closed-cases').open = true; });
+  // v1.121: closed cases are on the home page's CLOSED FILES (no sidebar section).
+  await p.evaluate(() => { location.hash = '#/'; }); await p.waitForSelector('.closed-files-section');
+  console.log('closed files', await p.$$eval('.closed-files-section .op-folder-tile', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim())));
   await p.screenshot({ path: process.env.SP + '/v184/sidebar.png' });
 
   // Archive needs a reason

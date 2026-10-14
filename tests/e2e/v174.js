@@ -6,7 +6,9 @@ const boot = require('./boot');
   await p.setViewportSize({ width: 1366, height: Math.min(tall + 420, 3000) }); await p.waitForTimeout(400);
   await p.screenshot({ path: process.env.SP + '/v174/home.png' });
   console.log('titles', await p.evaluate(() => [...document.querySelectorAll('.ov-head .section-title')].map((t) => `${t.innerText}:${Math.round((t.querySelector('span') || t).getBoundingClientRect().width)}`).join(' | ')));
-  console.log('ql tabs', await p.evaluate(() => [...document.querySelectorAll('#ql-footer .ql-tabs button')].map((x) => x.innerText.trim()).join(',')));
+  await p.click('#btn-side-links'); await p.waitForTimeout(300); // v1.121: Quick Links in the side panel
+  console.log('ql tabs', await p.evaluate(() => [...document.querySelectorAll('#ql-panel .ql-tabs button')].map((x) => x.innerText.trim()).join(',')));
+  await p.keyboard.press('Escape'); await p.waitForTimeout(200);
   await p.click('.att-fold'); await p.waitForTimeout(300);
   console.log('folded', await p.evaluate(() => { const s = document.querySelector('.attention-section'); return [s.classList.contains('att-folded'), Math.round(s.getBoundingClientRect().height), document.querySelector('.att-summary').innerText]; }));
   await p.screenshot({ path: process.env.SP + '/v174/home-folded.png', clip: { x: 300, y: 270, width: 1066, height: 160 } });
