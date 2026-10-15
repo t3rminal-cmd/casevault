@@ -14,8 +14,9 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   console.log('saved:', await p.evaluate(async () => { const d = await Vault.root.getDirectoryHandle('exports'); const n = []; for await (const [k] of d.entries()) n.push(k); return n; }));
   // shortcuts
   await p.keyboard.press('?'); await p.waitForSelector('.shortcuts-form'); ok(true, '? opens shortcuts'); await p.keyboard.press('Escape'); await p.waitForTimeout(200);
-  await p.keyboard.press('Control+k'); ok(await p.evaluate(() => document.activeElement.id === 'case-search'), 'Ctrl+K focuses search');
-  await p.keyboard.press('Escape'); await p.evaluate(() => document.activeElement.blur());
+  // v1.131: Ctrl+K opens Find (cases, Missions, people, pages), with the cursor in its box.
+  await p.keyboard.press('Control+k'); await p.waitForSelector('#dialog[open] .find-form'); ok(await p.evaluate(() => document.activeElement.classList.contains('find-input')), 'Ctrl+K opens Find');
+  await p.keyboard.press('Escape'); await p.waitForTimeout(200); await p.evaluate(() => document.activeElement.blur());
   await p.keyboard.press('n'); await p.waitForTimeout(400); ok(!!(await p.$('#dialog[open] .new-case-form')), 'N opens New Case'); await p.keyboard.press('Escape'); await p.waitForTimeout(200);
   // history + summary
   await p.evaluate((id) => { location.hash = `#/case/${id}/details`; }, ids.c); await p.waitForTimeout(800);

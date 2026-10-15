@@ -15,11 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.130
+## What's New in v1.131
 
-- **Mission rows one line tall** with an **Open ▾** menu (Details, Reports, Files) in place of three stacked buttons
-- **Sticky table headings and light row striping** on every data table
-- **Quieter banner chips**; the sidebar's INDEPENDENT CASES name no longer overlaps a two-digit count
+- **Find (Ctrl+K):** cases (same match as the sidebar search, notes too), Missions, pages and actions, plus the person view and Search Inside Cases for the words typed; keyboard or mouse
+- **? lists every shortcut**; Find's footer points to it
+- **Updater smoke test in CI:** every change installs the real release over an older copy with the real updater code and checks every file, the version record and the offline cache list
 
 ## What CaseVault Does
 

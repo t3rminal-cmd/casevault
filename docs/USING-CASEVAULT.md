@@ -213,6 +213,11 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.131
+
+- **Find (Ctrl+K):** one box for everything. Type a case number, a name, words from a case's notes, a Mission or a page (General Files, Settings, Back Up the Vault, New Case…) and press Enter. For a name it also offers **Every case this person is on** (the person view) and **Search inside cases** (notes, timelines, reports, the Draft form and file names). ↑ ↓ move, Enter opens, Esc closes. The sidebar's own search is still on its magnifier
+- **Shortcuts:** press **?** (or ⋮ → Keyboard Shortcuts) for the list; Find's footer reminds you
+
 ### What's new in v1.130
 
 - **A Mission's case list:** each row is one line again. **Open ▾** on a row shows Details, Reports and Files for that case; the Closing note fits on one line
@@ -225,12 +230,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Tidier spacing:** every inner margin in CaseVault now sits on the same small grid, so cards, forms, tables and buttons line up the same way on every page
 - **Flatter:** the many slightly different shadows are now two: a faint one on cards and a stronger one under windows and panels that float
 - **Colours:** older one-off reds, greens, ambers and blues now use the theme's colours, so warnings, errors and "done" look the same everywhere, in light and dark
-
-### What's new in v1.128
-
-- **Opened date in the future:** a case whose Opened date is still to come (usually a typo) now says so: General Files shows "in 40d" with a warning sign, and the case's hover box in the sidebar says to check the date. It used to show "Today"
-- **Backup reminder:** when the full backup to a second drive is due, a slim line under the home page banner says so, with **Back Up Now**; × hides it for the day. It no longer floats over the page and hides the buttons underneath. The banner's backup chip still turns red after 7 days
-- **Links** are no longer underlined anywhere; they are in the link colour
 
 ### Earlier versions
 

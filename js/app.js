@@ -3404,7 +3404,56 @@
   }
 
   /* v1.85: keyboard shortcuts. */
-  const SHORTCUTS = [['Ctrl+K', 'Search the case list'], ['N', 'New case (when not typing)'], ['Ctrl+S', 'Save every change now'], ['Ctrl+\\', 'Show or hide the case list'], ['Esc', 'Close the popup'], ['?', 'This list']];
+  const SHORTCUTS = [['Ctrl+K', 'Find a case, Mission, person or page'], ['N', 'New case (when not typing)'], ['Ctrl+S', 'Save every change now'], ['Ctrl+\\', 'Show or hide the case list'], ['Esc', 'Close the popup'], ['?', 'This list']];
+  /* v1.131: Find (Ctrl+K). One box for cases (number, subject, notes, status: the same match as the
+   * sidebar search), Missions, CaseVault's pages and actions, and two searches for the words typed:
+   * every case a person is on (the person view) and inside every case's notes, reports and files.
+   * Arrow keys and Enter, or a click. */
+  function findDialog() {
+    const pages = [
+      ['Home', 'house-door', () => { location.hash = '#/'; }], ['General Files', 'folder-general', () => { location.hash = '#/general'; }],
+      ['All Missions', 'folder-mission', () => { location.hash = '#/operations'; }], ['Reference', 'book', () => { location.hash = '#/reference'; }],
+      ['Quick Links', 'link-45deg', () => quickLinksPanel(true)], ['Settings', 'gear', () => showVaultPanel()],
+      ['Back Up the Vault', 'hdd-fill', () => showVaultPanel('backups')], ['New Case', 'plus-lg', () => newCase()],
+      ['New Mission', 'folder-plus', async () => { const op = await operationDialog(); if (op) { renderCaseList(); location.hash = `#/operation/${encodeURIComponent(op.id)}`; } }],
+      ['Keyboard Shortcuts', 'lightning-charge', () => shortcutsDialog()],
+    ];
+    return openDialog((close) => {
+      const input = h('input', { type: 'search', class: 'find-input', placeholder: 'Case number, name, Mission or page', 'aria-label': 'Find', autocomplete: 'off', autofocus: true });
+      const list = h('div', { class: 'find-list', role: 'listbox' });
+      let items = []; let at = 0;
+      const go = (fn) => { close(); setTimeout(fn, 0); };
+      const row = (icon, title, sub, fn, kind) => ({ el: h('button', { type: 'button', class: 'find-row', role: 'option', onclick: () => go(fn) },
+        I(icon), h('span', { class: 'find-title' }, title), sub ? h('span', { class: 'find-sub muted' }, sub) : null, h('span', { class: 'find-kind muted' }, kind)), fn });
+      const draw = () => {
+        const q = input.value.trim().toLowerCase();
+        const cases = (Vault.data?.cases || []).filter((c) => !q || matchesSearch(c, q))
+          .sort((a, b) => (isArchivedEntry(a) - isArchivedEntry(b)) || (b.updated || '').localeCompare(a.updated || '')).slice(0, q ? 12 : 6)
+          .map((c) => row(isArchivedEntry(c) ? 'folder-archived' : 'folder', c.number || 'No case number', [subj(c), isArchivedEntry(c) ? 'Archived' : c.status].filter(Boolean).join(' · '), () => { location.hash = caseLink(c); }, 'Case'));
+        const ops = (Vault.listOperations() || []).filter((op) => !q || `${op.number} ${op.name}`.toLowerCase().includes(q)).slice(0, q ? 6 : 3)
+          .map((op) => row('folder-mission', opLabel(op), `${plural(Vault.operationMembers(op.id).length, 'case')}`, () => { location.hash = `#/operation/${encodeURIComponent(op.id)}`; }, 'Mission'));
+        const pg = pages.filter(([t]) => !q || t.toLowerCase().includes(q)).map(([t, icon, fn]) => row(icon, t, '', fn, 'Page'));
+        const more = q.length >= 2 ? [
+          row('person-lines-fill', `Every case "${input.value.trim()}" is on`, 'Subjects, suspects and arrestees, names written another way too', () => CVPersonView.open(input.value.trim(), window.CaseVaultUI), 'Person'),
+          row('search', `Search inside cases for "${input.value.trim()}"`, 'Notes, timelines, reports, the Draft form and file names', () => searchInsideCases(input.value.trim()), 'Search'),
+        ] : [];
+        // A typed word that names a Mission lists the Mission before its cases (they match it too).
+        items = q && ops.length ? [...ops, ...cases, ...pg, ...more] : [...cases, ...ops, ...pg, ...more];
+        at = Math.min(at, Math.max(0, items.length - 1));
+        list.replaceChildren(...(items.length ? items.map((x, i) => { x.el.classList.toggle('on', i === at); x.el.setAttribute('aria-selected', String(i === at)); return x.el; }) : [h('p', { class: 'muted find-none' }, 'Nothing found.')]));
+      };
+      input.addEventListener('input', () => { at = 0; draw(); });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); at = (at + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % Math.max(1, items.length); draw(); (items[at] || {}).el?.scrollIntoView({ block: 'nearest' }); }
+        if (e.key === 'Enter' && items[at]) { e.preventDefault(); go(items[at].fn); }
+        if (e.key === 'Escape') { e.preventDefault(); close(); } // not left to the browser, which can skip the first Esc
+      });
+      draw();
+      return h('div', { class: 'find-form' }, h('div', { class: 'find-head' }, I('search'), input), list,
+        h('p', { class: 'find-foot muted' }, h('kbd', {}, '↑'), h('kbd', {}, '↓'), ' to move · ', h('kbd', {}, 'Enter'), ' to open · ', h('kbd', {}, 'Esc'), ' to close · ', h('kbd', {}, '?'), ' for every shortcut'));
+    });
+  }
+
   function shortcutsDialog() {
     return openDialog((close) => h('div', { class: 'shortcuts-form' },
       h('h2', { icon: 'lightning-charge' }, 'Keyboard Shortcuts'),
@@ -3461,10 +3510,8 @@
     const popup = !!document.querySelector('#dialog[open]') || !!(window.CVPrivacy && CVPrivacy.locked);
     if (state.connected && !popup && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
       e.preventDefault();
-      // The search box opens from the magnifier at the top of the case list.
-      const q = $('#case-search');
-      if (document.activeElement !== q) { const b2 = $('#btn-side-search'); if (b2) b2.click(); }
-      if (document.activeElement === q) q.select();
+      // v1.131: Find, for cases, Missions, people and pages (the sidebar's own search stays on its magnifier).
+      findDialog();
       return;
     }
     if (state.connected && !popup && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
