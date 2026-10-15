@@ -213,6 +213,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.134
+
+- **Statute of limitations, 18 months for misdemeanors:** a case whose narcotic charges are all misdemeanors (for example 720 ILCS 550/4(b) or (c), or any charge marked Misdemeanor or Class A, B or C) now gets 18 months from the Date of Occurrence instead of 3 years. One felony narcotic charge keeps 3 years. A charge whose class isn't known counts as a felony. The warning in Needs Attention says which period applies
+- **Closed Files and Archived, by year:** each has a folder for every year. Closed Files uses the year a case was closed (a closed Mission, the year it ended); Archived uses the year it was archived. Open a year for its folders: the Missions and General Files in Closed Files, the reasons (EXPIRED, NOLLE PROSEQUI, PROSECUTION, Other) in Archived. Open one of those for its case numbers
+- **No double count:** a folder shows its number of case numbers once, on the folder; the name under it no longer repeats it ("OP-1 Example · 1 closed" is now "OP-1 / Example")
+- **Other Files** now sits under Archived, then the Secure Locker
+
 ### What's new in v1.133
 
 - **Arrest Report → Phone Calls:** for each call, **Name (called who)**, **Relationship** and **Phone number called** (+ Add Phone Call for more than one), or tick **Refused phone call**. The PDF has a PHONE CALLS part with the calls in a table, or "ARRESTEE REFUSED PHONE CALL". In templates, `{{arrest.phoneCalls}}` gives the calls one per line (or "Refused phone call")
@@ -222,12 +229,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 - **Typing is smoother on a slow laptop.** After each pause in typing, CaseVault used to redraw the whole case list on the left, which on a slower PC froze the page for up to a second. Now it redraws only what changed (often just one row), and a save waits until you have paused for a moment (1.5 seconds)
 - **Saving While You Type** (⋮ → Options → Display), set for each PC: **After a pause** (recommended), **Every 5 minutes** or **Every 30 minutes**. With 5 or 30 minutes the save icon at the top says when the next save is; **Ctrl+S** saves at once. Changing page, locking, Power Off or closing CaseVault always saves first, and a change made with a click (Add Note, a choice from a list) saves straight away. With 30 minutes, up to 30 minutes of typing can be lost if the SSD is pulled out or the laptop loses power
-
-### What's new in v1.131
-
-- **Find (Ctrl+K):** one box for everything. Type a case number, a name, words from a case's notes, a Mission or a page (General Files, Settings, Back Up the Vault, New Case…) and press Enter. For a name it also offers **Every case this person is on** (the person view) and **Search inside cases** (notes, timelines, reports, the Draft form and file names). ↑ ↓ move, Enter opens, Esc closes. The sidebar's own search is still on its magnifier
-- **Shortcuts:** press **?** (or ⋮ → Keyboard Shortcuts) for the list; Find's footer reminds you
-- **A Mission's case list:** the Closing column says it in a few words (No report yet, Report ready, Other RD report, Closed by arrest); point at it for the full sentence
 
 ### Earlier versions
 

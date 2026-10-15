@@ -4,6 +4,12 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.131
+
+- **Find (Ctrl+K):** one box for everything. Type a case number, a name, words from a case's notes, a Mission or a page (General Files, Settings, Back Up the Vault, New Case…) and press Enter. For a name it also offers **Every case this person is on** (the person view) and **Search inside cases** (notes, timelines, reports, the Draft form and file names). ↑ ↓ move, Enter opens, Esc closes. The sidebar's own search is still on its magnifier
+- **Shortcuts:** press **?** (or ⋮ → Keyboard Shortcuts) for the list; Find's footer reminds you
+- **A Mission's case list:** the Closing column says it in a few words (No report yet, Report ready, Other RD report, Closed by arrest); point at it for the full sentence
+
 ## What's new in v1.130
 
 - **A Mission's case list:** each row is one line again. **Open ▾** on a row shows Details, Reports and Files for that case; the Closing note fits on one line

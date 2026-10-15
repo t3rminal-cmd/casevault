@@ -23,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.133.0';
+  const APP_VERSION = '1.134.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -287,9 +287,11 @@ const Vault = (() => {
       status: c.status || 'Open',
       tags: Array.isArray(c.tags) ? c.tags : [],
       opened: c.dates?.opened || '',
+      // v1.134: for CLOSED FILES and ARCHIVED by year on the home page.
+      closed: c.dates?.closed || '', archived: c.dates?.archived || '',
       updated: [c.dates?.updated, prev?.updated].filter(Boolean).sort().pop() || '',
       nextDeadline: nextDeadline(timeline),
-      // v1.67: the statute of limitations (narcotic charges, 3 years) and the archive sub-folder.
+      // v1.67: the statute of limitations (narcotic charges, 3 years; v1.134: 18 months for misdemeanors) and the archive sub-folder.
       sol: prev?.sol || null,
       archiveFolder: c.archiveFolder || '',
       // v1.90: Case History notes, so the case list search finds them.

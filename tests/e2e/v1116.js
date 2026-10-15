@@ -1,5 +1,6 @@
-// v1.116: the landing page's CLOSED FILES and ARCHIVED sections, under Other Files. Closed cases
-// and closed Missions leave Mission Files and General Files. All data is made up.
+// v1.116: the landing page's CLOSED FILES and ARCHIVED sections. Closed cases and closed Missions
+// leave Mission Files and General Files. v1.134: a folder per year, then the Mission / reason
+// folders, with Other Files under Archived. All data is made up.
 const boot = require('./boot.js');
 const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
 const SP = process.env.SP + '/v1116';
@@ -20,8 +21,8 @@ const SP = process.env.SP + '/v1116';
   await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForSelector('.closed-files-section');
   await p.waitForTimeout(500);
   const order = await p.$$eval('.dashboard > .dash-section', (x) => x.map((e) => e.className.match(/(op-folders-section|general-years-section|other-files-section|closed-files-section|archived-section|locker-section)/g)).filter(Boolean).map((m) => m[m.length - 1]));
-  const iOther = order.indexOf('other-files-section');
-  ok(order[iOther + 1] === 'closed-files-section' && order[iOther + 2] === 'archived-section' && order[iOther + 3] === 'locker-section', `Closed Files, then Archived, then the Secure Locker (v1.120), under Other Files: ${order.join(' > ')}`);
+  const iClosed = order.indexOf('closed-files-section');
+  ok(order[iClosed + 1] === 'archived-section' && order[iClosed + 2] === 'other-files-section' && order[iClosed + 3] === 'locker-section', `Closed Files, Archived, then Other Files (v1.134) and the Secure Locker: ${order.join(' > ')}`);
   const missions = await p.$$eval('.op-folders-section:not(.closed-files-section):not(.archived-section):not(.general-years-section) .op-folder-tile', (x) => x.map((e) => e.textContent.trim()));
   ok(missions.length === 1 && /OP-1/.test(missions[0]), `Mission Files keeps the open Mission only: ${missions.join(' | ')}`);
   await p.click('.op-folders-section .op-folder-tile:has-text("OP-1")'); await p.waitForTimeout(300);
@@ -29,16 +30,24 @@ const SP = process.env.SP + '/v1116';
   ok(inOp.join(',') === 'EX-200', `the open Mission shows its open case numbers only: ${inOp.join(',')}`);
   const general = await p.$$eval('.general-years-section .year-tile', (x) => x.map((e) => [e.textContent.trim(), e.classList.contains('placeholder-tile')]));
   ok(general.length === 1 && general[0][1], `the closed independent case left General Files: ${JSON.stringify(general)}`);
-  const closed = await p.$$eval('.closed-files-section .op-folder-tile', (x) => x.map((e) => e.textContent.trim().replace(/\s+/g, ' ')));
-  ok(closed.length === 3 && /OP-1/.test(closed[0]) && /1 closed/.test(closed[0]) && /OP-2.*Closed Op/.test(closed[1]) && /General Files/.test(closed[2]), `Closed Files: ${closed.join(' | ')}`);
-  await p.click('.closed-files-section .op-folder-tile:has-text("OP-2")'); await p.waitForTimeout(300);
+  const years = await p.$$eval('.closed-files-section .year-group-tile', (x) => x.map((e) => e.textContent.trim().replace(/\s+/g, ' ')));
+  ok(years.length === 1 && /^3 ?2026$/.test(years[0]), `Closed Files: one folder for 2026 with its 3 case numbers: ${years.join(' | ')}`);
+  await p.click('.closed-files-section .year-group-tile'); await p.waitForTimeout(300);
+  const closed = await p.$$eval('.closed-files-section .done-year .op-folder-tile', (x) => x.map((e) => e.textContent.trim().replace(/\s+/g, ' ')));
+  ok(closed.length === 3 && /OP-1/.test(closed[0]) && /OP-2.*Closed Op/.test(closed[1]) && /General Files/.test(closed[2]), `2026 holds the Missions and General Files: ${closed.join(' | ')}`);
+  ok(!closed.some((t) => /\d+ closed/.test(t)), 'the count is not repeated under the Mission name');
+  await p.locator('.closed-files-section').screenshot({ path: `${SP}/closed-year.png` }).catch(() => {});
+  await p.click('.closed-files-section .done-year .op-folder-tile:has-text("OP-2")'); await p.waitForTimeout(300);
   const inClosed = await p.$$eval('.closed-files-section .op-case-num', (x) => x.map((e) => e.textContent));
   ok(inClosed.join(',') === 'EX-400' && (await p.locator('.closed-files-section .op-open-name').getAttribute('href')).startsWith('#/operation/'), `a closed Mission opens with its cases and a link to it: ${inClosed}`);
   await p.locator('.closed-files-section').screenshot({ path: `${SP}/closed.png` }).catch(() => {});
-  // Archived, by reason.
-  const arch = await p.$$eval('.archived-section .op-folder-tile', (x) => x.map((e) => e.textContent.trim()));
-  ok(arch.length === 1 && /NOLLE PROSEQUI/.test(arch[0]), `Archived by reason: ${arch.join(' | ')}`);
-  await p.click('.archived-section .op-folder-tile'); await p.waitForTimeout(300);
+  // Archived, by year then by reason.
+  const archYears = await p.$$eval('.archived-section .year-group-tile', (x) => x.map((e) => e.textContent.trim()));
+  ok(archYears.length === 1 && /2026$/.test(archYears[0]), `Archived by year: ${archYears.join(' | ')}`);
+  await p.click('.archived-section .year-group-tile'); await p.waitForTimeout(300);
+  const arch = await p.$$eval('.archived-section .done-year .op-folder-tile', (x) => x.map((e) => e.textContent.trim()));
+  ok(arch.length === 1 && /NOLLE PROSEQUI/.test(arch[0]), `then by reason: ${arch.join(' | ')}`);
+  await p.click('.archived-section .done-year .op-folder-tile'); await p.waitForTimeout(300);
   ok((await p.$$eval('.archived-section .op-case-num', (x) => x.map((e) => e.textContent))).join() === 'EX-300', 'the archived case is in its folder');
   await p.locator('.archived-section').screenshot({ path: `${SP}/archived.png` }).catch(() => {});
   // Clicking empty space closes the open folder.
