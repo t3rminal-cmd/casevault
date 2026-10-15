@@ -15,12 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.131
+## What's New in v1.132
 
-- **Find (Ctrl+K):** cases (same match as the sidebar search, notes too), Missions, pages and actions, plus the person view and Search Inside Cases for the words typed; keyboard or mouse
-- **? lists every shortcut**; Find's footer points to it
-- **A Mission's Closing column** uses short words (No report yet, Report ready, Closed by arrest) so the table fits on a 1366-wide screen; the full sentence is on hover. It no longer stays at "…" when another part of the page redraws
-- **Updater smoke test in CI:** every change installs the real release over an older copy with the real updater code and checks every file, the version record and the offline cache list
+- **Smoother typing on slower PCs:** after a save the case list redraws only the rows that changed (it used to redraw every case, a pause of up to a second on a slow laptop); the dates in it no longer build a date formatter per case; the save icon and the case header aren't redrawn on every keystroke; a save waits for a 1.5 second pause in typing
+- **Saving While You Type** in Options → Display, per PC: after a pause (recommended), every 5 minutes or every 30 minutes. Only typing waits: clicks, page changes, Ctrl+S, lock, Power Off and closing still save at once
 
 ## What CaseVault Does
 

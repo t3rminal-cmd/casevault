@@ -4,6 +4,12 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.129
+
+- **Tidier spacing:** every inner margin in CaseVault now sits on the same small grid, so cards, forms, tables and buttons line up the same way on every page
+- **Flatter:** the many slightly different shadows are now two: a faint one on cards and a stronger one under windows and panels that float
+- **Colours:** older one-off reds, greens, ambers and blues now use the theme's colours, so warnings, errors and "done" look the same everywhere, in light and dark
+
 ## What's new in v1.128
 
 - **Opened date in the future:** a case whose Opened date is still to come (usually a typo) now says so: General Files shows "in 40d" with a warning sign, and the case's hover box in the sidebar says to check the date. It used to show "Today"

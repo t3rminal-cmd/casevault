@@ -3,6 +3,7 @@
  * Options:
  *   Display   zoom and brightness for this PC (kept in the browser like the theme: a display
  *             preference, never case data).
+ *             v1.132: Saving While You Type, when typed changes are written to the SSD on this PC.
  *   Dev Tools "Document Anonymizer" (was "Make it fictitious"): takes a real template, report or reference and swaps the
  *             personal details (names, phone numbers, addresses, dates of birth, case numbers…)
  *             for made-up fillers such as John Doe and 555-0100, so it can be kept as a template or
@@ -18,6 +19,24 @@
   // Looked up when used: options.js loads early (for zoom and brightness), before js/secure/pii.js.
   const PIIMOD = typeof module !== 'undefined' && module.exports ? require('./secure/pii.js') : null;
   const PII = () => PIIMOD || root.CVPii;
+
+  /* ---------- saving while you type (this PC, v1.132) ---------- */
+
+  // When typed changes are written to the SSD: after a pause in typing (the default), or at most
+  // every 5 or 30 minutes (for a slow PC). A page change, Ctrl+S, a lock, Power Off or closing the
+  // window always writes them at once.
+  const SAVE_KEY = 'casevault-save-every';
+  const SAVE_CHOICES = [['pause', 'After a Pause', 'A moment after you stop typing. Recommended: the least to lose.'],
+    ['5', 'Every 5 Minutes', 'At most once every 5 minutes while you type.'],
+    ['30', 'Every 30 Minutes', 'At most once every 30 minutes. If the SSD is pulled out or the laptop loses power, up to 30 minutes of typing can be lost.']];
+  function getSaveEvery() {
+    try { const v = root.localStorage.getItem(SAVE_KEY); return SAVE_CHOICES.some(([k]) => k === v) ? v : 'pause'; } catch { return 'pause'; }
+  }
+  function setSaveEvery(v) {
+    try { if (v === 'pause') root.localStorage.removeItem(SAVE_KEY); else root.localStorage.setItem(SAVE_KEY, v); } catch { /* this session only */ }
+  }
+  /** 0 for "after a pause", else the most milliseconds between saves. */
+  const saveEveryMs = () => { const v = getSaveEvery(); return v === 'pause' ? 0 : Number(v) * 60e3; };
 
   /* ---------- display: zoom and brightness (this PC) ---------- */
 
@@ -215,7 +234,25 @@
         slider('Zoom', ZOOM, getZoom(), (v) => `${v}%`, setZoom, 'Makes everything in CaseVault bigger or smaller.')),
       card('sun-fill', 'Brightness', 'Darker or lighter, for example in a dark room at night.',
         slider('Brightness', BRIGHT, getBrightness(), (v) => `${v}%`, setBrightness, 'Darkens or lightens CaseVault.')),
+      saveCard(),
       h('p', { class: 'muted small explain' }, 'Kept in this browser on this PC, like the theme. Each PC has its own. Nothing about your cases is stored here.'));
+  }
+
+  /** v1.132: when typed changes are written to the SSD (this PC). */
+  function saveCard() {
+    const { h } = ui;
+    const note = h('span', { class: 'muted small block opt-save-note' });
+    const btns = SAVE_CHOICES.map(([k, label, tip]) => h('button', { class: 'btn small opt-choice', type: 'button', role: 'radio', 'data-key': k, title: tip, onclick: () => pick(k) }, label));
+    function pick(k) {
+      setSaveEvery(k);
+      for (const b of btns) { const on = b.dataset.key === k; b.classList.toggle('active', on); b.setAttribute('aria-checked', String(on)); }
+      note.textContent = SAVE_CHOICES.find(([x]) => x === k)[2];
+    }
+    pick(getSaveEvery());
+    return h('div', { class: 'opt-card' },
+      h('div', { class: 'opt-card-head' }, h('span', { class: 'opt-card-icon', 'aria-hidden': 'true' }, ui.icon('hdd-fill')),
+        h('div', {}, h('strong', {}, 'Saving While You Type'), h('span', { class: 'muted small block' }, 'When typed changes are written to the SSD. Changing page, Ctrl+S, locking, Power Off or closing CaseVault always saves at once.'))),
+      h('div', { class: 'opt-row opt-choices', role: 'radiogroup', 'aria-label': 'Saving while you type' }, ...btns), note);
   }
 
   function devPanel() {
@@ -447,7 +484,7 @@
         } }, 'Email it'))));
   }
 
-  const api = { fictitious, AI_PROMPT, getZoom, getBrightness, setZoom, setBrightness, applyDisplay, open, contactDev, ZOOM, BRIGHT };
+  const api = { fictitious, AI_PROMPT, getZoom, getBrightness, setZoom, setBrightness, applyDisplay, open, contactDev, ZOOM, BRIGHT, getSaveEvery, setSaveEvery, saveEveryMs, SAVE_CHOICES };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else {
     root.CVOptions = api;

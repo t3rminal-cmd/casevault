@@ -4,6 +4,13 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.131)
+
+- **Find (Ctrl+K):** cases (same match as the sidebar search, notes too), Missions, pages and actions, plus the person view and Search Inside Cases for the words typed; keyboard or mouse
+- **? lists every shortcut**; Find's footer points to it
+- **A Mission's Closing column** uses short words (No report yet, Report ready, Closed by arrest) so the table fits on a 1366-wide screen; the full sentence is on hover. It no longer stays at "…" when another part of the page redraws
+- **Updater smoke test in CI:** every change installs the real release over an older copy with the real updater code and checks every file, the version record and the offline cache list
+
 ## Features (v1.130)
 
 - **Mission rows one line tall** with an **Open ▾** menu (Details, Reports, Files) in place of three stacked buttons

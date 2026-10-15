@@ -160,3 +160,9 @@ table.op-cases-table td.op-closing { width: auto; min-width: 0; white-space: now
 .find-row.on .find-title { color: var(--accent); }
 .find-foot { margin: 0; font-size: var(--fs-tiny); display: flex; flex-wrap: wrap; align-items: center; gap: .25rem; }
 .find-none { padding: .5rem; }
+
+/* v1.132: Options → Display → Saving While You Type: three equal choices in a row. */
+.opt-row.opt-choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.opt-choice { justify-content: center; white-space: nowrap; }
+.opt-choice.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.opt-save-note { margin-top: .5rem; }
