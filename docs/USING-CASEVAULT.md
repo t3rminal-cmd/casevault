@@ -213,6 +213,11 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.132
+
+- **Typing is smoother on a slow laptop.** After each pause in typing, CaseVault used to redraw the whole case list on the left, which on a slower PC froze the page for up to a second. Now it redraws only what changed (often just one row), and a save waits until you have paused for a moment (1.5 seconds)
+- **Saving While You Type** (⋮ → Options → Display), set for each PC: **After a pause** (recommended), **Every 5 minutes** or **Every 30 minutes**. With 5 or 30 minutes the save icon at the top says when the next save is; **Ctrl+S** saves at once. Changing page, locking, Power Off or closing CaseVault always saves first, and a change made with a click (Add Note, a choice from a list) saves straight away. With 30 minutes, up to 30 minutes of typing can be lost if the SSD is pulled out or the laptop loses power
+
 ### What's new in v1.131
 
 - **Find (Ctrl+K):** one box for everything. Type a case number, a name, words from a case's notes, a Mission or a page (General Files, Settings, Back Up the Vault, New Case…) and press Enter. For a name it also offers **Every case this person is on** (the person view) and **Search inside cases** (notes, timelines, reports, the Draft form and file names). ↑ ↓ move, Enter opens, Esc closes. The sidebar's own search is still on its magnifier
@@ -225,12 +230,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Long tables** (General Files, Missions, a Mission's cases, Files) keep their column headings at the top while you scroll, and rows are lightly striped so a line is easy to follow
 - **Home banner:** the count chips are flatter and quieter
 - **Sidebar:** INDEPENDENT CASES no longer runs under its count when there are 10 or more cases; it wraps onto two lines when it needs the room
-
-### What's new in v1.129
-
-- **Tidier spacing:** every inner margin in CaseVault now sits on the same small grid, so cards, forms, tables and buttons line up the same way on every page
-- **Flatter:** the many slightly different shadows are now two: a faint one on cards and a stronger one under windows and panels that float
-- **Colours:** older one-off reds, greens, ambers and blues now use the theme's colours, so warnings, errors and "done" look the same everywhere, in light and dark
 
 ### Earlier versions
 

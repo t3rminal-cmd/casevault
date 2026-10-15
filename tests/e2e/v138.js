@@ -31,7 +31,8 @@ const SP = process.env.SP;
   await p.click('button:has-text("Add suspect")'); await p.waitForTimeout(200);
   console.log('hair in combo:', await p.$eval('.suspect-demo input[aria-label$="Hair Color"]', (e) => !!e.closest('.combo')));
   await p.click('.suspect-demo input[aria-label$="Hair Color"]'); await p.keyboard.type('Bro'); await p.waitForTimeout(200);
-  await p.keyboard.press('ArrowDown'); await p.keyboard.press('Enter'); await p.waitForTimeout(1200);
+  await p.keyboard.press('ArrowDown'); await p.keyboard.press('Enter'); await p.waitForTimeout(300);
+  await p.evaluate(() => window.CaseVaultUI.Save.flushAll()); // v1.132: a save waits for a 1.5 s pause in typing
   console.log('hair saved:', JSON.stringify((await p.evaluate((id) => Vault.getCase(id), id)).suspects[0].info));
   console.log('role inputs in combo:', await p.$$eval('input[list], .contacts input[aria-label$="role"]', (x) => x.map((e) => !!e.closest('.combo'))));
   console.log('errors:', errs);

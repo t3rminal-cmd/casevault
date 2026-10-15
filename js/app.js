@@ -57,6 +57,9 @@
   }
 
   // v1.100: when a case was opened, short, and how long ago (for the sidebar).
+  // v1.132: the short month from a list (toLocaleString built a date formatter for every case on
+  // every sidebar redraw, a large part of the pause after each save on a slow laptop).
+  const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function openedAge(iso) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return null;
     const d = new Date(`${iso}T12:00:00`);
@@ -68,7 +71,7 @@
     const spanLong = days < 60 ? plural(days, 'day') : days < 730 ? plural(Math.floor(days / 30.44), 'month') : plural(Math.floor(days / 365.25), 'year');
     const age = days === 0 ? 'today' : future ? `in ${span}` : span;
     const ageLong = days === 0 ? 'Today' : future ? `In ${spanLong}` : spanLong;
-    return { short: `${d.toLocaleString('en-US', { month: 'short' })} ${pad(d.getDate())}, ${d.getFullYear()}`, age, ageLong, days: future ? -days : days, future, long: fmtDate(iso) };
+    return { short: `${SHORT_MONTHS[d.getMonth()]} ${pad(d.getDate())}, ${d.getFullYear()}`, age, ageLong, days: future ? -days : days, future, long: fmtDate(iso) };
   }
 
   function fmtDateTime(ms) {
@@ -221,20 +224,37 @@
    * Autosave + "Saved to SSD" indicator
    * ===================================================================== */
 
+  /** v1.132: the cursor is in a text box (as opposed to a button, a checkbox or a list). */
+  function isTyping() {
+    const a = document.activeElement;
+    return !!a && (a.isContentEditable || a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && /^(text|search|email|tel|url|number|)$/.test(a.type || '')));
+  }
+  const PAUSE_MS = 1500; // v1.132: "after a pause": this long after the last change (was 0.5 to 1.2 s)
   const Save = {
-    timers: new Map(),  // key -> { timer, fn }
+    timers: new Map(),  // key -> { timer, fn, due }
     failed: new Map(),  // key -> fn  (retried after reconnect)
     running: 0,
     lastSaved: null,
 
-    // Queue a save. Repeated calls with the same key within `delay` collapse into one write.
+    // Queue a save. Repeated calls with the same key collapse into one write.
+    // v1.132: when is set per PC in Options (CVOptions.saveEveryMs): after a pause in typing (the
+    // default: PAUSE_MS after the last change), or at most every 5 or 30 minutes. Either way the
+    // changes are written at once on a page change, Ctrl+S, a lock, Power Off or the window closing.
+    // The indicator is drawn when a save starts waiting, not on every keystroke.
+    // Only typing waits: a change made with a click (Add Note, a choice from a list) keeps its own
+    // short delay.
     schedule(key, fn, delay = 500) {
+      const typing = isTyping();
+      const every = typing && window.CVOptions && CVOptions.saveEveryMs ? CVOptions.saveEveryMs() : 0;
       const prev = this.timers.get(key);
-      if (prev) clearTimeout(prev.timer);
       this.failed.delete(key);
-      const timer = setTimeout(() => this.run(key, fn).catch(() => {}), delay); // errors surface via the indicator
-      this.timers.set(key, { timer, fn });
-      this.render();
+      if (prev && every) { prev.fn = fn; return; } // the timer already running writes the newest version
+      if (prev) clearTimeout(prev.timer);
+      const wait = every || (typing ? Math.max(delay, PAUSE_MS) : delay);
+      const entry = { fn, due: Date.now() + wait };
+      entry.timer = setTimeout(() => this.run(key, entry.fn).catch(() => {}), wait); // errors surface via the indicator
+      this.timers.set(key, entry);
+      if (!prev) this.render();
     },
 
     // Run a save now and report the result through the indicator.
@@ -299,9 +319,14 @@
       if (this.failed.size) {
         el.className = 'save-status error';
         el.textContent = `Not saved — reconnect SSD (${this.failed.size})`;
-      } else if (this.running || this.timers.size) {
+      } else if (this.running) {
         el.className = 'save-status saving';
         el.textContent = 'Saving…';
+      } else if (this.timers.size) {
+        // v1.132: changes waiting for the pause in typing, or for the next 5 or 30 minute save.
+        const due = new Date(Math.min(...[...this.timers.values()].map((t) => t.due || Date.now())));
+        el.className = 'save-status saving';
+        el.textContent = due - Date.now() > 60e3 ? `Not saved yet · saves at ${pad(due.getHours())}:${pad(due.getMinutes())} (Ctrl+S saves now)` : 'Saving…';
       } else if (this.lastSaved) {
         el.className = 'save-status saved';
         el.textContent = `Saved to SSD ${pad(this.lastSaved.getHours())}:${pad(this.lastSaved.getMinutes())}:${pad(this.lastSaved.getSeconds())}`;
@@ -334,7 +359,7 @@
     },
   };
 
-  const afterSave = debounce(() => renderCaseList(), 150);
+  const afterSave = debounce(() => refreshCaseList(), 150);
 
   /* =====================================================================
    * App state
@@ -841,7 +866,7 @@
       sol ? `Statute of limitations ${sol === 'expired' ? 'expired' : 'expires'} ${fmtDate(c.sol.expires)}` : null,
       due && !sol ? `${due.cls === 'overdue' || due.cls === 'soon' ? 'Alarm: ' : 'Next deadline: '}${c.nextDeadline.title || 'Deadline'}, ${fmtDate(c.nextDeadline.date)}${c.nextDeadline.time ? ` ${c.nextDeadline.time}` : ''} (${due.text})` : null,
     ].filter(Boolean).join('\n');
-    return h('li', {},
+    const li = h('li', {},
       h('a', {
         href: `#/case/${encodeURIComponent(c.id)}`,
         // v1.60: a case with a reminder (a deadline overdue or within a week) has a thin red border.
@@ -864,6 +889,8 @@
       // v1.100: the day it was opened and how long ago, on its own line so the name is never cut off.
       opened ? h('div', { class: 'case-item-opened muted', title: `Opened ${opened.long}${opened.days ? `, ${opened.days} day${opened.days === 1 ? '' : 's'} ago` : ', today'}` },
         I('calendar-event'), h('span', { class: 'cim-opened' }, `${opened.short} · ${opened.age}`)) : null));
+    li._cvArgs = [inGroup, { dim }]; // v1.132: to draw just this row again (refreshCaseList)
+    return li;
   }
 
   /* Operations (v1.46): an Operation is a record (number, name, status, dates, notes) in vault.json;
@@ -1012,9 +1039,43 @@
     return h('li', { class: 'op-item mission-item' }, det);
   }
 
+  /** v1.132: what the case list shows, as text: the whole list, and the same without the subject
+   * names. After a save the list is drawn again only when this changed, and when only a subject
+   * changed just that case's row is replaced (drawing every row after each pause in typing froze a
+   * slow laptop for up to a second). */
+  let sideSig = null;
+  function sideSignature() {
+    const q = $('#case-search').value.trim().toLowerCase();
+    const row = (c, withSubject) => [c.id, c.location, c.number, withSubject ? c.subject : '', c.operationId, c.status, c.opened, c.nextDeadline, c.sol,
+      q ? [c.title, c.fileNumber, c.agencyNumber, c.client, c.tags, c.notes] : null];
+    const ctx = [q, state.caseId, location.hash, sideOrder, today(), [...sideFold], Vault.listOperations().map((o) => [o.id, o.number, o.name, o.status])];
+    const cases = Vault.data.cases;
+    return { all: JSON.stringify([ctx, cases.map((c) => row(c, true))]), shape: JSON.stringify([ctx, cases.map((c) => row(c, false))]),
+      subjects: new Map(cases.map((c) => [c.id, c.subject])) };
+  }
+  /** Redraws the case list unless nothing in it changed (see sideSignature). */
+  function refreshCaseList() {
+    if (!Vault.data || !sideSig) return renderCaseList();
+    const now = sideSignature();
+    if (now.all === sideSig.all) return undefined;
+    if (now.shape !== sideSig.shape) return renderCaseList();
+    for (const c of Vault.data.cases) {
+      if (now.subjects.get(c.id) === sideSig.subjects.get(c.id)) continue;
+      for (const a of document.querySelectorAll('#case-list a.case-item')) {
+        if (a.getAttribute('href') !== `#/case/${encodeURIComponent(c.id)}`) continue;
+        const li = a.closest('li');
+        if (li && li._cvArgs) li.replaceWith(caseItem(c, ...li._cvArgs));
+      }
+    }
+    sideSig = now;
+    return undefined;
+  }
+
   function renderCaseList() {
     const list = $('#case-list');
+    sideSig = null;
     if (!Vault.data) { list.replaceChildren(); return; }
+    sideSig = sideSignature();
     const cases = filteredCases();
     const activeCount = Vault.data.cases.filter((c) => !isArchivedEntry(c)).length;
     const searching = !!$('#case-search').value.trim();
@@ -2531,7 +2592,9 @@
     const subjEl = $('#case-subject');
     if (subjEl) subjEl.textContent = subj(c) || 'No subject yet';
     const sub = $('#case-sub');
-    if (sub) sub.replaceChildren(...caseSubtitle(c));
+    // v1.132: drawn again only when what it shows changed (not on every keystroke in a field).
+    const key = JSON.stringify([c.operationId, opLabel(opOf(c)), c.agencyNumber, c.client, c.status]);
+    if (sub && sub.dataset.key !== key) { sub.replaceChildren(...caseSubtitle(c)); sub.dataset.key = key; }
   }
 
   /* ---------- Details ---------- */
