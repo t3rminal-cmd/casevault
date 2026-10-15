@@ -1960,7 +1960,7 @@
     if (hidden === Vault.localDay()) return null;
     const bar = h('div', { class: 'backup-bar', role: 'status' },
       I('exclamation-triangle-fill'),
-      h('span', {}, `${fullBackupText()}. A copy on a second drive is what saves your cases if this SSD is lost or fails.`),
+      h('span', { title: 'A copy on a second drive is what saves your cases if this SSD is lost or fails.' }, `${fullBackupText()}: copy the vault to a second drive.`),
       h('button', { type: 'button', class: 'btn small', icon: 'hdd-fill', onclick: () => showVaultPanel('backups') }, 'Back Up Now'),
       h('button', { type: 'button', class: 'icon-btn backup-bar-close', 'aria-label': 'Hide for today', title: 'Hide for today', onclick: () => {
         try { localStorage.setItem('cv-backup-bar', Vault.localDay()); } catch { /* not kept */ }

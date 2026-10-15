@@ -4,6 +4,10 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.126
+
+- **PDFs match the app:** the Supplementary Report, Draft PDF, Arrest Report, Case Summary, Timeline PDF and Buy Summary, Discovery receipt and Link Chart have navy titles, and their section headers (and the Arrest Report's side tabs) are light navy with navy writing. The grey label boxes and black writing are unchanged, so a copy still prints clearly in black and white
+
 ## What's new in v1.125
 
 - **Text sizes:** every screen now uses the same six text sizes (page title, section, sub-section, body, small, tiny) and three weights (regular, semibold, bold). Headings, labels and hints look the same from page to page
