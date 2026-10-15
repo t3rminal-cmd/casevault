@@ -15,9 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.126
+## What's New in v1.127
 
-- **PDFs in the theme:** every PDF CaseVault makes has navy titles and light-navy section bands with navy headings (shared `navy()` / `bandBox()` in `js/report-pdf.js`); label boxes stay grey so copies print well in black and white
+- **One icon style:** every icon the app uses has a colour picture (`icons/color/`, drawn by `scripts/color-icons/make.js`); only the small controls (chevrons, drag grip, ⋮) stay plain, in one muted colour. A unit test keeps it that way
 
 ## What CaseVault Does
 

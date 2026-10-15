@@ -4,6 +4,10 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.126)
+
+- **PDFs in the theme:** every PDF CaseVault makes has navy titles and light-navy section bands with navy headings (shared `navy()` / `bandBox()` in `js/report-pdf.js`); label boxes stay grey so copies print well in black and white
+
 ## Features (v1.125)
 
 - **Type scale:** six text sizes (`--fs-tiny` … `--fs-title` in `css/theme.css`) and three weights (400, 600, 700) used across every screen, in place of about 36 one-off sizes. A browser test keeps every visible text on the scale

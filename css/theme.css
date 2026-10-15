@@ -95,3 +95,10 @@ body { font-family: var(--font); }
 .status-pending { background: var(--st-pending-soft); color: var(--st-pending); }
 /* The banner: navy, flat. */
 .hero { background: linear-gradient(135deg, var(--hero-1) 0%, var(--hero-2) 100%); box-shadow: none; }
+
+/* v1.127: one icon style. Every picture is a colour icon; only the small controls (the open/close
+   arrows, the drag grip and the ⋮ menu) are plain shapes, all in the same muted colour, so they never
+   compete with the pictures. A button or link still turns them its own colour on hover. */
+:where(svg.bi[data-icon^="chevron-"], svg.bi[data-icon="grip-vertical"], svg.bi[data-icon="three-dots-vertical"]) { color: var(--muted); }
+:where(button, a, summary):hover > :where(svg.bi[data-icon^="chevron-"], svg.bi[data-icon="grip-vertical"], svg.bi[data-icon="three-dots-vertical"]),
+:where(button, a, summary):focus-visible > :where(svg.bi[data-icon^="chevron-"], svg.bi[data-icon="grip-vertical"], svg.bi[data-icon="three-dots-vertical"]) { color: inherit; }
