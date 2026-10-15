@@ -35,7 +35,7 @@
       y = PAGE_H - M;
       if (pages.length === 1) {
         if (lh) { y -= R.letterhead(ops, lh, M, y, INNER, 'helvetica'); if (lh.logo) pages[0].imgs.push(lh.logo.index); }
-        text(M, y - 18, 'CASE SUMMARY', 18, true);
+        R.navy(ops, () => text(M, y - 18, 'CASE SUMMARY', 18, true));
         const bw = 170;
         fill(PAGE_W - M - bw, y - 11, bw, 11, 0.88);
         rect(PAGE_W - M - bw, y - 32, bw, 32, 0.9);
@@ -50,9 +50,8 @@
     const ensure = (hh) => { if (y - hh < BOTTOM) newPage(); };
     const band = (label) => {
       ensure(40);
-      fill(M, y - 15, INNER, 15, 0.82);
-      rect(M, y - 15, INNER, 15, 0.6);
-      text(M + 6, y - 11, label, 9.5, true);
+      R.bandBox(ops, M, y - 15, INNER, 15);
+      R.navy(ops, () => text(M + 6, y - 11, label, 9.5, true));
       y -= 21;
     };
     const para = (s, { size = 9.5, bold = false, indent = 0, gap = 2 } = {}) => {

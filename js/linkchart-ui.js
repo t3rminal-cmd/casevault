@@ -75,7 +75,7 @@
     const jpeg = new Uint8Array(await (await new Promise((r) => cv.toBlob(r, 'image/jpeg', 0.92))).arrayBuffer());
     const ops = [...headOps];
     const text = (x, y, s, size, bold) => ops.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${x.toFixed(2)} ${y.toFixed(2)} Td ${R.pdfString(s)} Tj ET`);
-    text(M, PH - M - lhH - 14, 'Link Chart', 16, true);
+    R.navy(ops, () => text(M, PH - M - lhH - 14, 'Link Chart', 16, true));
     const sub = [chart.title, c.number ? `Case ${c.number}` : '', c.subject || ''].filter(Boolean).join(' · ');
     if (sub) text(M, PH - M - lhH - 30, sub, 10, false);
     ops.push(`0.6 w ${M} ${(top + 6).toFixed(2)} m ${PW - M} ${(top + 6).toFixed(2)} l S`);

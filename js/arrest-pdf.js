@@ -53,6 +53,8 @@
     const vtext = (x, yy, s, size, bold = true) => ops.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf 0 1 -1 0 ${x.toFixed(2)} ${yy.toFixed(2)} Tm ${pdfString(s)} Tj ET`);
     const line = (x1, y1, x2, y2, w = 0.6) => ops.push(`${w} w ${x1.toFixed(2)} ${y1.toFixed(2)} m ${x2.toFixed(2)} ${y2.toFixed(2)} l S`);
     const rect = (x, yy, w, h, lw = 0.6) => ops.push(`${lw} w ${x.toFixed(2)} ${yy.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re S`);
+    // v1.126: the section tabs down the left in the theme's light navy, their names in navy.
+    const tint = (x, yy, w, h) => ops.push(`${P().NAVY_TINT} rg ${x.toFixed(2)} ${yy.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re f 0 g`);
     const fill = (x, yy, w, h, gray = 0.9) => ops.push(`${gray} g ${x.toFixed(2)} ${yy.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re f 0 g`);
     const center = (x, w, yy, s, size, bold) => text(x + (w - width(s, size, bold)) / 2, yy, s, size, bold);
 
@@ -100,7 +102,7 @@
       for (const t of lines) { ensure(lead + 1); fill(CX, y - lead, CW, lead, BOX); text(CX + 6, y - lead + 3.5, t, size); y -= lead; }
       y -= 3;
     };
-    const band = (label) => { fill(L, y - 13, INNER, 13, 0.8); rect(L, y - 13, INNER, 13, 0.6); center(L, INNER, y - 9.8, label, 9, true); y -= 13; };
+    const band = (label) => { P().bandBox(ops, L, y - 13, INNER, 13); P().navy(ops, () => center(L, INNER, y - 9.8, label, 9, true)); y -= 13; };
 
     const newPage = () => {
       ops = []; sigs = [];
@@ -113,7 +115,7 @@
         if (lh) { y -= P().letterhead(ops, lh, L, y, INNER, 'helvetica'); if (lh.logo) pages[pages.length - 1].imgs.push(lh.logo.index); }
         // The agency and ARREST REPORT on the left, the approval in the middle, the numbers on the right.
         if (agency && !(lh && lh.header)) text(L, y - 9, agency.toUpperCase(), 10, true);
-        text(L, y - 25, 'ARREST REPORT', 17, true);
+        P().navy(ops, () => text(L, y - 25, 'ARREST REPORT', 17, true));
         if (caseLabel) text(L, y - 35, caseLabel, 7);
         if (who && clean(who.supervisor) && clean(who.approvalDate)) center(L + INNER * 0.35, INNER * 0.3, y - 12, 'FINAL APPROVAL', 12, true);
         const nums = [['CB #:', cb], ['IR #:', clean(who && who.irNumber)], ['YD #:', clean(who && who.ydNumber)], ['RD #:', clean(who && who.rdNumber) || clean(caseNumber)], ['EVENT #:', clean(who && who.eventNumber)]];
@@ -144,7 +146,7 @@
       if (!seg) return;
       const h = seg.top - bottom;
       rect(L, bottom, INNER, h, 1.1);
-      fill(L + 1, bottom + 1, TAB, h - 2, 0.8);
+      tint(L + 1, bottom + 1, TAB, h - 2);
       line(L + TAB + 1, bottom, L + TAB + 1, seg.top, 0.8);
       // The name in one line, or two when it doesn't fit (RECOVERED / NARCOTICS).
       let size = 9;
@@ -153,7 +155,7 @@
       while (size > 5.5 && Math.max(...rows.map((r) => width(r, size, true))) > h - 6) size -= 0.5;
       rows.forEach((r, j) => {
         const off = rows.length === 2 ? (j === 0 ? -size * 0.55 : size * 0.6) : 0;
-        vtext(L + 1 + TAB / 2 + size * 0.35 + off, bottom + (h - width(r, size, true)) / 2, r, size);
+        P().navy(ops, () => vtext(L + 1 + TAB / 2 + size * 0.35 + off, bottom + (h - width(r, size, true)) / 2, r, size));
       });
     };
     const startSeg = (label, minH = 0) => { ensure(Math.max(minH, 24)); seg = { label, top: y }; y -= 4; };
@@ -238,7 +240,7 @@
       // The CB number on a tab at the right edge, as on the form.
       if (pages.length === who.firstPage + 1 && cb(a)) {
         const tx = PAGE_W - L + 4; const tb = 150; const th = 150;
-        fill(tx, tb, 14, th, 0.8); rect(tx, tb, 14, th, 0.6);
+        tint(tx, tb, 14, th); rect(tx, tb, 14, th, 0.6);
         vtext(tx + 10, tb + (th - width(`CB #: ${cb(a)}`, 8, true)) / 2, `CB #: ${cb(a)}`, 8);
       }
 
@@ -304,8 +306,8 @@
       const by = kvList(L + hw + 4 + TAB + 5, ct - 13, [['Bond Date:', when(a.bondDate, a.bondTime)], ['Type:', a.bondType], ['Receipt #:', a.bondReceipt], ['Amount:', a.bond]], iw);
       const cb2 = Math.min(cy, by, ct - 84) - 2;
       for (const [x0, label] of [[L, 'COURT INFO'], [L + hw + 4, 'BOND INFO']]) {
-        rect(x0, cb2, hw, ct - cb2, 1.1); fill(x0 + 1, cb2 + 1, TAB, ct - cb2 - 2, 0.8); line(x0 + TAB + 1, cb2, x0 + TAB + 1, ct, 0.8);
-        vtext(x0 + 1 + TAB / 2 + 3, cb2 + (ct - cb2 - width(label, 9, true)) / 2, label, 9);
+        rect(x0, cb2, hw, ct - cb2, 1.1); tint(x0 + 1, cb2 + 1, TAB, ct - cb2 - 2); line(x0 + TAB + 1, cb2, x0 + TAB + 1, ct, 0.8);
+        P().navy(ops, () => vtext(x0 + 1 + TAB / 2 + 3, cb2 + (ct - cb2 - width(label, 9, true)) / 2, label, 9));
       }
       y = cb2 - 4;
 

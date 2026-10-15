@@ -213,6 +213,10 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.126
+
+- **PDFs match the app:** the Supplementary Report, Draft PDF, Arrest Report, Case Summary, Timeline PDF and Buy Summary, Discovery receipt and Link Chart have navy titles, and their section headers (and the Arrest Report's side tabs) are light navy with navy writing. The grey label boxes and black writing are unchanged, so a copy still prints clearly in black and white
+
 ### What's new in v1.125
 
 - **Text sizes:** every screen now uses the same six text sizes (page title, section, sub-section, body, small, tiny) and three weights (regular, semibold, bold). Headings, labels and hints look the same from page to page
@@ -223,12 +227,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **New look, "Navy Ledger":** deep navy on a warm off-white, flatter (thin borders instead of shadows), with a navy welcome banner. Dark mode has the same colours in lighter tones
 - **Font:** JetBrains Mono, which comes with CaseVault, so the app looks the same on every PC (Consolas was only on Windows). Nothing is downloaded
 - **Status colours mean the same everywhere:** Open blue, Pending amber, Closed green, Archived warm grey, Overdue red. Mission sections are blue and General Files plum
-
-### What's new in v1.123
-
-- **Quick Links:** one link per row, every link the same size, and the whole name on one line
-- **Missions list, a Mission's page and General Files:** the status labels (Open, Closed, Archived) are all one width, and dates sit in columns, months under months, days under days, years under years
-- **A Mission's page:** the subject is split into **Last Name**, **First Name** and **M.I.** columns, as in General Files. On a smaller screen the Details / Reports / Files buttons stack, so the table fits without scrolling sideways
 
 ### Earlier versions
 

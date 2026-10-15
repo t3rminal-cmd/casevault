@@ -140,7 +140,7 @@
         // v1.85: the department letterhead across the top, when there is one.
         if (lh) { y -= letterhead(ops, lh, M, y, INNER, 'times'); if (lh.logo) pages[0].imgs.push(lh.logo.index); }
         // Title on the left, the agency under it; the R.D. Number in a box on the right (v1.48).
-        text(M, y - 14, title, 14, true);
+        navy(ops, () => text(M, y - 14, title, 14, true));
         if (agency && !(lh && lh.header)) text(M, y - 25, agency.toUpperCase(), 7.5, true);
         const bw = (INNER / 8) * 2;
         fill(PAGE_W - M - bw, y - 10.5, bw, 10.5, 0.9);
@@ -160,9 +160,8 @@
     // A band with a section title (Exhibit Attachments).
     const band = (label) => {
       ensure(30);
-      fill(M, y - 13, INNER, 13, 0.88);
-      rect(M, y - 13, INNER, 13);
-      text(M + 4, y - 9.6, label.toUpperCase(), 8, true);
+      bandBox(ops, M, y - 13, INNER, 13);
+      navy(ops, () => text(M + 4, y - 9.6, label.toUpperCase(), 8, true));
       y -= 13;
     };
 
@@ -355,9 +354,8 @@
     // ---- update information, status, how cleared
     if (on('update')) {
       ensure(16 + 2 * 15 + 34);
-      fill(M, y - 14, INNER, 14, 0.9);
-      rect(M, y - 14, INNER, 14, 0.6);
-      center(M, INNER, y - 10, 'Update Information    *See Narrative For Updated Information', 8.5, true);
+      bandBox(ops, M, y - 14, INNER, 14);
+      navy(ops, () => center(M, INNER, y - 10, 'Update Information    *See Narrative For Updated Information', 8.5, true));
       y -= 14;
       const upd = [['victimVerified', 'offenderVerified', 'propertyVerified', 'circumstancesVerified'], ['victimUpdated', 'offenderUpdated', 'propertyUpdated', 'circumstancesUpdated']];
       for (const row of upd) {
@@ -374,9 +372,8 @@
       const halves = [[M, split, 'Status', 'status'], [M + split, INNER - split, 'How Cleared', 'cleared']];
       rect(M, y - 34, split, 34, 0.6); rect(M + split, y - 34, INNER - split, 34, 0.6);
       for (const [x, w, head, k] of halves) {
-        fill(x, y - 13, w, 13, 0.9);
-        rect(x, y - 13, w, 13, 0.6);
-        center(x, w, y - 9.5, head, 8.5, true);
+        bandBox(ops, x, y - 13, w, 13);
+        navy(ops, () => center(x, w, y - 9.5, head, 8.5, true));
         const list = opts(k); const cw = w / list.length;
         list.forEach((o, i) => {
           const lab = RF.shortCode(o).replace(/ - /, '-'); // v1.48: the form's short codes
@@ -396,8 +393,8 @@
     if (on('report')) {
       ensure(40);
       y -= 4;
-      rect(M, y - 16, INNER, 16, 0.6);
-      text(M + 4, y - 11.5, d.activity ? `Officer's Report - ${d.activity}` : "Officer's Report", 10, true);
+      bandBox(ops, M, y - 16, INNER, 16);
+      navy(ops, () => text(M + 4, y - 11.5, d.activity ? `Officer's Report - ${d.activity}` : "Officer's Report", 10, true));
       y -= 20;
       const by = `This is an Officer's Report by Beat Assigned: ${on('offense') ? val('beatAssigned') : ''}`;
       text(M + 2, y - 9, by.trim(), 9.5);
@@ -625,9 +622,8 @@
     for (let p = 0; p < count; p++) {
       const ops = []; const imgs = [];
       let y = PAGE_H - M;
-      ops.push(`0.88 g ${M} ${(y - 15).toFixed(2)} ${INNER} 15 re f 0 g`);
-      ops.push(`0.8 w ${M} ${(y - 15).toFixed(2)} ${INNER} 15 re S`);
-      t(ops, M + 4, y - 11, heading.toUpperCase(), 9, true);
+      bandBox(ops, M, y - 15, INNER, 15, 0.8);
+      navy(ops, () => t(ops, M + 4, y - 11, heading.toUpperCase(), 9, true));
       y -= 15;
       if (p === 0 && description) {
         const lines = wrap(description, 9.5, INNER - 8, false, 'times').slice(0, 4);
@@ -698,7 +694,20 @@
     return bytes;
   }
 
-  const api = { build, layout, assemble, textsReport, wrap, width, pdfString, plain, letterhead, withLogo, PAGE_W, PAGE_H, M };
+  /* v1.126: the theme's navy on every PDF. Section bands are a light navy tint with a navy edge and
+   * a navy title; document titles are navy. Label boxes stay light grey and the text black, so a copy
+   * prints cleanly in black and white too. */
+  const NAVY = '0.122 0.227 0.373';      // #1f3a5f
+  const NAVY_TINT = '0.894 0.918 0.949'; // #e4eaf2
+  /** Draws whatever draw() pushes (text) in navy, then goes back to black. */
+  function navy(ops, draw) { ops.push(`${NAVY} rg`); draw(); ops.push('0 g'); }
+  /** A section band: the navy tint with a navy edge. The caller writes the title (in navy). */
+  function bandBox(ops, x, y, w, h, lw = 0.6) {
+    const r = `${x.toFixed(2)} ${y.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re`;
+    ops.push(`${NAVY_TINT} rg ${r} f ${NAVY} RG ${lw} w ${r} S 0 G 0 g`);
+  }
+
+  const api = { build, layout, assemble, textsReport, wrap, width, pdfString, plain, letterhead, withLogo, navy, bandBox, NAVY, NAVY_TINT, PAGE_W, PAGE_H, M };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportPdf = api;
 })(this);
