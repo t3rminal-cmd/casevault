@@ -15,11 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.124
+## What's New in v1.125
 
-- **Navy Ledger theme:** deep navy on warm off-white, flat, square; dark mode to match. All colours live in one file, `css/theme.css`
-- **JetBrains Mono** bundled in `vendor/` (OFL), so the app looks the same on every PC, fully offline
-- **One colour per status everywhere:** Open blue, Pending amber, Closed green, Archived warm grey, Overdue red
+- **Type scale:** six text sizes (`--fs-tiny` … `--fs-title` in `css/theme.css`) and three weights (400, 600, 700) used across every screen, in place of about 36 one-off sizes. A browser test keeps every visible text on the scale
 
 ## What CaseVault Does
 

@@ -4,6 +4,11 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.122
+
+- **Housekeeping release:** nothing changes in how CaseVault works. The unused Poppins font files are gone (CaseVault uses Consolas), the older "What's new" notes moved to [previous-versions/WHATS-NEW.md](../previous-versions/WHATS-NEW.md), and the README describes the current screens (Settings, the Quick Links panel, the person view)
+- The check that stops case files being committed to the public code repository now also covers locker, chat, branding, export and log folders and the arrest, link chart, mail log, library and report-field files
+
 ## What's new in v1.121
 
 - **Quick Links** are in a panel that slides in from the right. Open it with **Quick Links** on the home page (beside Reference) or the link icon in the sidebar's top row (next to Home), from any page. Reference / OSINT / LEO tabs and **Arrange** work as before. A link to a CaseVault page (Location Codes, Charges…) shows that page and closes the panel; outside sites open in a new browser tab. Close it with ×, Esc or a click outside. The bar at the bottom of the page is gone

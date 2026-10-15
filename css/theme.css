@@ -1,4 +1,4 @@
-/* CaseVault — the theme (v1.124, "Navy Ledger").
+/* CaseVault — the theme (v1.124, "Navy Ledger"; v1.125 type scale).
  *
  * Loaded after app.css, so the colours and the font here win. One place for the palette: deep navy on
  * a warm off-white, flat (thin borders instead of shadows), square corners, and one colour per meaning
@@ -14,6 +14,14 @@
 :root, :root:not([data-theme="dark"]) {
   --font: "JetBrains Mono", Consolas, "Cascadia Mono", "Liberation Mono", "DejaVu Sans Mono", monospace;
   --mono: var(--font);
+  /* v1.125: the type scale. Six sizes; every text size in app.css is one of these (icons and the
+     clock keep their own). Three weights: 400 regular, 600 semibold, 700 bold. */
+  --fs-tiny: .72rem;    /* badges, counts, table headers, captions under icons */
+  --fs-small: .82rem;   /* hints, meta lines, buttons in tables, form labels */
+  --fs-text: .9375rem;  /* body text and inputs (15px) */
+  --fs-sub: 1.05rem;    /* card titles, sub-sections */
+  --fs-section: 1.25rem;/* section headers */
+  --fs-title: 1.5rem;   /* page titles */
   --bg: #f5f4f0;
   --surface: #fffefb;
   --surface-2: #ebe9e3;
