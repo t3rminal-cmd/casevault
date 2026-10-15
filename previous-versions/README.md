@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.132)
+
+- **Smoother typing on slower PCs:** after a save the case list redraws only the rows that changed (it used to redraw every case, a pause of up to a second on a slow laptop); the dates in it no longer build a date formatter per case; the save icon and the case header aren't redrawn on every keystroke; a save waits for a 1.5 second pause in typing
+- **Saving While You Type** in Options → Display, per PC: after a pause (recommended), every 5 minutes or every 30 minutes. Only typing waits: clicks, page changes, Ctrl+S, lock, Power Off and closing still save at once
+
 ## Features (v1.131)
 
 - **Find (Ctrl+K):** cases (same match as the sidebar search, notes too), Missions, pages and actions, plus the person view and Search Inside Cases for the words typed; keyboard or mouse

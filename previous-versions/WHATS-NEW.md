@@ -4,6 +4,13 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.130
+
+- **A Mission's case list:** each row is one line again. **Open ▾** on a row shows Details, Reports and Files for that case; the Closing note fits on one line
+- **Long tables** (General Files, Missions, a Mission's cases, Files) keep their column headings at the top while you scroll, and rows are lightly striped so a line is easy to follow
+- **Home banner:** the count chips are flatter and quieter
+- **Sidebar:** INDEPENDENT CASES no longer runs under its count when there are 10 or more cases; it wraps onto two lines when it needs the room
+
 ## What's new in v1.129
 
 - **Tidier spacing:** every inner margin in CaseVault now sits on the same small grid, so cards, forms, tables and buttons line up the same way on every page

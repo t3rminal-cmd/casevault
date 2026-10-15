@@ -37,7 +37,8 @@ const SP = process.env.SP + '/v1113';
   // Doesn't-apply boxes.
   for (const label of ['No narcotics recovered', 'No warrant identified', 'No arrestee vehicle information']) await p.locator('label.arrest-none', { hasText: label }).locator('input').check();
   await p.waitForTimeout(300);
-  ok(await p.$$eval('.arrest-none-body', (x) => x.every((e) => e.hidden)), 'ticking them hides those parts');
+  // (v1.133: Refused phone call is another such box, not ticked here.)
+  ok(await p.$$eval('label.arrest-none', (x) => x.filter((l) => !/Refused phone call/.test(l.textContent)).every((l) => l.nextElementSibling.hidden)), 'ticking them hides those parts');
   // The State of Illinois as victim.
   await p.click('button:has-text("+ Add State of Illinois as Victim")'); await p.waitForTimeout(300);
   const vf = await p.$$eval('.arrest-item', (items) => { const it = items.find((x) => [...x.querySelectorAll('input')].some((i) => i.value === 'State of Illinois')); return it ? [...it.querySelectorAll('.field > span')].map((s) => s.textContent.trim()) : []; });

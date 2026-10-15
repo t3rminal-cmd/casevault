@@ -166,3 +166,7 @@ table.op-cases-table td.op-closing { width: auto; min-width: 0; white-space: now
 .opt-choice { justify-content: center; white-space: nowrap; }
 .opt-choice.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 .opt-save-note { margin-top: .5rem; }
+
+/* v1.133: Arrest Report → Phone Calls: name, relationship and number on one row. */
+.arrest-grid.arrest-g-calls { grid-template-columns: 2fr 1.4fr 1.4fr; }
+@media (max-width: 820px) { .arrest-grid.arrest-g-calls { grid-template-columns: 1fr; } }

@@ -292,6 +292,15 @@
       if (!props.length && !clean(a.property)) big('NO PROPERTIES RECORDED');
       endSeg(56);
 
+      // ---- phone calls (v1.133): who was called, or that the arrestee refused a call
+      startSeg('PHONE CALLS', 44);
+      const calls = a.refusedCall ? [] : (a.phoneCalls || []).filter(C.itemFilled);
+      if (a.refusedCall) { y -= 4; big('ARRESTEE REFUSED PHONE CALL'); }
+      else if (!calls.length) { y -= 4; big('NO PHONE CALLS RECORDED'); }
+      else tableRows([['Name (Called Who)', 0, 0.4], ['Relationship', 0.4, 0.28], ['Phone Number Called', 0.68, 0.32]],
+        calls.map((x) => [clean(x.name), clean(x.relationship), clean(x.phone)]));
+      endSeg(44);
+
       // ---- incident narrative, carried over pages, on a grey ground
       startSeg('INCIDENT NARRATIVE', 80);
       for (const l of wrap('(The facts for probable cause to arrest AND to substantiate the charges include, but are not limited to, the following)', 8, CW, true)) { text(CX, y - 8, l, 8, true); y -= 10; }

@@ -213,6 +213,11 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.133
+
+- **Arrest Report → Phone Calls:** for each call, **Name (called who)**, **Relationship** and **Phone number called** (+ Add Phone Call for more than one), or tick **Refused phone call**. The PDF has a PHONE CALLS part with the calls in a table, or "ARRESTEE REFUSED PHONE CALL". In templates, `{{arrest.phoneCalls}}` gives the calls one per line (or "Refused phone call")
+- **New charge:** 720 ILCS 550/4(b), Possession of Cannabis, 10 to 30 grams, first offense (Class B misdemeanor), under Illinois: Possession in the charge list and the Reference
+
 ### What's new in v1.132
 
 - **Typing is smoother on a slow laptop.** After each pause in typing, CaseVault used to redraw the whole case list on the left, which on a slower PC froze the page for up to a second. Now it redraws only what changed (often just one row), and a save waits until you have paused for a moment (1.5 seconds)
@@ -223,13 +228,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Find (Ctrl+K):** one box for everything. Type a case number, a name, words from a case's notes, a Mission or a page (General Files, Settings, Back Up the Vault, New Case…) and press Enter. For a name it also offers **Every case this person is on** (the person view) and **Search inside cases** (notes, timelines, reports, the Draft form and file names). ↑ ↓ move, Enter opens, Esc closes. The sidebar's own search is still on its magnifier
 - **Shortcuts:** press **?** (or ⋮ → Keyboard Shortcuts) for the list; Find's footer reminds you
 - **A Mission's case list:** the Closing column says it in a few words (No report yet, Report ready, Other RD report, Closed by arrest); point at it for the full sentence
-
-### What's new in v1.130
-
-- **A Mission's case list:** each row is one line again. **Open ▾** on a row shows Details, Reports and Files for that case; the Closing note fits on one line
-- **Long tables** (General Files, Missions, a Mission's cases, Files) keep their column headings at the top while you scroll, and rows are lightly striped so a line is easy to follow
-- **Home banner:** the count chips are flatter and quieter
-- **Sidebar:** INDEPENDENT CASES no longer runs under its count when there are 10 or more cases; it wraps onto two lines when it needs the room
 
 ### Earlier versions
 
