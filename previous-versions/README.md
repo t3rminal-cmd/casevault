@@ -4,6 +4,10 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.125)
+
+- **Type scale:** six text sizes (`--fs-tiny` … `--fs-title` in `css/theme.css`) and three weights (400, 600, 700) used across every screen, in place of about 36 one-off sizes. A browser test keeps every visible text on the scale
+
 ## Features (v1.124)
 
 - **Navy Ledger theme:** deep navy on warm off-white, flat, square; dark mode to match. All colours live in one file, `css/theme.css`

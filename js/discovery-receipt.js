@@ -30,7 +30,7 @@
     const ensure = (h) => { if (y - h < M + 30) { newPage(); text(M, y - 10, `Discovery Receipt (continued) · ${opts.caseLabel || ''}`, 9, true); y -= 24; } };
 
     newPage();
-    text(M, y - 18, 'DISCOVERY RECEIPT', 18, true);
+    R().navy(ops, () => text(M, y - 18, 'DISCOVERY RECEIPT', 18, true));
     if (opts.agency) text(M, y - 32, String(opts.agency).toUpperCase(), 8.5, true);
     const range = entry.batesFirst === entry.batesLast ? bates(entry.prefix, entry.batesFirst) : `${bates(entry.prefix, entry.batesFirst)} to ${bates(entry.prefix, entry.batesLast)}`;
     text(W - M - tw(range, 10, true), y - 18, range, 10, true);

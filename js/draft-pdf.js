@@ -63,9 +63,9 @@
       y = PAGE_H - M;
       text(M, y - 10, agency || '', 9, true);
       const t = title.length > 60 ? `${title.slice(0, 57)}…` : title;
-      text(PAGE_W / 2 - width(t, 13, true) / 2, y - 12, t, 13, true);
+      P().navy(ops, () => text(PAGE_W / 2 - width(t, 13, true) / 2, y - 12, t, 13, true));
       y -= 20;
-      line(M, y, PAGE_W - M, y, 1.2);
+      ops.push(`${P().NAVY} RG`); line(M, y, PAGE_W - M, y, 1.2); ops.push('0 G');
       y -= 6;
     };
     const ensure = (h) => { if (y - h < M + 18) newPage(); };
@@ -114,8 +114,8 @@
       if (b.kind === 'band') {
         ensure(40);
         y -= 4;
-        fill(M, y - 13, INNER, 13, 0.88); rect(M, y - 13, INNER, 13);
-        text(M + 4, y - 9.6, clean(b.text).toUpperCase(), 8, true);
+        P().bandBox(ops, M, y - 13, INNER, 13);
+        P().navy(ops, () => text(M + 4, y - 9.6, clean(b.text).toUpperCase(), 8, true));
         y -= 13;
       } else if (b.kind === 'heading') { y -= 4; para(b.text, 9, true); y -= 2; }
       else if (b.kind === 'rule') { ensure(8); line(M, y - 4, PAGE_W - M, y - 4, 0.4); y -= 8; }

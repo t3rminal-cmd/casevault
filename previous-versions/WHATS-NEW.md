@@ -4,6 +4,12 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.123
+
+- **Quick Links:** one link per row, every link the same size, and the whole name on one line
+- **Missions list, a Mission's page and General Files:** the status labels (Open, Closed, Archived) are all one width, and dates sit in columns, months under months, days under days, years under years
+- **A Mission's page:** the subject is split into **Last Name**, **First Name** and **M.I.** columns, as in General Files. On a smaller screen the Details / Reports / Files buttons stack, so the table fits without scrolling sideways
+
 ## What's new in v1.122
 
 - **Housekeeping release:** nothing changes in how CaseVault works. The unused Poppins font files are gone (CaseVault uses Consolas), the older "What's new" notes moved to [previous-versions/WHATS-NEW.md](../previous-versions/WHATS-NEW.md), and the README describes the current screens (Settings, the Quick Links panel, the person view)
