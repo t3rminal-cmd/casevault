@@ -60,10 +60,15 @@
   function openedAge(iso) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return null;
     const d = new Date(`${iso}T12:00:00`);
-    const days = Math.max(0, Math.round((new Date(`${today()}T12:00:00`) - d) / 864e5));
-    const age = days === 0 ? 'today' : days < 60 ? `${days}d` : days < 730 ? `${Math.floor(days / 30.44)}mo` : `${Math.floor(days / 365.25)}y`;
-    const ageLong = days === 0 ? 'Today' : days < 60 ? plural(days, 'day') : days < 730 ? plural(Math.floor(days / 30.44), 'month') : plural(Math.floor(days / 365.25), 'year');
-    return { short: `${d.toLocaleString('en-US', { month: 'short' })} ${pad(d.getDate())}, ${d.getFullYear()}`, age, ageLong, days, long: fmtDate(iso) };
+    const diff = Math.round((new Date(`${today()}T12:00:00`) - d) / 864e5);
+    // v1.128: an Opened date in the future (most likely a typo) says so, rather than "today".
+    const future = diff < 0;
+    const days = Math.abs(diff);
+    const span = days < 60 ? `${days}d` : days < 730 ? `${Math.floor(days / 30.44)}mo` : `${Math.floor(days / 365.25)}y`;
+    const spanLong = days < 60 ? plural(days, 'day') : days < 730 ? plural(Math.floor(days / 30.44), 'month') : plural(Math.floor(days / 365.25), 'year');
+    const age = days === 0 ? 'today' : future ? `in ${span}` : span;
+    const ageLong = days === 0 ? 'Today' : future ? `In ${spanLong}` : spanLong;
+    return { short: `${d.toLocaleString('en-US', { month: 'short' })} ${pad(d.getDate())}, ${d.getFullYear()}`, age, ageLong, days: future ? -days : days, future, long: fmtDate(iso) };
   }
 
   function fmtDateTime(ms) {
@@ -580,17 +585,8 @@
       const names = await Vault.listBackups();
       if (!names.some((x) => x.startsWith(`vault-${Vault.localDay()}`))) warn.push('Today\'s automatic backup of vault.json is missing. Open ⋮ → Vault → Backups and click Back Up Now.');
     } catch { /* drive lost: reported elsewhere */ }
-    const age = fullBackupAge();
-    // v1.101: the red chip in the banner always shows it; the pop-up says it once a day.
-    if (age == null || age > FULL_BACKUP_DAYS) {
-      let told = '';
-      try { told = localStorage.getItem('cv-backup-nag') || ''; } catch { /* not kept: say it */ }
-      if (told !== Vault.localDay()) {
-        // v1.118: on its own, shorter, and not in red: the banner's No Backup chip keeps saying it.
-        setTimeout(() => toast(`${fullBackupText()}. Back up the whole vault to a second drive: ⋮ → Vault → Backups.`, 'warn', 7000), warn.length ? 600 : 0);
-        try { localStorage.setItem('cv-backup-nag', Vault.localDay()); } catch { /* not kept */ }
-      }
-    }
+    // v1.128: the full-backup reminder is a slim bar under the home page banner (backupBar), not a
+    // floating message over the page; the banner's red chip still says it.
     if (MODE === 'helper' && HelperFS.sysinfo) {
       const si = await HelperFS.sysinfo();
       if (si && si.diskTotal && (si.diskFree < 2 * 1024 ** 3 || si.diskFree / si.diskTotal < 0.05)) warn.push(`The SSD is nearly full: ${fmtSize(si.diskFree)} free. Archive or move large files before it fills up.`);
@@ -841,7 +837,7 @@
     const opened = openedAge(c.opened || (c.dates && c.dates.opened));
     const tip = [
       `${c.number || 'No case number'}${c.subject ? `, ${c.subject}` : ''} · ${c.status}`,
-      opened ? `Opened ${opened.long} (${opened.days ? `${opened.days} day${opened.days === 1 ? '' : 's'} ago` : 'today'})` : null,
+      opened ? `Opened ${opened.long} (${opened.future ? `${opened.ageLong.toLowerCase()}: a date in the future, check it` : opened.days ? `${opened.days} day${opened.days === 1 ? '' : 's'} ago` : 'today'})` : null,
       sol ? `Statute of limitations ${sol === 'expired' ? 'expired' : 'expires'} ${fmtDate(c.sol.expires)}` : null,
       due && !sol ? `${due.cls === 'overdue' || due.cls === 'soon' ? 'Alarm: ' : 'Next deadline: '}${c.nextDeadline.title || 'Deadline'}, ${fmtDate(c.nextDeadline.date)}${c.nextDeadline.time ? ` ${c.nextDeadline.time}` : ''} (${due.text})` : null,
     ].filter(Boolean).join('\n');
@@ -1343,6 +1339,7 @@
     $('#main').replaceChildren(h('section', { class: 'dashboard' },
       // v1.61: a smaller banner with the status counts in it, then quick actions and what needs you.
       welcomeHero(cases, deadlines, count),
+      backupBar(),
       quickActions(),
       needsAttention(deadlines, cases),
       operationFolders(cases, tlBox, opBox),
@@ -1722,7 +1719,7 @@
           h('td', { class: 'gen-mission' }, op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, title: opLabel(op) }, op.number || op.name || 'Mission') : h('span', { class: 'muted' }, '—')),
           h('td', {}, statusPill(arch ? 'Archived' : c.status)),
           h('td', { class: 'nowrap date-cell' }, dateCols(c.opened)),
-          h('td', { class: 'nowrap age-cell' }, (() => { const o = openedAge(c.opened); return o ? h('span', { title: `${o.days} day${o.days === 1 ? '' : 's'} since it was opened` }, o.ageLong) : '—'; })()),
+          h('td', { class: 'nowrap age-cell' }, (() => { const o = openedAge(c.opened); return o ? (o.future ? h('span', { class: 'age-future', title: `${o.ageLong}: the Opened date is in the future. Check it on the Details tab.` }, I('exclamation-triangle-fill'), o.age) : h('span', { title: `${o.days} day${o.days === 1 ? '' : 's'} since it was opened` }, o.ageLong)) : '—'; })()),
           h('td', { class: 'nowrap' }, action));
       }) : [h('tr', {}, h('td', { colspan: 9, class: 'muted empty-cell' }, Vault.data.cases.length ? 'No cases match.' : 'No cases yet. New Case makes one.'))]));
     };
@@ -1953,6 +1950,25 @@
 
   /* The landing page's welcome banner (v1.21): a greeting, the date and time, what needs you
    * today, and one-click actions. */
+  /* v1.128: when the full backup is due, one slim line under the banner (it used to float over the
+   * page): what is due, Back Up Now, and × to hide it for today. */
+  function backupBar() {
+    const n = fullBackupAge();
+    if (n != null && n <= FULL_BACKUP_DAYS) return null;
+    let hidden = '';
+    try { hidden = localStorage.getItem('cv-backup-bar') || ''; } catch { /* not kept: show it */ }
+    if (hidden === Vault.localDay()) return null;
+    const bar = h('div', { class: 'backup-bar', role: 'status' },
+      I('exclamation-triangle-fill'),
+      h('span', {}, `${fullBackupText()}. A copy on a second drive is what saves your cases if this SSD is lost or fails.`),
+      h('button', { type: 'button', class: 'btn small', icon: 'hdd-fill', onclick: () => showVaultPanel('backups') }, 'Back Up Now'),
+      h('button', { type: 'button', class: 'icon-btn backup-bar-close', 'aria-label': 'Hide for today', title: 'Hide for today', onclick: () => {
+        try { localStorage.setItem('cv-backup-bar', Vault.localDay()); } catch { /* not kept */ }
+        bar.remove();
+      } }, I('x-lg')));
+    return bar;
+  }
+
   function welcomeHero(cases, deadlines, count) {
     const who = ((Vault.data.settings.affiant || {}).name || '').trim();
     const hour = new Date().getHours();

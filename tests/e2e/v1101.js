@@ -32,13 +32,17 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   ok(hd.bellOnFolder && hd.bellNotOnName, 'the bell sits on the folder, not on the name');
   ok(/^\d+ cases?$/.test(hd.meta), `the line under it is short: "${hd.meta}"`);
 
-  // backup pop-up once a day
-  const nag = () => p.evaluate(() => [...document.querySelectorAll('.toast')].some((t) => /full backup/i.test(t.textContent)));
-  await p.reload(); await p.waitForTimeout(2000);
-  ok(!(await nag()), 'reloading the same day: no backup pop-up (the banner chip still shows)');
-  ok(await p.locator('.hc-backup').count() === 1, 'the banner chip is still there');
-  await p.evaluate(() => localStorage.setItem('cv-backup-nag', '2000-01-01')); await p.reload(); await p.waitForTimeout(2000);
-  ok(await nag(), 'a new day: the pop-up shows once');
+  // v1.128: the backup reminder is a slim bar under the banner (never a pop-up over the page);
+  // × hides it for the day, and it is back the next day.
+  const toastNag = () => p.evaluate(() => [...document.querySelectorAll('.toast')].some((t) => /full backup/i.test(t.textContent)));
+  const bar = () => p.locator('.dashboard .backup-bar').count();
+  await p.reload(); await p.waitForSelector('.dashboard'); await p.waitForTimeout(1500);
+  ok(!(await toastNag()) && (await bar()) === 1, 'no pop-up; the reminder bar is under the banner');
+  await p.click('.backup-bar .backup-bar-close'); await p.waitForTimeout(200);
+  await p.reload(); await p.waitForSelector('.dashboard'); await p.waitForTimeout(1200);
+  ok((await bar()) === 0 && await p.locator('.hc-backup').count() === 1, 'hidden for today; the banner chip is still there');
+  await p.evaluate(() => localStorage.setItem('cv-backup-bar', '2000-01-01')); await p.reload(); await p.waitForSelector('.dashboard'); await p.waitForTimeout(1200);
+  ok((await bar()) === 1, 'a new day: the bar is back');
 
   // General Files: Age column and sorting
   await p.evaluate(() => { location.hash = '#/general'; }); await p.waitForTimeout(900);

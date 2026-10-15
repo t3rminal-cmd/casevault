@@ -102,3 +102,15 @@ body { font-family: var(--font); }
 :where(svg.bi[data-icon^="chevron-"], svg.bi[data-icon="grip-vertical"], svg.bi[data-icon="three-dots-vertical"]) { color: var(--muted); }
 :where(button, a, summary):hover > :where(svg.bi[data-icon^="chevron-"], svg.bi[data-icon="grip-vertical"], svg.bi[data-icon="three-dots-vertical"]),
 :where(button, a, summary):focus-visible > :where(svg.bi[data-icon^="chevron-"], svg.bi[data-icon="grip-vertical"], svg.bi[data-icon="three-dots-vertical"]) { color: inherit; }
+
+/* v1.128: links are never underlined; they are the link colour (and bolder where they sit in text). */
+a, a:hover, a:focus, a:visited, .dropzone .link { text-decoration: none; }
+.dropzone .link { color: var(--link); font-weight: 600; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* v1.128: the backup reminder, one slim line under the banner. */
+.backup-bar { display: flex; align-items: center; gap: .6rem; margin: -.4rem 0 1rem; padding: .45rem .7rem; background: var(--warn-soft); border: 1px solid var(--warn); border-left-width: 4px; font-size: var(--fs-small); }
+.backup-bar > span { flex: 1; min-width: 0; }
+.backup-bar > svg:first-child { color: var(--warn); flex: none; }
+.backup-bar .backup-bar-close { flex: none; }
+/* v1.128: a case opened "in the future" (a typo): flagged. */
+.age-future { display: inline-flex; align-items: center; gap: .3rem; color: var(--warn); font-weight: 600; }

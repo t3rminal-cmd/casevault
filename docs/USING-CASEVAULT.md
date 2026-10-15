@@ -213,6 +213,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.128
+
+- **Opened date in the future:** a case whose Opened date is still to come (usually a typo) now says so: General Files shows "in 40d" with a warning sign, and the case's hover box in the sidebar says to check the date. It used to show "Today"
+- **Backup reminder:** when the full backup to a second drive is due, a slim line under the home page banner says so, with **Back Up Now**; × hides it for the day. It no longer floats over the page and hides the buttons underneath. The banner's backup chip still turns red after 7 days
+- **Links** are no longer underlined anywhere; they are in the link colour
+
 ### What's new in v1.127
 
 - **One icon style:** every picture in CaseVault is now a colour icon. The last three that were plain outlines (the numbered list on the sidebar's sort button and Arrange, the # on Case Numbers, the U.S. Marshals star) have colour versions in the same style
@@ -221,11 +227,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 ### What's new in v1.126
 
 - **PDFs match the app:** the Supplementary Report, Draft PDF, Arrest Report, Case Summary, Timeline PDF and Buy Summary, Discovery receipt and Link Chart have navy titles, and their section headers (and the Arrest Report's side tabs) are light navy with navy writing. The grey label boxes and black writing are unchanged, so a copy still prints clearly in black and white
-
-### What's new in v1.125
-
-- **Text sizes:** every screen now uses the same six text sizes (page title, section, sub-section, body, small, tiny) and three weights (regular, semibold, bold). Headings, labels and hints look the same from page to page
-- Small print (hints, dates under a case, the case list in the sidebar) is a touch larger and easier to read; nothing is cut off
 
 ### Earlier versions
 

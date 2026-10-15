@@ -4,6 +4,11 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.125
+
+- **Text sizes:** every screen now uses the same six text sizes (page title, section, sub-section, body, small, tiny) and three weights (regular, semibold, bold). Headings, labels and hints look the same from page to page
+- Small print (hints, dates under a case, the case list in the sidebar) is a touch larger and easier to read; nothing is cut off
+
 ## What's new in v1.124
 
 - **New look, "Navy Ledger":** deep navy on a warm off-white, flatter (thin borders instead of shadows), with a navy welcome banner. Dark mode has the same colours in lighter tones
