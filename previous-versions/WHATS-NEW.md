@@ -4,6 +4,11 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.127
+
+- **One icon style:** every picture in CaseVault is now a colour icon. The last three that were plain outlines (the numbered list on the sidebar's sort button and Arrange, the # on Case Numbers, the U.S. Marshals star) have colour versions in the same style
+- The small controls (the open/close arrows, the drag grip and the ⋮ menu) stay simple shapes, all in the same soft grey, so they don't compete with the pictures; they turn the button's colour when you point at it
+
 ## What's new in v1.126
 
 - **PDFs match the app:** the Supplementary Report, Draft PDF, Arrest Report, Case Summary, Timeline PDF and Buy Summary, Discovery receipt and Link Chart have navy titles, and their section headers (and the Arrest Report's side tabs) are light navy with navy writing. The grey label boxes and black writing are unchanged, so a copy still prints clearly in black and white

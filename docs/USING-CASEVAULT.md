@@ -213,6 +213,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.130
+
+- **A Mission's case list:** each row is one line again. **Open ▾** on a row shows Details, Reports and Files for that case; the Closing note fits on one line
+- **Long tables** (General Files, Missions, a Mission's cases, Files) keep their column headings at the top while you scroll, and rows are lightly striped so a line is easy to follow
+- **Home banner:** the count chips are flatter and quieter
+- **Sidebar:** INDEPENDENT CASES no longer runs under its count when there are 10 or more cases; it wraps onto two lines when it needs the room
+
 ### What's new in v1.129
 
 - **Tidier spacing:** every inner margin in CaseVault now sits on the same small grid, so cards, forms, tables and buttons line up the same way on every page
@@ -224,11 +231,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Opened date in the future:** a case whose Opened date is still to come (usually a typo) now says so: General Files shows "in 40d" with a warning sign, and the case's hover box in the sidebar says to check the date. It used to show "Today"
 - **Backup reminder:** when the full backup to a second drive is due, a slim line under the home page banner says so, with **Back Up Now**; × hides it for the day. It no longer floats over the page and hides the buttons underneath. The banner's backup chip still turns red after 7 days
 - **Links** are no longer underlined anywhere; they are in the link colour
-
-### What's new in v1.127
-
-- **One icon style:** every picture in CaseVault is now a colour icon. The last three that were plain outlines (the numbered list on the sidebar's sort button and Arrange, the # on Case Numbers, the U.S. Marshals star) have colour versions in the same style
-- The small controls (the open/close arrows, the drag grip and the ⋮ menu) stay simple shapes, all in the same soft grey, so they don't compete with the pictures; they turn the button's colour when you point at it
 
 ### Earlier versions
 

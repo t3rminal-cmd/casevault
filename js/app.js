@@ -1618,7 +1618,8 @@
           h('td', {}, statusPill(isArchivedEntry(c) ? 'Archived' : c.status)),
           h('td', { class: 'nowrap' }, dateCols(c.opened)),
           h('td', { class: 'op-closing', 'data-case': c.id }, h('span', { class: 'muted small' }, '…')),
-          h('td', { class: 'nowrap' }, h('div', { class: 'op-case-links' }, OP_TABS.map(([tab, label]) => h('a', { class: 'op-tab-link', href: caseLink(c, tab) }, label)))),
+          // v1.130: one Open menu per row (Details, Reports, Files), so every row is one line tall.
+          h('td', { class: 'nowrap' }, openMenu(c)),
           h('td', { class: 'nowrap' }, isArchivedEntry(c)
             ? h('span', { class: 'muted small', title: 'Archived cases are read-only. Restore it to unlink it.' }, 'Archived')
             : h('button', { class: 'btn small', type: 'button', icon: 'folder-symlink', title: 'Move this case to General Files or another Mission', onclick: async () => { if (await moveCaseDialog(c)) redraw(); } }, 'Move File')))))))
@@ -1746,6 +1747,16 @@
   const opFolderState = { open: '', close: null };
   // v1.44: just Details, Reports and Files, as words.
   const OP_TABS = [['details', 'Details'], ['reports', 'Reports'], ['files', 'Files']];
+  /* v1.130: a small Open menu (a <details>): Details, Reports and Files of one case. A click on a
+   * choice, outside it, or Esc closes it. */
+  function openMenu(c) {
+    const det = h('details', { class: 'row-menu' },
+      h('summary', { class: 'btn small', 'aria-label': `Open ${c.number || 'the case'}` }, 'Open', I('chevron-down')),
+      h('div', { class: 'row-menu-list', role: 'menu' }, OP_TABS.map(([tab, label]) => h('a', { role: 'menuitem', href: caseLink(c, tab), onclick: () => { det.open = false; } }, label))));
+    return det;
+  }
+  document.addEventListener('click', (e) => { for (const d of document.querySelectorAll('details.row-menu[open]')) if (!d.contains(e.target)) d.open = false; });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') for (const d of document.querySelectorAll('details.row-menu[open]')) { d.open = false; d.querySelector('summary').focus(); } });
   // Empty space: anything that isn't a control, a link, a folder, the open folder's cases or the
   // timeline, and nothing inside a dialog or the sidebar.
   // v1.47: the General Files year folders close the same way.

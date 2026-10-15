@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.129)
+
+- **Spacing on a 4px grid:** 336 paddings snapped to multiples of .25rem (244 distinct values to 136)
+- **Two shadows:** 18 one-off drop shadows now `--shadow` / `--shadow-lg` (insets and focus rings stay)
+- **Colours:** 108 dead palette declarations removed from `app.css` (theme.css owns them) and one-off status colours mapped to the theme (222 hard-coded colours to 132; what's left is artwork, badges, the privacy screen and the link chart canvas)
+
 ## Features (v1.128)
 
 - **Future Opened dates flagged** ("in 40d", with a warning) instead of "Today"
