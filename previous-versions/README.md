@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.124)
+
+- **Navy Ledger theme:** deep navy on warm off-white, flat, square; dark mode to match. All colours live in one file, `css/theme.css`
+- **JetBrains Mono** bundled in `vendor/` (OFL), so the app looks the same on every PC, fully offline
+- **One colour per status everywhere:** Open blue, Pending amber, Closed green, Archived warm grey, Overdue red
+
 ## Features (v1.123)
 
 - **Quick Links:** one link per row, all the same size, no name cut off
