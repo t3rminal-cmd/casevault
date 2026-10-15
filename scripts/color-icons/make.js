@@ -133,7 +133,12 @@ const I = {
   'drug-mushroom': S(`<path d="M10 66 Q14 14 64 12 Q114 14 118 66 Z" fill="url(#r)"/><circle cx="40" cy="44" r="8" fill="#fff" stroke="none"/><circle cx="72" cy="30" r="7" fill="#fff" stroke="none"/><circle cx="92" cy="52" r="7" fill="#fff" stroke="none"/><path d="M48 66 H80 L84 110 Q64 122 44 110 Z" fill="url(#w)"/>`),
   'drug-steroid': S(`<rect x="8" y="46" width="16" height="36" fill="url(#b)"/><rect x="24" y="34" width="18" height="60" fill="url(#b)"/><rect x="104" y="46" width="16" height="36" fill="url(#b)"/><rect x="86" y="34" width="18" height="60" fill="url(#b)"/><path d="M42 64 H86" stroke-width="12"/>`),
   'photo-stack': S(`<rect x="30" y="10" width="88" height="70" rx="5" fill="url(#lb)"/><rect x="10" y="38" width="88" height="78" rx="5" fill="url(#w)"/><path d="M20 106 L44 76 L60 94 L72 82 L90 106 Z" fill="url(#g)"/><circle cx="76" cy="58" r="9" fill="url(#y)"/>`),
+  // v1.127: the last three icons the program drew as plain shapes
+  'list-numbered': S(`<rect x="16" y="10" width="96" height="108" rx="8" fill="url(#w)"/><circle cx="36" cy="38" r="11" fill="url(#b)"/><circle cx="36" cy="66" r="11" fill="url(#b)"/><circle cx="36" cy="94" r="11" fill="url(#b)"/><text x="36" y="43" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="900" fill="#fff" stroke="none" text-anchor="middle">1</text><text x="36" y="71" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="900" fill="#fff" stroke="none" text-anchor="middle">2</text><text x="36" y="99" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="900" fill="#fff" stroke="none" text-anchor="middle">3</text><path d="M58 38 H98 M58 66 H98 M58 94 H98" stroke="#9fb3d1" stroke-width="7"/>`),
+  'hash': S(`<rect x="12" y="12" width="104" height="104" rx="14" fill="url(#lb)"/><path d="M54 30 L46 98 M82 30 L74 98 M34 52 H98 M30 78 H94" stroke="${N}" stroke-width="14"/><path d="M54 30 L46 98 M82 30 L74 98 M34 52 H98 M30 78 H94" stroke="url(#b)" stroke-width="6"/>`),
+  'marshal-star': S(`<circle cx="64" cy="64" r="56" fill="url(#y)"/><circle cx="64" cy="64" r="44" fill="url(#w)" stroke-width="4"/><path d="M64 26 L74 52 L102 52 L80 70 L88 98 L64 82 L40 98 L48 70 L26 52 L54 52 Z" fill="url(#y)"/><circle cx="64" cy="64" r="8" fill="url(#b)" stroke-width="4"/>`),
 };
 fs.mkdirSync(process.env.OUT, { recursive: true });
-for (const [k, v] of Object.entries(I)) fs.writeFileSync(`${process.env.OUT}/${k}.svg`, v);
+// ONLY=a,b writes just those (to add new icons without redrawing the rest).
+for (const [k, v] of Object.entries(I).filter(([k]) => !process.env.ONLY || process.env.ONLY.split(',').includes(k))) fs.writeFileSync(`${process.env.OUT}/${k}.svg`, v);
 console.log(Object.keys(I).length);

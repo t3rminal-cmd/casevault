@@ -213,6 +213,11 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.127
+
+- **One icon style:** every picture in CaseVault is now a colour icon. The last three that were plain outlines (the numbered list on the sidebar's sort button and Arrange, the # on Case Numbers, the U.S. Marshals star) have colour versions in the same style
+- The small controls (the open/close arrows, the drag grip and the ⋮ menu) stay simple shapes, all in the same soft grey, so they don't compete with the pictures; they turn the button's colour when you point at it
+
 ### What's new in v1.126
 
 - **PDFs match the app:** the Supplementary Report, Draft PDF, Arrest Report, Case Summary, Timeline PDF and Buy Summary, Discovery receipt and Link Chart have navy titles, and their section headers (and the Arrest Report's side tabs) are light navy with navy writing. The grey label boxes and black writing are unchanged, so a copy still prints clearly in black and white
@@ -221,12 +226,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 - **Text sizes:** every screen now uses the same six text sizes (page title, section, sub-section, body, small, tiny) and three weights (regular, semibold, bold). Headings, labels and hints look the same from page to page
 - Small print (hints, dates under a case, the case list in the sidebar) is a touch larger and easier to read; nothing is cut off
-
-### What's new in v1.124
-
-- **New look, "Navy Ledger":** deep navy on a warm off-white, flatter (thin borders instead of shadows), with a navy welcome banner. Dark mode has the same colours in lighter tones
-- **Font:** JetBrains Mono, which comes with CaseVault, so the app looks the same on every PC (Consolas was only on Windows). Nothing is downloaded
-- **Status colours mean the same everywhere:** Open blue, Pending amber, Closed green, Archived warm grey, Overdue red. Mission sections are blue and General Files plum
 
 ### Earlier versions
 

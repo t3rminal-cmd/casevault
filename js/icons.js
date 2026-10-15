@@ -61,6 +61,8 @@
     'badge-state-pd': 'badge-state-pd', 'badge-local-pd': 'badge-local-pd', 'badge-sheriff': 'badge-sheriff',
     // v1.68
     'folder-mission': 'folder-mission', 'folder-general': 'folder-general', 'folder-other': 'folder-other', // v1.74
+    // v1.127: the last three that were plain shapes
+    'list-ol': 'list-numbered', 'hash': 'hash', 'marshal-star': 'marshal-star',
     'power': 'power', 'chat-square-text': 'sms', 'images': 'photo-stack', 'table': 'bar-chart',
     'drug-powder': 'drug-powder', 'drug-syringe': 'drug-syringe', 'drug-vial': 'drug-vial', 'drug-crystal': 'drug-crystal', 'drug-pills': 'drug-pills', 'drug-mushroom': 'drug-mushroom', 'drug-steroid': 'drug-steroid', 'drug-cannabis': 'cannabis',
   };
