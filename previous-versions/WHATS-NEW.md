@@ -4,6 +4,12 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.128
+
+- **Opened date in the future:** a case whose Opened date is still to come (usually a typo) now says so: General Files shows "in 40d" with a warning sign, and the case's hover box in the sidebar says to check the date. It used to show "Today"
+- **Backup reminder:** when the full backup to a second drive is due, a slim line under the home page banner says so, with **Back Up Now**; × hides it for the day. It no longer floats over the page and hides the buttons underneath. The banner's backup chip still turns red after 7 days
+- **Links** are no longer underlined anywhere; they are in the link colour
+
 ## What's new in v1.127
 
 - **One icon style:** every picture in CaseVault is now a colour icon. The last three that were plain outlines (the numbered list on the sidebar's sort button and Arrange, the # on Case Numbers, the U.S. Marshals star) have colour versions in the same style

@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.130)
+
+- **Mission rows one line tall** with an **Open ▾** menu (Details, Reports, Files) in place of three stacked buttons
+- **Sticky table headings and light row striping** on every data table
+- **Quieter banner chips**; the sidebar's INDEPENDENT CASES name no longer overlaps a two-digit count
+
 ## Features (v1.129)
 
 - **Spacing on a 4px grid:** 336 paddings snapped to multiples of .25rem (244 distinct values to 136)

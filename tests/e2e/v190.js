@@ -30,12 +30,13 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   ok(!(await p.$('.history-editing')) && (await p.evaluate(async (id) => (await Vault.getCase(id)).activity.filter((a) => a.note)[0].what, ids.c)) !== 'should not save', 'Esc cancels the edit');
   // 4. Search finds the note
   await p.evaluate(() => { location.hash = '#/'; }); await p.waitForTimeout(800);
-  await p.keyboard.press('Control+k'); await p.waitForTimeout(300);
-  await p.keyboard.type('migrated to casevault'); await p.waitForTimeout(600);
-  const hits = await p.$$eval('#case-list .case-item, #case-list [data-case-id], #case-list li', (l) => l.length);
-  const found = await p.evaluate(async (id) => { const c = await Vault.getCase(id); console.log(''); return document.querySelector('#sidebar, aside, nav').textContent.includes(c.number); }, ids.c); console.log('index notes:', await p.evaluate((id) => Vault.data.cases.find((x) => x.id === id).notes, ids.c));
-  ok(found, `note text finds the case (${hits} items)`);
-  await p.fill('#case-search', ''); await p.waitForTimeout(300);
+  // v1.131: Ctrl+K opens Find, which matches cases the same way as the sidebar search (notes too).
+  await p.keyboard.press('Control+k'); await p.waitForSelector('#dialog[open] .find-input');
+  await p.keyboard.type('migrated to casevault'); await p.waitForTimeout(400);
+  const hits = await p.$$eval('.find-list .find-row', (l) => l.filter((r) => /Case$/.test(r.textContent)).map((r) => r.textContent));
+  const num = await p.evaluate(async (id) => (await Vault.getCase(id)).number, ids.c);
+  ok(hits.some((t) => t.includes(num)), `note text finds the case (${hits.length} cases)`);
+  await p.keyboard.press('Escape'); await p.waitForTimeout(200);
   // 1. Power Off asks to back up first (no backup recorded)
   await p.click('#btn-power'); await p.waitForTimeout(400);
   ok(await p.isVisible('#dialog[open] .power-backup-form'), 'Power Off offers a backup first');
