@@ -4,6 +4,10 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.127)
+
+- **One icon style:** every icon the app uses has a colour picture (`icons/color/`, drawn by `scripts/color-icons/make.js`); only the small controls (chevrons, drag grip, ⋮) stay plain, in one muted colour. A unit test keeps it that way
+
 ## Features (v1.126)
 
 - **PDFs in the theme:** every PDF CaseVault makes has navy titles and light-navy section bands with navy headings (shared `navy()` / `bandBox()` in `js/report-pdf.js`); label boxes stay grey so copies print well in black and white
