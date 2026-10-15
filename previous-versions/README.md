@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.128)
+
+- **Future Opened dates flagged** ("in 40d", with a warning) instead of "Today"
+- **Backup reminder** is a slim bar under the home banner with Back Up Now (× hides it for the day), not a pop-up over the page
+- **No underlined links** anywhere
+
 ## Features (v1.127)
 
 - **One icon style:** every icon the app uses has a colour picture (`icons/color/`, drawn by `scripts/color-icons/make.js`); only the small controls (chevrons, drag grip, ⋮) stay plain, in one muted colour. A unit test keeps it that way

@@ -213,6 +213,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.129
+
+- **Tidier spacing:** every inner margin in CaseVault now sits on the same small grid, so cards, forms, tables and buttons line up the same way on every page
+- **Flatter:** the many slightly different shadows are now two: a faint one on cards and a stronger one under windows and panels that float
+- **Colours:** older one-off reds, greens, ambers and blues now use the theme's colours, so warnings, errors and "done" look the same everywhere, in light and dark
+
 ### What's new in v1.128
 
 - **Opened date in the future:** a case whose Opened date is still to come (usually a typo) now says so: General Files shows "in 40d" with a warning sign, and the case's hover box in the sidebar says to check the date. It used to show "Today"
@@ -223,10 +229,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 - **One icon style:** every picture in CaseVault is now a colour icon. The last three that were plain outlines (the numbered list on the sidebar's sort button and Arrange, the # on Case Numbers, the U.S. Marshals star) have colour versions in the same style
 - The small controls (the open/close arrows, the drag grip and the ⋮ menu) stay simple shapes, all in the same soft grey, so they don't compete with the pictures; they turn the button's colour when you point at it
-
-### What's new in v1.126
-
-- **PDFs match the app:** the Supplementary Report, Draft PDF, Arrest Report, Case Summary, Timeline PDF and Buy Summary, Discovery receipt and Link Chart have navy titles, and their section headers (and the Arrest Report's side tabs) are light navy with navy writing. The grey label boxes and black writing are unchanged, so a copy still prints clearly in black and white
 
 ### Earlier versions
 

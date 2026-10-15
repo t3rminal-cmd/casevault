@@ -15,11 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.128
+## What's New in v1.129
 
-- **Future Opened dates flagged** ("in 40d", with a warning) instead of "Today"
-- **Backup reminder** is a slim bar under the home banner with Back Up Now (× hides it for the day), not a pop-up over the page
-- **No underlined links** anywhere
+- **Spacing on a 4px grid:** 336 paddings snapped to multiples of .25rem (244 distinct values to 136)
+- **Two shadows:** 18 one-off drop shadows now `--shadow` / `--shadow-lg` (insets and focus rings stay)
+- **Colours:** 108 dead palette declarations removed from `app.css` (theme.css owns them) and one-off status colours mapped to the theme (222 hard-coded colours to 132; what's left is artwork, badges, the privacy screen and the link chart canvas)
 
 ## What CaseVault Does
 
