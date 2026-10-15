@@ -122,6 +122,11 @@
   const PROPERTY_FIELDS = [
     { key: 'inventory', label: 'Inventory #' }, { key: 'description', label: 'Description', propertyPick: true },
   ];
+  // v1.133: the arrestee's phone calls: who was called, how they are related, the number called.
+  const PHONE_CALL_FIELDS = [
+    { key: 'name', label: 'Name (called who)' }, { key: 'relationship', label: 'Relationship' },
+    { key: 'phone', label: 'Phone number called', type: 'tel' },
+  ];
   const NON_OFFENDER_FIELDS = [
     { key: 'role', label: 'Role', type: 'select', options: ['Victim', 'Complainant', 'Victim and complainant', 'Witness'] },
     { key: 'name', label: 'Name', victimPick: true }, { key: 'officer', label: 'Officer name' }, { key: 'address', label: 'Residence', type: 'textarea' }, { key: 'beat', label: 'Beat' },
@@ -138,6 +143,7 @@
     warrants: { fields: WARRANT_FIELDS, item: 'Warrant', none: 'No warrant identified' },
     nonOffenders: { fields: NON_OFFENDER_FIELDS, item: 'Person', none: 'None' },
     properties: { fields: PROPERTY_FIELDS, item: 'Property', none: 'No properties recorded' },
+    phoneCalls: { fields: PHONE_CALL_FIELDS, item: 'Phone Call', none: 'No phone calls recorded' },
   };
 
   const blank = (fields) => Object.fromEntries(fields.map((f) => [f.key, f.key === 'counts' ? '1' : f.key === 'role' ? 'Victim' : '']));
@@ -145,9 +151,10 @@
   const emptyItem = (list) => (list === 'charges' ? emptyCharge() : blank(LISTS[list].fields));
   const emptyArrestee = () => ({
     ...Object.fromEntries([...ARRESTEE_FIELDS, ...ARREST_FIELDS].map((f) => [f.key, ''])),
-    photo: '', charges: [emptyCharge()], narcotics: [], warrants: [], nonOffenders: [], properties: [], property: '', narrative: '', notes: '',
-    // v1.113: ticked when the part doesn't apply (the report then says so).
-    noVehicle: false, noNarcotics: false, noWarrant: false,
+    photo: '', charges: [emptyCharge()], narcotics: [], warrants: [], nonOffenders: [], properties: [], phoneCalls: [], property: '', narrative: '', notes: '',
+    // v1.113: ticked when the part doesn't apply (the report then says so). v1.133: refusedCall,
+    // the arrestee refused a phone call.
+    noVehicle: false, noNarcotics: false, noWarrant: false, refusedCall: false,
   });
   const emptyArrest = () => ({ schema: 2, arrestees: [emptyArrestee()] });
   /** v1.119: the same person arrested on another case of the Mission: their own details (name,
@@ -205,7 +212,7 @@
   const CHARGE_CLASSES = ['Class X', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class A', 'Class B', 'Class C', 'Petty offense', 'Federal felony', 'Federal misdemeanor'];
   const STATUTE_CLASS = [
     ['720 ILCS 550/5(c)', 'Class 4'], ['720 ILCS 550/5(d)', 'Class 3'], ['720 ILCS 550/5(e)', 'Class 2'], ['720 ILCS 550/5(f)', 'Class 1'], ['720 ILCS 550/5(g)', 'Class X'],
-    ['720 ILCS 550/4(c)', 'Class A'], ['720 ILCS 550/4(d)', 'Class 4'], ['720 ILCS 550/4(e)', 'Class 3'], ['720 ILCS 550/4(f)', 'Class 2'], ['720 ILCS 550/4(g)', 'Class 1'],
+    ['720 ILCS 550/4(b)', 'Class B'], ['720 ILCS 550/4(c)', 'Class A'], ['720 ILCS 550/4(d)', 'Class 4'], ['720 ILCS 550/4(e)', 'Class 3'], ['720 ILCS 550/4(f)', 'Class 2'], ['720 ILCS 550/4(g)', 'Class 1'],
     ['720 ILCS 570/401(a)', 'Class X'], ['720 ILCS 570/401(c)', 'Class 1'], ['720 ILCS 570/401(d)', 'Class 2'], ['720 ILCS 570/401(e)', 'Class 3'],
     ['720 ILCS 570/402(a)', 'Class 1'], ['720 ILCS 570/402(c)', 'Class 4'],
     ['720 ILCS 646/55(a)(2)(A)', 'Class 2'], ['720 ILCS 646/55(a)(2)(B)', 'Class 1'], ['720 ILCS 646/55(a)(2)(C)', 'Class X'], ['720 ILCS 646/55(a)(2)(D)', 'Class X'], ['720 ILCS 646/55(a)(2)(E)', 'Class X'], ['720 ILCS 646/55(a)(2)(F)', 'Class X'],
@@ -270,6 +277,8 @@
       put('narcotics', n.narcotics.filter(itemFilled).map((x) => [clean(x.drug), [clean(x.amount), clean(x.unit)].filter(Boolean).join(' '), clean(x.inventory) && `Inv. ${clean(x.inventory)}`].filter(Boolean).join(', ')).join('\n'));
       put('warrants', n.warrants.filter(itemFilled).map((x) => [clean(x.number), clean(x.kind), clean(x.offense)].filter(Boolean).join(', ')).join('\n'));
       if (!clean(n.warrantNumber) && n.warrants[0]) put('warrantNumber', clean(n.warrants[0].number));
+      // v1.133: "Jane Doe (Mother), (312) 555-0100", one call a line; or that the call was refused.
+      put('phoneCalls', n.refusedCall ? 'Refused phone call' : n.phoneCalls.filter(itemFilled).map((x) => [[clean(x.name), clean(x.relationship) && `(${clean(x.relationship)})`].filter(Boolean).join(' '), clean(x.phone)].filter(Boolean).join(', ')).join('\n'));
       put('property', [...n.properties.filter(itemFilled).map(propertyLine), clean(n.property)].filter(Boolean).join('\n')); put('narrative', clean(n.narrative)); put('notes', clean(n.narrative || n.notes));
     });
     ctx['arrest.count'] = String(list.filter((a) => arresteeName(a)).length);

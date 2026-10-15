@@ -163,7 +163,7 @@
             const was = K().isStateVictim(it);
             const flip = () => { if (K().isStateVictim(it) !== was) { draw(); const el = box.querySelectorAll('.arrest-item')[i]; const n = el && el.querySelector('input'); if (n) { n.focus(); } } };
             return fieldset(it, K().nonOffenderFields(it), flip);
-          })() : fieldset(it, L.fields, null, listKey === 'properties' ? 'arrest-g-property' : ''))) : [h('p', { class: 'muted small' }, noneText)]),
+          })() : fieldset(it, L.fields, null, listKey === 'properties' ? 'arrest-g-property' : listKey === 'phoneCalls' ? 'arrest-g-calls' : ''))) : [h('p', { class: 'muted small' }, noneText)]),
         archived ? null : h('div', { class: 'row' },
           h('button', { class: 'btn small', type: 'button', onclick: () => { a[listKey].push(K().emptyItem(listKey)); changed(); draw(); } }, addLabel),
           listKey === 'nonOffenders' && !a.nonOffenders.some(K().isStateVictim) ? h('button', { class: 'btn small', type: 'button', title: 'The State of Illinois as the victim, with the officer\'s name', onclick: () => { a.nonOffenders.push({ ...K().emptyItem('nonOffenders'), role: 'Victim', name: K().STATE_VICTIM }); changed(); draw(); } }, '+ Add State of Illinois as Victim') : null));
@@ -293,6 +293,8 @@
           // v1.114: one row per property: inventory number and description. Text from before stays below.
           section('Properties', listEditor(a, 'properties', 'No properties recorded.', '+ Add Property'),
             a.property ? fieldset(a, [{ key: 'property', label: 'Other confiscated properties', type: 'textarea' }]) : null),
+          // v1.133: who the arrestee called, or that they refused a phone call.
+          section('Phone Calls', ...noneBox(a, 'refusedCall', 'Refused phone call', listEditor(a, 'phoneCalls', 'No phone calls recorded.', '+ Add Phone Call'))),
           section('Incident Narrative', fieldset(a, [{ key: 'narrative', label: 'The facts for probable cause to arrest and to support the charges', type: 'textarea' }])),
           section('Court and Bond', fieldset(a, [...K().COURT_FIELDS, ...K().BOND_FIELDS], null, 'arrest-g-court')),
           section('Reporting Personnel', fieldset(a, K().PERSONNEL_FIELDS, null, 'arrest-g-personnel')));
