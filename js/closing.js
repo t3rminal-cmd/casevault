@@ -287,14 +287,15 @@
     const list = (cases || []).filter(Boolean);
     const ready = list.filter((x) => x.status !== 'Closed' && !x.archived && arrestReady(arrests.get(x.id)));
     const anyReport = list.find((x) => arrestReady(arrests.get(x.id)));
+    // text: the full sentence; short: what fits on one line in a Mission's case list (v1.131).
     const rows = new Map();
     for (const x of list) {
       const ref = x.closure && x.closure.arrestRef;
-      if (x.archived) rows.set(x.id, { state: 'archived', text: 'Archived' });
-      else if (x.status === 'Closed') rows.set(x.id, { state: 'closed', text: ref ? `Closed by arrest (report on RD ${ref.number})` : 'Closed' });
-      else if (ready.includes(x)) rows.set(x.id, { state: 'ready', text: 'Arrest report ready' });
-      else if (anyReport) rows.set(x.id, { state: 'ref', text: `Can close by arrest with RD ${anyReport.number}'s report` });
-      else rows.set(x.id, { state: 'open', text: 'No arrest report yet' });
+      if (x.archived) rows.set(x.id, { state: 'archived', text: 'Archived', short: 'Archived' });
+      else if (x.status === 'Closed') rows.set(x.id, { state: 'closed', text: ref ? `Closed by arrest (report on RD ${ref.number})` : 'Closed', short: ref ? 'Closed by arrest' : 'Closed' });
+      else if (ready.includes(x)) rows.set(x.id, { state: 'ready', text: 'Arrest report ready', short: 'Report ready' });
+      else if (anyReport) rows.set(x.id, { state: 'ref', text: `Can close by arrest with RD ${anyReport.number}'s report`, short: 'Other RD report' });
+      else rows.set(x.id, { state: 'open', text: 'No arrest report yet', short: 'No report yet' });
     }
     const done = [...rows.values()].filter((r) => r.state === 'closed' || r.state === 'archived').length;
     return { done, total: list.length, rows };

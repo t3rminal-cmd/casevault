@@ -50,8 +50,14 @@ const SP = process.env.SP + '/v1123';
   ok(names.some((n) => n.join('|') === 'DOE|John|Q.') && names.some((n) => n.join('|') === 'ROE-POEZ|Mary|—'), `the subject split into Last / First / M.I.: ${JSON.stringify(names)}`);
   const om = await lined('.op-cases-table .dc-m'); const od = await lined('.op-cases-table .dc-d'); const oy = await lined('.op-cases-table .dc-y');
   ok(same(om) && same(od) && same(oy), `Mission page: opened dates lined up: ${om} | ${od} | ${oy}`);
-  const fit = await p.evaluate(() => { const t = document.querySelector('.op-cases-table'); return t.scrollWidth <= t.closest('.table-wrap').clientWidth + 1; });
-  ok(fit, 'the Mission table fits at 1366 wide');
+  // v1.131: measured once the Closing column has filled in (short words; the full sentence is the
+  // tooltip) and every font face has loaded.
+  await p.waitForFunction(() => document.querySelectorAll('.op-closing .closing-state').length === document.querySelectorAll('.op-closing').length);
+  const fits = (sel) => p.evaluate(async (q) => { await document.fonts.ready; const t = document.querySelector(q); return [t.scrollWidth, t.closest('.table-wrap').clientWidth]; }, sel);
+  const closing = await p.$$eval('.op-closing .closing-state', (xs) => xs.map((x) => [x.textContent, x.title]));
+  ok(closing.length && closing.every(([t, full]) => t && full), `the Closing column is filled, the full sentence on hover: ${JSON.stringify(closing)}`);
+  const [ow, oc] = await fits('.op-cases-table');
+  ok(ow <= oc + 1, `the Mission table fits at 1366 wide: ${ow} / ${oc}`);
   await p.locator('.op-cases-table').screenshot({ path: `${SP}/mission.png` });
 
   // General Files: the same dates and pills.
@@ -59,7 +65,7 @@ const SP = process.env.SP + '/v1123';
   const gp = await p.$$eval('.general-table .pill', (xs) => xs.map((x) => [Math.round(x.getBoundingClientRect().width), x.scrollWidth <= x.clientWidth]));
   const gm = await lined('.general-table .dc-m'); const gy = await lined('.general-table .dc-y');
   ok(same(gp.map((x) => x[0])) && gp.every((x) => x[1]) && same(gm) && same(gy), `General Files: pills one width and whole, dates lined up: ${JSON.stringify(gp)} ${gm} | ${gy}`);
-  const gfit = await p.evaluate(() => { const t = document.querySelector('.general-table'); return t.scrollWidth <= t.closest('.table-wrap').clientWidth + 1; });
-  ok(gfit, 'General Files fits at 1366 wide');
+  const [gw, gc] = await fits('.general-table');
+  ok(gw <= gc + 1, `General Files fits at 1366 wide: ${gw} / ${gc}`);
   console.log('errors', errs); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

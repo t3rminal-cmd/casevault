@@ -102,8 +102,8 @@ const SP = process.env.SP + '/v1119';
   // 13. The Mission's closing progress.
   await p.evaluate(async (i) => { const x = await Vault.getCase(i); x.status = 'Closed'; x.dates.closed = '2026-10-01'; x.closure = { disposition: 'arrest', date: '2026-10-01', arrestRef: { id: 'x', number: 'EX-200' } }; await Vault.saveCase(x); }, ex201);
   await p.evaluate((o) => { location.hash = '#/x'; location.hash = `#/operation/${o}`; }, ids.op); await p.waitForSelector('.op-progress strong'); await p.waitForTimeout(400);
-  const prog = await p.evaluate(() => ({ head: document.querySelector('.op-progress strong').textContent, rows: [...document.querySelectorAll('.op-cases-table tbody tr')].map((r) => [r.querySelector('.case-num-link').textContent, r.querySelector('.op-closing').textContent]) }));
-  ok(prog.head === '1 of 2 cases closed' && prog.rows.some(([n, t]) => n === 'EX-200' && /Arrest report ready/.test(t)) && prog.rows.some(([n, t]) => n === 'EX-201' && /Closed by arrest \(report on RD EX-200\)/.test(t)), `Mission progress: ${JSON.stringify(prog)}`);
+  const prog = await p.evaluate(() => ({ head: document.querySelector('.op-progress strong').textContent, rows: [...document.querySelectorAll('.op-cases-table tbody tr')].map((r) => [r.querySelector('.case-num-link').textContent, r.querySelector('.op-closing').textContent, r.querySelector('.op-closing .closing-state').title]) }));
+  ok(prog.head === '1 of 2 cases closed' && prog.rows.some(([n, t, full]) => n === 'EX-200' && t === 'Report ready' && /Arrest report ready/.test(full)) && prog.rows.some(([n, t, full]) => n === 'EX-201' && t === 'Closed by arrest' && /Closed by arrest \(report on RD EX-200\)/.test(full)), `Mission progress: ${JSON.stringify(prog)}`);
   await p.locator('.op-page').screenshot({ path: `${SP}/mission.png` }).catch(() => {});
 
   // 11. The person view: every case with John Doe, other spellings flagged.

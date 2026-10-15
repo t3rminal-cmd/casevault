@@ -1570,7 +1570,9 @@
         const x = await Vault.getCase(m.id).catch(() => m);
         full.push({ ...x, archived: isArchivedEntry(m) });
       }
-      if (tk !== state.renderToken) return;
+      // v1.131: filled while this page is on screen (another part of the app redrawing, which bumps
+      // the render token, used to leave the Closing column at "…").
+      if (tk !== state.renderToken && !progressBox.isConnected) return;
       const pr = CVClosing.missionProgress(full, arrests);
       const bar = h('span', { class: 'op-progress-bar' }, h('span', { class: 'op-progress-fill' }));
       bar.firstChild.style.width = `${pr.total ? Math.round((pr.done / pr.total) * 100) : 0}%`;
@@ -1578,7 +1580,7 @@
         h('span', { class: 'muted small' }, pr.done === pr.total ? 'Everything is closed. Close the Mission when you are ready.' : [...pr.rows.values()].some((r) => r.state === 'ref') ? 'Cases without their own arrest report can close by arrest with the report on another RD.' : ''));
       for (const td of document.querySelectorAll('.op-closing[data-case]')) {
         const r = pr.rows.get(td.dataset.case);
-        if (r) td.replaceChildren(h('span', { class: `closing-state ${r.state}` }, r.text));
+        if (r) td.replaceChildren(h('span', { class: `closing-state ${r.state}`, title: r.text }, r.short));
       }
     })().catch(() => progressBox.replaceChildren());
     $('#main').replaceChildren(h('section', { class: 'ops-page op-page' },

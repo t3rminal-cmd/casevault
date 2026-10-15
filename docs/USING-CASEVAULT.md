@@ -217,6 +217,7 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 - **Find (Ctrl+K):** one box for everything. Type a case number, a name, words from a case's notes, a Mission or a page (General Files, Settings, Back Up the Vault, New Case…) and press Enter. For a name it also offers **Every case this person is on** (the person view) and **Search inside cases** (notes, timelines, reports, the Draft form and file names). ↑ ↓ move, Enter opens, Esc closes. The sidebar's own search is still on its magnifier
 - **Shortcuts:** press **?** (or ⋮ → Keyboard Shortcuts) for the list; Find's footer reminds you
+- **A Mission's case list:** the Closing column says it in a few words (No report yet, Report ready, Other RD report, Closed by arrest); point at it for the full sentence
 
 ### What's new in v1.130
 
