@@ -1,6 +1,7 @@
 /*
  * CaseVault statute of limitations (v1.67): narcotic charges must be brought within 3 years of the
- * Date of Occurrence. Works out, from the Draft (report-fields.json) and the Arrest details
+ * Date of Occurrence; v1.134: 18 months when every narcotic charge is a misdemeanor (720 ILCS 5/3-5(b)),
+ * for example 720 ILCS 550/4(b) or (c). Works out, from the Draft (report-fields.json) and the Arrest details
  * (arrest.json), whether a case has a narcotic charge, the date it happened, and when the 3 years
  * run out. The Overview warns 5 days before that (Needs Attention).
  *
@@ -10,6 +11,7 @@
   'use strict';
 
   const YEARS = 3;
+  const MISDEMEANOR_MONTHS = 18;
   const WARN_DAYS = 5;
 
   const clean = (v) => String(v == null ? '' : v).trim();
@@ -24,6 +26,28 @@
     if (/720\s*ILCS\s*(570|550|646|600|635)\b/i.test(statute)) return true;
     if (/\b21\s*U\.?\s*S\.?\s*C\b/i.test(statute)) return true;
     return /controlled substance|cannabis|marijuana|methamphetamine|heroin|cocaine|fentanyl|narcotic|\bdrug/i.test(words);
+  }
+
+  /** v1.134: a misdemeanor by its Type, its Class, or (from js/closing.js) its statute. A charge whose
+   * class isn't known counts as a felony. */
+  const MISDEMEANOR_CLASSES = ['Class A', 'Class B', 'Class C', 'Federal misdemeanor'];
+  function closing() {
+    if (root && root.CVClosing) return root.CVClosing;
+    try { return typeof require === 'function' ? require('./closing.js') : null; } catch { return null; }
+  }
+  function isMisdemeanor(ch) {
+    if (!ch) return false;
+    const level = clean(ch.level); const degree = clean(ch.degree);
+    if (level) return level === 'Misdemeanor';
+    if (degree) return MISDEMEANOR_CLASSES.includes(degree);
+    const K = closing();
+    return !!(K && K.chargeClass && K.chargeClass(clean(ch.statute || ch.code)).level === 'Misdemeanor');
+  }
+
+  /** "YYYY-MM-DD" plus whole months (31 January plus one month is 3 March, as with years below). */
+  function addMonths(day, months) {
+    const [y, m, d] = day.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1 + months, d)).toISOString().slice(0, 10);
   }
 
   /** "YYYY-MM-DD" plus whole years (29 February becomes 1 March in a non-leap year). */
@@ -42,11 +66,14 @@
     const rfCharges = (fields && Array.isArray(fields.charges)) ? fields.charges : [];
     const arrestees = (arrest && Array.isArray(arrest.arrestees)) ? arrest.arrestees : [];
     const arrestCharges = arrestees.flatMap((a) => (Array.isArray(a.charges) ? a.charges : []));
-    if (![...rfCharges, ...arrestCharges].some(isNarcoticCharge)) return null;
+    const narcotic = [...rfCharges, ...arrestCharges].filter(isNarcoticCharge);
+    if (!narcotic.length) return null;
     let occurred = fields && isDate(fields.date) ? clean(fields.date) : '';
     if (!occurred) occurred = arrestees.map((a) => clean(a.date)).filter(isDate).sort()[0] || '';
     if (!occurred) return null;
-    return { occurred, expires: addYears(occurred, YEARS) };
+    // v1.134: 18 months when every narcotic charge is a misdemeanor, else 3 years.
+    const months = narcotic.every(isMisdemeanor) ? MISDEMEANOR_MONTHS : YEARS * 12;
+    return { occurred, expires: months === YEARS * 12 ? addYears(occurred, YEARS) : addMonths(occurred, months), months };
   }
 
   /** Whole days from `today` to the expiry day (negative once it has passed). */
@@ -76,7 +103,10 @@
     return `${d ? `${d} Day${d === 1 ? '' : 's'} ` : ''}${hh}:${mm}:${ss} Left`;
   }
 
-  const api = { YEARS, WARN_DAYS, isNarcoticCharge, addYears, compute, daysLeft, state, countdown };
+  /** v1.134: "3 years" or "18 months", for a sol from compute() (older ones have no months: 3 years). */
+  const periodText = (sol) => (sol && sol.months && sol.months !== YEARS * 12 ? `${sol.months} months` : `${YEARS} years`);
+
+  const api = { YEARS, MISDEMEANOR_MONTHS, WARN_DAYS, isNarcoticCharge, isMisdemeanor, addYears, addMonths, compute, daysLeft, state, countdown, periodText };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVLimits = api;
 })(this);

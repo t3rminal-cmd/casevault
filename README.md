@@ -15,10 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.133
+## What's New in v1.134
 
-- **Arrest Report phone calls:** Name (called who), Relationship and Phone number called, as many as needed, or Refused phone call; on the PDF and in `{{arrest.phoneCalls}}`
-- **Charge 720 ILCS 550/4(b):** Possession of Cannabis, 10 to 30 grams, first offense (Class B misdemeanor)
+- **Statute of limitations:** 18 months when every narcotic charge on a case is a misdemeanor (720 ILCS 5/3-5(b)); 3 years otherwise
+- **Closed Files and Archived by year:** a folder for each year (closed, or archived), then the Missions / General Files or the archive reasons inside it
+- **Home page:** a folder's count shows once (no "· 1 closed" under the Mission name); Other Files sits under Archived
 
 ## What CaseVault Does
 
