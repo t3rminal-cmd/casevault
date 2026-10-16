@@ -1648,12 +1648,21 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 .hero-clock { position: relative; z-index: 1; font-size: clamp(1.8rem, 3.calc(6vw / var(--z, 1)), 3rem); font-weight: 600; letter-spacing: .02em; line-height: 1; opacity: .95; font-variant-numeric: tabular-nums; }
 .hero .btn .bi { color: inherit; }
 .hero-art { position: absolute; right: -40px; bottom: -60px; width: 300px; height: 300px; pointer-events: none; }
-.hero-art > .bi { position: absolute; right: 90px; bottom: 100px; width: 90px; height: 90px; color: rgba(255, 255, 255, .14); }
+.hero-side { position: relative; z-index: 1; display: flex; align-items: center; gap: 1.1rem; align-self: center; }
+.hero-vault { flex: none; width: 64px; height: 64px; color: rgba(255, 255, 255, .85); fill: none; stroke: currentColor; stroke-width: 3; }
+.hero-vault .hv-frame { stroke-width: 2.5; }
+.hero-vault .hv-hinge, .hero-vault .hv-bolt { stroke: none; fill: currentColor; }
+.hero-vault .hv-ring { stroke-width: 1.5; stroke-dasharray: 3 5; }
+.hero-vault .hv-hub { fill: currentColor; }
+.hero-vault .hv-wheel { stroke-width: 4; stroke-linecap: square; transform-origin: 60px 60px; animation: cv-vault-turn 8s ease-in-out infinite; }
+.hero-vault .hv-ring { transform-origin: 60px 60px; animation: cv-vault-dial 8s ease-in-out infinite; }
+@keyframes cv-vault-turn { 0%, 70% { transform: rotate(0); } 85%, 100% { transform: rotate(90deg); } }
+@keyframes cv-vault-dial { 0%, 70% { transform: rotate(0); } 85%, 100% { transform: rotate(-45deg); } }
 .hero-ring { position: absolute; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .14); right: 0; bottom: 0; animation: cv-hero-pulse 6s ease-in-out infinite; }
 .hero-ring.r1 { width: 300px; height: 300px; } .hero-ring.r2 { width: 220px; height: 220px; right: 40px; bottom: 40px; animation-delay: -2s; } .hero-ring.r3 { width: 140px; height: 140px; right: 80px; bottom: 80px; animation-delay: -4s; }
 @keyframes cv-hero-pulse { 0%, 100% { transform: scale(1); opacity: .9; } 50% { transform: scale(1.06); opacity: .4; } }
-@media (prefers-reduced-motion: reduce) { .hero-ring { animation: none; } }
-@media (max-width: 700px) { .hero { flex-direction: column-reverse; padding: 1.25rem; } .hero-clock { font-size: 1.6rem; } }
+@media (prefers-reduced-motion: reduce) { .hero-ring, .hero-vault .hv-wheel, .hero-vault .hv-ring { animation: none; } }
+@media (max-width: 700px) { .hero { flex-direction: column-reverse; padding: 1.25rem; } .hero-clock { font-size: 1.6rem; } .hero-side { align-self: flex-start; } .hero-vault { width: 44px; height: 44px; } }
 .stats .stat { transition: transform .15s, box-shadow .15s; }
 .stats .stat:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
 
@@ -3949,18 +3958,12 @@ a.locker-tile, a.locker-tile:hover, a.locker-tile * { text-decoration: none !imp
 .dashboard .ov-panel.ov-empty { padding-top: .75rem; padding-bottom: .75rem; }
 .dashboard .ov-panel.ov-empty > .section-head { margin: 0; padding: 0; border-bottom: 0; }
 .general-table td.gen-mission a { white-space: nowrap; } /* v1.118 */
-/* v1.118: a small caption under each top-bar status icon, so they say what they are. */
-.tb-status > [data-cap] { position: relative; }
-.tb-status > [data-cap]::after { content: attr(data-cap); position: absolute; top: calc(100% + 1px); left: 50%; transform: translateX(-50%); font-size: .56rem; line-height: 1; letter-spacing: .02em; color: var(--muted); white-space: nowrap; pointer-events: none; font-weight: 600; text-transform: none; }
-@media (max-width: 640px) { .tb-status > [data-cap]::after { display: none; } }
-.tb-status > [data-cap]:empty::after { display: none; }
 /* v1.118: the Details tab's folded boxes are slim rows, with their count beside the title. */
 .fold-head .fold-count { margin-left: .55rem; font-size: var(--fs-tiny); }
 .fold-head .fold-count.zero { opacity: .55; }
 #main .contacts.foldable.folded { padding-top: .5rem; padding-bottom: .5rem; }
 #main .cv-boxed.foldable.folded > .fold-head h3 { margin: 0; }
-.tb-status { column-gap: 1.05rem; }
-.tb-status > [data-cap]::after { top: calc(100% + 2px); }
+.tb-status { column-gap: .5rem; } /* v1.137: icons only (no captions); the hover box names each */
 /* v1.118: the section buttons readable in dark mode too (Closed grey and Archived amber lighter). */
 :root[data-theme="dark"] .dashboard .ov-btn-closed { color: #c7ced8; }
 :root[data-theme="dark"] .dashboard .ov-btn-archived { color: #e3ad55; }

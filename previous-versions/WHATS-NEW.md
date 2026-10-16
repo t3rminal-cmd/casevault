@@ -4,6 +4,13 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.134
+
+- **Statute of limitations, 18 months for misdemeanors:** a case whose narcotic charges are all misdemeanors (for example 720 ILCS 550/4(b) or (c), or any charge marked Misdemeanor or Class A, B or C) now gets 18 months from the Date of Occurrence instead of 3 years. One felony narcotic charge keeps 3 years. A charge whose class isn't known counts as a felony. The warning in Needs Attention says which period applies
+- **Closed Files and Archived, by year:** each has a folder for every year. Closed Files uses the year a case was closed (a closed Mission, the year it ended); Archived uses the year it was archived. Open a year for its folders: the Missions and General Files in Closed Files, the reasons (EXPIRED, NOLLE PROSEQUI, PROSECUTION, Other) in Archived. Open one of those for its case numbers
+- **No double count:** a folder shows its number of case numbers once, on the folder; the name under it no longer repeats it ("OP-1 Example · 1 closed" is now "OP-1 / Example")
+- **Other Files** now sits under Archived, then the Secure Locker
+
 ## What's new in v1.133
 
 - **Arrest Report → Phone Calls:** for each call, **Name (called who)**, **Relationship** and **Phone number called** (+ Add Phone Call for more than one), or tick **Refused phone call**. The PDF has a PHONE CALLS part with the calls in a table, or "ARRESTEE REFUSED PHONE CALL". In templates, `{{arrest.phoneCalls}}` gives the calls one per line (or "Refused phone call")

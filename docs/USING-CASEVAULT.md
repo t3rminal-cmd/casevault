@@ -213,6 +213,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.137
+
+- **Home page:** the Year Summary tile has its icon; the Ask AI tile is gone (Ask AI is the round button in the lower corner)
+- **Top bar:** the Network, Local AI, Memory, SSD and Power Off icons no longer have words under them. Their colours still show the state, and holding the mouse over one says what it is
+- **Banner:** the shield is replaced with a vault door whose handle turns now and then, as if unlocking. It stays still when Windows is set to show fewer animations
+
 ### What's new in v1.136
 
 - **Year Summary** (the Year Summary tile on the home page, or Ctrl+K → Year Summary): pick a year to see the cases opened, closed and archived in it, arrests by month, charges (felony, misdemeanor, other) with the 10 most common, and narcotics recovered, added up by narcotic and unit. **Print / PDF** makes a one-page PDF with your letterhead. Counted from the case dates and the Arrest Reports (arrest date, charges, recovered narcotics)
@@ -227,13 +233,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Arrest Report phone calls have a Time of call**, on the PDF and in `{{arrest.phoneCalls}}`
 - **Print / PDF, Save PDF to Case and Send to Sign** first list what is still empty in the Arrest Report (name, arrest date and time, Miranda, narcotics, warrant, vehicle, phone call, narrative, arresting officer). **Go Back** to fill it in, or **Continue Anyway**. A part ticked as not applying isn't listed
 - **Closed Files and Archived** case cards show when the case was closed (and archived)
-
-### What's new in v1.134
-
-- **Statute of limitations, 18 months for misdemeanors:** a case whose narcotic charges are all misdemeanors (for example 720 ILCS 550/4(b) or (c), or any charge marked Misdemeanor or Class A, B or C) now gets 18 months from the Date of Occurrence instead of 3 years. One felony narcotic charge keeps 3 years. A charge whose class isn't known counts as a felony. The warning in Needs Attention says which period applies
-- **Closed Files and Archived, by year:** each has a folder for every year. Closed Files uses the year a case was closed (a closed Mission, the year it ended); Archived uses the year it was archived. Open a year for its folders: the Missions and General Files in Closed Files, the reasons (EXPIRED, NOLLE PROSEQUI, PROSECUTION, Other) in Archived. Open one of those for its case numbers
-- **No double count:** a folder shows its number of case numbers once, on the folder; the name under it no longer repeats it ("OP-1 Example · 1 closed" is now "OP-1 / Example")
-- **Other Files** now sits under Archived, then the Secure Locker
 
 ### Earlier versions
 

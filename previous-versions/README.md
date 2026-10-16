@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.136)
+
+- **Year Summary:** cases opened, closed and archived in a year, arrests by month, charges by type and the most common, narcotics recovered; on screen and as a PDF
+- **Archived review:** Review After 3 / 5 / 7 / 10 Years lists the archived cases that old, for a records-retention review (nothing is deleted automatically)
+
 ## Features (v1.135)
 
 - **Draft tab typing fixed:** field labels were re-measured on every frame while typing; now only when a field's size or label changes

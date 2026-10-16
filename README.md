@@ -15,10 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.136
+## What's New in v1.137
 
-- **Year Summary:** cases opened, closed and archived in a year, arrests by month, charges by type and the most common, narcotics recovered; on screen and as a PDF
-- **Archived review:** Review After 3 / 5 / 7 / 10 Years lists the archived cases that old, for a records-retention review (nothing is deleted automatically)
+- **Home page:** Year Summary tile icon; no Ask AI tile (it's the corner button)
+- **Top bar:** status icons without captions; the hover box names each
+- **Banner:** a vault door with a turning handle replaces the shield (still with reduced motion)
 
 ## What CaseVault Does
 
