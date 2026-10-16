@@ -17,8 +17,8 @@ const SP = process.env.SP + '/v1119';
   ok(geo.toastAbove, `the message sits above the round buttons: ${JSON.stringify(geo)}`);
   await p.evaluate(() => document.querySelectorAll('.toast').forEach((t) => t.remove()));
   // 4. Top bar: Memory at once; captions on one line.
-  const caps = await p.evaluate(() => [...document.querySelectorAll('.tb-status > [data-cap]:not([hidden])')].map((e) => [e.dataset.cap, Math.round(e.getBoundingClientRect().bottom)]));
-  ok(caps.some(([k]) => k === 'Memory') && new Set(caps.map(([, y]) => y)).size === 1, `top-bar icons, all the same height: ${JSON.stringify(caps)}`);
+  const caps = await p.evaluate(() => [...document.querySelectorAll('.tb-status > :not([hidden]):not(#ai-activity)')].map((e) => [e.id, Math.round(e.getBoundingClientRect().bottom)]));
+  ok(caps.some(([k]) => k === 'mem-status') && new Set(caps.map(([, y]) => y)).size === 1, `top-bar icons, all the same height: ${JSON.stringify(caps)}`);
   await p.screenshot({ path: `${SP}/landing.png` });
 
   // 5-7. Details: no Closed box while open, the hint in one line, no second Mission link.

@@ -2144,11 +2144,11 @@
       if (w) counts.style.setProperty('--chip-w', `${w}px`);
     });
     return h('div', { class: 'hero hero-compact' },
-      h('div', { class: 'hero-art', 'aria-hidden': 'true' }, h('span', { class: 'hero-ring r1' }), h('span', { class: 'hero-ring r2' }), h('span', { class: 'hero-ring r3' }), I('shield-lock-fill')),
+      h('div', { class: 'hero-art', 'aria-hidden': 'true' }, h('span', { class: 'hero-ring r1' }), h('span', { class: 'hero-ring r2' }), h('span', { class: 'hero-ring r3' })),
       h('div', { class: 'hero-text' },
         h('div', { class: 'hero-line' }, h('h1', { class: 'hero-title' }, `${greet}${who ? `, ${who.split(/\s+/)[0]}` : ''}`), dateLine),
         counts),
-      clock);
+      h('div', { class: 'hero-side' }, heroVault(), clock));
   }
 
   /* v1.61: one row of same-size actions under the banner. Draft, Discovery and Link Chart ask
@@ -2168,13 +2168,28 @@
       tile('Draft', 'pencil-square', toTab('draft'), 'Open the Draft tab of a case'),
       tile('Discovery', 'shield-lock-fill', discovery, 'Make a discovery package for a case'),
       tile('Link Chart', 'diagram-3-fill', toTab('linkchart'), 'Open the Link Chart of a case'),
-      tile('Ask AI', 'chat-dots-fill', () => { const b = document.getElementById('btn-chat'); if (b) b.click(); }, 'Open the Ask AI window'),
       tile('Reference', 'book', () => { location.hash = '#/reference'; }, 'Charts, codes and calculators'),
-      tile('Year Summary', 'bar-chart', () => yearSummary(), 'A year at a glance: cases opened, closed and archived, arrests, charges and narcotics recovered; prints as a PDF'),
+      tile('Year Summary', 'bar-chart-line-fill', () => yearSummary(), 'A year at a glance: cases opened, closed and archived, arrests, charges and narcotics recovered; prints as a PDF'),
       // v1.121: Quick Links open in a panel from the right; Library and Vault are one Settings tile
       // (they opened the same window).
       qlTile(),
       tile('Settings', 'gear', () => showVaultPanel(), 'Vault settings, My Profile, the Library for the AI, Quick Links, logs and backups'));
+  }
+
+  /* v1.137: the banner's picture is a vault door, for the name: a square door with hinges and bolts,
+   * a round door in it, and a spoked handle that turns a quarter now and then, as if unlocking. */
+  function heroVault() {
+    const NS = 'http://www.w3.org/2000/svg';
+    const el = (tag, attrs, ...kids) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); n.append(...kids); return n; };
+    const spokes = [0, 45, 90, 135].map((a) => el('line', { x1: 60, y1: 34, x2: 60, y2: 86, transform: `rotate(${a} 60 60)` }));
+    const bolts = [[60, 18], [102, 60], [60, 102], [18, 60]].map(([x, y]) => el('rect', { x: x - 3, y: y - 3, width: 6, height: 6, class: 'hv-bolt' }));
+    return el('svg', { class: 'hero-vault', viewBox: '0 0 120 120', width: 120, height: 120, 'aria-hidden': 'true', focusable: 'false' },
+      el('rect', { x: 4, y: 4, width: 112, height: 112, class: 'hv-frame' }),
+      el('rect', { x: 0, y: 22, width: 6, height: 14, class: 'hv-hinge' }), el('rect', { x: 0, y: 84, width: 6, height: 14, class: 'hv-hinge' }),
+      el('circle', { cx: 60, cy: 60, r: 46, class: 'hv-door' }),
+      el('circle', { cx: 60, cy: 60, r: 36, class: 'hv-ring' }),
+      ...bolts,
+      el('g', { class: 'hv-wheel' }, ...spokes, el('circle', { cx: 60, cy: 60, r: 9, class: 'hv-hub' })));
   }
 
   /** v1.61: pick a case (newest change first; type to filter). Resolves to an index entry or null. */
@@ -3604,7 +3619,7 @@
       ['Back Up the Vault', 'hdd-fill', () => showVaultPanel('backups')], ['New Case', 'plus-lg', () => newCase()],
       ['New Mission', 'folder-plus', async () => { const op = await operationDialog(); if (op) { renderCaseList(); location.hash = `#/operation/${encodeURIComponent(op.id)}`; } }],
       ['Keyboard Shortcuts', 'lightning-charge', () => shortcutsDialog()],
-      ['Year Summary', 'bar-chart', () => yearSummary()],
+      ['Year Summary', 'bar-chart-line-fill', () => yearSummary()],
     ];
     return openDialog((close) => {
       const input = h('input', { type: 'search', class: 'find-input', placeholder: 'Case number, name, Mission or page', 'aria-label': 'Find', autocomplete: 'off', autofocus: true });
