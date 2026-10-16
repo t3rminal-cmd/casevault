@@ -123,8 +123,8 @@
       status.textContent = `✓ Saved ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     };
     const changed = () => {
-      status.className = 'note-save-status small warn-text';
-      status.textContent = 'Not saved yet…';
+      // v1.135: written only when it changes (not on every keystroke).
+      if (status.textContent !== 'Not saved yet…') { status.className = 'note-save-status small warn-text'; status.textContent = 'Not saved yet…'; }
       Save.schedule(key, writeNow, 700);
     };
 
@@ -339,17 +339,28 @@
       lastPdf = { sig, path, bytes };
       return path;
     }
+    // v1.135: before printing or saving: what is still empty, with Go Back or Continue Anyway.
+    const checkFirst = async () => {
+      const gaps = K().arrestGaps(arrest);
+      if (!gaps.length) return true;
+      return ui.confirmDialog({ title: 'Some parts of the Arrest Report are empty', confirmText: 'Continue Anyway', cancelText: 'Go Back',
+        message: h('div', { class: 'arrest-gaps' }, h('p', {}, 'Still to fill in (or tick as not applying):'),
+          ...gaps.map((g) => h('div', {}, h('strong', {}, g.who), h('ul', {}, g.missing.map((m) => h('li', {}, m)))))) });
+    };
     const printBtn = h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button', title: 'Opens the Arrest Report. Print it, or save it as a PDF.', onclick: async () => {
+      if (!archived && !(await checkFirst())) return;
       await Save.flushAll();
       await showPdf(await pdfBytes());
     } }, 'Print / PDF');
     const pdfCaseBtn = h('button', { class: 'btn small', type: 'button', title: 'Saves the PDF in this case\'s Arrest Report folder.', onclick: async () => {
+      if (!(await checkFirst())) return;
       let path;
       try { path = await savePdf(); } catch { return; }
       toast(`Saved to the case files: ${path.split('/').pop()}`, 'success', 5000);
       await showPdf(lastPdf.bytes);
     } }, 'Save PDF to Case');
     const signBtn = h('button', { class: 'btn small', type: 'button', title: 'Saves the PDF to the case and starts an email with it attached, for signing.', onclick: async () => {
+      if (!(await checkFirst())) return;
       let path;
       try { path = await savePdf(); } catch { return; }
       if (root.CVMailUI) {

@@ -126,6 +126,7 @@
   const PHONE_CALL_FIELDS = [
     { key: 'name', label: 'Name (called who)' }, { key: 'relationship', label: 'Relationship' },
     { key: 'phone', label: 'Phone number called', type: 'tel' },
+    { key: 'time', label: 'Time of call', type: 'time' }, // v1.135
   ];
   const NON_OFFENDER_FIELDS = [
     { key: 'role', label: 'Role', type: 'select', options: ['Victim', 'Complainant', 'Victim and complainant', 'Witness'] },
@@ -220,6 +221,8 @@
     ['720 ILCS 570/405', 'Class X'], ['720 ILCS 5/24-1.1', 'Class 3'], ['720 ILCS 5/24-1.6', 'Class 4'],
     ['21 U.S.C. § 844', 'Federal misdemeanor'],
   ].sort((a, b) => b[0].length - a[0].length);
+  // v1.135: the same statute with a different class by its wording (a subsequent offense).
+  const WORDING_CLASS = [['720 ILCS 550/4(b)', /subsequent|second or|repeat/i, 'Class A']];
   const MISDEMEANOR_CLASSES = ['Class A', 'Class B', 'Class C', 'Federal misdemeanor'];
   /** The Type that goes with a class: Felony, Misdemeanor, or '' when the class says nothing. */
   function typeOfClass(cls) {
@@ -231,9 +234,11 @@
   }
   /** v1.114: { degree, level } for a statute ('' each when unknown). Federal statutes are felonies
    * unless listed; Illinois felony statutes with no fixed class get the Type only. */
-  function chargeClass(statute) {
+  function chargeClass(statute, description = '') {
     const s = clean(statute).replace(/\s+/g, ' ');
     if (!s) return { degree: '', level: '' };
+    const byWords = WORDING_CLASS.find(([k, re]) => s === k && re.test(clean(description)));
+    if (byWords) return { degree: byWords[2], level: typeOfClass(byWords[2]) };
     const hit = STATUTE_CLASS.find(([k]) => s === k || (s.startsWith(k) && /^[(\s]/.test(s.slice(k.length)))); // 405 is not 405.1
     if (hit) return { degree: hit[1], level: typeOfClass(hit[1]) };
     if (/U\.S\.C\./.test(s)) return { degree: '', level: 'Felony' };
@@ -242,7 +247,7 @@
   }
   /** A charge picked from a statute and wording: its class and type go with it (another charge's go). */
   function withClass(ch, statute, description) {
-    const k = chargeClass(statute);
+    const k = chargeClass(statute, description);
     return { ...ch, statute: clean(statute), description: clean(description), degree: k.degree, level: k.level };
   }
 
@@ -278,12 +283,36 @@
       put('warrants', n.warrants.filter(itemFilled).map((x) => [clean(x.number), clean(x.kind), clean(x.offense)].filter(Boolean).join(', ')).join('\n'));
       if (!clean(n.warrantNumber) && n.warrants[0]) put('warrantNumber', clean(n.warrants[0].number));
       // v1.133: "Jane Doe (Mother), (312) 555-0100", one call a line; or that the call was refused.
-      put('phoneCalls', n.refusedCall ? 'Refused phone call' : n.phoneCalls.filter(itemFilled).map((x) => [[clean(x.name), clean(x.relationship) && `(${clean(x.relationship)})`].filter(Boolean).join(' '), clean(x.phone)].filter(Boolean).join(', ')).join('\n'));
+      put('phoneCalls', n.refusedCall ? 'Refused phone call' : n.phoneCalls.filter(itemFilled).map((x) => [[clean(x.name), clean(x.relationship) && `(${clean(x.relationship)})`].filter(Boolean).join(' '), clean(x.phone), clean(x.time) && `at ${clean(x.time)}`].filter(Boolean).join(', ')).join('\n'));
       put('property', [...n.properties.filter(itemFilled).map(propertyLine), clean(n.property)].filter(Boolean).join('\n')); put('narrative', clean(n.narrative)); put('notes', clean(n.narrative || n.notes));
     });
     ctx['arrest.count'] = String(list.filter((a) => arresteeName(a)).length);
     ctx['arrest.names'] = list.map(arresteeName).filter(Boolean).join('; ');
     return ctx;
+  }
+
+  /** v1.135: what an Arrest Report still leaves empty, before it's printed: [{ who, missing: [...] }]
+   * for each arrestee with gaps. A part ticked as not applying (No narcotics recovered, Refused phone
+   * call…) isn't a gap. */
+  function arrestGaps(arrest) {
+    const out = [];
+    ((arrest && arrest.arrestees) || []).forEach((raw, i) => {
+      const a = normalizeArrestee(raw);
+      const missing = [];
+      if (!arresteeName(a)) missing.push('the arrestee\'s name');
+      if (!chargesText(a.charges)) missing.push('a charge');
+      if (!clean(a.date) || !clean(a.time)) missing.push('the arrest date and time');
+      if (!clean(a.miranda)) missing.push('Miranda');
+      else if (/^Given/.test(clean(a.miranda)) && !clean(a.mirandaTime)) missing.push('the Miranda time');
+      if (!a.noNarcotics && !a.narcotics.some(itemFilled)) missing.push('recovered narcotics (or tick No narcotics recovered)');
+      if (!a.noWarrant && !a.warrants.some(itemFilled)) missing.push('a warrant (or tick No warrant identified)');
+      if (!a.noVehicle && !VEHICLE_FIELDS.some((f) => clean(a[f.key]))) missing.push('the arrestee vehicle (or tick No arrestee vehicle information)');
+      if (!a.refusedCall && !a.phoneCalls.some(itemFilled)) missing.push('a phone call (or tick Refused phone call)');
+      if (!clean(a.narrative)) missing.push('the incident narrative');
+      if (!clean(a.arrestingOfficer)) missing.push('the 1st arresting officer');
+      if (missing.length) out.push({ who: arresteeName(a) || `Arrestee ${i + 1}`, missing });
+    });
+    return out;
   }
 
   /** v1.84: an arrest report good enough to close by arrest: an arrestee's name and a charge. */
@@ -428,7 +457,7 @@
   /** Charges are blank (nothing typed yet). */
   const chargesBlank = (a) => !(a && a.charges || []).some((x) => clean(x.statute) || clean(x.description));
 
-  const api = { missionProgress, arrestReady, arrestCoverage, PROPERTY_KINDS, PROPERTY_FIELDS, propertyLine, CHARGE_CLASSES, chargeClass, typeOfClass, withClass, victimChoices, STATE_VICTIM, isStateVictim, nonOffenderFields, splitName, arresteeChoices, personToArrestee, chargesBlank, personKey, peopleOfCase, sameSuspectCases,
+  const api = { arrestGaps, missionProgress, arrestReady, arrestCoverage, PROPERTY_KINDS, PROPERTY_FIELDS, propertyLine, CHARGE_CLASSES, chargeClass, typeOfClass, withClass, victimChoices, STATE_VICTIM, isStateVictim, nonOffenderFields, splitName, arresteeChoices, personToArrestee, chargesBlank, personKey, peopleOfCase, sameSuspectCases,
     STATUS_HELP, FOLLOW_UP_REASONS, DISPOSITIONS, disposition, copyArrestee, ARRESTEE_FIELDS, ARREST_FIELDS, CHARGE_FIELDS,
     NUMBER_FIELDS, INCIDENT_FIELDS, VEHICLE_FIELDS, COURT_FIELDS, BOND_FIELDS, PERSONNEL_FIELDS, NARCOTIC_FIELDS, WARRANT_FIELDS, NON_OFFENDER_FIELDS, LISTS,
     emptyArrest, emptyArrestee, emptyCharge, emptyItem, normalizeArrest, normalizeArrestee, itemFilled, ageOn, arresteeName, chargesText, arrestContext, closureContext, closeChecklist, followUpEvent, peopleOf,

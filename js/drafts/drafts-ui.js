@@ -317,18 +317,25 @@
     const rich = CVRichEditor.create(ta, { h, icon: ui.icon, label: 'Draft text' });
     const wrap = h('div', { class: 'editor-wrap' }, rich.el, ta, suggBox);
 
-    const suggestToggle = h('input', { type: 'checkbox', checked: Vault.data.settings.draftSuggestions !== false });
+    // v1.135: on or off for each PC; off to begin with on a PC without a graphics card for the AI.
+    const HW = root.CVHardware;
+    const suggestDefaultOff = () => !!HW && typeof HW.state.suggestions !== 'boolean' && HW.noGpu(HW.state);
+    const suggestToggle = h('input', { type: 'checkbox', checked: HW ? HW.suggestionsOn(HW.state, Vault.data.settings.draftSuggestions) : Vault.data.settings.draftSuggestions !== false });
     const suggestNote = h('span', { class: 'muted small' });
     const suggestLabel = h('label', { class: 'check-row suggest-toggle', title: 'Suggestions as you type, in the Markdown view.' }, suggestToggle, h('span', {}, 'AI suggestions ', suggestNote));
     const suggestionsOn = () => suggestToggle.checked && !suggestToggle.disabled;
     function drawSuggestState() {
       const ready = aiReady() && !!CVCopilot.fastModel(Engine().detected);
       suggestToggle.disabled = !ready;
-      suggestNote.textContent = ready ? `(${CVCopilot.fastModel(Engine().detected)}, Tab accepts, Esc dismisses)` : `(off: AI ${Engine().status() === 'rules-only' ? 'is Rules-only' : 'engine offline'})`;
+      suggestNote.textContent = !ready ? `(off: AI ${Engine().status() === 'rules-only' ? 'is Rules-only' : 'engine offline'})`
+        : !suggestToggle.checked && suggestDefaultOff() ? '(off on this PC: no graphics card for the AI, so they would slow typing; tick to turn on)'
+          : `(${CVCopilot.fastModel(Engine().detected)}, Tab accepts, Esc dismisses)`;
       if (!ready) ghost.stop();
     }
     suggestToggle.addEventListener('change', () => {
-      Save.track('settings', () => Vault.updateSettings({ draftSuggestions: suggestToggle.checked })).catch(() => {});
+      if (HW) HW.setSuggestions(suggestToggle.checked);
+      else Save.track('settings', () => Vault.updateSettings({ draftSuggestions: suggestToggle.checked })).catch(() => {});
+      drawSuggestState();
       if (!suggestToggle.checked) ghost.stop();
     });
 

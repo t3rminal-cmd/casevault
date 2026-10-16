@@ -213,6 +213,16 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.135
+
+- **Faster typing on the Draft tab:** the part that keeps each field's label from being cut off was measuring every field again and again while you typed (on a slow laptop that could freeze the form). It now measures a field only when its size or label changes. The Arrest Report no longer rewrites "Not saved yet…" on every key
+- **AI suggestions as you type** (Drafts) are now set for each PC, and start off on a PC without a graphics card for the AI, where they slow typing down. The note next to the box says so; tick it to turn them on for that PC
+- **Statute of limitations, earlier notices:** Needs Attention shows a case 90 days before its deadline ("Within 90 days") and again, highlighted, 30 days before ("Within 30 days"). The red warning in the last 5 days stays
+- **Charge 720 ILCS 550/4(b), subsequent offense** (Class A misdemeanor) next to the first offense (Class B); picking it fills in the right class
+- **Arrest Report phone calls have a Time of call**, on the PDF and in `{{arrest.phoneCalls}}`
+- **Print / PDF, Save PDF to Case and Send to Sign** first list what is still empty in the Arrest Report (name, arrest date and time, Miranda, narcotics, warrant, vehicle, phone call, narrative, arresting officer). **Go Back** to fill it in, or **Continue Anyway**. A part ticked as not applying isn't listed
+- **Closed Files and Archived** case cards show when the case was closed (and archived)
+
 ### What's new in v1.134
 
 - **Statute of limitations, 18 months for misdemeanors:** a case whose narcotic charges are all misdemeanors (for example 720 ILCS 550/4(b) or (c), or any charge marked Misdemeanor or Class A, B or C) now gets 18 months from the Date of Occurrence instead of 3 years. One felony narcotic charge keeps 3 years. A charge whose class isn't known counts as a felony. The warning in Needs Attention says which period applies
@@ -224,11 +234,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 - **Arrest Report → Phone Calls:** for each call, **Name (called who)**, **Relationship** and **Phone number called** (+ Add Phone Call for more than one), or tick **Refused phone call**. The PDF has a PHONE CALLS part with the calls in a table, or "ARRESTEE REFUSED PHONE CALL". In templates, `{{arrest.phoneCalls}}` gives the calls one per line (or "Refused phone call")
 - **New charge:** 720 ILCS 550/4(b), Possession of Cannabis, 10 to 30 grams, first offense (Class B misdemeanor), under Illinois: Possession in the charge list and the Reference
-
-### What's new in v1.132
-
-- **Typing is smoother on a slow laptop.** After each pause in typing, CaseVault used to redraw the whole case list on the left, which on a slower PC froze the page for up to a second. Now it redraws only what changed (often just one row), and a save waits until you have paused for a moment (1.5 seconds)
-- **Saving While You Type** (⋮ → Options → Display), set for each PC: **After a pause** (recommended), **Every 5 minutes** or **Every 30 minutes**. With 5 or 30 minutes the save icon at the top says when the next save is; **Ctrl+S** saves at once. Changing page, locking, Power Off or closing CaseVault always saves first, and a change made with a click (Add Note, a choice from a list) saves straight away. With 30 minutes, up to 30 minutes of typing can be lost if the SSD is pulled out or the laptop loses power
 
 ### Earlier versions
 

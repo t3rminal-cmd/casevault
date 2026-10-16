@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.134)
+
+- **Statute of limitations:** 18 months when every narcotic charge on a case is a misdemeanor (720 ILCS 5/3-5(b)); 3 years otherwise
+- **Closed Files and Archived by year:** a folder for each year (closed, or archived), then the Missions / General Files or the archive reasons inside it
+- **Home page:** a folder's count shows once (no "· 1 closed" under the Mission name); Other Files sits under Archived
+
 ## Features (v1.133)
 
 - **Arrest Report phone calls:** Name (called who), Relationship and Phone number called, as many as needed, or Refused phone call; on the PDF and in `{{arrest.phoneCalls}}`
