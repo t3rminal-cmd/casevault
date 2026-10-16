@@ -267,16 +267,17 @@
           const col = O.eventColor(ev, colors);
           const li = h('li', { class: `tl-item ${ev.kind} ${ev.done ? 'done' : ''} ${due ? due.cls : ''} ${ev.date < now ? 'past' : ''}${col ? ' tl-colored' : ''}` },
             h('div', { class: 'tl-when', title: fmtDate(ev.date) }, h('span', { class: 'tl-day' }, String(Number(dd))), h('span', { class: 'tl-wk' }, wk), ev.time ? h('span', { class: 'tl-time' }, ev.time) : ''),
-            h('div', { class: 'tl-body' },
+            h('div', { class: 'tl-body' }, h('div', { class: 'tl-main' },
               h('div', { class: 'tl-title' },
                 done,
                 h('span', { class: `badge ${ev.kind}` }, isDeadline ? 'Deadline' : ev.kind === 'buy' ? 'Buy' : 'Event'),
                 many ? h('span', { class: `tl-case${caseId === c.id ? ' current' : ''}`, title: caseId === c.id ? 'This case number' : 'Another case number of this mission' }, numberOf(caseId)) : null,
                 h('strong', {}, ev.title),
-                ev.suspect ? h('span', { class: 'tl-suspect', title: 'Suspect' }, ev.suspect) : null,
                 due && h('span', { class: `due ${due.cls}` }, due.text)),
               ev.kind === 'buy' && O.buyLine(ev) ? h('div', { class: 'tl-buy' }, O.buyLine(ev)) : null,
               ev.note && h('div', { class: 'tl-note' }, ev.note)),
+              // v1.138: the suspect on the right of the box, every name the same width so they line up.
+              ev.suspect ? h('div', { class: 'tl-who' }, h('span', { class: 'tl-suspect', title: 'Suspect' }, ev.suspect)) : null),
             h('div', { class: 'tl-actions' },
               h('button', { class: 'btn small ghost', type: 'button', onclick: () => {
                 editing = { id: ev.id, caseId };
@@ -301,7 +302,17 @@
         }
         if (!todayShown && all.every((x) => x.ev.date < now)) items.push(h('li', { class: 'tl-today' }, h('span', {}, `Today · ${fmtDate(now)}`)));
         list.replaceChildren(...items);
+        sizeSuspects();
       }
+
+      // v1.138: every suspect box as wide as the widest name (up to a cap, then it wraps).
+      const sizeSuspects = () => requestAnimationFrame(() => {
+        const chips = [...list.querySelectorAll('.tl-who .tl-suspect')];
+        list.style.removeProperty('--tl-who-w');
+        if (!chips.length || !list.isConnected) return;
+        const w = Math.max(...chips.map((x) => Math.ceil(x.getBoundingClientRect().width)));
+        if (w) list.style.setProperty('--tl-who-w', `${w}px`);
+      });
 
       draw();
       panel.replaceChildren(many ? h('p', { class: 'muted small tl-op-note' }, `The timeline of the whole mission: all ${tls.size} case numbers.`) : '', form, stats, h('div', { class: 'tl-filter-row' }, filters, tools), legend, list);

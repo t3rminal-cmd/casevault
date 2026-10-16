@@ -4060,3 +4060,22 @@ table.op-cases-table td.op-closing { width: 9.5rem; min-width: 9.5rem; line-heig
   .op-cases-table .op-case-links { display: grid; grid-template-columns: 1fr; gap: .25rem; }
   .op-cases-table .op-tab-link { justify-content: center; }
 }
+/* v1.138: the suspect sits on the right of the event box, the same width on every event, so the
+   names line up down the timeline. */
+.tl-body:has(> .tl-who) { display: flex; align-items: center; gap: .9rem; }
+.tl-main { flex: 1 1 auto; min-width: 0; }
+.tl-who { flex: none; display: flex; }
+.tl-who .tl-suspect { box-sizing: border-box; min-width: var(--tl-who-w, auto); max-width: 14rem; text-align: center; padding: .2rem .6rem; overflow-wrap: anywhere; }
+@media (max-width: 640px) { .tl-who .tl-suspect { max-width: 8rem; } }
+/* v1.138: the top-left logo is the banner's vault door: navy with gold bolts; the handle turns a
+   quarter when the pointer is over CaseVault. */
+.brand-vault { flex: none; width: 30px; height: 30px; color: var(--accent); fill: none; stroke: currentColor; stroke-width: 6; }
+.brand-vault .hv-frame { fill: var(--accent-soft); stroke-width: 5; }
+.brand-vault .hv-door { fill: var(--surface); }
+.brand-vault .hv-ring { stroke-width: 3; stroke-dasharray: 6 8; }
+.brand-vault .hv-hinge { fill: currentColor; stroke: none; }
+.brand-vault .hv-bolt { fill: var(--warn); stroke: none; }
+.brand-vault .hv-hub { fill: currentColor; }
+.brand-vault .hv-wheel { stroke-width: 8; stroke-linecap: square; transform-origin: 60px 60px; transition: transform .6s ease-in-out; }
+.brand:hover .brand-vault .hv-wheel, .brand:focus-visible .brand-vault .hv-wheel { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .brand-vault .hv-wheel { transition: none; } }
