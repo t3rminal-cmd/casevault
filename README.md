@@ -15,14 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.135
+## What's New in v1.136
 
-- **Draft tab typing fixed:** field labels were re-measured on every frame while typing; now only when a field's size or label changes
-- **AI suggestions per PC**, off to begin with on a PC without a graphics card for the AI
-- **Statute of limitations notices** 90 and 30 days before, in Needs Attention
-- **720 ILCS 550/4(b) subsequent offense** (Class A); **phone call time** on the Arrest Report
-- **Arrest Report check:** printing or saving first lists what is still empty
-- **Closed and archived dates** on the case cards in Closed Files and Archived
+- **Year Summary:** cases opened, closed and archived in a year, arrests by month, charges by type and the most common, narcotics recovered; on screen and as a PDF
+- **Archived review:** Review After 3 / 5 / 7 / 10 Years lists the archived cases that old, for a records-retention review (nothing is deleted automatically)
 
 ## What CaseVault Does
 

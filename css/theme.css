@@ -178,3 +178,22 @@ table.op-cases-table td.op-closing { width: auto; min-width: 0; white-space: now
 
 /* v1.135: the closed / archived date on a case card in Closed Files and Archived. */
 .op-case-dates { display: flex; align-items: center; gap: .35rem; padding: 0 .1rem .35rem; }
+
+/* v1.136: Year Summary. */
+.ys-head { display: flex; align-items: center; gap: .75rem; margin-bottom: .75rem; padding-right: 2.5rem; }
+.ys-head h2 { margin: 0; white-space: nowrap; }
+.ys-head select { width: auto; min-width: 7rem; }
+.ys-stat .muted { white-space: nowrap; }
+.ys-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: .5rem; }
+.ys-stat { display: flex; flex-direction: column; align-items: center; padding: .6rem .25rem; border: 1px solid var(--border); background: var(--surface); }
+.ys-stat strong { font-size: var(--fs-title); color: var(--accent); }
+.ys-h { margin: 1rem 0 .4rem; font-size: var(--fs-sub); }
+.ys-months { display: grid; grid-template-columns: repeat(12, 1fr); gap: .35rem; height: 8rem; align-items: end; }
+.ys-month { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+.ys-bar { width: 70%; min-height: 1px; background: var(--accent); }
+.ys-n { font-size: var(--fs-small); font-weight: 700; }
+.ys-table td.num, .ys-table th.num { text-align: right; white-space: nowrap; }
+@media (max-width: 820px) { .ys-stats { grid-template-columns: repeat(2, 1fr); } }
+
+/* v1.136: Archived → Review after N years. */
+.ov-review-pick { width: auto; }

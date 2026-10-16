@@ -4,6 +4,15 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.135)
+
+- **Draft tab typing fixed:** field labels were re-measured on every frame while typing; now only when a field's size or label changes
+- **AI suggestions per PC**, off to begin with on a PC without a graphics card for the AI
+- **Statute of limitations notices** 90 and 30 days before, in Needs Attention
+- **720 ILCS 550/4(b) subsequent offense** (Class A); **phone call time** on the Arrest Report
+- **Arrest Report check:** printing or saving first lists what is still empty
+- **Closed and archived dates** on the case cards in Closed Files and Archived
+
 ## Features (v1.134)
 
 - **Statute of limitations:** 18 months when every narcotic charge on a case is a misdemeanor (720 ILCS 5/3-5(b)); 3 years otherwise

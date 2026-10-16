@@ -213,6 +213,11 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.136
+
+- **Year Summary** (the Year Summary tile on the home page, or Ctrl+K → Year Summary): pick a year to see the cases opened, closed and archived in it, arrests by month, charges (felony, misdemeanor, other) with the 10 most common, and narcotics recovered, added up by narcotic and unit. **Print / PDF** makes a one-page PDF with your letterhead. Counted from the case dates and the Arrest Reports (arrest date, charges, recovered narcotics)
+- **Archived → Review:** choose **Review After 3, 5, 7 or 10 Years** in the Archived section (kept with the vault; Off to begin with). When archived cases pass that age, a **Review (N)** button lists them with the date archived and the reason, to check against your agency's records-retention rules. CaseVault deletes nothing on its own
+
 ### What's new in v1.135
 
 - **Faster typing on the Draft tab:** the part that keeps each field's label from being cut off was measuring every field again and again while you typed (on a slow laptop that could freeze the form). It now measures a field only when its size or label changes. The Arrest Report no longer rewrites "Not saved yet…" on every key
@@ -229,11 +234,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Closed Files and Archived, by year:** each has a folder for every year. Closed Files uses the year a case was closed (a closed Mission, the year it ended); Archived uses the year it was archived. Open a year for its folders: the Missions and General Files in Closed Files, the reasons (EXPIRED, NOLLE PROSEQUI, PROSECUTION, Other) in Archived. Open one of those for its case numbers
 - **No double count:** a folder shows its number of case numbers once, on the folder; the name under it no longer repeats it ("OP-1 Example · 1 closed" is now "OP-1 / Example")
 - **Other Files** now sits under Archived, then the Secure Locker
-
-### What's new in v1.133
-
-- **Arrest Report → Phone Calls:** for each call, **Name (called who)**, **Relationship** and **Phone number called** (+ Add Phone Call for more than one), or tick **Refused phone call**. The PDF has a PHONE CALLS part with the calls in a table, or "ARRESTEE REFUSED PHONE CALL". In templates, `{{arrest.phoneCalls}}` gives the calls one per line (or "Refused phone call")
-- **New charge:** 720 ILCS 550/4(b), Possession of Cannabis, 10 to 30 grams, first offense (Class B misdemeanor), under Illinois: Possession in the charge list and the Reference
 
 ### Earlier versions
 

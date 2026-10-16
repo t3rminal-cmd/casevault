@@ -167,7 +167,7 @@
     ['panel', '.vault-panel'],
     ['form', '.op-form, .new-case-form, .deep-search, .restore-form, .locker-form'],
     ['full', '.preview, .doc-view, .lib-preview, .pdf-view, .word-view, .disc'],
-    ['wide', '.problem-form, .type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
+    ['wide', '.year-summary, .problem-form, .type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
   ];
 
   function openDialog(build) {
@@ -1962,8 +1962,35 @@
     });
     const order = [...Vault.ARCHIVE_FOLDERS.map(([k]) => k), 'other'];
     const years = byYear(items).map((y) => ({ ...y, folders: y.folders.sort((a, b) => order.indexOf(a.k) - order.indexOf(b.k)) }));
+    // v1.136: archived cases due for a records-retention review (set for the vault: Off, 3, 5, 7 or 10 years).
+    const reviewYears = Number(Vault.data.settings.archiveReviewYears) || 0;
+    const due = archiveReviewDue(cases, reviewYears);
+    const reviewPick = h('select', { class: 'ov-review-pick', 'aria-label': 'Review archived cases after', title: 'Lists archived cases this many years after they were archived, for your agency\'s records-retention review. CaseVault deletes nothing on its own.' },
+      [[0, 'Review: Off'], [3, 'Review After 3 Years'], [5, 'Review After 5 Years'], [7, 'Review After 7 Years'], [10, 'Review After 10 Years']].map(([n, label]) => h('option', { value: String(n), selected: n === reviewYears }, label)));
+    reviewPick.addEventListener('change', async () => {
+      try { await Save.track('settings', () => Vault.updateSettings({ archiveReviewYears: Number(reviewPick.value) })); showDashboard(); } catch { /* reported */ }
+    });
+    const reviewBtn = due.length ? h('button', { class: 'btn small ov-btn-review', type: 'button', icon: 'hourglass-split', title: `Archived ${reviewYears} or more years ago`, onclick: () => archiveReviewDialog(due, reviewYears) }, `Review (${due.length})`) : null;
     return caseFolderSection({ cls: 'archived-section', title: 'Archived', desc: 'Archived cases, by the year they were archived, then by reason. Restore brings one back.', years, icon: 'folder-archived', what: 'archived', st: archFolderState,
-      action: h('button', { class: 'btn small ov-btn-archived', type: 'button', icon: 'folder-archived', title: 'Every archived case, in a list', onclick: () => showGeneralWith('archived') }, 'All Archived'), empty: 'Nothing archived. Archive (on a closed case) moves it here.' });
+      action: h('div', { class: 'ov-head-actions' }, reviewPick, reviewBtn,
+        h('button', { class: 'btn small ov-btn-archived', type: 'button', icon: 'folder-archived', title: 'Every archived case, in a list', onclick: () => showGeneralWith('archived') }, 'All Archived')), empty: 'Nothing archived. Archive (on a closed case) moves it here.' });
+  }
+  /** v1.136: archived cases archived `years` or more years ago (oldest first); [] when off. */
+  function archiveReviewDue(cases, years) {
+    if (!years || !globalThis.CVLimits) return [];
+    const now = today();
+    return cases.filter(isArchivedEntry).filter((c) => { const d = c.archived || c.closed; return /^\d{4}-\d{2}-\d{2}$/.test(d || '') && CVLimits.addYears(d, years) <= now; })
+      .sort((a, b) => (a.archived || a.closed).localeCompare(b.archived || b.closed));
+  }
+  function archiveReviewDialog(due, years) {
+    return openDialog((close) => h('div', { class: 'review-form' },
+      h('h2', { icon: 'hourglass-split' }, `Archived ${years}+ Years Ago`),
+      h('p', { class: 'muted small' }, `${plural(due.length, 'case')} archived ${years} or more years ago. Check each against your agency's records-retention rules. CaseVault deletes nothing on its own: Delete Case (on the case) moves one to Recently Deleted.`),
+      h('table', { class: 'data-table review-table' }, h('thead', {}, h('tr', {}, h('th', {}, 'Case Number'), h('th', {}, 'Subject'), h('th', {}, 'Archived'), h('th', {}, 'Reason'), h('th', {}, ''))),
+        h('tbody', {}, due.map((c) => h('tr', {}, h('td', {}, c.number || 'No case number'), h('td', {}, subj(c) || '—'), h('td', { class: 'nowrap' }, fmtDate(c.archived || c.closed)),
+          h('td', {}, (Vault.ARCHIVE_FOLDERS.find(([k]) => k === c.archiveFolder) || [, 'Other'])[1]),
+          h('td', {}, h('a', { class: 'btn small', href: caseLink(c, 'details'), onclick: () => close() }, 'Open')))))),
+      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
   }
   function generalYearFolders(cases) {
     // v1.116: closed cases are under CLOSED FILES.
@@ -2143,6 +2170,7 @@
       tile('Link Chart', 'diagram-3-fill', toTab('linkchart'), 'Open the Link Chart of a case'),
       tile('Ask AI', 'chat-dots-fill', () => { const b = document.getElementById('btn-chat'); if (b) b.click(); }, 'Open the Ask AI window'),
       tile('Reference', 'book', () => { location.hash = '#/reference'; }, 'Charts, codes and calculators'),
+      tile('Year Summary', 'bar-chart', () => yearSummary(), 'A year at a glance: cases opened, closed and archived, arrests, charges and narcotics recovered; prints as a PDF'),
       // v1.121: Quick Links open in a panel from the right; Library and Vault are one Settings tile
       // (they opened the same window).
       qlTile(),
@@ -2809,6 +2837,58 @@
   function deconflictionSection(...args) { return PARTS.overview.deconflictionSection(...args); }
   function historyOf(...args) { return PARTS.overview.historyOf(...args); }
   function caseHistorySection(...args) { return PARTS.overview.caseHistorySection(...args); }
+
+  /* v1.136: Year Summary: cases opened, closed and archived in a year, arrests by month, charges by
+   * type and the most common ones, narcotics recovered; on screen, and as a PDF. */
+  async function yearSummary(pickYear) {
+    const entries = (Vault.data && Vault.data.cases) || [];
+    const arrests = new Map();
+    try {
+      await Promise.all(entries.map(async (e) => { arrests.set(e.id, await Vault.readCaseJSON(e.id, 'arrest.json').catch(() => null)); }));
+    } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
+    const years = CVYearSummary.years(entries, arrests, today().slice(0, 4));
+    let year = pickYear && years.includes(String(pickYear)) ? String(pickYear) : years[0];
+    const pdfOf = async (s) => CVYearSummary.build(s, { letterhead: await CVLetterhead.forPdf().catch(() => null), printed: fmtDate(today()) });
+    return openDialog((close) => {
+      const body = h('div', { class: 'ys-body' });
+      const sel = h('select', { 'aria-label': 'Year' }, years.map((y) => h('option', { value: y, selected: y === year }, y)));
+      const stat = (n, label, icon) => h('div', { class: 'ys-stat' }, h('strong', {}, String(n)), h('span', { class: 'muted small' }, label, ' ', I(icon)));
+      const draw = () => {
+        const s = CVYearSummary.compute(year, entries, arrests);
+        const max = Math.max(1, ...s.byMonth);
+        body.replaceChildren(
+          h('div', { class: 'ys-stats' }, stat(s.opened.length, 'Cases opened', 'folder-plus'), stat(s.closed.length, 'Cases closed', 'folder-closed'),
+            stat(s.archived.length, 'Archived', 'folder-archived'), stat(s.arrests, 'Arrests', 'person-badge'), stat(s.charges.total, 'Charges', 'list-ol')),
+          h('h3', { class: 'ys-h' }, 'Arrests by Month'),
+          h('div', { class: 'ys-months', role: 'img', 'aria-label': `Arrests by month: ${s.byMonth.map((n, i) => `${CVYearSummary.MONTHS[i]} ${n}`).join(', ')}` },
+            s.byMonth.map((n, i) => {
+              const bar = h('span', { class: 'ys-bar' });
+              bar.style.height = `${Math.round((n / max) * 100)}%`; // set in script: the page allows no inline styles
+              return h('div', { class: 'ys-month', title: `${CVYearSummary.MONTHS[i]}: ${n}` }, h('span', { class: 'ys-n' }, n ? String(n) : ''), bar, h('span', { class: 'ys-m muted small' }, CVYearSummary.MONTHS[i]));
+            })),
+          h('h3', { class: 'ys-h' }, 'Charges'),
+          h('p', { class: 'ys-line' }, `Felony ${s.charges.felony} · Misdemeanor ${s.charges.misdemeanor} · Other or unknown ${s.charges.other}`),
+          s.topCharges.length ? h('table', { class: 'data-table ys-table' }, h('thead', {}, h('tr', {}, h('th', {}, 'Most common charges'), h('th', { class: 'num' }, 'Counts'))),
+            h('tbody', {}, s.topCharges.map(([label, n]) => h('tr', {}, h('td', {}, label), h('td', { class: 'num' }, String(n)))))) : h('p', { class: 'muted small' }, 'No charges on Arrest Reports this year.'),
+          h('h3', { class: 'ys-h' }, 'Narcotics Recovered'),
+          s.narcotics.length ? h('table', { class: 'data-table ys-table' }, h('thead', {}, h('tr', {}, h('th', {}, 'Narcotic'), h('th', { class: 'num' }, 'Total'), h('th', { class: 'num' }, 'Entries'))),
+            h('tbody', {}, s.narcotics.map((n) => h('tr', {}, h('td', {}, n.drug), h('td', { class: 'num' }, `${n.total || '—'}${n.unit ? ` ${n.unit}` : ''}`), h('td', { class: 'num' }, String(n.count)))))) : h('p', { class: 'muted small' }, 'No narcotics on Arrest Reports this year.'),
+          h('p', { class: 'muted small' }, 'From the case dates and the Arrest Reports (arrest date, charges, recovered narcotics).'));
+      };
+      sel.addEventListener('change', () => { year = sel.value; draw(); });
+      draw();
+      return h('div', { class: 'year-summary' },
+        h('div', { class: 'ys-head' }, h('h2', {}, 'Year Summary'), sel, h('div', { class: 'spacer' }),
+          h('button', { class: 'btn primary', type: 'button', icon: 'printer', onclick: async () => {
+            const bytes = await pdfOf(CVYearSummary.compute(year, entries, arrests));
+            const name = `Year Summary ${year}.pdf`;
+            close();
+            await openDialog((done) => h('div', { class: 'pdf-view' }, h('h2', {}, `Year Summary ${year}`), CVPdfViewer.create(bytes, { h, icon: I, title: 'Year Summary', fileName: name }),
+              h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => { done(); yearSummary(year); } }, 'Back'), h('button', { class: 'btn primary', type: 'button', onclick: () => done() }, 'Close'))));
+          } }, 'Print / PDF')),
+        body);
+    });
+  }
 
   /* v1.85: Case Summary: one page for a supervisor, as a PDF (the letterhead on top). */
   async function caseSummary(c) {
@@ -3524,6 +3604,7 @@
       ['Back Up the Vault', 'hdd-fill', () => showVaultPanel('backups')], ['New Case', 'plus-lg', () => newCase()],
       ['New Mission', 'folder-plus', async () => { const op = await operationDialog(); if (op) { renderCaseList(); location.hash = `#/operation/${encodeURIComponent(op.id)}`; } }],
       ['Keyboard Shortcuts', 'lightning-charge', () => shortcutsDialog()],
+      ['Year Summary', 'bar-chart', () => yearSummary()],
     ];
     return openDialog((close) => {
       const input = h('input', { type: 'search', class: 'find-input', placeholder: 'Case number, name, Mission or page', 'aria-label': 'Find', autocomplete: 'off', autofocus: true });
