@@ -4,6 +4,11 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.133
+
+- **Arrest Report → Phone Calls:** for each call, **Name (called who)**, **Relationship** and **Phone number called** (+ Add Phone Call for more than one), or tick **Refused phone call**. The PDF has a PHONE CALLS part with the calls in a table, or "ARRESTEE REFUSED PHONE CALL". In templates, `{{arrest.phoneCalls}}` gives the calls one per line (or "Refused phone call")
+- **New charge:** 720 ILCS 550/4(b), Possession of Cannabis, 10 to 30 grams, first offense (Class B misdemeanor), under Illinois: Possession in the charge list and the Reference
+
 ## What's new in v1.132
 
 - **Typing is smoother on a slow laptop.** After each pause in typing, CaseVault used to redraw the whole case list on the left, which on a slower PC froze the page for up to a second. Now it redraws only what changed (often just one row), and a save waits until you have paused for a moment (1.5 seconds)
