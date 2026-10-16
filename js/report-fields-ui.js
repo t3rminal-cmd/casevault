@@ -1347,8 +1347,15 @@
     // v1.48: every field is one grey box with its label inside; an empty box shows the label as its
     // placeholder, and the label moves to the top of the box once there is a value.
     labelsInside(panel);
-    requestAnimationFrame(() => fitPlaceholders(panel));
-    new MutationObserver(() => { labelsInside(panel); requestAnimationFrame(() => fitPlaceholders(panel)); }).observe(panel, { childList: true, subtree: true });
+    // v1.135: once per frame at most, and only when fields are added (a typed letter, a save
+    // message or this fitting itself used to set it off again on every frame, which froze typing).
+    let fitQueued = false;
+    const queueFit = () => { if (fitQueued) return; fitQueued = true; requestAnimationFrame(() => { fitQueued = false; fitPlaceholders(panel); }); };
+    queueFit();
+    new MutationObserver((ms) => {
+      if (!ms.some((m) => [...m.addedNodes].some((n) => n.nodeType === 1))) return;
+      labelsInside(panel); queueFit();
+    }).observe(panel, { childList: true, subtree: true });
   }
 
   // A label that doesn't fit its box as a placeholder stays on top instead (no cut-off words).
@@ -1358,6 +1365,10 @@
     for (const f of root.querySelectorAll('.rf-section .field.rf-boxed')) {
       const inp = f.querySelector(':scope > input:not([type=checkbox]), :scope > textarea, :scope > .combo > input, :scope > select');
       if (!inp || !inp.offsetWidth) continue;
+      // v1.135: measured again only when the box's width or its label changed.
+      const fitKey = `${inp.clientWidth}|${inp.dataset.label || inp.placeholder || ''}`;
+      if (inp.dataset.fitKey === fitKey) continue;
+      inp.dataset.fitKey = fitKey;
       const cs = getComputedStyle(inp);
       measureCtx.font = `500 ${cs.fontSize} ${cs.fontFamily}`;
       if (inp.tagName !== 'SELECT' && inp.placeholder && !inp.dataset.label) inp.dataset.label = inp.placeholder;
@@ -1367,9 +1378,11 @@
       const long = !!lab && measureCtx.measureText(lab).width + 8 > room;
       f.classList.toggle('rf-ph-long', long);
       // Too long: no placeholder at all, the label stays on top; else the label is the placeholder.
-      if (inp.tagName !== 'SELECT' && f.classList.contains('rf-ph') && inp.dataset.label) inp.placeholder = long ? '' : inp.dataset.label;
+      const ph = long ? '' : inp.dataset.label;
+      if (inp.tagName !== 'SELECT' && f.classList.contains('rf-ph') && inp.dataset.label && inp.placeholder !== ph) inp.placeholder = ph;
       // A list too narrow for its label shows the label on top and a dash as its empty choice.
-      if (inp.tagName === 'SELECT' && inp.dataset.label && inp.options[0]) inp.options[0].textContent = long ? '—' : inp.dataset.label;
+      const first = long ? '—' : inp.dataset.label;
+      if (inp.tagName === 'SELECT' && inp.dataset.label && inp.options[0] && inp.options[0].textContent !== first) inp.options[0].textContent = first;
     }
   }
   window.addEventListener('resize', () => { const r = document.querySelector('.tab-panel'); if (r) fitPlaceholders(r); });

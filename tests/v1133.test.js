@@ -16,7 +16,7 @@ test('v1.133: 550/4(b) is in the charge list as a Class B misdemeanor', () => {
 test('v1.133: an arrestee has phone calls and a refused-call tick, old ones too', () => {
   const a = K.emptyArrestee();
   assert.deepStrictEqual([a.phoneCalls, a.refusedCall], [[], false]);
-  assert.deepStrictEqual(K.emptyItem('phoneCalls'), { name: '', relationship: '', phone: '' });
+  assert.deepStrictEqual(K.emptyItem('phoneCalls'), { name: '', relationship: '', phone: '', time: '' }); // v1.135: time
   const old = K.normalizeArrestee({ firstName: 'John', lastName: 'Doe' }); // saved before v1.133
   assert.deepStrictEqual([old.phoneCalls, old.refusedCall], [[], false]);
 });

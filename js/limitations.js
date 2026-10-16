@@ -41,7 +41,7 @@
     if (level) return level === 'Misdemeanor';
     if (degree) return MISDEMEANOR_CLASSES.includes(degree);
     const K = closing();
-    return !!(K && K.chargeClass && K.chargeClass(clean(ch.statute || ch.code)).level === 'Misdemeanor');
+    return !!(K && K.chargeClass && K.chargeClass(clean(ch.statute || ch.code), clean(ch.description || ch.desc)).level === 'Misdemeanor');
   }
 
   /** "YYYY-MM-DD" plus whole months (31 January plus one month is 3 March, as with years below). */
@@ -92,6 +92,16 @@
     return n <= WARN_DAYS ? 'warn' : '';
   }
 
+  /** v1.135: an earlier notice: 'soon' (30 days or less to go), 'notice' (90 days or less), else ''
+   * (the last 5 days and after are state()'s warn and expired). */
+  const NOTICE_DAYS = [30, 90];
+  function notice(sol, today) {
+    const n = daysLeft(sol, today);
+    if (n == null || n <= WARN_DAYS) return '';
+    if (n <= NOTICE_DAYS[0]) return 'soon';
+    return n <= NOTICE_DAYS[1] ? 'notice' : '';
+  }
+
   /** The count-down words for a time left in milliseconds: "4 Days 06:12:30 Left", "Expired". */
   function countdown(ms) {
     if (ms <= 0) return 'Expired';
@@ -106,7 +116,7 @@
   /** v1.134: "3 years" or "18 months", for a sol from compute() (older ones have no months: 3 years). */
   const periodText = (sol) => (sol && sol.months && sol.months !== YEARS * 12 ? `${sol.months} months` : `${YEARS} years`);
 
-  const api = { YEARS, MISDEMEANOR_MONTHS, WARN_DAYS, isNarcoticCharge, isMisdemeanor, addYears, addMonths, compute, daysLeft, state, countdown, periodText };
+  const api = { YEARS, MISDEMEANOR_MONTHS, WARN_DAYS, NOTICE_DAYS, notice, isNarcoticCharge, isMisdemeanor, addYears, addMonths, compute, daysLeft, state, countdown, periodText };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVLimits = api;
 })(this);

@@ -53,6 +53,21 @@
     return QUICK_FIRST;
   }
 
+  /** v1.135: no graphics card that can run the AI: measured mostly on the processor, or integrated graphics. */
+  function noGpu(pc) {
+    const p = pc || {};
+    if (p.measured && typeof p.measured.gpuShare === 'number') return p.measured.gpuShare < 0.5;
+    return p.gpu === 'integrated';
+  }
+  /** v1.135: AI suggestions as you type (Drafts): this PC's own choice, else off when it has no
+   * graphics card for the AI (they keep the processor busy while you type), else the vault's setting. */
+  function suggestionsOn(pc, vaultSetting) {
+    const p = pc || {};
+    if (typeof p.suggestions === 'boolean') return p.suggestions;
+    if (vaultSetting === false) return false;
+    return !noGpu(p);
+  }
+
   /** One-line explanation of the Auto decision, for the AI engine dialog. */
   function explain(pc) {
     const p = pc || {};
@@ -115,8 +130,10 @@
   }
 
   const api = {
-    classifyGpu, measure, autoOrder, explain, LIGHT_FIRST, QUICK_FIRST,
+    classifyGpu, measure, autoOrder, explain, LIGHT_FIRST, QUICK_FIRST, noGpu, suggestionsOn,
     profile, setProfile, probeGpu, observe,
+    /** v1.135: this PC's choice for AI suggestions as you type. */
+    setSuggestions(on) { pc = { ...pc, suggestions: !!on }; save(pc); changed(); },
     get state() { return { ...pc }; },
     onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     reset() { pc = {}; save(pc); changed(); },

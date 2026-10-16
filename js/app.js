@@ -1843,6 +1843,9 @@
     return h('div', { class: 'op-case-card' },
       h('a', { class: 'op-case-top', href: to('details') }, h('span', { class: 'op-case-id' }, h('span', { class: 'op-case-num' }, c.number || 'No case number yet'),
         h('span', { class: 'op-case-subject muted' }, [subj(c) || 'No subject yet', op ? opLabel(op) : ''].filter(Boolean).join(' · '))), statusPill(c.status)),
+      // v1.135: when a closed or archived case was closed (and archived).
+      (c.status === 'Closed' || isArchivedEntry(c)) && (c.closed || c.archived) ? h('div', { class: 'op-case-dates muted small' },
+        h('span', {}, [c.closed && `Closed ${fmtDate(c.closed)}`, isArchivedEntry(c) && c.archived && `Archived ${fmtDate(c.archived)}`].filter(Boolean).join(' · ')), I('calendar-check')) : null,
       h('nav', { class: 'op-case-links', 'aria-label': `${c.number || 'Case'} tabs` },
         ...OP_TABS.map(([tab, label]) => h('a', { class: 'op-tab-link', href: to(tab) }, label))));
   }
@@ -2189,6 +2192,18 @@
         h('span', { class: 'att-when' }, `${expired ? 'Expired' : 'Expires'} ${fmtDate(c.sol.expires)}`),
         left);
     });
+    // v1.135: earlier notices, 90 and 30 days before (amber; the last 5 days are the red warning above).
+    const soon = cases.filter((c) => c.sol && !isArchivedEntry(c) && c.status !== 'Closed' && globalThis.CVLimits && CVLimits.notice(c.sol, today()))
+      .sort((a, b) => a.sol.expires.localeCompare(b.sol.expires));
+    const soonRows = soon.map((c) => {
+      const n = CVLimits.daysLeft(c.sol, today());
+      const lvl = CVLimits.notice(c.sol, today());
+      return h('a', { role: 'listitem', class: `attention-row att-sol-${lvl}`, href: caseLink(c, 'draft'), title: `Narcotic charges must be brought within ${CVLimits.periodText(c.sol)} of the Date of Occurrence (${fmtDate(c.sol.occurred)}).` },
+        h('span', { class: 'att-case' }, h('strong', {}, c.number || 'No case number'), h('span', { class: 'muted small' }, subj(c))),
+        h('span', { class: 'att-what' }, I('hourglass-split'), ` Statute of Limitations in ${n} days`),
+        h('span', { class: 'att-when' }, `Expires ${fmtDate(c.sol.expires)}`),
+        h('span', { class: 'att-due' }, lvl === 'soon' ? 'Within 30 days' : 'Within 90 days'));
+    });
     if (sols.length && !state.solToastShown) {
       state.solToastShown = true;
       toast(`Statute of limitations: ${sols.map((c) => c.number || 'No case number').join(', ')}. See Needs Attention.`, 'error', 9000);
@@ -2196,7 +2211,7 @@
     // v1.66: no count beside the heading; the list says it all.
     // v1.74: Needs Attention folds into one slim bar (with a short summary); remembered.
     const overdueN = solRows.length + due.filter((c) => daysUntil(c.nextDeadline.date) < 0).length;
-    const total = solRows.length + due.length;
+    const total = solRows.length + soonRows.length + due.length;
     const summary = h('span', { class: `att-summary${overdueN ? ' has-overdue' : ''}` }, total ? `${total} item${total === 1 ? '' : 's'}${overdueN ? ` · ${overdueN} overdue` : ''}` : 'Nothing due in the next 7 days');
     let folded = false;
     try { folded = localStorage.getItem('cv-att-folded') === '1'; } catch { /* private window */ }
@@ -2209,9 +2224,9 @@
       head.addEventListener('click', (e) => { if (folded && !e.target.closest('button')) set(false); });
       return sec;
     };
-    if (!due.length && !solRows.length) return wrap(h('p', { class: 'muted attention-none' }, 'Nothing due in the next 7 days.'));
+    if (!due.length && !solRows.length && !soonRows.length) return wrap(h('p', { class: 'muted attention-none' }, 'Nothing due in the next 7 days.'));
     return wrap(
-      h('div', { class: 'attention-list', role: 'list' }, ...solRows, ...due.slice(0, 8).map((c) => {
+      h('div', { class: 'attention-list', role: 'list' }, ...solRows, ...soonRows, ...due.slice(0, 8).map((c) => {
         const d = c.nextDeadline;
         const n = daysUntil(d.date);
         const lab = dueLabel(d.date);

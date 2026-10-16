@@ -168,5 +168,13 @@ table.op-cases-table td.op-closing { width: auto; min-width: 0; white-space: now
 .opt-save-note { margin-top: .5rem; }
 
 /* v1.133: Arrest Report → Phone Calls: name, relationship and number on one row. */
-.arrest-grid.arrest-g-calls { grid-template-columns: 2fr 1.4fr 1.4fr; }
+.arrest-grid.arrest-g-calls { grid-template-columns: 2fr 1.4fr 1.4fr 1fr; }
 @media (max-width: 820px) { .arrest-grid.arrest-g-calls { grid-template-columns: 1fr; } }
+
+/* v1.135: statute of limitations notices, 90 days (amber) and 30 days (stronger) before. */
+.attention-row.att-sol-notice { border-left: 3px solid var(--st-pending); }
+.attention-row.att-sol-soon { border-left: 3px solid var(--warn); background: var(--warn-soft); }
+.attention-row.att-sol-notice .att-what, .attention-row.att-sol-soon .att-what { color: var(--warn); }
+
+/* v1.135: the closed / archived date on a case card in Closed Files and Archived. */
+.op-case-dates { display: flex; align-items: center; gap: .35rem; padding: 0 .1rem .35rem; }

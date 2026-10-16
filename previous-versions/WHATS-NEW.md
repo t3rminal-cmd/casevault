@@ -4,6 +4,11 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.132
+
+- **Typing is smoother on a slow laptop.** After each pause in typing, CaseVault used to redraw the whole case list on the left, which on a slower PC froze the page for up to a second. Now it redraws only what changed (often just one row), and a save waits until you have paused for a moment (1.5 seconds)
+- **Saving While You Type** (⋮ → Options → Display), set for each PC: **After a pause** (recommended), **Every 5 minutes** or **Every 30 minutes**. With 5 or 30 minutes the save icon at the top says when the next save is; **Ctrl+S** saves at once. Changing page, locking, Power Off or closing CaseVault always saves first, and a change made with a click (Add Note, a choice from a list) saves straight away. With 30 minutes, up to 30 minutes of typing can be lost if the SSD is pulled out or the laptop loses power
+
 ## What's new in v1.131
 
 - **Find (Ctrl+K):** one box for everything. Type a case number, a name, words from a case's notes, a Mission or a page (General Files, Settings, Back Up the Vault, New Case…) and press Enter. For a name it also offers **Every case this person is on** (the person view) and **Search inside cases** (notes, timelines, reports, the Draft form and file names). ↑ ↓ move, Enter opens, Esc closes. The sidebar's own search is still on its magnifier

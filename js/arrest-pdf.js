@@ -297,8 +297,8 @@
       const calls = a.refusedCall ? [] : (a.phoneCalls || []).filter(C.itemFilled);
       if (a.refusedCall) { y -= 4; big('ARRESTEE REFUSED PHONE CALL'); }
       else if (!calls.length) { y -= 4; big('NO PHONE CALLS RECORDED'); }
-      else tableRows([['Name (Called Who)', 0, 0.4], ['Relationship', 0.4, 0.28], ['Phone Number Called', 0.68, 0.32]],
-        calls.map((x) => [clean(x.name), clean(x.relationship), clean(x.phone)]));
+      else tableRows([['Name (Called Who)', 0, 0.34], ['Relationship', 0.34, 0.24], ['Phone Number Called', 0.58, 0.26], ['Time', 0.84, 0.16]],
+        calls.map((x) => [clean(x.name), clean(x.relationship), clean(x.phone), MIL(x.time)]));
       endSeg(44);
 
       // ---- incident narrative, carried over pages, on a grey ground
