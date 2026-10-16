@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.137)
+
+- **Home page:** Year Summary tile icon; no Ask AI tile (it's the corner button)
+- **Top bar:** status icons without captions; the hover box names each
+- **Banner:** a vault door with a turning handle replaces the shield (still with reduced motion)
+
 ## Features (v1.136)
 
 - **Year Summary:** cases opened, closed and archived in a year, arrests by month, charges by type and the most common, narcotics recovered; on screen and as a PDF

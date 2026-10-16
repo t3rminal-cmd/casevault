@@ -213,6 +213,11 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.138
+
+- **Timeline:** an event's suspect now shows on the right of its box, in a name box the same width on every event, so the names line up down the timeline. Long names wrap instead of being cut off
+- **Top-left logo:** the vault door from the banner. Its handle turns a quarter when the mouse is over CaseVault
+
 ### What's new in v1.137
 
 - **Home page:** the Year Summary tile has its icon; the Ask AI tile is gone (Ask AI is the round button in the lower corner)
@@ -223,16 +228,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 - **Year Summary** (the Year Summary tile on the home page, or Ctrl+K → Year Summary): pick a year to see the cases opened, closed and archived in it, arrests by month, charges (felony, misdemeanor, other) with the 10 most common, and narcotics recovered, added up by narcotic and unit. **Print / PDF** makes a one-page PDF with your letterhead. Counted from the case dates and the Arrest Reports (arrest date, charges, recovered narcotics)
 - **Archived → Review:** choose **Review After 3, 5, 7 or 10 Years** in the Archived section (kept with the vault; Off to begin with). When archived cases pass that age, a **Review (N)** button lists them with the date archived and the reason, to check against your agency's records-retention rules. CaseVault deletes nothing on its own
-
-### What's new in v1.135
-
-- **Faster typing on the Draft tab:** the part that keeps each field's label from being cut off was measuring every field again and again while you typed (on a slow laptop that could freeze the form). It now measures a field only when its size or label changes. The Arrest Report no longer rewrites "Not saved yet…" on every key
-- **AI suggestions as you type** (Drafts) are now set for each PC, and start off on a PC without a graphics card for the AI, where they slow typing down. The note next to the box says so; tick it to turn them on for that PC
-- **Statute of limitations, earlier notices:** Needs Attention shows a case 90 days before its deadline ("Within 90 days") and again, highlighted, 30 days before ("Within 30 days"). The red warning in the last 5 days stays
-- **Charge 720 ILCS 550/4(b), subsequent offense** (Class A misdemeanor) next to the first offense (Class B); picking it fills in the right class
-- **Arrest Report phone calls have a Time of call**, on the PDF and in `{{arrest.phoneCalls}}`
-- **Print / PDF, Save PDF to Case and Send to Sign** first list what is still empty in the Arrest Report (name, arrest date and time, Miranda, narcotics, warrant, vehicle, phone call, narrative, arresting officer). **Go Back** to fill it in, or **Continue Anyway**. A part ticked as not applying isn't listed
-- **Closed Files and Archived** case cards show when the case was closed (and archived)
 
 ### Earlier versions
 

@@ -4,6 +4,16 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.135
+
+- **Faster typing on the Draft tab:** the part that keeps each field's label from being cut off was measuring every field again and again while you typed (on a slow laptop that could freeze the form). It now measures a field only when its size or label changes. The Arrest Report no longer rewrites "Not saved yet…" on every key
+- **AI suggestions as you type** (Drafts) are now set for each PC, and start off on a PC without a graphics card for the AI, where they slow typing down. The note next to the box says so; tick it to turn them on for that PC
+- **Statute of limitations, earlier notices:** Needs Attention shows a case 90 days before its deadline ("Within 90 days") and again, highlighted, 30 days before ("Within 30 days"). The red warning in the last 5 days stays
+- **Charge 720 ILCS 550/4(b), subsequent offense** (Class A misdemeanor) next to the first offense (Class B); picking it fills in the right class
+- **Arrest Report phone calls have a Time of call**, on the PDF and in `{{arrest.phoneCalls}}`
+- **Print / PDF, Save PDF to Case and Send to Sign** first list what is still empty in the Arrest Report (name, arrest date and time, Miranda, narcotics, warrant, vehicle, phone call, narrative, arresting officer). **Go Back** to fill it in, or **Continue Anyway**. A part ticked as not applying isn't listed
+- **Closed Files and Archived** case cards show when the case was closed (and archived)
+
 ## What's new in v1.134
 
 - **Statute of limitations, 18 months for misdemeanors:** a case whose narcotic charges are all misdemeanors (for example 720 ILCS 550/4(b) or (c), or any charge marked Misdemeanor or Class A, B or C) now gets 18 months from the Date of Occurrence instead of 3 years. One felony narcotic charge keeps 3 years. A charge whose class isn't known counts as a felony. The warning in Needs Attention says which period applies
