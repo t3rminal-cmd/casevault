@@ -4079,3 +4079,17 @@ table.op-cases-table td.op-closing { width: 9.5rem; min-width: 9.5rem; line-heig
 .brand-vault .hv-wheel { stroke-width: 8; stroke-linecap: square; transform-origin: 60px 60px; transition: transform .6s ease-in-out; }
 .brand:hover .brand-vault .hv-wheel, .brand:focus-visible .brand-vault .hv-wheel { transform: rotate(90deg); }
 @media (prefers-reduced-motion: reduce) { .brand-vault .hv-wheel { transition: none; } }
+/* v1.139: Training shows each certificate as a card of the same size: a picture of its first page
+   (any shape fits inside the same frame, centred), then its name, then size, date and Delete. */
+.cert-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); gap: .9rem; padding: .25rem 0 .75rem; }
+.cert-card { display: flex; flex-direction: column; border: 1px solid var(--border); background: var(--surface); box-shadow: var(--lift, var(--shadow)); min-width: 0; }
+.cert-card:hover { box-shadow: var(--lift-hover, var(--shadow-lg)); }
+.cert-open { all: unset; box-sizing: border-box; display: flex; flex-direction: column; flex: 1 1 auto; cursor: pointer; }
+.cert-open:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.cert-art { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 11 / 8.5; background: var(--surface-2); border-bottom: 1px solid var(--border); overflow: hidden; }
+.cert-art .cert-icon .bi, .cert-art .cert-icon svg { width: 2.6rem; height: 2.6rem; }
+.cert-art.has-thumb .cert-icon { display: none; }
+.cert-thumb { width: 100%; height: 100%; object-fit: contain; padding: .45rem; box-sizing: border-box; }
+.cert-name { padding: .55rem .7rem .2rem; font-weight: 700; text-align: center; line-height: 1.3; min-height: calc(2 * 1.3em); overflow-wrap: anywhere; display: flex; align-items: flex-start; justify-content: center; flex: 1 1 auto; }
+.cert-foot > .muted { white-space: nowrap; }
+.cert-foot { display: flex; align-items: center; justify-content: space-between; gap: .4rem; padding: .15rem .45rem .35rem .7rem; }

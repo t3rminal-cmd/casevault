@@ -1292,6 +1292,35 @@
 
   // v1.72: tiles: the folders as folder icons, like Operations and General Files; a click opens
   // one (its files show under the icons), another click closes it.
+  /* v1.139: the picture on a certificate card: the first page of a PDF, or the photo itself. Made in
+   * memory only (nothing written to the PC), kept while CaseVault is open, and redrawn when the file
+   * changes. */
+  const thumbCache = new Map();
+  function sharedThumb(reader, f, img) {
+    const kind = /\.pdf$/i.test(f.base) ? 'pdf' : /\.(png|jpe?g|gif|webp|bmp)$/i.test(f.base) ? 'img' : '';
+    if (!kind) return;
+    const id = `${reader.where}|${f.base}|${f.size}|${f.modified}`;
+    if (!thumbCache.has(id)) {
+      thumbCache.set(id, (async () => {
+        const file = await reader.readFile(f.base);
+        if (kind === 'img') return URL.createObjectURL(file);
+        const lib = await CVExtract.loadPdfjs();
+        const task = CVExtract.openPdf(lib, new Uint8Array(await file.arrayBuffer()));
+        try {
+          const page = await (await task.promise).getPage(1);
+          const base = page.getViewport({ scale: 1 });
+          const vp = page.getViewport({ scale: Math.min(2, 480 / Math.max(base.width, base.height)) });
+          const cv = Object.assign(document.createElement('canvas'), { width: Math.ceil(vp.width), height: Math.ceil(vp.height) });
+          const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+          await page.render({ canvasContext: g, viewport: vp }).promise;
+          page.cleanup();
+          return URL.createObjectURL(await new Promise((res) => cv.toBlob(res, 'image/png')));
+        } finally { await task.destroy(); }
+      })().catch(() => { thumbCache.delete(id); return ''; }));
+    }
+    thumbCache.get(id).then((url) => { if (!url) return; img.src = url; img.hidden = false; img.closest('.cert-art')?.classList.add('has-thumb'); });
+  }
+
   function sharedFilesBox(key, { folders: fixed = [], getFolders = null, allowNew = false, newTile = true, tiles = false, tileIcon = 'folder2-open', empty = 'No files yet.' } = {}) {
     const box = h('div', { class: `shared-files${tiles ? ' shared-tiles' : ''}`, 'data-key': key });
     const norm = (f) => (typeof f === 'string' ? { name: f, label: f } : { ...f, label: f.label || f.name });
@@ -1341,9 +1370,10 @@
         title: `${f.label}${f.desc ? `: ${f.desc}` : ''} (${counts[f.name] || 0} file${counts[f.name] === 1 ? '' : 's'})`,
         onclick: () => { folder = f.name === folder ? null : f.name; sharedOpen[key] = folder; draw(); },
       }, h('span', { class: 'op-folder-art' }, I(tileIcon), counts[f.name] ? h('span', { class: 'op-folder-count' }, String(counts[f.name])) : null),
-      h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, f.label), (f.desc || f.custom) ? h('span', { class: 'op-title' }, f.desc || 'Your own folder') : ''))),
+      // v1.139: the folder's name only (its description is in the hover box), so the tiles match.
+      h('span', { class: 'op-folder-name' }, h('span', { class: 'op-num' }, f.label)))),
       allowNew && newTile ? h('button', { type: 'button', role: 'listitem', class: 'op-folder-tile shared-tile shared-tile-new', title: 'Make a new folder in Other Files', onclick: newFolder },
-        h('span', { class: 'op-folder-art' }, I('folder-plus')), h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, 'New Folder'), h('span', { class: 'op-title' }, 'Make your own'))) : '') : null;
+        h('span', { class: 'op-folder-art' }, I('folder-plus')), h('span', { class: 'op-folder-name' }, h('span', { class: 'op-num' }, 'New Folder'))) : '') : null;
       if (tiles && folder == null) { box.replaceChildren(tileRow); return; }
       const chips = tiles ? tileRow : folders.length ? h('nav', { class: `tabs shared-tabs${folders.some((f) => f.desc) ? ' has-desc' : ''}`, role: 'tablist' }, ...folders.map((f) => h('button', {
         type: 'button', role: 'tab', class: `tab${f.name === folder ? ' active' : ''}`, 'aria-selected': String(f.name === folder), title: f.desc || null,
@@ -1352,17 +1382,30 @@
       f.desc ? h('span', { class: 'tab-desc' }, f.desc) : '')),
       allowNew ? h('button', { type: 'button', class: 'tab tab-new', title: 'Make a new folder in Other Files', onclick: newFolder }, h('span', { class: 'tab-main' }, I('folder-plus'), h('span', { class: 'tab-name' }, 'New Folder')), folders.some((f) => f.desc) ? h('span', { class: 'tab-desc' }, 'Your own folder') : '') : '') : null;
       const reader = { readFile: (name) => Vault.readShared(key, folder, name.split('/').pop()), where: `${key}${folder ? `\\${folder}` : ''}` };
-      const rows = list.length ? h('table', { class: 'files shared-table' },
+      const delFile = async (f) => {
+        if (!(await confirmDialog({ title: `Delete ${f.base}?`, message: 'The file is deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
+        try { await Vault.deleteShared(key, folder, f.base); } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); toast(`Not deleted: ${err.message}`, 'error'); }
+        draw();
+      };
+      // v1.139: Training holds certificates: each file is a card of the same size with a picture of
+      // its first page (or the photo), so they line up in even rows.
+      const cards = key === 'other' && folder === 'Training';
+      const rows = list.length && cards ? h('div', { class: 'cert-grid', role: 'list' }, list.map((f) => {
+        const img = h('img', { class: 'cert-thumb', alt: '', hidden: true });
+        const art = h('span', { class: 'cert-art' }, h('span', { class: 'cert-icon' }, I(FILE_ICONS[fileKind(f.base)])), img);
+        sharedThumb(reader, f, img);
+        return h('div', { class: 'cert-card', role: 'listitem' },
+          h('button', { type: 'button', class: 'cert-open', title: `Open ${f.base}`, onclick: () => previewFile(reader, f.base) }, art,
+            h('span', { class: 'cert-name' }, f.base.replace(/\.[^.]+$/, ''))),
+          h('div', { class: 'cert-foot' }, h('span', { class: 'muted small', title: `Last updated ${fmtDateTime(f.modified)}` }, `${fmtSize(f.size)} · ${f.modified ? new Date(f.modified).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}`),
+            h('button', { type: 'button', class: 'icon-btn danger-icon', title: 'Delete this file', onclick: () => delFile(f) }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${f.base}`))));
+      })) : list.length ? h('table', { class: 'files shared-table' },
         h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', { class: 'num' }, 'Size'), h('th', { class: 'date-cell' }, 'Updated'), h('th', { class: 'col-actions' }, ''))),
         h('tbody', {}, list.map((f) => h('tr', {},
           h('td', {}, h('button', { type: 'button', class: 'linklike', title: 'Open', onclick: () => previewFile(reader, f.base) }, I(FILE_ICONS[fileKind(f.base)]), ' ', f.base)),
           h('td', { class: 'num muted' }, fmtSize(f.size)),
           h('td', { class: 'muted date-cell', title: `Last updated ${fmtDateTime(f.modified)}` }, f.modified ? fmtDate(Vault.localDay(new Date(f.modified))) : '—'),
-          h('td', { class: 'col-actions' }, h('button', { type: 'button', class: 'icon-btn danger-icon', title: 'Delete this file', onclick: async () => {
-            if (!(await confirmDialog({ title: `Delete ${f.base}?`, message: 'The file is deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
-            try { await Vault.deleteShared(key, folder, f.base); } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); toast(`Not deleted: ${err.message}`, 'error'); }
-            draw();
-          } }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${f.base}`))))))) : h('p', { class: 'muted small shared-empty' }, folderLabel ? `No files in ${folderLabel} yet.` : empty);
+          h('td', { class: 'col-actions' }, h('button', { type: 'button', class: 'icon-btn danger-icon', title: 'Delete this file', onclick: () => delFile(f) }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${f.base}`))))))) : h('p', { class: 'muted small shared-empty' }, folderLabel ? `No files in ${folderLabel} yet.` : empty);
       // The vehicle cards are made once, so typing isn't lost when the file list redraws.
       // v1.80: Subject Data opens its demographics sheet the same way.
       const panelFor = { 'Vehicle List': opVehiclesPanel, 'Subject Data': opSubjectsPanel }[folder];
@@ -1370,7 +1413,7 @@
       else vehEl = null;
       if (vehEl) vehEl.dataset.folder = folder;
       const vehicles = vehEl || '';
-      box.replaceChildren(...[chips, tiles ? h('div', { class: 'op-open-head shared-open-head' }, h('strong', {}, folderLabel), h('span', { class: 'muted small' }, (cur && cur.desc) || ''), h('div', { class: 'spacer' }),
+      box.replaceChildren(...[chips, tiles ? h('div', { class: 'op-open-head shared-open-head' }, h('strong', {}, folderLabel), h('div', { class: 'spacer' }),
         h('button', { type: 'button', class: 'btn small ghost', title: 'Close this folder', onclick: () => { folder = null; sharedOpen[key] = null; draw(); } }, 'Close')) : '', vehicles, h('div', { class: 'shared-drop', title: 'Drop files here, or click Add Files' }, rows,
         h('div', { class: 'shared-foot' }, h('button', { type: 'button', class: 'btn small', icon: 'plus-lg', onclick: () => pick.click() }, folderLabel ? `Add Files to ${folderLabel}` : 'Add Files'), h('span', { class: 'muted small' }, 'or drop files here'),
           cur && cur.custom ? h('span', { class: 'spacer' }) : '', cur && cur.custom ? h('button', { type: 'button', class: 'btn small ghost danger', icon: 'trash3', title: 'Remove this folder (only when it is empty)', onclick: () => removeFolder(cur) }, 'Remove Folder') : ''), pick)].filter(Boolean));

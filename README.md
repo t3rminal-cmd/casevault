@@ -15,10 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.138
+## What's New in v1.139
 
-- **Timeline:** suspect names on the right of each event, the same width so they line up
-- **Logo:** the vault door at the top left too
+- **Icon:** the vault door as the favicon and app icon
+- **Other Files:** folder names only, no subheadings
+- **Training:** certificates as same-size cards with a picture of the first page
 
 ## What CaseVault Does
 
