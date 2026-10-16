@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.138)
+
+- **Timeline:** suspect names on the right of each event, the same width so they line up
+- **Logo:** the vault door at the top left too
+
 ## Features (v1.137)
 
 - **Home page:** Year Summary tile icon; no Ask AI tile (it's the corner button)

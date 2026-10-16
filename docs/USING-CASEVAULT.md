@@ -213,6 +213,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.139
+
+- **Favicon and app icon:** the vault door, on navy with gold bolts, in the browser tab, the taskbar and the unlock screen
+- **Other Files:** the folders show their name only (USPIS Files, DEA Files, INET Files, Training, Other and your own), so the tiles match. Holding the mouse over one still says what it is
+- **Training → certificates:** each file in Training shows as a card of the same size with a picture of its first page. Landscape and portrait certificates sit in the same frame, the cards line up in even rows, and the full name shows under each picture (without .pdf). Click a card to open it; the bin deletes it. Photos (JPG, PNG) show the same way. The pictures are made in memory while CaseVault is open; nothing is saved on the PC
+
 ### What's new in v1.138
 
 - **Timeline:** an event's suspect now shows on the right of its box, in a name box the same width on every event, so the names line up down the timeline. Long names wrap instead of being cut off
@@ -223,11 +229,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Home page:** the Year Summary tile has its icon; the Ask AI tile is gone (Ask AI is the round button in the lower corner)
 - **Top bar:** the Network, Local AI, Memory, SSD and Power Off icons no longer have words under them. Their colours still show the state, and holding the mouse over one says what it is
 - **Banner:** the shield is replaced with a vault door whose handle turns now and then, as if unlocking. It stays still when Windows is set to show fewer animations
-
-### What's new in v1.136
-
-- **Year Summary** (the Year Summary tile on the home page, or Ctrl+K → Year Summary): pick a year to see the cases opened, closed and archived in it, arrests by month, charges (felony, misdemeanor, other) with the 10 most common, and narcotics recovered, added up by narcotic and unit. **Print / PDF** makes a one-page PDF with your letterhead. Counted from the case dates and the Arrest Reports (arrest date, charges, recovered narcotics)
-- **Archived → Review:** choose **Review After 3, 5, 7 or 10 Years** in the Archived section (kept with the vault; Off to begin with). When archived cases pass that age, a **Review (N)** button lists them with the date archived and the reason, to check against your agency's records-retention rules. CaseVault deletes nothing on its own
 
 ### Earlier versions
 
