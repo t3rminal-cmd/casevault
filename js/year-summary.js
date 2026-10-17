@@ -89,7 +89,7 @@
       pages.push({ ops, sigs: [], imgs: [], signed: true });
       y = PAGE_H - M;
       if (pages.length === 1) {
-        if (lh) { y -= R.letterhead(ops, lh, M, y, INNER, 'helvetica'); if (lh.logo) pages[0].imgs.push(lh.logo.index); }
+        { y -= R.letterhead(ops, lh, M, y, INNER, 'helvetica'); if (lh && lh.logo) pages[0].imgs.push(lh.logo.index); }
         R.navy(ops, () => text(M, y - 18, `YEAR SUMMARY ${s.year}`, 18, true));
         y -= 34;
       } else { text(M, y - 10, `YEAR SUMMARY ${s.year} (continued)`, 9, true); y -= 20; }

@@ -15,12 +15,12 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.140
+## What's New in v1.141
 
-- **Training:** certificate details (course, given by, completed, hours, expires) on each card
-- **Renewal reminders:** Needs Attention 90 and 30 days before a certificate expires
-- **Training Record PDF:** courses, dates, hours and total, with the certificates after it
-- **{{training}}:** the Training & Experience paragraph for affidavits (also {{training.list}}, {{training.hours}}, {{training.count}})
+- **Find:** Ctrl+K finds certificates (course, who gave it) and Other Files by name
+- **Cards / List:** every folder can show its files as same-size cards or a list (kept per folder on this PC)
+- **Timeline:** Group by Suspect, on screen and in the PDF; the PDF's Suspect column lines up
+- **PDFs:** the vault mark in the header when no letterhead is set
 
 ## What CaseVault Does
 

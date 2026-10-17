@@ -319,8 +319,26 @@
     return [...list.filter((g) => g.key), ...list.filter((g) => !g.key)];
   }
 
+  /**
+   * v1.141: the events grouped by suspect, for Timeline → Group by Suspect and its PDF: [{ key, name,
+   * color, rows }], suspects by name, then the events without a suspect ("No Suspect"). Each group's
+   * rows stay in date order.
+   */
+  function suspectGroups(rows) {
+    const colors = suspectColors(rows);
+    const out = new Map();
+    for (const r of rows || []) {
+      const key = suspectKey(r.ev && r.ev.suspect);
+      const g = out.get(key) || { key, name: key ? (colors.get(key) || {}).name || String(r.ev.suspect).trim() : 'No Suspect', color: key ? (colors.get(key) || {}).color || '' : '', rows: [] };
+      g.rows.push(r);
+      out.set(key, g);
+    }
+    const named = [...out.values()].filter((g) => g.key).sort((a, b) => a.name.localeCompare(b.name));
+    return [...named, ...[...out.values()].filter((g) => !g.key)];
+  }
+
   const api = {
-    BUY_UNITS, buyLine, buySummary, money,
+    BUY_UNITS, buyLine, buySummary, money, suspectGroups,
     subjectLabel, nameParts, TL_COLORS, isColor, suspectKey, suspectColors, eventColor,
     opKey, mergeOverview, sameOverview, mergeEvents,
     OP_STATUSES, normNumber, opLabel, normName, nameMatch, subjectMatches, caseWithNumber, duplicateNumbers,

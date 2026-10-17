@@ -225,7 +225,18 @@
       }
       const tools = h('div', { class: 'tl-tools' },
         h('button', { class: 'btn small', type: 'button', icon: 'cash-coin', title: 'The buys of each suspect: what was bought and paid, with totals', onclick: buySummaryDialog }, 'Buy Summary'),
-        h('button', { class: 'btn small', type: 'button', icon: 'printer', title: 'A PDF of the events shown now (the filter and suspect you picked), in their colours', onclick: () => showPdf('Timeline', { rows: shownRows, subtitle: [suspectNote(), filter !== 'all' ? `${{ upcoming: 'Upcoming', deadline: 'Deadlines', past: 'Past' }[filter]} only` : ''].filter(Boolean).join(' · ') }, 'Timeline') }, 'Print Timeline'));
+        h('button', { class: 'btn small', type: 'button', icon: 'printer', title: 'A PDF of the events shown now (the filter and suspect you picked), in their colours', onclick: () => showPdf('Timeline', { group: groupBy, rows: shownRows, subtitle: [suspectNote(), filter !== 'all' ? `${{ upcoming: 'Upcoming', deadline: 'Deadlines', past: 'Past' }[filter]} only` : ''].filter(Boolean).join(' · ') }, 'Timeline') }, 'Print Timeline'));
+
+      // v1.141: Group by Suspect: each suspect's events together under their name (kept on this PC).
+      let groupBy = false;
+      try { groupBy = localStorage.getItem('cv-tl-group') === 'suspect'; } catch { /* private window */ }
+      const groupBtn = h('button', { class: `btn small tl-group-btn${groupBy ? ' on' : ''}`, type: 'button', icon: 'people', 'aria-pressed': String(groupBy), title: 'Show each suspect\'s events together under their name', onclick: () => {
+        groupBy = !groupBy;
+        try { localStorage.setItem('cv-tl-group', groupBy ? 'suspect' : ''); } catch { /* private window */ }
+        groupBtn.classList.toggle('on', groupBy); groupBtn.setAttribute('aria-pressed', String(groupBy));
+        draw();
+      } }, 'Group by Suspect');
+      tools.prepend(groupBtn);
 
       function draw() {
         const everything = CVOperation.mergeEvents([...tls.entries()].map(([caseId, t]) => ({ caseId, number: numberOf(caseId), events: t.events })));
@@ -254,8 +265,20 @@
         let month = '';
         let todayShown = false;
         const monthName = (d) => { const [y, m] = d.split('-'); return `${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][Number(m) - 1]} ${y}`; };
-        for (const { caseId, ev } of all) {
-          if (!todayShown && ev.date >= now && all.some((x) => x.ev.date < now)) { items.push(h('li', { class: 'tl-today' }, h('span', {}, `Today · ${fmtDate(now)}`))); todayShown = true; }
+        list.classList.toggle('tl-grouped', groupBy);
+        const seq = groupBy ? O.suspectGroups(all).flatMap((g) => [{ head: g }, ...g.rows]) : all;
+        for (const item of seq) {
+          if (item.head) {
+            const g = item.head;
+            const dot = h('span', { class: 'tl-legend-dot static' }); if (g.color) dot.style.setProperty('--sw', g.color);
+            const li = h('li', { class: `tl-group-head${g.key ? '' : ' none'}` }, dot, h('strong', {}, g.name), h('span', { class: 'count' }, `${g.rows.length} event${g.rows.length === 1 ? '' : 's'}`));
+            if (g.color) li.style.setProperty('--tl-color', g.color);
+            items.push(li);
+            month = '';
+            continue;
+          }
+          const { caseId, ev } = item;
+          if (!groupBy && !todayShown && ev.date >= now && all.some((x) => x.ev.date < now)) { items.push(h('li', { class: 'tl-today' }, h('span', {}, `Today · ${fmtDate(now)}`))); todayShown = true; }
           const mk = ev.date.slice(0, 7);
           if (mk !== month) { month = mk; items.push(h('li', { class: 'tl-month' }, monthName(ev.date))); }
           const isDeadline = ev.kind === 'deadline';
@@ -300,7 +323,7 @@
           if (col) li.style.setProperty('--tl-color', col);
           items.push(li);
         }
-        if (!todayShown && all.every((x) => x.ev.date < now)) items.push(h('li', { class: 'tl-today' }, h('span', {}, `Today · ${fmtDate(now)}`)));
+        if (!groupBy && !todayShown && all.every((x) => x.ev.date < now)) items.push(h('li', { class: 'tl-today' }, h('span', {}, `Today · ${fmtDate(now)}`)));
         list.replaceChildren(...items);
         sizeSuspects();
       }

@@ -1382,6 +1382,17 @@
     return [{ jpeg: await jpegOf(cv), w: cv.width, h: cv.height, of: 1 }];
   }
 
+  /* v1.141: Cards or List for each folder, kept on this PC (a display choice, no case data). */
+  const VIEW_KEY = 'cv-folder-view';
+  function folderView(key, folder) {
+    let m = {};
+    try { m = JSON.parse(localStorage.getItem(VIEW_KEY) || '{}') || {}; } catch { /* private window */ }
+    const v = m[`${key}|${folder || ''}`];
+    return v === 'cards' || v === 'list' ? v : key === 'other' && folder === 'Training' ? 'cards' : 'list';
+  }
+  function setFolderView(key, folder, v) {
+    try { const m = JSON.parse(localStorage.getItem(VIEW_KEY) || '{}') || {}; m[`${key}|${folder || ''}`] = v; localStorage.setItem(VIEW_KEY, JSON.stringify(m)); } catch { /* private window */ }
+  }
   /* v1.139: the picture on a certificate card: the first page of a PDF, or the photo itself. Made in
    * memory only (nothing written to the PC), kept while CaseVault is open, and redrawn when the file
    * changes. */
@@ -1479,13 +1490,23 @@
       };
       // v1.139: Training holds certificates: each file is a card of the same size with a picture of
       // its first page (or the photo), so they line up in even rows.
-      const cards = key === 'other' && folder === 'Training';
+      // v1.141: every folder can show its files as Cards or as a List (remembered on this PC for each
+      // folder); Training starts as Cards, the others as a List.
+      const training = key === 'other' && folder === 'Training';
+      const cards = folderView(key, folder) === 'cards';
       // v1.140: each certificate's details (course, completed, hours, expires) from .training.json.
-      const meta = cards && list.length ? await Vault.readTraining().catch(() => ({})) : {};
+      const meta = training && cards && list.length ? await Vault.readTraining().catch(() => ({})) : {};
       const rows = list.length && cards ? h('div', { class: 'cert-grid', role: 'list' }, list.map((f) => {
         const img = h('img', { class: 'cert-thumb', alt: '', hidden: true });
         const art = h('span', { class: 'cert-art' }, h('span', { class: 'cert-icon' }, I(FILE_ICONS[fileKind(f.base)])), img);
         sharedThumb(reader, f, img);
+        if (!training) {
+          return h('div', { class: 'cert-card file-card', role: 'listitem', 'data-file': f.base },
+            h('button', { type: 'button', class: 'cert-open', title: `Open ${f.base}`, onclick: () => previewFile(reader, f.base) }, art,
+              h('span', { class: 'cert-name' }, f.base.replace(/\.[^.]+$/, '')), h('span', { class: 'cert-facts muted small' }, fmtSize(f.size))),
+            h('div', { class: 'cert-foot' }, h('span', { class: 'muted small', title: `${f.base} · last updated ${fmtDateTime(f.modified)}` }, `Added ${f.modified ? new Date(f.modified).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}`),
+              h('button', { type: 'button', class: 'icon-btn danger-icon', title: 'Delete this file', onclick: () => delFile(f) }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${f.base}`))));
+        }
         const d = CVTraining.normalize(meta[f.base]);
         const st = CVTraining.notice(d, today());
         const left = CVTraining.daysLeft(d, today());
@@ -1516,7 +1537,9 @@
       if (vehEl) vehEl.dataset.folder = folder;
       const vehicles = vehEl || '';
       box.replaceChildren(...[chips, tiles ? h('div', { class: 'op-open-head shared-open-head' }, h('strong', {}, folderLabel), h('div', { class: 'spacer' }),
-        cards ? h('button', { type: 'button', class: 'btn small', icon: 'file-earmark-pdf', title: 'A list of your courses with dates and hours, and the certificates after it, as a PDF', onclick: () => trainingRecord() }, 'Training Record') : '',
+        training ? h('button', { type: 'button', class: 'btn small', icon: 'file-earmark-pdf', title: 'A list of your courses with dates and hours, and the certificates after it, as a PDF', onclick: () => trainingRecord() }, 'Training Record') : '',
+        h('div', { class: 'view-switch', role: 'group', 'aria-label': 'Show files as' },
+          ...[['cards', 'grid-3x3', 'Cards'], ['list', 'list-ul', 'List']].map(([v, icon, label]) => h('button', { type: 'button', class: `btn small view-btn${(cards ? 'cards' : 'list') === v ? ' on' : ''}`, 'aria-pressed': String((cards ? 'cards' : 'list') === v), icon, title: `Show the files as ${label.toLowerCase()}`, onclick: () => { setFolderView(key, folder, v); draw(); } }, label))),
         h('button', { type: 'button', class: 'btn small ghost', title: 'Close this folder', onclick: () => { folder = null; sharedOpen[key] = null; draw(); } }, 'Close')) : '', vehicles, h('div', { class: 'shared-drop', title: 'Drop files here, or click Add Files' }, rows,
         h('div', { class: 'shared-foot' }, h('button', { type: 'button', class: 'btn small', icon: 'plus-lg', onclick: () => pick.click() }, folderLabel ? `Add Files to ${folderLabel}` : 'Add Files'), h('span', { class: 'muted small' }, 'or drop files here'),
           cur && cur.custom ? h('span', { class: 'spacer' }) : '', cur && cur.custom ? h('button', { type: 'button', class: 'btn small ghost danger', icon: 'trash3', title: 'Remove this folder (only when it is empty)', onclick: () => removeFolder(cur) }, 'Remove Folder') : ''), pick)].filter(Boolean));
@@ -3786,11 +3809,31 @@
       ['New Mission', 'folder-plus', async () => { const op = await operationDialog(); if (op) { renderCaseList(); location.hash = `#/operation/${encodeURIComponent(op.id)}`; } }],
       ['Keyboard Shortcuts', 'lightning-charge', () => shortcutsDialog()],
       ['Year Summary', 'bar-chart-line-fill', () => yearSummary()],
+      ['Training Record', 'file-earmark-pdf', () => trainingRecord()], ['Training', 'patch-check-fill', () => openTraining()],
     ];
     return openDialog((close) => {
       const input = h('input', { type: 'search', class: 'find-input', placeholder: 'Case number, name, Mission or page', 'aria-label': 'Find', autocomplete: 'off', autofocus: true });
       const list = h('div', { class: 'find-list', role: 'listbox' });
       let items = []; let at = 0;
+      // v1.141: the certificates in Training (by course, who gave it or file name) and the files in
+      // Other Files, read once when Find opens.
+      let files = [];
+      (async () => {
+        const folders = [...Vault.OTHER_FOLDERS, ...(await Vault.otherCustomFolders().catch(() => [])).map((n) => ({ name: n, label: n }))];
+        const out = [];
+        for (const f of folders) {
+          const list = await Vault.listShared('other', f.name).catch(() => []);
+          const meta = f.name === 'Training' && list.length ? await Vault.readTraining().catch(() => ({})) : null;
+          for (const x of list) {
+            const reader = { readFile: (name) => Vault.readShared('other', f.name, name.split('/').pop()), where: `other${f.name ? `\\${f.name}` : ''}` };
+            const d = meta ? CVTraining.normalize(meta[x.base]) : null;
+            out.push({ cert: !!meta, title: meta ? CVTraining.courseOf(x.base, d) : x.base, sub: meta ? [d.provider, d.date ? shortDate(d.date) : '', x.base].filter(Boolean).join(' · ') : `Other Files → ${f.label || f.name || 'Other'}`,
+              hay: [x.base, d && d.course, d && d.provider].filter(Boolean).join(' ').toLowerCase(), open: () => previewFile(reader, x.base) });
+          }
+        }
+        files = out;
+        if (input.isConnected && input.value.trim()) draw();
+      })();
       const go = (fn) => { close(); setTimeout(fn, 0); };
       const row = (icon, title, sub, fn, kind) => ({ el: h('button', { type: 'button', class: 'find-row', role: 'option', onclick: () => go(fn) },
         I(icon), h('span', { class: 'find-title' }, title), sub ? h('span', { class: 'find-sub muted' }, sub) : null, h('span', { class: 'find-kind muted' }, kind)), fn });
@@ -3802,12 +3845,14 @@
         const ops = (Vault.listOperations() || []).filter((op) => !q || `${op.number} ${op.name}`.toLowerCase().includes(q)).slice(0, q ? 6 : 3)
           .map((op) => row('folder-mission', opLabel(op), `${plural(Vault.operationMembers(op.id).length, 'case')}`, () => { location.hash = `#/operation/${encodeURIComponent(op.id)}`; }, 'Mission'));
         const pg = pages.filter(([t]) => !q || t.toLowerCase().includes(q)).map(([t, icon, fn]) => row(icon, t, '', fn, 'Page'));
+        const fl = q ? files.filter((x) => q.split(/\s+/).every((w) => x.hay.includes(w))).slice(0, 8)
+          .map((x) => row(x.cert ? 'patch-check-fill' : 'file-earmark', x.title, x.sub, x.open, x.cert ? 'Certificate' : 'File')) : [];
         const more = q.length >= 2 ? [
           row('person-lines-fill', `Every case "${input.value.trim()}" is on`, 'Subjects, suspects and arrestees, names written another way too', () => CVPersonView.open(input.value.trim(), window.CaseVaultUI), 'Person'),
           row('search', `Search inside cases for "${input.value.trim()}"`, 'Notes, timelines, reports, the Draft form and file names', () => searchInsideCases(input.value.trim()), 'Search'),
         ] : [];
         // A typed word that names a Mission lists the Mission before its cases (they match it too).
-        items = q && ops.length ? [...ops, ...cases, ...pg, ...more] : [...cases, ...ops, ...pg, ...more];
+        items = q && ops.length ? [...ops, ...cases, ...fl, ...pg, ...more] : [...cases, ...ops, ...fl, ...pg, ...more];
         at = Math.min(at, Math.max(0, items.length - 1));
         list.replaceChildren(...(items.length ? items.map((x, i) => { x.el.classList.toggle('on', i === at); x.el.setAttribute('aria-selected', String(i === at)); return x.el; }) : [h('p', { class: 'muted find-none' }, 'Nothing found.')]));
       };

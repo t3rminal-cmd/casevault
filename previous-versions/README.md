@@ -4,6 +4,13 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.140)
+
+- **Training:** certificate details (course, given by, completed, hours, expires) on each card
+- **Renewal reminders:** Needs Attention 90 and 30 days before a certificate expires
+- **Training Record PDF:** courses, dates, hours and total, with the certificates after it
+- **{{training}}:** the Training & Experience paragraph for affidavits (also {{training.list}}, {{training.hours}}, {{training.count}})
+
 ## Features (v1.139)
 
 - **Icon:** the vault door as the favicon and app icon

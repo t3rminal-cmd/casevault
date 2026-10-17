@@ -138,7 +138,7 @@
       y = PAGE_H - M;
       if (pages.length === 1) {
         // v1.85: the department letterhead across the top, when there is one.
-        if (lh) { y -= letterhead(ops, lh, M, y, INNER, 'times'); if (lh.logo) pages[0].imgs.push(lh.logo.index); }
+        { y -= letterhead(ops, lh, M, y, INNER, 'times'); if (lh && lh.logo) pages[0].imgs.push(lh.logo.index); }
         // Title on the left, the agency under it; the R.D. Number in a box on the right (v1.48).
         navy(ops, () => text(M, y - 14, title, 14, true));
         if (agency && !(lh && lh.header)) text(M, y - 25, agency.toUpperCase(), 7.5, true);
@@ -556,10 +556,35 @@
   /** The department logo (top left) and the department header to its right, across the top of the
    * first page. lh: { header, logo: { index, w, h } | null }. Pushes onto ops; returns the height
    * used (0 when there is no letterhead). */
+  /* v1.141: CaseVault's vault door, drawn with lines (no image): navy square, white door and handle,
+   * gold bolts. S points square, its top-left corner at (x, yTop). */
+  function vaultMark(ops, x, yTop, S = 22) {
+    const k = S / 120; const X = (v) => (x + v * k).toFixed(2); const Y = (v) => (yTop - v * k).toFixed(2);
+    const circle = (cx, cy, r) => { const c = r * 0.5523; return `${X(cx + r)} ${Y(cy)} m ${X(cx + r)} ${Y(cy - c)} ${X(cx + c)} ${Y(cy - r)} ${X(cx)} ${Y(cy - r)} c ${X(cx - c)} ${Y(cy - r)} ${X(cx - r)} ${Y(cy - c)} ${X(cx - r)} ${Y(cy)} c ${X(cx - r)} ${Y(cy + c)} ${X(cx - c)} ${Y(cy + r)} ${X(cx)} ${Y(cy + r)} c ${X(cx + c)} ${Y(cy + r)} ${X(cx + r)} ${Y(cy + c)} ${X(cx + r)} ${Y(cy)} c`; };
+    ops.push('q', `${NAVY} rg ${X(0)} ${Y(120)} ${(120 * k).toFixed(2)} ${(120 * k).toFixed(2)} re f`);
+    ops.push(`1 1 1 RG ${(5 * k).toFixed(2)} w ${X(12)} ${Y(108)} ${(96 * k).toFixed(2)} ${(96 * k).toFixed(2)} re S`);
+    ops.push(`${(6 * k).toFixed(2)} w ${circle(60, 60, 40)} S`);
+    ops.push(`${(7 * k).toFixed(2)} w`);
+    for (const a of [0, 45, 90, 135]) { const r = (a * Math.PI) / 180; const dx = Math.sin(r) * 25; const dy = Math.cos(r) * 25; ops.push(`${X(60 - dx)} ${Y(60 - dy)} m ${X(60 + dx)} ${Y(60 + dy)} l S`); }
+    ops.push(`1 1 1 rg ${circle(60, 60, 9)} f`);
+    ops.push('0.886 0.710 0.322 rg');
+    for (const [bx, by] of [[60, 24], [96, 60], [60, 96], [24, 60]]) ops.push(`${X(bx - 4)} ${Y(by + 4)} ${(8 * k).toFixed(2)} ${(8 * k).toFixed(2)} re f`);
+    ops.push('Q');
+  }
+
+  /**
+   * The letterhead across the top; -> the height used. v1.141: with no letterhead set, a slim header
+   * with CaseVault's vault mark instead of a blank space.
+   */
   function letterhead(ops, lh, x, yTop, innerW, face = 'helvetica') {
     const lines = String((lh && lh.header) || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(0, 4);
     const logo = lh && lh.logo;
-    if (!lines.length && !logo) return 0;
+    if (!lines.length && !logo) {
+      vaultMark(ops, x, yTop, 20);
+      ops.push(`BT /F2 9 Tf ${(x + 26).toFixed(2)} ${(yTop - 13.5).toFixed(2)} Td ${pdfString('CaseVault')} Tj ET`);
+      ops.push(`0.6 w ${x.toFixed(2)} ${(yTop - 25).toFixed(2)} m ${(x + innerW).toFixed(2)} ${(yTop - 25).toFixed(2)} l S`);
+      return 31;
+    }
     const S = 52;
     let tx = x;
     if (logo) {
@@ -707,7 +732,7 @@
     ops.push(`${NAVY_TINT} rg ${r} f ${NAVY} RG ${lw} w ${r} S 0 G 0 g`);
   }
 
-  const api = { build, layout, assemble, textsReport, wrap, width, pdfString, plain, letterhead, withLogo, navy, bandBox, NAVY, NAVY_TINT, PAGE_W, PAGE_H, M };
+  const api = { build, layout, assemble, textsReport, wrap, width, pdfString, plain, letterhead, vaultMark, withLogo, navy, bandBox, NAVY, NAVY_TINT, PAGE_W, PAGE_H, M };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportPdf = api;
 })(this);

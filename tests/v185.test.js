@@ -20,7 +20,11 @@ test('v1.85: letterhead() draws the header lines and the logo, and nothing when 
   assert.match(all, /Example City Police/);
   assert.match(all, /Narcotics Unit/);
   assert.match(all, /\/Im3 Do/);
-  assert.strictEqual(R.letterhead([], { header: '  ', logo: null }, 36, 750, 540), 0);
+  // v1.141: with no letterhead, a slim header with the CaseVault vault mark instead of a blank space.
+  const none = [];
+  assert.strictEqual(R.letterhead(none, { header: '  ', logo: null }, 36, 750, 540), 31);
+  assert.match(none.join('\n'), /\(CaseVault\) Tj/);
+  assert.strictEqual(R.letterhead([], null, 36, 750, 540), 31);
   assert.strictEqual(R.withLogo(null, []), null);
   const list = [{}, {}];
   const lh = R.withLogo(LH, list);
