@@ -4,6 +4,13 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.140
+
+- **Certificate details (Training):** the pencil on a certificate card opens **Certificate Details**: Course, Given By, Date Completed, Hours and Expires. The card then shows the course name, the date completed and the hours, and when it expires. These details are kept with the vault (Training\.training.json) and are removed when the certificate is deleted
+- **Renewal reminders:** a certificate with an expiry date shows in **Needs Attention** 90 days and 30 days before it expires, and in red once it has expired ("Certificate Expired · 7 days ago"). Its card says **Renew in N days** or **Expired**. Click the reminder to go to Training
+- **Training Record (PDF):** the **Training Record** button in Training lists every course with its date, hours and expiry, and the total hours, with your letterhead and name (from My Profile). Tick **Add the certificates after the list** to put each certificate's pages behind the list, one per page
+- **{{training}} in Drafts:** a template can use **{{training}}** for the Training & Experience paragraph ("Your Affiant has completed the following training: Basic Narcotics Investigations (Example Police Academy, March 4, 2024, 40 hours); …. In total, your Affiant has completed 48 hours of training."). Also **{{training.list}}** (one course a line), **{{training.hours}}** and **{{training.count}}**. They are listed under **Your training** in the placeholder help
+
 ## What's new in v1.139
 
 - **Favicon and app icon:** the vault door, on navy with gold bolts, in the browser tab, the taskbar and the unlock screen

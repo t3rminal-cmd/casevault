@@ -405,7 +405,8 @@
     const showAll = h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-down', title: 'Open every part on screen', onclick: () => foldAll(false) }, 'Show All');
     const hideAll = h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-right', title: 'Fold every part away on screen (they stay on the report)', onclick: () => foldAll(true) }, 'Hide All');
     if (autoCharged) { changed(); toast('Charges filled in from the Draft tab. Change or remove them as needed.', 'info', 5000); }
-    panel.replaceChildren(
+    // v1.143: the parts that aren't there are left out (replaceChildren would show null as "null").
+    panel.replaceChildren(...[
       h('div', { class: 'toolbar arrest-toolbar' },
         h('p', { class: 'muted small explain' }, 'The Arrest Report for this case, one per arrestee. Print it, save it as a PDF or email it to sign. These details also fill {{arrest.…}} in templates. Saved in this case\'s folder on the SSD (arrest.json).'),
         printBtn, archived ? null : pdfCaseBtn, archived ? null : signBtn,
@@ -421,7 +422,7 @@
       archived ? null : h('div', { class: 'row' },
         h('button', { class: 'btn', type: 'button', onclick: () => { const a = K().emptyArrestee(); if (c.number) a.rdNumber = c.number; arrest.arrestees.push(a); changed(); draw(); } }, '+ Add another arrestee'),
         elsewhere.length ? h('button', { class: 'btn', type: 'button', icon: 'people', title: 'The same person was arrested on another case number of this Mission: copy their details here', onclick: () => copyFromMission() }, 'Copy From Another Case') : null,
-        h('div', { class: 'spacer' }), reportBtn));
+        h('div', { class: 'spacer' }), reportBtn)].filter(Boolean));
   }
 
   // A new draft from the arrest report template, filled from these details.

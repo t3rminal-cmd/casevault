@@ -51,14 +51,27 @@
       }
       if (token !== state.renderToken) return;
       const K = root.CVClosing;
+      const sameSuspect = (name) => {
+        const onTimeline = [...tls.values()].flatMap((t) => t.events.map((e) => String(e.suspect || '').trim())).filter(Boolean);
+        for (const pool of [onTimeline, suspectNames]) {
+          const exact = pool.find((n) => O.suspectKey(n) === O.suspectKey(name));
+          if (exact) return exact;
+          const like = pool.find((n) => O.nameMatch(n, name));
+          if (like) return like;
+        }
+        return name;
+      };
       const autoArrests = (caseId, own) => {
         const a = arrests.get(caseId);
         if (!a || !K) return [];
         return K.normalizeArrest(a).arrestees.map((x, i) => ({ x, i })).filter(({ x }) => K.arresteeName(x) && /^\d{4}-\d{2}-\d{2}$/.test(x.date || ''))
           .map(({ x, i }) => {
-            const name = K.arresteeName(x);
+            // v1.143: the arrest goes under the suspect it is about: a name already on the timeline (or
+            // on the Details tab) written another way ("DOE, John", "John Q Doe") is used instead,
+            // so the suspect has one filter, not two.
+            const name = sameSuspect(K.arresteeName(x));
             const charges = (x.charges || []).filter((ch) => String(ch.statute || '').trim() || String(ch.description || '').trim()).map((ch) => [ch.statute, ch.description].filter((v) => String(v || '').trim()).join(' ')).join('; ');
-            return { id: `arrest-${caseId}-${i}`, auto: true, kind: 'arrest', date: x.date, time: String(x.time || '').trim(), title: `Arrest of ${name}`, suspect: name, note: charges ? `Charged: ${charges}` : '', color: '' };
+            return { id: `arrest-${caseId}-${i}`, auto: true, kind: 'arrest', date: x.date, time: String(x.time || '').trim(), title: `Arrest of ${K.arresteeName(x)}`, suspect: name, note: charges ? `Charged: ${charges}` : '', color: '' };
           })
           // An Arrest event you typed yourself for the same person on the same day stands for it.
           .filter((ev) => !own.some((o) => o.kind === 'arrest' && o.date === ev.date && O.suspectKey(o.suspect) === O.suspectKey(ev.suspect)));
@@ -186,7 +199,9 @@
       // v1.117: a key of the suspects on the timeline, each in their colour: click a name to show only
       // their events; click the colour to change it on all their events.
       const legend = h('div', { class: 'tl-legend' });
-      function drawLegend(colors) {
+      function drawLegend(colors, rows = []) {
+        // v1.143: a suspect who was arrested has small handcuffs on their filter.
+        const arrested = new Set(rows.filter(({ ev }) => ev.kind === 'arrest').map(({ ev }) => O.suspectKey(ev.suspect)));
         if (!colors.size) { legend.replaceChildren(); legend.hidden = true; return; }
         legend.hidden = false;
         if (suspectFilter && !colors.has(suspectFilter)) suspectFilter = '';
@@ -194,7 +209,7 @@
           ...[...colors.entries()].map(([k, x]) => {
             const dot = h('button', { type: 'button', class: 'tl-legend-dot', title: `Change ${x.name}'s colour`, 'aria-label': `Change ${x.name}'s colour`, onclick: (e) => { e.stopPropagation(); recolor(k, x, dot); } });
             dot.style.setProperty('--sw', x.color);
-            return h('span', { class: `tl-legend-chip${suspectFilter === k ? ' on' : ''}` }, dot,
+            return h('span', { class: `tl-legend-chip${suspectFilter === k ? ' on' : ''}${arrested.has(k) ? ' arrested' : ''}` }, dot, arrested.has(k) ? h('span', { class: 'tl-legend-cuffs', title: `${x.name} was arrested` }, cuffs()) : null,
               h('button', { type: 'button', class: 'tl-legend-name', 'aria-pressed': String(suspectFilter === k), title: suspectFilter === k ? 'Show everyone again' : `Show only ${x.name}'s events`, onclick: () => { suspectFilter = suspectFilter === k ? '' : k; draw(); } }, x.name, h('span', { class: 'count' }, String(x.count))));
           }),
           suspectFilter ? h('button', { type: 'button', class: 'btn small ghost tl-legend-all', onclick: () => { suspectFilter = ''; draw(); } }, 'Show All') : null].filter(Boolean));
@@ -274,7 +289,7 @@
       function draw() {
         const everything = CVOperation.mergeEvents([...tls.entries()].map(([caseId, t]) => ({ caseId, number: numberOf(caseId), events: [...t.events, ...autoArrests(caseId, t.events)] })));
         const colors = O.suspectColors(everything);
-        drawLegend(colors);
+        drawLegend(colors, everything);
         const now = today();
         const openDl = everything.filter(({ ev }) => ev.kind === 'deadline' && !ev.done);
         const overdue = openDl.filter(({ ev }) => ev.date < now);
