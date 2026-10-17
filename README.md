@@ -15,10 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.143
+## What's New in v1.144
 
-- **Arrest Report:** no stray "null"
-- **Timeline:** arrests under the matching suspect (one filter each, handcuffs on arrested suspects)
+- **Updater 1.3:** CaseVault look (navy banner with the vault door, 11/12 pt), Installed → Available strip, What's New before installing (files behind Show Files), Check · Download · Install · Done steps, Open CaseVault when done
 
 ## What CaseVault Does
 
