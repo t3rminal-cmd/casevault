@@ -4,6 +4,13 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.141
+
+- **Find (Ctrl+K) finds certificates and Other Files:** type part of a course name, who gave it or a file name ("narcotics academy", "lab request"). Certificates show as **Certificate** with who gave it and when; other files as **File** with their folder. Enter opens it. **Training** and **Training Record** are in Find too
+- **Cards or List for every folder:** each Other Files or Mission folder has **Cards | List** beside Close. Cards show each file as a same-size card with a picture of its first page (PDFs and photos). The choice is kept on this PC for each folder. Training starts as Cards, the others as a List
+- **Timeline → Group by Suspect:** the button beside Buy Summary shows each suspect's events together under their name, in their colour, with a count. Events without a suspect come last under **No Suspect**. Click again to go back to date order; the choice is kept on this PC. **Print Timeline** follows it. Without grouping, the PDF now has its own **Suspect** column on the right, so the names line up
+- **PDFs without a letterhead:** when no department letterhead is set (Settings → Letterhead), Reports, Arrest Reports, Timelines, Case Summaries, Year Summaries, Training Records and Link Charts show a slim header with the CaseVault vault mark instead of a blank space. With a letterhead, nothing changes
+
 ## What's new in v1.140
 
 - **Certificate details (Training):** the pencil on a certificate card opens **Certificate Details**: Course, Given By, Date Completed, Hours and Expires. The card then shows the course name, the date completed and the hours, and when it expires. These details are kept with the vault (Training\.training.json) and are removed when the certificate is deleted

@@ -41,11 +41,20 @@ class ControllerTests(InstallBase):
         ctl = Controller(self.settings, ev.post, gh=gh, apps=apps or FakeApps(), tools_dir=self.tools)
         return ctl, ev
 
+    def guide(self):
+        os.makedirs(os.path.join(self.app, "docs"), exist_ok=True)
+        with open(os.path.join(self.app, "docs", "USING-CASEVAULT.md"), "w", encoding="utf-8") as f:
+            f.write("### What's new in v1.23\n\n- **New thing:** it works\n\n### What's new in v1.22\n\n- **Old thing:** before\n")
+
     def test_check_then_install(self):
+        self.guide()
         ctl, ev = self.make()
         self.assertFalse(ctl.can_undo())
         ctl.check()
         c = ev.wait_for("confirm")
+        # v1.3: the two version numbers and What's New since the installed version.
+        self.assertEqual((c["installed"], c["available"]), ("1.22.0", "1.23.0"))
+        self.assertEqual(c["news"], [("1.23", ["New thing: it works"])])
         self.assertIn("2 changed, 2 new, 1 to remove", c["summary"])
         self.assertTrue(c["helper"])
         self.assertIn("update  W: Start-CaseVault.bat", c["files"])
@@ -54,6 +63,7 @@ class ControllerTests(InstallBase):
         d = ev.wait_for("done")
         self.assertTrue(d["installed"])
         self.assertIn("Installed 1.23.0", d["text"])
+        self.assertEqual(d["version"], "1.23.0")
         loc = ev.wait_for("local")
         self.assertIn("CaseVault 1.23.0 (commit bbbbbbb", loc["text"])
         self.assertTrue(loc["undo"])
@@ -125,6 +135,9 @@ class WindowTests(InstallBase):
     def test_window_flow(self):
         import tkinter as tk
         from casevault_updater.window import UpdaterWindow
+        os.makedirs(os.path.join(self.app, "docs"), exist_ok=True)
+        with open(os.path.join(self.app, "docs", "USING-CASEVAULT.md"), "w", encoding="utf-8") as f:
+            f.write("### What's new in v1.23\n\n- **New thing:** it works\n")
         gh, _ = self.gh()
         root = tk.Tk()
         w = UpdaterWindow(root, self.settings)
@@ -143,11 +156,25 @@ class WindowTests(InstallBase):
         self.assertTrue(until(lambda: w.waiting), "Install Now is offered")
         self.assertIn("Ready to install", w.status.cget("text"))
         self.assertTrue(w.install_btn.winfo_ismapped())
+        # v1.3: the version strip, the steps and What's New (the files behind Show Files).
+        self.assertEqual(w.v_have.cget("text"), "Installed 1.22")
+        self.assertEqual(w.v_new.cget("text"), "Available 1.23")
+        self.assertEqual([w.steps.state_of(i) for i in range(4)], ["done", "done", "active", "todo"])
+        self.assertEqual(w.panel_title.cget("text"), "What's New")
+        self.assertIn("New thing: it works", w.files.get("1.0", "end"))
+        w.toggle_files()
+        self.assertIn("Start-CaseVault.bat", w.files.get("1.0", "end"))
+        self.assertTrue(w.panel_title.cget("text").startswith("Files ("))
+        w.toggle_files()
         w.on_answer(True)
-        self.assertTrue(until(lambda: not w.ctl.busy and "Installed" in w.status.cget("text")))
+        self.assertTrue(until(lambda: not w.ctl.busy and "Installed" in w.status.cget("text") and not w.local.spinning))
         seen.append(w.status.cget("text"))
         self.assertEqual(int(w.bar["value"]), 1000)
         self.assertIn("1.23.0", w.local.cget("text"))
+        root.update()
+        self.assertEqual([w.steps.state_of(i) for i in range(4)], ["done"] * 4)
+        self.assertEqual(w.v_have.cget("text"), "Installed 1.23 · Up To Date")
+        self.assertTrue(w.open_btn.winfo_ismapped(), "Open CaseVault is offered when it's done")
         root.destroy()
         self.assert_new()
 

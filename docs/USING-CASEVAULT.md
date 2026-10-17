@@ -213,6 +213,14 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.144
+
+- **Updater: a new look (updater 1.3):** the CaseVault Updater window now looks like CaseVault: off-white and navy, square corners, larger text (11 pt, headings 12 pt), and a navy banner with the vault door whose handle turns while it works
+- **Updater: versions at a glance:** a strip under the banner says **Installed 1.143 → Available 1.144**, and **Installed 1.144 · Up To Date** when there is nothing new
+- **Updater: What's New:** before you install, the window lists what each newer version brings (the same notes as here) instead of a list of file names. **Show Files** still shows the files it will change
+- **Updater: steps:** **Check · Download · Install · Done** across the top show where it is; each turns green when finished, and red where something stopped
+- **Updater: Open CaseVault:** when the update is done, **Open CaseVault** starts it for you. The updater updates itself, so the new look shows the next time you start Check-For-Updates.bat
+
 ### What's new in v1.143
 
 - **Arrest Report: no more "null":** the word null showed on the Arrest Report tab under the arrestees (where nothing was meant to be). Gone; a check of every page now makes sure no "null", "undefined" or "NaN" shows anywhere
@@ -224,13 +232,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Arrests added by themselves:** every arrestee on the case's **Arrest Report** with a name and an Arrest Date shows on the Timeline as "Arrest of NAME" on that date (with the time and charges), with an **Arrest Report** button instead of Edit / Delete: change it on the Arrest Report. An Arrest event you add yourself for the same person on the same day takes its place, so it isn't listed twice. Mission timelines show the arrests of every case number. In the Timeline PDF an arrest is marked **[ARREST]** with a red square and rule
 - **Bigger, even text in CaseVault:** text 11 pt, small text (labels, hints, badges) 10 pt and never smaller, headers 12 pt, on every page
 - **Bigger, even text in the PDFs:** text 10 pt and section headers 12 pt on the Supplementary Report, Arrest Report, Timeline, Case Summary, Year Summary and Training Record. The small captions inside the form boxes stay small, as on a printed form, so the forms keep their layout
-
-### What's new in v1.141
-
-- **Find (Ctrl+K) finds certificates and Other Files:** type part of a course name, who gave it or a file name ("narcotics academy", "lab request"). Certificates show as **Certificate** with who gave it and when; other files as **File** with their folder. Enter opens it. **Training** and **Training Record** are in Find too
-- **Cards or List for every folder:** each Other Files or Mission folder has **Cards | List** beside Close. Cards show each file as a same-size card with a picture of its first page (PDFs and photos). The choice is kept on this PC for each folder. Training starts as Cards, the others as a List
-- **Timeline → Group by Suspect:** the button beside Buy Summary shows each suspect's events together under their name, in their colour, with a count. Events without a suspect come last under **No Suspect**. Click again to go back to date order; the choice is kept on this PC. **Print Timeline** follows it. Without grouping, the PDF now has its own **Suspect** column on the right, so the names line up
-- **PDFs without a letterhead:** when no department letterhead is set (Settings → Letterhead), Reports, Arrest Reports, Timelines, Case Summaries, Year Summaries, Training Records and Link Charts show a slim header with the CaseVault vault mark instead of a blank space. With a letterhead, nothing changes
 
 ### Earlier versions
 

@@ -6,18 +6,22 @@ thread (tkinter isn't thread-safe). Kinds:
 
     "busy"      {"text": ...}                 a step started; buttons off
     "progress"  {"stage", "done", "total", "detail", "fraction"}
-    "confirm"   {"summary", "files", "helper"} the download is ready: Install Now / Not Now
+    "confirm"   {"summary", "files", "helper", "installed", "available", "news"}
+                                              the download is ready: Install Now / Not Now
+                                              (v1.3: the two version numbers and What's New)
     "done"      {"ok": bool, "text", "notes": [...]}  finished (or nothing to do, or refused)
     "error"     {"text"}                      something went wrong; nothing half-done stays
     "local"     {"text"}                      what's on the SSD now (after each run)
 """
 
+import os
 import threading
 import time
+import webbrowser
 from typing import Callable, Optional
 
 from . import apps as default_apps
-from . import config
+from . import config, notes
 from .errors import UpdaterError
 from .install import last_backup, undo_last
 from .version import read_app_version, read_local
@@ -78,6 +82,17 @@ class Controller:
         self._yes = yes
         self._answer.set()
 
+    def open_app(self) -> bool:
+        """v1.3 "Open CaseVault": Start-CaseVault.bat on the CV-AI drive (Firefox, or Edge with the
+        helper), else CaseVault's page on the SSD in the default browser."""
+        if self.apps.helper_running():
+            return bool(webbrowser.open(f"http://127.0.0.1:{getattr(self.apps, 'HELPER_PORT', 8517)}/"))
+        tools = self.tools_dir or self.settings.tools_dir or config.find_tools_dir()
+        if self.apps.start_helper(tools):
+            return True
+        page = os.path.join(self.settings.app_dir, "index.html")
+        return os.path.isfile(page) and bool(webbrowser.open("file:///" + os.path.abspath(page).replace(os.sep, "/").lstrip("/")))
+
     def undo(self) -> None:
         if self.busy:
             return
@@ -95,8 +110,11 @@ class Controller:
 
     def _confirm(self, plan, running: bool) -> bool:
         files = [f"{c.action:<7} {'W: ' if c.area == 'tools' else ''}{c.rel}" for c in plan.changes]
+        installed = read_app_version(self.settings.app_dir)
         self._answer.clear()
-        self.post("confirm", {"summary": plan.summary(), "files": files, "helper": running})
+        self.post("confirm", {"summary": plan.summary(), "files": files, "helper": running, "installed": installed,
+                              "available": notes.new_version(self.settings, plan.commit),
+                              "news": notes.for_update(self.settings, plan.commit, installed)})
         self._answer.wait()
         return self._yes
 
@@ -106,7 +124,8 @@ class Controller:
         self.post("busy", {"text": STAGES["check"][0]})
         try:
             out = run_update(self.settings, self._confirm, self._progress, gh=self.gh, tools_dir=self.tools_dir, apps=self.apps)
-            self.post("done", {"ok": out.installed, "text": out.message, "notes": out.notes, "installed": out.installed})
+            self.post("done", {"ok": out.installed, "text": out.message, "notes": out.notes, "installed": out.installed,
+                               "version": read_app_version(self.settings.app_dir)})
         except UpdaterError as e:
             self.post("error", {"text": str(e)})
         except Exception as e:  # noqa: BLE001 - never leave the window hanging

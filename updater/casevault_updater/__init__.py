@@ -9,7 +9,7 @@ Modules
     version   version.json on the SSD, and the check: is there a newer commit?
     (next)    plan (which files changed), download (to a staging folder, verified),
               apply (backup, replace, journal, roll back), processes (stop/start the helper),
-              ui (the window with the button and progress bar)
+              ui (the window with the button and progress bar), notes (What's New for the window)
 """
 
-__version__ = "1.2.1"
+__version__ = "1.3.0"

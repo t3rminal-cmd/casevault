@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.143)
+
+- **Arrest Report:** no stray "null"
+- **Timeline:** arrests under the matching suspect (one filter each, handcuffs on arrested suspects)
+
 ## Features (v1.142)
 
 - **Timeline:** Arrest events (type and from the Arrest Report) in red with handcuffs
