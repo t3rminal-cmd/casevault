@@ -4093,3 +4093,17 @@ table.op-cases-table td.op-closing { width: 9.5rem; min-width: 9.5rem; line-heig
 .cert-name { padding: .55rem .7rem .2rem; font-weight: 700; text-align: center; line-height: 1.3; min-height: calc(2 * 1.3em); overflow-wrap: anywhere; display: flex; align-items: flex-start; justify-content: center; flex: 1 1 auto; }
 .cert-foot > .muted { white-space: nowrap; }
 .cert-foot { display: flex; align-items: center; justify-content: space-between; gap: .4rem; padding: .15rem .45rem .35rem .7rem; }
+/* v1.140: a certificate's details on its card: what it is, when and how long; the expiry date (amber
+   within 90 days, red once expired); the pencil beside Delete. */
+.cert-facts { display: block; text-align: center; padding: 0 .7rem .3rem; }
+.cert-exp { display: block; margin: 0 auto .45rem; padding: .1rem .5rem; font-size: var(--fs-tiny); font-weight: 700; border: 1px solid var(--border); color: var(--muted); }
+.cert-exp-notice { color: var(--warn); border-color: var(--warn); }
+.cert-exp-soon { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
+.cert-exp-expired { color: var(--danger); border-color: var(--danger); background: var(--danger-soft); }
+.cert-card.cert-expired { border-color: var(--danger); }
+.cert-tools { display: inline-flex; gap: .15rem; }
+.cert-form-row { display: grid; grid-template-columns: minmax(0, 1fr) 6rem minmax(0, 1fr); gap: .75rem; }
+@media (max-width: 560px) { .cert-form-row { grid-template-columns: 1fr; } }
+.attention-row.att-cert-notice { border-left: 3px solid var(--st-pending); }
+.attention-row.att-cert-soon { border-left: 3px solid var(--warn); background: var(--warn-soft); }
+.attention-row.att-cert-notice .att-what, .attention-row.att-cert-soon .att-what { color: var(--warn); }

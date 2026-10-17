@@ -54,7 +54,9 @@
     const arrest = await Vault.readCaseJSON(c.id, 'arrest.json').catch(() => null);
     // {{report.*}} from Reports → Report Fields (v1.18).
     const fields = root.CVReportFields ? await Vault.readCaseJSON(c.id, 'report-fields.json').catch(() => null) : null;
-    return { ...K().arrestContext(arrest || { arrestees: [] }), ...K().closureContext(c.closure), ...(fields ? CVReportFields.context(fields) : {}) };
+    // v1.140: {{training}} and the rest from Other Files → Training.
+    const training = root.CVTraining ? CVTraining.context(await Vault.trainingRows().catch(() => [])) : {};
+    return { ...K().arrestContext(arrest || { arrestees: [] }), ...K().closureContext(c.closure), ...(fields ? CVReportFields.context(fields) : {}), ...training };
   }
 
   /* ---------------- Arrest details tab ---------------- */

@@ -4,6 +4,12 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.137
+
+- **Home page:** the Year Summary tile has its icon; the Ask AI tile is gone (Ask AI is the round button in the lower corner)
+- **Top bar:** the Network, Local AI, Memory, SSD and Power Off icons no longer have words under them. Their colours still show the state, and holding the mouse over one says what it is
+- **Banner:** the shield is replaced with a vault door whose handle turns now and then, as if unlocking. It stays still when Windows is set to show fewer animations
+
 ## What's new in v1.136
 
 - **Year Summary** (the Year Summary tile on the home page, or Ctrl+K → Year Summary): pick a year to see the cases opened, closed and archived in it, arrests by month, charges (felony, misdemeanor, other) with the 10 most common, and narcotics recovered, added up by narcotic and unit. **Print / PDF** makes a one-page PDF with your letterhead. Counted from the case dates and the Arrest Reports (arrest date, charges, recovered narcotics)

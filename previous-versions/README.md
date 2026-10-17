@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.139)
+
+- **Icon:** the vault door as the favicon and app icon
+- **Other Files:** folder names only, no subheadings
+- **Training:** certificates as same-size cards with a picture of the first page
+
 ## Features (v1.138)
 
 - **Timeline:** suspect names on the right of each event, the same width so they line up

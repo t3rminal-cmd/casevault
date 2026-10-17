@@ -1292,6 +1292,96 @@
 
   // v1.72: tiles: the folders as folder icons, like Operations and General Files; a click opens
   // one (its files show under the icons), another click closes it.
+  const shortDate = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || '')); return m ? new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''; };
+  /** v1.140: the home page with Other Files → Training open, scrolled to it. */
+  function openTraining() {
+    sharedOpen.other = 'Training';
+    if (location.hash !== '#/' && location.hash !== '') { location.hash = '#/'; } else showDashboard();
+    let tries = 0;
+    const go = () => { const sec = document.querySelector('.other-files-section'); if (sec) sec.scrollIntoView({ block: 'start', behavior: 'smooth' }); else if (++tries < 20) setTimeout(go, 100); };
+    setTimeout(go, 150);
+  }
+  /* v1.140: a certificate's details: course, who gave it, date completed, hours, expiry date. */
+  async function editCertificate(file, meta, redraw) {
+    const d = CVTraining.normalize(meta[file]);
+    const f = {
+      course: h('input', { maxlength: 200, autocomplete: 'off', value: d.course, placeholder: file.replace(/\.[^.]+$/, ''), 'aria-label': 'Course' }),
+      provider: h('input', { maxlength: 200, autocomplete: 'off', value: d.provider, placeholder: 'Example Police Academy', 'aria-label': 'Given By' }),
+      date: h('input', { type: 'date', value: d.date, 'aria-label': 'Date Completed' }),
+      hours: h('input', { inputmode: 'decimal', maxlength: 8, autocomplete: 'off', value: d.hours, placeholder: '40', 'aria-label': 'Hours' }),
+      expires: h('input', { type: 'date', value: d.expires, 'aria-label': 'Expires' }),
+    };
+    const ok = await openDialog((close) => h('form', { class: 'dialog-form cert-form', onsubmit: (e) => { e.preventDefault(); close(true); } },
+      h('h2', { icon: 'pencil-square' }, 'Certificate Details'),
+      h('p', { class: 'muted small' }, file),
+      field('Course', f.course), field('Given By', f.provider),
+      h('div', { class: 'cert-form-row' }, field('Date Completed', f.date), field('Hours', f.hours), field('Expires', f.expires)),
+      h('p', { class: 'muted small' }, 'Leave Expires empty when the certificate does not expire. Needs Attention reminds you 90 and 30 days before.'),
+      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Save'))));
+    if (!ok) return;
+    const next = CVTraining.normalize({ course: f.course.value, provider: f.provider.value, date: f.date.value, hours: f.hours.value, expires: f.expires.value });
+    try {
+      const all = await Vault.readTraining();
+      if (Object.values(next).some(Boolean)) all[file] = next; else delete all[file];
+      await Save.track('shared:training', () => Vault.saveTraining(all));
+      toast('Certificate details saved.', 'success', 2500);
+    } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); toast(`Not saved: ${err.message}`, 'error'); }
+    redraw();
+  }
+  /* v1.140: the Training Record PDF: the courses with dates and hours, total hours, then each
+   * certificate's pages. */
+  async function trainingRecord() {
+    const rows = await Vault.trainingRows().catch(() => []);
+    if (!rows.length) { toast('Add your certificates to Other Files → Training first.', 'info'); return; }
+    const attach = h('input', { type: 'checkbox', checked: true });
+    const go = await openDialog((close) => h('form', { class: 'dialog-form', onsubmit: (e) => { e.preventDefault(); close(true); } },
+      h('h2', { icon: 'file-earmark-pdf' }, 'Training Record'),
+      h('p', {}, `${rows.length} certificate${rows.length === 1 ? '' : 's'}${CVTraining.totalHours(rows) ? `, ${CVTraining.totalHours(rows)} hours in total` : ''}.`),
+      h('label', { class: 'check' }, attach, ' Add the certificates after the list'),
+      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit', icon: 'printer' }, 'Make PDF'))));
+    if (!go) return;
+    const attachments = [];
+    if (attach.checked) {
+      toast('Adding the certificates…', 'info', 2500);
+      for (const r of rows) {
+        try {
+          const file = await Vault.readShared('other', 'Training', r.file);
+          for (const [k, pg] of (await certJpegs(file, r.file)).entries()) attachments.push({ ...pg, caption: `${r.course}${pg.of > 1 ? ` (page ${k + 1} of ${pg.of})` : ''}` });
+        } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
+      }
+    }
+    const affiant = (Vault.data.settings && Vault.data.settings.affiant) || {};
+    const bytes = CVTraining.build(rows, { letterhead: await CVLetterhead.forPdf().catch(() => null), printed: fmtDate(today()), today: today(), name: [affiant.name, affiant.title].filter(Boolean).join(', '), attachments });
+    await openDialog((done) => h('div', { class: 'pdf-view' }, h('h2', {}, 'Training Record'), CVPdfViewer.create(bytes, { h, icon: I, title: 'Training Record', fileName: 'Training Record.pdf' }),
+      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => done() }, 'Close'))));
+  }
+  /** A certificate's pages as JPEGs (a photo is one page), at most 1600 px. */
+  async function certJpegs(file, name) {
+    const jpegOf = async (cv) => new Uint8Array(await (await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.88))).arrayBuffer());
+    const canvasOf = (w, hh) => Object.assign(document.createElement('canvas'), { width: Math.ceil(w), height: Math.ceil(hh) });
+    if (/\.pdf$/i.test(name)) {
+      const lib = await CVExtract.loadPdfjs();
+      const task = CVExtract.openPdf(lib, new Uint8Array(await file.arrayBuffer()));
+      try {
+        const doc = await task.promise; const out = [];
+        for (let n = 1; n <= Math.min(doc.numPages, 10); n++) {
+          const page = await doc.getPage(n);
+          const base = page.getViewport({ scale: 1 });
+          const vp = page.getViewport({ scale: Math.min(2.5, 1600 / Math.max(base.width, base.height)) });
+          const cv = canvasOf(vp.width, vp.height); const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+          await page.render({ canvasContext: g, viewport: vp }).promise; page.cleanup();
+          out.push({ jpeg: await jpegOf(cv), w: cv.width, h: cv.height, of: doc.numPages });
+        }
+        return out;
+      } finally { await task.destroy(); }
+    }
+    if (!/\.(png|jpe?g|gif|webp|bmp)$/i.test(name)) return [];
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const cv = canvasOf(bmp.width * k, bmp.height * k); const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(bmp, 0, 0, cv.width, cv.height);
+    return [{ jpeg: await jpegOf(cv), w: cv.width, h: cv.height, of: 1 }];
+  }
+
   /* v1.139: the picture on a certificate card: the first page of a PDF, or the photo itself. Made in
    * memory only (nothing written to the PC), kept while CaseVault is open, and redrawn when the file
    * changes. */
@@ -1390,15 +1480,27 @@
       // v1.139: Training holds certificates: each file is a card of the same size with a picture of
       // its first page (or the photo), so they line up in even rows.
       const cards = key === 'other' && folder === 'Training';
+      // v1.140: each certificate's details (course, completed, hours, expires) from .training.json.
+      const meta = cards && list.length ? await Vault.readTraining().catch(() => ({})) : {};
       const rows = list.length && cards ? h('div', { class: 'cert-grid', role: 'list' }, list.map((f) => {
         const img = h('img', { class: 'cert-thumb', alt: '', hidden: true });
         const art = h('span', { class: 'cert-art' }, h('span', { class: 'cert-icon' }, I(FILE_ICONS[fileKind(f.base)])), img);
         sharedThumb(reader, f, img);
-        return h('div', { class: 'cert-card', role: 'listitem' },
+        const d = CVTraining.normalize(meta[f.base]);
+        const st = CVTraining.notice(d, today());
+        const left = CVTraining.daysLeft(d, today());
+        const facts = [d.date ? `Completed ${shortDate(d.date)}` : '', d.hours ? `${d.hours} hr${d.hours === '1' ? '' : 's'}` : ''].filter(Boolean)
+          .flatMap((t, i) => [i ? ' · ' : '', h('span', { class: 'nowrap' }, t)]).filter(Boolean);
+        const exp = d.expires ? h('span', { class: `cert-exp${st ? ` cert-exp-${st}` : ''}`, title: `Expires ${fmtDate(d.expires)}` },
+          st === 'expired' ? 'Expired' : st ? `Renew in ${left} day${left === 1 ? '' : 's'}` : `Expires ${shortDate(d.expires)}`) : null;
+        return h('div', { class: `cert-card${st ? ` cert-${st}` : ''}`, role: 'listitem', 'data-file': f.base },
           h('button', { type: 'button', class: 'cert-open', title: `Open ${f.base}`, onclick: () => previewFile(reader, f.base) }, art,
-            h('span', { class: 'cert-name' }, f.base.replace(/\.[^.]+$/, ''))),
-          h('div', { class: 'cert-foot' }, h('span', { class: 'muted small', title: `Last updated ${fmtDateTime(f.modified)}` }, `${fmtSize(f.size)} · ${f.modified ? new Date(f.modified).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}`),
-            h('button', { type: 'button', class: 'icon-btn danger-icon', title: 'Delete this file', onclick: () => delFile(f) }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${f.base}`))));
+            h('span', { class: 'cert-name' }, CVTraining.courseOf(f.base, d)),
+            h('span', { class: 'cert-facts muted small' }, ...(facts.length ? facts : [d.provider || 'Add the details with the pencil'])), exp),
+          h('div', { class: 'cert-foot' }, h('span', { class: 'muted small', title: `${f.base} · ${fmtSize(f.size)} · last updated ${fmtDateTime(f.modified)}` }, `Added ${f.modified ? new Date(f.modified).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}`),
+            h('span', { class: 'cert-tools' },
+              h('button', { type: 'button', class: 'icon-btn cert-edit', title: 'Course, date completed, hours and expiry date', onclick: () => editCertificate(f.base, meta, draw) }, I('pencil-square'), h('span', { class: 'sr-only' }, `Details of ${f.base}`)),
+              h('button', { type: 'button', class: 'icon-btn danger-icon', title: 'Delete this file', onclick: () => delFile(f) }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${f.base}`)))));
       })) : list.length ? h('table', { class: 'files shared-table' },
         h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', { class: 'num' }, 'Size'), h('th', { class: 'date-cell' }, 'Updated'), h('th', { class: 'col-actions' }, ''))),
         h('tbody', {}, list.map((f) => h('tr', {},
@@ -1414,6 +1516,7 @@
       if (vehEl) vehEl.dataset.folder = folder;
       const vehicles = vehEl || '';
       box.replaceChildren(...[chips, tiles ? h('div', { class: 'op-open-head shared-open-head' }, h('strong', {}, folderLabel), h('div', { class: 'spacer' }),
+        cards ? h('button', { type: 'button', class: 'btn small', icon: 'file-earmark-pdf', title: 'A list of your courses with dates and hours, and the certificates after it, as a PDF', onclick: () => trainingRecord() }, 'Training Record') : '',
         h('button', { type: 'button', class: 'btn small ghost', title: 'Close this folder', onclick: () => { folder = null; sharedOpen[key] = null; draw(); } }, 'Close')) : '', vehicles, h('div', { class: 'shared-drop', title: 'Drop files here, or click Add Files' }, rows,
         h('div', { class: 'shared-foot' }, h('button', { type: 'button', class: 'btn small', icon: 'plus-lg', onclick: () => pick.click() }, folderLabel ? `Add Files to ${folderLabel}` : 'Add Files'), h('span', { class: 'muted small' }, 'or drop files here'),
           cur && cur.custom ? h('span', { class: 'spacer' }) : '', cur && cur.custom ? h('button', { type: 'button', class: 'btn small ghost danger', icon: 'trash3', title: 'Remove this folder (only when it is empty)', onclick: () => removeFolder(cur) }, 'Remove Folder') : ''), pick)].filter(Boolean));
@@ -2310,9 +2413,26 @@
       head.addEventListener('click', (e) => { if (folded && !e.target.closest('button')) set(false); });
       return sec;
     };
-    if (!due.length && !solRows.length && !soonRows.length) return wrap(h('p', { class: 'muted attention-none' }, 'Nothing due in the next 7 days.'));
-    return wrap(
-      h('div', { class: 'attention-list', role: 'list' }, ...solRows, ...soonRows, ...due.slice(0, 8).map((c) => {
+    const empty = !due.length && !solRows.length && !soonRows.length;
+    const none = h('p', { class: 'muted attention-none', hidden: !empty }, 'Nothing due in the next 7 days.');
+    // v1.140: certificates in Training to renew (expired, or within 90 / 30 days), read from the SSD
+    // after the page is drawn.
+    const certRows = (list) => Vault.trainingRows().then((rows) => {
+      const r = CVTraining.renewals(rows, today());
+      if (!r.length || !list.isConnected) return;
+      list.append(...r.map((c) => {
+        const lvl = CVTraining.notice(c, today()); const n = CVTraining.daysLeft(c, today());
+        return h('a', { role: 'listitem', class: `attention-row att-cert att-cert-${lvl}${lvl === 'expired' ? ' att-overdue' : ''}`, href: '#/', title: 'Open Other Files → Training', onclick: (e) => { e.preventDefault(); openTraining(); } },
+          h('span', { class: 'att-case' }, h('strong', {}, c.course), h('span', { class: 'muted small' }, c.provider || 'Training')),
+          h('span', { class: 'att-what' }, I('patch-check-fill'), lvl === 'expired' ? ' Certificate Expired' : ' Certificate to Renew'),
+          h('span', { class: 'att-when' }, `${lvl === 'expired' ? 'Expired' : 'Expires'} ${fmtDate(c.expires)}`),
+          h('span', { class: 'att-due' }, lvl === 'expired' ? `${-n} day${n === -1 ? '' : 's'} ago` : lvl === 'soon' ? 'Within 30 days' : 'Within 90 days'));
+      }));
+      list.hidden = false; none.hidden = true;
+      const t = list.querySelectorAll('.attention-row').length; const o = list.querySelectorAll('.att-overdue').length;
+      summary.textContent = `${t} item${t === 1 ? '' : 's'}${o ? ` · ${o} overdue` : ''}`; summary.classList.toggle('has-overdue', !!o);
+    }).catch(() => {});
+    const dueRows = due.slice(0, 8).map((c) => {
         const d = c.nextDeadline;
         const n = daysUntil(d.date);
         const lab = dueLabel(d.date);
@@ -2321,7 +2441,10 @@
           h('span', { class: 'att-what' }, d.title || 'Deadline'),
           h('span', { class: 'att-when' }, fmtDate(d.date), d.time ? ` ${d.time}` : ''),
           h('span', { class: 'att-due' }, lab.text.replace(/\b\w/g, (ch) => ch.toUpperCase())));
-      })),
+    });
+    const attList = h('div', { class: 'attention-list', role: 'list', hidden: empty }, ...solRows, ...soonRows, ...dueRows);
+    certRows(attList);
+    return wrap(attList, none,
       due.length > 8 ? h('p', { class: 'muted small' }, `And ${due.length - 8} more. Each case shows a red border in the case list.`) : null);
   }
 
