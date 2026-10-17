@@ -34,7 +34,7 @@
       pages.push({ ops, sigs: [], imgs: [], signed: true });
       y = PAGE_H - M;
       if (pages.length === 1) {
-        if (lh) { y -= R.letterhead(ops, lh, M, y, INNER, 'helvetica'); if (lh.logo) pages[0].imgs.push(lh.logo.index); }
+        { y -= R.letterhead(ops, lh, M, y, INNER, 'helvetica'); if (lh && lh.logo) pages[0].imgs.push(lh.logo.index); }
         R.navy(ops, () => text(M, y - 18, 'CASE SUMMARY', 18, true));
         const bw = 170;
         fill(PAGE_W - M - bw, y - 11, bw, 11, 0.88);

@@ -38,7 +38,7 @@
       pages.push({ ops, sigs: [], imgs: [], signed: true });
       y = PAGE_H - M;
       if (pages.length === 1) {
-        if (lh) { y -= R.letterhead(ops, lh, M, y, INNER, 'helvetica'); if (lh.logo) pages[0].imgs.push(lh.logo.index); }
+        { y -= R.letterhead(ops, lh, M, y, INNER, 'helvetica'); if (lh && lh.logo) pages[0].imgs.push(lh.logo.index); }
         R.navy(ops, () => text(M, y - 18, title.toUpperCase(), 18, true));
         if (data.number) {
           const bw = 170;
@@ -68,21 +68,48 @@
     if (data.timeline !== false) {
       band(`EVENTS (${rows.length})`);
       if (!rows.length) para('No events.');
-      for (const { ev, number } of rows) {
+      // v1.141: the suspect in a column of its own on the right, so the names line up; with
+      // data.group, each suspect's events together under their name.
+      const SUS = 120; const EV_X = 150; const EV_W = INNER - EV_X - SUS - 12;
+      const hasSuspect = rows.some(({ ev }) => clean(ev.suspect));
+      const evW = hasSuspect ? EV_W : INNER - EV_X;
+      const eventRow = ({ ev, number }) => {
         const when = `${ev.date ? fmt(ev.date) : 'No date'}${ev.time ? ` ${ev.time}` : ''}`;
         const kind = ev.kind === 'deadline' ? (ev.done ? 'Deadline, done' : 'Deadline') : ev.kind === 'buy' ? 'Buy' : '';
         const head = [clean(ev.title) || 'Event', kind ? `[${kind}]` : ''].filter(Boolean).join(' ');
-        const sub = [number && data.many ? `Case ${number}` : '', clean(ev.suspect) ? `Suspect: ${clean(ev.suspect)}` : '', ev.kind === 'buy' ? Op.buyLine(ev) : '', clean(ev.note)].filter(Boolean).join(' · ');
-        const lines = R.wrap(head, 9.5, INNER - 160, true);
-        const subs = sub ? R.wrap(sub, 8.5, INNER - 160, false) : [];
-        const hh = lines.length * 12 + subs.length * 11 + 5;
+        const sub = [number && data.many ? `Case ${number}` : '', ev.kind === 'buy' ? Op.buyLine(ev) : '', clean(ev.note)].filter(Boolean).join(' · ');
+        const lines = R.wrap(head, 9.5, evW, true);
+        const subs = sub ? R.wrap(sub, 8.5, evW, false) : [];
+        const who = hasSuspect && clean(ev.suspect) && !data.group ? R.wrap(clean(ev.suspect), 8.5, SUS - 8, true) : [];
+        const hh = Math.max(lines.length * 12 + subs.length * 11, who.length * 11) + 5;
         ensure(hh);
         swatch(M + 2, y - 10, 8, Op.eventColor(ev, colors));
         text(M + 16, y - 9, when, 8.5, true);
-        lines.forEach((l, n) => text(M + 150, y - 9.5 - n * 12, l, 9.5, true));
-        subs.forEach((l, n) => text(M + 150, y - 9.5 - lines.length * 12 - n * 11, l, 8.5));
+        lines.forEach((l, n) => text(M + EV_X, y - 9.5 - n * 12, l, 9.5, true));
+        subs.forEach((l, n) => text(M + EV_X, y - 9.5 - lines.length * 12 - n * 11, l, 8.5));
+        who.forEach((l, n) => text(M + INNER - SUS + 4, y - 9 - n * 11, l, 8.5, true));
         y -= hh;
+      };
+      if (rows.length && hasSuspect && !data.group) {
+        fill(M, y - 12, INNER, 12, 0.9);
+        text(M + 16, y - 9, 'Date', 8, true); text(M + EV_X, y - 9, 'Event', 8, true); text(M + INNER - SUS + 4, y - 9, 'Suspect', 8, true);
+        y -= 15;
       }
+      if (data.group) {
+        for (const g of Op.suspectGroups(rows)) {
+          ensure(40);
+          y -= 2;
+          swatch(M + 2, y - 10, 9, g.color);
+          text(M + 16, y - 10, g.name, 10.5, true);
+          const n = `${g.rows.length} event${g.rows.length === 1 ? '' : 's'}`;
+          text(PAGE_W - M - R.width(n, 9, true), y - 10, n, 9, true);
+          y -= 14;
+          ops.push(`0.5 w ${M.toFixed(2)} ${(y - 1).toFixed(2)} m ${(M + INNER).toFixed(2)} ${(y - 1).toFixed(2)} l S`);
+          y -= 4;
+          g.rows.forEach(eventRow);
+          y -= 6;
+        }
+      } else rows.forEach(eventRow);
       y -= 6;
     }
 

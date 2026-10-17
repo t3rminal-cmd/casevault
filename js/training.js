@@ -99,7 +99,7 @@
       pages.push({ ops, sigs: [], imgs: [], signed: true });
       y = PAGE_H - M;
       if (first) {
-        if (lh) { y -= R.letterhead(ops, lh, M, y, INNER, 'helvetica'); if (lh.logo) pages[0].imgs.push(lh.logo.index); }
+        { y -= R.letterhead(ops, lh, M, y, INNER, 'helvetica'); if (lh && lh.logo) pages[0].imgs.push(lh.logo.index); }
         R.navy(ops, () => text(M, y - 18, 'TRAINING RECORD', 18, true));
         y -= 26;
         if (clean(opts.name)) { text(M, y - 10, clean(opts.name), 11, true); y -= 16; }

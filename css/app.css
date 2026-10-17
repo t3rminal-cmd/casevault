@@ -4107,3 +4107,14 @@ table.op-cases-table td.op-closing { width: 9.5rem; min-width: 9.5rem; line-heig
 .attention-row.att-cert-notice { border-left: 3px solid var(--st-pending); }
 .attention-row.att-cert-soon { border-left: 3px solid var(--warn); background: var(--warn-soft); }
 .attention-row.att-cert-notice .att-what, .attention-row.att-cert-soon .att-what { color: var(--warn); }
+/* v1.141: Timeline → Group by Suspect: a heading for each suspect (their colour, name and count). */
+.tl-modern .tl-group-head { display: flex; align-items: center; gap: .55rem; margin: 1rem 0 .5rem calc(var(--tl-date) + var(--tl-gap)); padding: .35rem .7rem; border-left: 4px solid var(--tl-color, var(--border)); background: color-mix(in srgb, var(--tl-color, transparent) 8%, var(--surface)); }
+.tl-modern .tl-group-head strong { font-size: var(--fs-sub); }
+.tl-modern .tl-group-head .count { color: var(--muted); font-size: var(--fs-small); }
+.tl-modern .tl-group-head.none { border-left-color: var(--border); }
+.tl-group-btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+/* v1.141: Cards / List for a folder's files, beside Close. */
+.view-switch { display: inline-flex; }
+.view-switch .view-btn + .view-btn { margin-left: -1px; }
+.view-switch .view-btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); position: relative; }
+.tl-grouped .tl-who { display: none; } /* v1.141: the group heading names the suspect */

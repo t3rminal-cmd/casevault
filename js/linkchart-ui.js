@@ -57,7 +57,7 @@
     const pics = [null]; // image 0 is the chart; the logo (if any) is image 1
     const lh = R.withLogo(root.CVLetterhead ? await root.CVLetterhead.forPdf() : null, pics);
     const headOps = [];
-    const lhH = lh ? R.letterhead(headOps, lh, M, PH - M, PW - 2 * M, 'helvetica') : 0;
+    const lhH = R.letterhead(headOps, lh, M, PH - M, PW - 2 * M, 'helvetica'); // v1.141: the vault mark when there is no letterhead
     const top = PH - M - 46 - lhH; const areaW = PW - 2 * M; const areaH = top - (M + 14);
     const k = Math.min(areaW / width, areaH / height, 1.6);
     const w = width * k; const hgt = height * k;

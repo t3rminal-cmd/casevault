@@ -213,6 +213,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.141
+
+- **Find (Ctrl+K) finds certificates and Other Files:** type part of a course name, who gave it or a file name ("narcotics academy", "lab request"). Certificates show as **Certificate** with who gave it and when; other files as **File** with their folder. Enter opens it. **Training** and **Training Record** are in Find too
+- **Cards or List for every folder:** each Other Files or Mission folder has **Cards | List** beside Close. Cards show each file as a same-size card with a picture of its first page (PDFs and photos). The choice is kept on this PC for each folder. Training starts as Cards, the others as a List
+- **Timeline → Group by Suspect:** the button beside Buy Summary shows each suspect's events together under their name, in their colour, with a count. Events without a suspect come last under **No Suspect**. Click again to go back to date order; the choice is kept on this PC. **Print Timeline** follows it. Without grouping, the PDF now has its own **Suspect** column on the right, so the names line up
+- **PDFs without a letterhead:** when no department letterhead is set (Settings → Letterhead), Reports, Arrest Reports, Timelines, Case Summaries, Year Summaries, Training Records and Link Charts show a slim header with the CaseVault vault mark instead of a blank space. With a letterhead, nothing changes
+
 ### What's new in v1.140
 
 - **Certificate details (Training):** the pencil on a certificate card opens **Certificate Details**: Course, Given By, Date Completed, Hours and Expires. The card then shows the course name, the date completed and the hours, and when it expires. These details are kept with the vault (Training\.training.json) and are removed when the certificate is deleted
@@ -225,11 +232,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Favicon and app icon:** the vault door, on navy with gold bolts, in the browser tab, the taskbar and the unlock screen
 - **Other Files:** the folders show their name only (USPIS Files, DEA Files, INET Files, Training, Other and your own), so the tiles match. Holding the mouse over one still says what it is
 - **Training → certificates:** each file in Training shows as a card of the same size with a picture of its first page. Landscape and portrait certificates sit in the same frame, the cards line up in even rows, and the full name shows under each picture (without .pdf). Click a card to open it; the bin deletes it. Photos (JPG, PNG) show the same way. The pictures are made in memory while CaseVault is open; nothing is saved on the PC
-
-### What's new in v1.138
-
-- **Timeline:** an event's suspect now shows on the right of its box, in a name box the same width on every event, so the names line up down the timeline. Long names wrap instead of being cut off
-- **Top-left logo:** the vault door from the banner. Its handle turns a quarter when the mouse is over CaseVault
 
 ### Earlier versions
 

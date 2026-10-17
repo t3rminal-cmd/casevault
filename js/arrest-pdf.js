@@ -112,7 +112,7 @@
       const cb = who ? clean(who.bookingNumber) : '';
       if (first) {
         // v1.85: the department letterhead across the top of each arrestee's first page.
-        if (lh) { y -= P().letterhead(ops, lh, L, y, INNER, 'helvetica'); if (lh.logo) pages[pages.length - 1].imgs.push(lh.logo.index); }
+        { y -= P().letterhead(ops, lh, L, y, INNER, 'helvetica'); if (lh && lh.logo) pages[pages.length - 1].imgs.push(lh.logo.index); }
         // The agency and ARREST REPORT on the left, the approval in the middle, the numbers on the right.
         if (agency && !(lh && lh.header)) text(L, y - 9, agency.toUpperCase(), 10, true);
         P().navy(ops, () => text(L, y - 25, 'ARREST REPORT', 17, true));
