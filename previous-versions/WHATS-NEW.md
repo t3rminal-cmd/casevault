@@ -4,6 +4,12 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.139
+
+- **Favicon and app icon:** the vault door, on navy with gold bolts, in the browser tab, the taskbar and the unlock screen
+- **Other Files:** the folders show their name only (USPIS Files, DEA Files, INET Files, Training, Other and your own), so the tiles match. Holding the mouse over one still says what it is
+- **Training → certificates:** each file in Training shows as a card of the same size with a picture of its first page. Landscape and portrait certificates sit in the same frame, the cards line up in even rows, and the full name shows under each picture (without .pdf). Click a card to open it; the bin deletes it. Photos (JPG, PNG) show the same way. The pictures are made in memory while CaseVault is open; nothing is saved on the PC
+
 ## What's new in v1.138
 
 - **Timeline:** an event's suspect now shows on the right of its box, in a name box the same width on every event, so the names line up down the timeline. Long names wrap instead of being cut off

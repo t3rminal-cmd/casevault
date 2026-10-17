@@ -4,6 +4,13 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.141)
+
+- **Find:** Ctrl+K finds certificates (course, who gave it) and Other Files by name
+- **Cards / List:** every folder can show its files as same-size cards or a list (kept per folder on this PC)
+- **Timeline:** Group by Suspect, on screen and in the PDF; the PDF's Suspect column lines up
+- **PDFs:** the vault mark in the header when no letterhead is set
+
 ## Features (v1.140)
 
 - **Training:** certificate details (course, given by, completed, hours, expires) on each card

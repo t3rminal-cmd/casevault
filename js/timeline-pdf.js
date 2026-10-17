@@ -48,20 +48,20 @@
           text(PAGE_W - M - bw + 6, y - 26, clean(data.number), 12, true);
         }
         y -= 40;
-        if (data.subtitle) { for (const l of R.wrap(clean(data.subtitle), 9, INNER, false)) { text(M, y - 9, l, 9); y -= 12; } y -= 4; }
+        if (data.subtitle) { for (const l of R.wrap(clean(data.subtitle), 10, INNER, false)) { text(M, y - 9, l, 10); y -= 13; } y -= 4; }
       } else {
-        text(M, y - 10, `${title.toUpperCase()}${data.number ? ` · ${data.number}` : ''} (continued)`, 9, true);
+        text(M, y - 10, `${title.toUpperCase()}${data.number ? ` · ${data.number}` : ''} (continued)`, 10, true);
         y -= 20;
       }
     };
     const ensure = (hh) => { if (y - hh < BOTTOM) newPage(); };
     const band = (label) => {
       ensure(40);
-      R.bandBox(ops, M, y - 15, INNER, 15);
-      R.navy(ops, () => text(M + 6, y - 11, label, 9.5, true));
-      y -= 21;
+      R.bandBox(ops, M, y - 18, INNER, 18);
+      R.navy(ops, () => text(M + 6, y - 13.5, label, 12, true));
+      y -= 24;
     };
-    const para = (s, size = 9.5) => { for (const line of R.wrap(clean(s), size, INNER - 8, false)) { ensure(size + 3); text(M + 4, y - size, line, size); y -= size + 3; } };
+    const para = (s, size = 10) => { for (const line of R.wrap(clean(s), size, INNER - 8, false)) { ensure(size + 3); text(M + 4, y - size, line, size); y -= size + 3; } };
 
     newPage();
 
@@ -75,24 +75,25 @@
       const evW = hasSuspect ? EV_W : INNER - EV_X;
       const eventRow = ({ ev, number }) => {
         const when = `${ev.date ? fmt(ev.date) : 'No date'}${ev.time ? ` ${ev.time}` : ''}`;
-        const kind = ev.kind === 'deadline' ? (ev.done ? 'Deadline, done' : 'Deadline') : ev.kind === 'buy' ? 'Buy' : '';
+        const kind = ev.kind === 'deadline' ? (ev.done ? 'Deadline, done' : 'Deadline') : ev.kind === 'buy' ? 'Buy' : ev.kind === 'arrest' ? 'ARREST' : '';
         const head = [clean(ev.title) || 'Event', kind ? `[${kind}]` : ''].filter(Boolean).join(' ');
         const sub = [number && data.many ? `Case ${number}` : '', ev.kind === 'buy' ? Op.buyLine(ev) : '', clean(ev.note)].filter(Boolean).join(' · ');
-        const lines = R.wrap(head, 9.5, evW, true);
-        const subs = sub ? R.wrap(sub, 8.5, evW, false) : [];
-        const who = hasSuspect && clean(ev.suspect) && !data.group ? R.wrap(clean(ev.suspect), 8.5, SUS - 8, true) : [];
-        const hh = Math.max(lines.length * 12 + subs.length * 11, who.length * 11) + 5;
+        const lines = R.wrap(head, 10, evW, true);
+        const subs = sub ? R.wrap(sub, 10, evW, false) : [];
+        const who = hasSuspect && clean(ev.suspect) && !data.group ? R.wrap(clean(ev.suspect), 10, SUS - 8, true) : [];
+        const hh = Math.max(lines.length * 13 + subs.length * 12, who.length * 12) + 5;
         ensure(hh);
-        swatch(M + 2, y - 10, 8, Op.eventColor(ev, colors));
-        text(M + 16, y - 9, when, 8.5, true);
-        lines.forEach((l, n) => text(M + EV_X, y - 9.5 - n * 12, l, 9.5, true));
-        subs.forEach((l, n) => text(M + EV_X, y - 9.5 - lines.length * 12 - n * 11, l, 8.5));
-        who.forEach((l, n) => text(M + INNER - SUS + 4, y - 9 - n * 11, l, 8.5, true));
+        // v1.142: an arrest has a red square and a red rule beside it, whatever the suspect's colour.
+        if (ev.kind === 'arrest') { swatch(M + 1, y - 11, 10, '#b42318'); ops.push(`0.706 0.137 0.094 RG 2 w ${(M + EV_X - 6).toFixed(2)} ${(y - hh + 4).toFixed(2)} m ${(M + EV_X - 6).toFixed(2)} ${(y - 1).toFixed(2)} l S 0 G`); } else swatch(M + 2, y - 10, 8, Op.eventColor(ev, colors));
+        text(M + 16, y - 9, when, 10, true);
+        lines.forEach((l, n) => text(M + EV_X, y - 9.5 - n * 13, l, 10, true));
+        subs.forEach((l, n) => text(M + EV_X, y - 9.5 - lines.length * 13 - n * 12, l, 10));
+        who.forEach((l, n) => text(M + INNER - SUS + 4, y - 9 - n * 12, l, 10, true));
         y -= hh;
       };
       if (rows.length && hasSuspect && !data.group) {
         fill(M, y - 12, INNER, 12, 0.9);
-        text(M + 16, y - 9, 'Date', 8, true); text(M + EV_X, y - 9, 'Event', 8, true); text(M + INNER - SUS + 4, y - 9, 'Suspect', 8, true);
+        text(M + 16, y - 9, 'Date', 10, true); text(M + EV_X, y - 9, 'Event', 10, true); text(M + INNER - SUS + 4, y - 9, 'Suspect', 10, true);
         y -= 15;
       }
       if (data.group) {
@@ -100,9 +101,9 @@
           ensure(40);
           y -= 2;
           swatch(M + 2, y - 10, 9, g.color);
-          text(M + 16, y - 10, g.name, 10.5, true);
+          text(M + 16, y - 10, g.name, 12, true);
           const n = `${g.rows.length} event${g.rows.length === 1 ? '' : 's'}`;
-          text(PAGE_W - M - R.width(n, 9, true), y - 10, n, 9, true);
+          text(PAGE_W - M - R.width(n, 10, true), y - 10, n, 10, true);
           y -= 14;
           ops.push(`0.5 w ${M.toFixed(2)} ${(y - 1).toFixed(2)} m ${(M + INNER).toFixed(2)} ${(y - 1).toFixed(2)} l S`);
           y -= 4;
@@ -122,25 +123,25 @@
         ensure(52);
         y -= 2;
         swatch(M + 2, y - 10, 9, g.color);
-        text(M + 16, y - 10, g.name, 10.5, true);
+        text(M + 16, y - 10, g.name, 12, true);
         const sum = `${g.buys.length} buy${g.buys.length === 1 ? '' : 's'} · ${Op.money(g.paid)} paid`;
-        text(PAGE_W - M - R.width(sum, 9, true), y - 10, sum, 9, true);
+        text(PAGE_W - M - R.width(sum, 10, true), y - 10, sum, 10, true);
         y -= 16;
         fill(M, y - 12, INNER, 12, 0.9);
-        cols.forEach(([x, k]) => text(M + 4 + x, y - 9, k, 8, true));
+        cols.forEach(([x, k]) => text(M + 4 + x, y - 9, k, 10, true));
         y -= 14;
         for (const b of g.buys) {
-          ensure(12);
+          ensure(13);
           const cells = [b.date ? fmt(b.date) : '', b.number, b.drug || '—', b.qty ? `${b.qty} ${b.unit}` : '—', b.paid ? Op.money(b.paid) : '—'];
-          cols.forEach(([x], i) => text(M + 4 + x, y - 9, R.wrap(cells[i], 8.5, (cols[i + 1] ? cols[i + 1][0] : INNER) - x - 8, false)[0] || '', 8.5));
-          y -= 12;
+          cols.forEach(([x], i) => text(M + 4 + x, y - 9, R.wrap(cells[i], 10, (cols[i + 1] ? cols[i + 1][0] : INNER) - x - 8, false)[0] || '', 10));
+          y -= 13;
         }
         const totals = g.drugs.map((d) => `${d.drug} ${d.amounts.map((a) => `${a.qty} ${a.unit}`).join(' + ')}`).join('; ');
         ensure(14);
         ops.push(`0.5 w ${M.toFixed(2)} ${(y - 1).toFixed(2)} m ${(M + INNER).toFixed(2)} ${(y - 1).toFixed(2)} l S`);
-        text(M + 4, y - 11, 'Total', 8.5, true);
-        if (totals) R.wrap(totals, 8.5, 300, true).slice(0, 1).forEach((l) => text(M + 4 + 170, y - 11, l, 8.5, true));
-        text(M + 4 + 420, y - 11, Op.money(g.paid), 8.5, true);
+        text(M + 4, y - 11, 'Total', 10, true);
+        if (totals) R.wrap(totals, 10, 300, true).slice(0, 1).forEach((l) => text(M + 4 + 170, y - 11, l, 10, true));
+        text(M + 4 + 420, y - 11, Op.money(g.paid), 10, true);
         y -= 20;
       }
     }

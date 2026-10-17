@@ -16,12 +16,13 @@
   --mono: var(--font);
   /* v1.125: the type scale. Six sizes; every text size in app.css is one of these (icons and the
      clock keep their own). Three weights: 400 regular, 600 semibold, 700 bold. */
-  --fs-tiny: .72rem;    /* badges, counts, table headers, captions under icons */
-  --fs-small: .82rem;   /* hints, meta lines, buttons in tables, form labels */
-  --fs-text: .9375rem;  /* body text and inputs (15px) */
-  --fs-sub: 1.05rem;    /* card titles, sub-sections */
-  --fs-section: 1.25rem;/* section headers */
-  --fs-title: 1.5rem;   /* page titles */
+  /* v1.142: text 11 pt, small text 10 pt (never smaller), headers 12 pt (1 pt = 1.333 px). */
+  --fs-tiny: .8333rem;  /* badges, counts, table headers, captions under icons (10 pt) */
+  --fs-small: .8333rem; /* hints, meta lines, buttons in tables, form labels (10 pt) */
+  --fs-text: .9167rem;  /* body text and inputs (11 pt) */
+  --fs-sub: 1rem;       /* card titles, sub-sections (12 pt) */
+  --fs-section: 1rem;   /* section headers (12 pt) */
+  --fs-title: 1rem;     /* page titles (12 pt) */
   --bg: #f5f4f0;
   --surface: #fffefb;
   --surface-2: #ebe9e3;

@@ -160,9 +160,9 @@
     // A band with a section title (Exhibit Attachments).
     const band = (label) => {
       ensure(30);
-      bandBox(ops, M, y - 13, INNER, 13);
-      navy(ops, () => text(M + 4, y - 9.6, label.toUpperCase(), 8, true));
-      y -= 13;
+      bandBox(ops, M, y - 17, INNER, 17); // v1.142: section headers 12 pt
+      navy(ops, () => text(M + 4, y - 12.5, label.toUpperCase(), 12, true));
+      y -= 17;
     };
 
     // A ruled row of the grid: each cell has its small label, a dashed rule, then the value.
@@ -393,11 +393,11 @@
     if (on('report')) {
       ensure(40);
       y -= 4;
-      bandBox(ops, M, y - 16, INNER, 16);
-      navy(ops, () => text(M + 4, y - 11.5, d.activity ? `Officer's Report - ${d.activity}` : "Officer's Report", 10, true));
-      y -= 20;
+      bandBox(ops, M, y - 18, INNER, 18);
+      navy(ops, () => text(M + 4, y - 13, d.activity ? `Officer's Report - ${d.activity}` : "Officer's Report", 12, true));
+      y -= 22;
       const by = `This is an Officer's Report by Beat Assigned: ${on('offense') ? val('beatAssigned') : ''}`;
-      text(M + 2, y - 9, by.trim(), 9.5);
+      text(M + 2, y - 9, by.trim(), 10);
       y -= 16;
       const done = new Set(['courtDate']);
       const line1 = (k) => { done.add(k); if (RF.isHidden(d, k)) return; if (k === 'courtBranch') { const c = RF.courtLine(d, (kk) => val(kk)); if (c) labelled(c[0], c[1]); return; } labelled(RF.lineLabel ? RF.lineLabel(d, k) : labelOf(k), val(k)); };
@@ -520,8 +520,8 @@
       const slotH = (y - (M + 18)) / 2;
       photos.slice(i, i + 2).forEach((ph, j) => {
         const top = y - j * slotH;
-        const cap = twrap(ph.caption || '', 9.5, INNER - 8).slice(0, 3);
-        const capH = cap.length * 11 + 8;
+        const cap = twrap(ph.caption || '', 10, INNER - 8).slice(0, 3);
+        const capH = cap.length * 12 + 8;
         const boxH = slotH - capH - 10;
         const k = Math.min((INNER - 12) / ph.w, (boxH - 12) / ph.h);
         const w = ph.w * k; const hgt = ph.h * k;
@@ -529,7 +529,7 @@
         const x = M + (INNER - w) / 2; const yy = top - boxH + (boxH - hgt) / 2;
         ops.push(`q ${w.toFixed(2)} 0 0 ${hgt.toFixed(2)} ${x.toFixed(2)} ${yy.toFixed(2)} cm /Im${ph.index} Do Q`);
         pages[pages.length - 1].imgs.push(ph.index);
-        cap.forEach((l, n) => text(M + 4, top - boxH - 12 - n * 11, l, 9.5)); // v1.47: not bold
+        cap.forEach((l, n) => text(M + 4, top - boxH - 12 - n * 12, l, 10)); // v1.47: not bold
       });
     }
 

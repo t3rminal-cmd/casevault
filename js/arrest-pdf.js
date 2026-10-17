@@ -59,7 +59,7 @@
     const center = (x, w, yy, s, size, bold) => text(x + (w - width(s, size, bold)) / 2, yy, s, size, bold);
 
     // "Label: value": the label in bold, the value after it (wrapping under itself). -> height used.
-    const kv = (x, yy, label, value, { max = 200, size = 9, vbold = false } = {}) => {
+    const kv = (x, yy, label, value, { max = 200, size = 10, vbold = false } = {}) => {
       const lab = label ? `${label} ` : '';
       const lw = width(lab, size, true);
       text(x, yy, lab, size, true);
@@ -70,7 +70,7 @@
 
     // v1.45: values in light grey boxes, every label of a list the same width so the boxes line up.
     const BOX = 0.92;
-    const kvList = (x, yy, rows, w, size = 9) => {
+    const kvList = (x, yy, rows, w, size = 10) => {
       const lw = Math.max(...rows.map(([l]) => width(`${l} `, size, true)));
       const vw = Math.max(30, w - lw - 2);
       for (const [l, v] of rows) {
@@ -86,14 +86,14 @@
     };
     // A table in grey rows: cols [[label, from, share]] of the content width.
     const tableRows = (cols, rows, boldCol = -1) => {
-      cols.forEach(([l, f]) => text(CX + CW * f + 2, y - 9, l, 8.5, true));
-      y -= 13;
+      cols.forEach(([l, f]) => text(CX + CW * f + 2, y - 10, l, 10, true));
+      y -= 14;
       for (const r of rows) {
-        const cells = r.map((v, i) => wrap(v || '', 9, CW * cols[i][2] - 8));
-        const h = Math.max(1, ...cells.map((c) => c.length)) * 11.5 + 4;
+        const cells = r.map((v, i) => wrap(v || '', 10, CW * cols[i][2] - 8));
+        const h = Math.max(1, ...cells.map((c) => c.length)) * 13 + 4;
         ensure(h + 2);
         cols.forEach(([, f, sh]) => fill(CX + CW * f + 1, y - h, CW * sh - 2, h, BOX));
-        cells.forEach((ls, i) => ls.forEach((t, j) => text(CX + CW * cols[i][1] + 4, y - 11 - j * 11.5, t, 9, i === boldCol)));
+        cells.forEach((ls, i) => ls.forEach((t, j) => text(CX + CW * cols[i][1] + 4, y - 12 - j * 13, t, 10, i === boldCol)));
         y -= h + 3;
       }
     };
@@ -102,7 +102,7 @@
       for (const t of lines) { ensure(lead + 1); fill(CX, y - lead, CW, lead, BOX); text(CX + 6, y - lead + 3.5, t, size); y -= lead; }
       y -= 3;
     };
-    const band = (label) => { P().bandBox(ops, L, y - 13, INNER, 13); P().navy(ops, () => center(L, INNER, y - 9.8, label, 9, true)); y -= 13; };
+    const band = (label) => { P().bandBox(ops, L, y - 17, INNER, 17); P().navy(ops, () => center(L, INNER, y - 12.6, label, 12, true)); y -= 17; }; // v1.142: headers 12 pt
 
     const newPage = () => {
       ops = []; sigs = [];
@@ -167,8 +167,8 @@
       newPage();
       if (open) { seg = { label: open.label, top: y }; y -= 4; }
     };
-    const subBand = (s, right = '') => { fill(L + TAB + 2, y - 12, INNER - TAB - 3, 12, 0.85); text(CX, y - 9, s, 9, true); if (right) text(CX + 321, y - 9, right, 9, true); y -= 14; };
-    const big = (s) => { text(CX + 14, y - 14, s, 9.5, true); y -= 22; };
+    const subBand = (s, right = '') => { fill(L + TAB + 2, y - 14, INNER - TAB - 3, 14, 0.85); text(CX, y - 10.5, s, 10, true); if (right) text(CX + 321, y - 10.5, right, 10, true); y -= 16; };
+    const big = (s) => { text(CX + 14, y - 14, s, 10, true); y -= 22; };
 
     const yn = (s) => clean(s) || '';
     const typeCode = (s) => ({ Felony: 'F', Misdemeanor: 'M' }[clean(s)] || clean(s));
@@ -183,13 +183,13 @@
       const top = y;
       const c1 = CX; const c1w = CW * 0.5; const c2 = CX + c1w + 8; const c2w = CW * 0.26; const c3 = c2 + c2w + 6; const c3w = CX + CW - c3;
       let ly = y - 9;
-      text(c1, ly, 'Name:', 9, true); text(c1 + width('Name: ', 9, true), ly, reportName(a), 11, true); ly -= 16;
+      text(c1, ly, 'Name:', 10, true); text(c1 + width('Name: ', 10, true), ly, reportName(a), 12, true); ly -= 16;
       ly = kvList(c1, ly, [['Res:', a.address], ['Beat:', a.beatResidence], ['DOB:', US(a.dob)], ['Age:', age ? `${age} years` : ''], ['POB:', a.pob], ['DLN:', a.idNumber], ['Phone:', a.phone], ['Armed With:', a.armedWith]], c1w);
       // The description, one item a line, in one grey column.
       const desc = [a.sex, a.race, a.height, a.weight, a.eyes && `${clean(a.eyes)} Eyes`, a.hair && `${clean(a.hair)} Hair`, a.hairStyle && `${clean(a.hairStyle)} Hair Style`, a.complexion && `${clean(a.complexion)} Complexion`].map(clean).filter(Boolean);
-      const dl = desc.flatMap((d) => wrap(d, 9, c2w - 8));
+      const dl = desc.flatMap((d) => wrap(d, 10, c2w - 8));
       let ry = top - 9;
-      if (dl.length) { fill(c2, ry - (dl.length - 1) * 12.5 - 3.5, c2w, dl.length * 12.5 + 1, BOX); for (const l of dl) { text(c2 + 4, ry, l, 9); ry -= 12.5; } }
+      if (dl.length) { fill(c2, ry - (dl.length - 1) * 13.5 - 3.5, c2w, dl.length * 13.5 + 1, BOX); for (const l of dl) { text(c2 + 4, ry, l, 10); ry -= 13.5; } }
       const ph = photos[n];
       const blockH = Math.max(ph ? 140 : 118, top - Math.min(ly, ry) + 6);
       line(c2 - 5, top + 4, c2 - 5, top - blockH, 0.6);
@@ -253,8 +253,8 @@
         ensure(70);
         const t0 = y; const w1 = (CW - 24) * 0.42; const w2 = (CW - 24) * 0.3; const w3 = (CW - 24) * 0.28;
         const x2 = CX + w1 + 12; const x3 = x2 + w2 + 12;
-        text(CX, y - 9, 'Name:', 9, true);
-        text(CX + width('Name: ', 9, true), y - 9, `${clean(p.name).toUpperCase()}${clean(p.role) ? `  (${clean(p.role)})` : ''}`, 9.5, true);
+        text(CX, y - 9, 'Name:', 10, true);
+        text(CX + width('Name: ', 10, true), y - 9, `${clean(p.name).toUpperCase()}${clean(p.role) ? `  (${clean(p.role)})` : ''}`, 10, true);
         // v1.113: the State of Illinois as victim: its officer, on one line.
         if (C.isStateVictim(p)) { y = kvList(CX, y - 25, [['Officer Name:', p.officer]], CW) - 2; if (i < others.length - 1) { line(CX, y + 2, CX + CW, y + 2, 0.4); y -= 2; } return; }
         const yy0 = y - 25;
@@ -282,7 +282,7 @@
 
       // ---- properties
       startSeg('PROPERTIES', 56);
-      text(CX, y - 9, 'Confiscated Properties :', 9.5, true); y -= 12;
+      text(CX, y - 9, 'Confiscated Properties :', 10, true); y -= 13;
       for (const l of wrap('All confiscated properties are recorded with their inventory numbers; the inventory number retrieves the records of evidence and recovered property.', 7.5, CW, true)) { text(CX, y - 7, l, 7.5, true); y -= 9; }
       y -= 4;
       // v1.114: a row per property (inventory number, description), then any text from before.
@@ -305,7 +305,7 @@
       startSeg('INCIDENT NARRATIVE', 80);
       for (const l of wrap('(The facts for probable cause to arrest AND to substantiate the charges include, but are not limited to, the following)', 8, CW, true)) { text(CX, y - 8, l, 8, true); y -= 10; }
       y -= 3;
-      greyText(clean(a.narrative) ? wrap(P().plain(a.narrative), 9.5, CW - 12) : [''], 9.5, 12);
+      greyText(clean(a.narrative) ? wrap(P().plain(a.narrative), 10, CW - 12) : [''], 10, 13);
       endSeg(80);
 
       // ---- court info and bond info, side by side, the same width
@@ -329,12 +329,12 @@
       for (const l of wrap('I hereby declare and affirm, under penalty of perjury, that the facts stated herein are accurate to the best of my knowledge, information and/or belief.', 7.5, CW - 10, true)) { text(CX, y - 7, l, 7.5, true); y -= 9; }
       y -= 6;
       const person = (label, star, name, right, sign) => {
-        text(CX, y - 10, label, 9, true);
+        text(CX, y - 10, label, 10, true);
         // v1.45: star, name and date in grey boxes on the same columns for every officer.
         fill(CX + 138, y - 14, 42, 14, BOX); fill(CX + 183, y - 14, 132, 14, BOX); fill(CX + 318, y - 14, 110, 14, BOX);
-        text(CX + 141, y - 10, clean(star) ? `#${clean(star)}` : '', 9);
-        wrap(clean(name).toUpperCase(), 9, 126).slice(0, 1).forEach((l) => text(CX + 186, y - 10, l, 9));
-        if (right) text(CX + 321, y - 10, right, 9);
+        text(CX + 141, y - 10, clean(star) ? `#${clean(star)}` : '', 10);
+        wrap(clean(name).toUpperCase(), 10, 126).slice(0, 1).forEach((l) => text(CX + 186, y - 10, l, 10));
+        if (right) text(CX + 321, y - 10, right, 10);
         // The signature field on the right, clear of the date and time.
         if (sign) { const sx = CX + CW - 100; rect(sx, y - 18, 100, 18, 0.5); text(sx + 2, y - 5, 'SIGNATURE', 5.5); sigs.push({ name: sign, rect: [sx + 1, y - 17, sx + 99, y - 7] }); }
         y -= sign ? 22 : 14;

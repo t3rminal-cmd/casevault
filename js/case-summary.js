@@ -43,18 +43,18 @@
         text(PAGE_W - M - bw + 6, y - 26, clean(c.number) || 'None', 12, true);
         y -= 42;
       } else {
-        text(M, y - 10, `CASE SUMMARY${c.number ? ` · ${c.number}` : ''} (continued)`, 9, true);
+        text(M, y - 10, `CASE SUMMARY${c.number ? ` · ${c.number}` : ''} (continued)`, 10, true);
         y -= 20;
       }
     };
     const ensure = (hh) => { if (y - hh < BOTTOM) newPage(); };
     const band = (label) => {
       ensure(40);
-      R.bandBox(ops, M, y - 15, INNER, 15);
-      R.navy(ops, () => text(M + 6, y - 11, label, 9.5, true));
-      y -= 21;
+      R.bandBox(ops, M, y - 18, INNER, 18);
+      R.navy(ops, () => text(M + 6, y - 13.5, label, 12, true));
+      y -= 24;
     };
-    const para = (s, { size = 9.5, bold = false, indent = 0, gap = 2 } = {}) => {
+    const para = (s, { size = 10, bold = false, indent = 0, gap = 2 } = {}) => {
       for (const line of R.wrap(clean(s), size, INNER - indent - 8, bold)) { ensure(size + 3); text(M + 4 + indent, y - size, line, size, bold); y -= size + 3; }
       y -= gap;
     };
@@ -78,29 +78,29 @@
     const colW = INNER / 2;
     for (let i = 0; i < facts.length; i += 2) {
       const pair = facts.slice(i, i + 2);
-      const lines = pair.map(([, v]) => R.wrap(v || '—', 9.5, colW - 92, false));
-      const rowH = Math.max(...lines.map((l) => l.length)) * 12.5 + 5;
+      const lines = pair.map(([, v]) => R.wrap(v || '—', 10, colW - 92, false));
+      const rowH = Math.max(...lines.map((l) => l.length)) * 13 + 5;
       ensure(rowH);
       pair.forEach(([k], j) => {
         const x = M + j * colW;
         fill(x + 84, y - rowH + 2, colW - 90, rowH - 3, 0.94);
-        text(x + 4, y - 11.5, `${k}:`, 8.5, true);
-        lines[j].forEach((l, n) => text(x + 88, y - 11.5 - n * 12.5, l, 9.5));
+        text(x + 4, y - 11.5, `${k}:`, 10, true);
+        lines[j].forEach((l, n) => text(x + 88, y - 11.5 - n * 13, l, 10));
       });
       y -= rowH;
     }
-    if (c.closure && clean(c.closure.note)) { y -= 2; para(`Closing note: ${c.closure.note}`, { size: 9 }); }
+    if (c.closure && clean(c.closure.note)) { y -= 2; para(`Closing note: ${c.closure.note}`, { size: 10 }); }
     y -= 6;
 
     // Arrestees and their charges.
     const people = ((arrest && arrest.arrestees) || []).filter((a) => K().arresteeName(a));
     band(`ARRESTEES AND CHARGES (${people.length})`);
-    if (!people.length) para('No arrestees entered.', { size: 9.5 });
+    if (!people.length) para('No arrestees entered.', { size: 10.5 });
     for (const a of people) {
       para(K().arresteeName(a), { size: 10, bold: true, gap: 0 });
       const charges = K().chargesText(a.charges);
-      if (charges) charges.split('\n').forEach((l) => para(l, { size: 9, indent: 10, gap: 0 }));
-      else para('No charges entered.', { size: 9, indent: 10, gap: 0 });
+      if (charges) charges.split('\n').forEach((l) => para(l, { size: 10, indent: 10, gap: 0 }));
+      else para('No charges entered.', { size: 10, indent: 10, gap: 0 });
       y -= 4;
     }
     y -= 4;
@@ -108,37 +108,37 @@
     // Exhibits (the Draft tab's evidence).
     const ex = fields ? (F().normalize(fields).evidence || []) : [];
     band(`EXHIBITS (${ex.length})`);
-    if (!ex.length) para('No exhibits entered on the Draft tab.', { size: 9.5 });
-    for (const e of ex) para(F().exhibitLine(e), { size: 9, gap: 0 });
+    if (!ex.length) para('No exhibits entered on the Draft tab.', { size: 10.5 });
+    for (const e of ex) para(F().exhibitLine(e), { size: 10, gap: 0 });
     y -= 6;
 
     // Timeline.
     const events = ((timeline && timeline.events) || []).slice().sort((a, b) => `${a.date || ''}${a.time || ''}`.localeCompare(`${b.date || ''}${b.time || ''}`));
     band(`TIMELINE (${events.length})`);
-    if (!events.length) para('No timeline events.', { size: 9.5 });
+    if (!events.length) para('No timeline events.', { size: 10.5 });
     for (const ev of events) {
       const when = `${ev.date ? fmt(ev.date) : 'No date'}${ev.time ? ` ${ev.time}` : ''}`;
       const tag = ev.kind === 'deadline' ? (ev.done ? ' [deadline, done]' : ' [deadline]') : '';
-      const lines = R.wrap(`${clean(ev.title) || 'Event'}${tag}`, 9, INNER - 150, false);
-      ensure(lines.length * 12 + 2);
-      text(M + 4, y - 9, when, 8.5, true);
-      lines.forEach((l, n) => text(M + 140, y - 9 - n * 12, l, 9));
-      y -= lines.length * 12 + 2;
+      const lines = R.wrap(`${clean(ev.title) || 'Event'}${tag}`, 10, INNER - 150, false);
+      ensure(lines.length * 13 + 2);
+      text(M + 4, y - 9, when, 10, true);
+      lines.forEach((l, n) => text(M + 140, y - 9 - n * 13, l, 10));
+      y -= lines.length * 13 + 2;
     }
     y -= 6;
 
     // Case history.
     band(`CASE HISTORY (${history.length})`);
-    if (!history.length) para('Nothing recorded.', { size: 9.5 });
+    if (!history.length) para('Nothing recorded.', { size: 10.5 });
     for (const r of history) {
       const t = r.at ? new Date(r.at) : null;
       const p2 = (n) => String(n).padStart(2, '0');
       const when = t && !Number.isNaN(t.getTime()) ? `${fmt(`${t.getFullYear()}-${p2(t.getMonth() + 1)}-${p2(t.getDate())}`)} ${p2(t.getHours())}${p2(t.getMinutes())}` : r.day ? fmt(r.day) : '';
-      const lines = R.wrap(clean(r.what), 9, INNER - 150, false);
-      ensure(lines.length * 12 + 2);
-      text(M + 4, y - 9, when, 8.5, true);
-      lines.forEach((l, n) => text(M + 140, y - 9 - n * 12, l, 9));
-      y -= lines.length * 12 + 2;
+      const lines = R.wrap(clean(r.what), 10, INNER - 150, false);
+      ensure(lines.length * 13 + 2);
+      text(M + 4, y - 9, when, 10, true);
+      lines.forEach((l, n) => text(M + 140, y - 9 - n * 13, l, 10));
+      y -= lines.length * 13 + 2;
     }
 
     pages.forEach((pg, i) => {
