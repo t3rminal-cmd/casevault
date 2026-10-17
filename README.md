@@ -15,10 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.142
+## What's New in v1.143
 
-- **Timeline:** Arrest events (type and from the Arrest Report) in red with handcuffs
-- **Fonts:** app text 11 pt / small 10 pt / headers 12 pt; PDF text 10 pt / headers 12 pt
+- **Arrest Report:** no stray "null"
+- **Timeline:** arrests under the matching suspect (one filter each, handcuffs on arrested suspects)
 
 ## What CaseVault Does
 

@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.142)
+
+- **Timeline:** Arrest events (type and from the Arrest Report) in red with handcuffs
+- **Fonts:** app text 11 pt / small 10 pt / headers 12 pt; PDF text 10 pt / headers 12 pt
+
 ## Features (v1.141)
 
 - **Find:** Ctrl+K finds certificates (course, who gave it) and Other Files by name

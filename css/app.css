@@ -4124,3 +4124,5 @@ table.op-cases-table td.op-closing { width: 9.5rem; min-width: 9.5rem; line-heig
 .tl-cuffs { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
 .tl-modern .tl-item.arrest .tl-body, .tl-modern .tl-item.arrest.tl-colored:not(.overdue) .tl-body { border-left: 6px solid var(--danger); background: color-mix(in srgb, var(--danger) 6%, var(--surface)); }
 html .tl-modern .tl-item.arrest::before, html .tl-modern .tl-item.arrest.tl-colored:not(.overdue)::before { background: var(--danger); box-shadow: 0 0 0 2px var(--danger); border-radius: 0 !important; }
+.tl-legend-cuffs { display: inline-flex; color: var(--danger); } /* v1.143: this suspect was arrested */
+.tl-legend-cuffs .tl-cuffs { width: .95em; height: .95em; }

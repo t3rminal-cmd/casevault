@@ -213,6 +213,11 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.143
+
+- **Arrest Report: no more "null":** the word null showed on the Arrest Report tab under the arrestees (where nothing was meant to be). Gone; a check of every page now makes sure no "null", "undefined" or "NaN" shows anywhere
+- **Timeline: arrests under their suspect:** an arrest from the Arrest Report goes under the suspect it is about, even when the name is written another way ("Johnathan Q Doe" on the Arrest Report, "DOE, Johnathan" on the Timeline), so each suspect has one filter, not two. Filtering by the suspect shows their arrest with their other events, and their filter shows small red handcuffs when they were arrested. The arrest's title keeps the name from the Arrest Report
+
 ### What's new in v1.142
 
 - **Arrests stand out on the Timeline:** a new event Type **Arrest** with a red **ARREST** badge with handcuffs, a red square on the line (the others are round) and a thick red edge, whatever the suspect's colour (their name box keeps it)
@@ -226,13 +231,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Cards or List for every folder:** each Other Files or Mission folder has **Cards | List** beside Close. Cards show each file as a same-size card with a picture of its first page (PDFs and photos). The choice is kept on this PC for each folder. Training starts as Cards, the others as a List
 - **Timeline → Group by Suspect:** the button beside Buy Summary shows each suspect's events together under their name, in their colour, with a count. Events without a suspect come last under **No Suspect**. Click again to go back to date order; the choice is kept on this PC. **Print Timeline** follows it. Without grouping, the PDF now has its own **Suspect** column on the right, so the names line up
 - **PDFs without a letterhead:** when no department letterhead is set (Settings → Letterhead), Reports, Arrest Reports, Timelines, Case Summaries, Year Summaries, Training Records and Link Charts show a slim header with the CaseVault vault mark instead of a blank space. With a letterhead, nothing changes
-
-### What's new in v1.140
-
-- **Certificate details (Training):** the pencil on a certificate card opens **Certificate Details**: Course, Given By, Date Completed, Hours and Expires. The card then shows the course name, the date completed and the hours, and when it expires. These details are kept with the vault (Training\.training.json) and are removed when the certificate is deleted
-- **Renewal reminders:** a certificate with an expiry date shows in **Needs Attention** 90 days and 30 days before it expires, and in red once it has expired ("Certificate Expired · 7 days ago"). Its card says **Renew in N days** or **Expired**. Click the reminder to go to Training
-- **Training Record (PDF):** the **Training Record** button in Training lists every course with its date, hours and expiry, and the total hours, with your letterhead and name (from My Profile). Tick **Add the certificates after the list** to put each certificate's pages behind the list, one per page
-- **{{training}} in Drafts:** a template can use **{{training}}** for the Training & Experience paragraph ("Your Affiant has completed the following training: Basic Narcotics Investigations (Example Police Academy, March 4, 2024, 40 hours); …. In total, your Affiant has completed 48 hours of training."). Also **{{training.list}}** (one course a line), **{{training.hours}}** and **{{training.count}}**. They are listed under **Your training** in the placeholder help
 
 ### Earlier versions
 
