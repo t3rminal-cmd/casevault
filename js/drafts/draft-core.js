@@ -208,6 +208,8 @@
       g('Contacts', ['case.officer.name', 'case.officer.email', 'case.officer.phone', 'case.prosecutor.title', 'case.prosecutor.name', 'case.prosecutor.email', 'case.prosecutor.phone']),
       g('Date', ['today', 'today.iso']),
       g('You', AFFIANT_FIELDS.map((k) => `affiant.${k}`)),
+      // v1.140: from Other Files → Training (js/training.js).
+      g('Your training', ['training', 'training.list', 'training.hours', 'training.count']),
       g('Arrest details', ['arrest.name', 'arrest.dob', 'arrest.description', 'arrest.charges', 'arrest.names', 'arrest.count',
         ...arrestKeys.filter((k) => !['dob'].includes(k)).map((k) => `arrest.${k}`), 'arrest.property', 'arrest.phoneCalls', 'arrest.notes']
         .filter((k, i, all) => all.indexOf(k) === i)),

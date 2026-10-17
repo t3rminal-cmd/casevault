@@ -23,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.139.0';
+  const APP_VERSION = '1.140.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -1371,7 +1371,29 @@ const Vault = (() => {
     await FS.writeJSON(dir, file, list);
   }
   async function readShared(key, folder, base) { return FS.getFile(await sharedDir(key, folder), base); }
-  async function deleteShared(key, folder, base) { await FS.remove(await sharedDir(key, folder), base); }
+  async function deleteShared(key, folder, base) {
+    await FS.remove(await sharedDir(key, folder), base);
+    // v1.140: a certificate's details go with it.
+    if (key === 'other' && folder === 'Training') { const m = await readTraining(); if (m[base]) { delete m[base]; await saveTraining(m); } }
+  }
+  /** v1.140: the certificates' details in Other Files → Training, as .training.json (hidden from the
+   * file list): { "<file name>": { course, provider, date, hours, expires } }. */
+  async function readTraining() {
+    const dir = await sharedDir('other', 'Training').catch(() => null);
+    const v = dir ? await FS.readJSON(dir, '.training.json').catch(() => null) : null;
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  }
+  async function saveTraining(meta) {
+    const dir = await sharedDir('other', 'Training', true);
+    await FS.writeJSON(dir, '.training.json', meta || {});
+  }
+  /** v1.140: the Training certificates with their details (CVTraining.rows), newest first. */
+  async function trainingRows() {
+    const T = typeof module !== 'undefined' && module.exports ? require('./training.js') : globalThis.CVTraining;
+    if (!T) return [];
+    const files = await listShared('other', 'Training').catch(() => []);
+    return T.rows(files, files.length ? await readTraining() : {});
+  }
 
   async function readFile(id, path) {
     const { folder, base } = CVCaseFiles.splitPath(path);
@@ -1900,7 +1922,7 @@ const Vault = (() => {
     createCase, getCase, saveCase, deleteCase, restoreCaseFromBackup, listDeleted, restoreDeleted, purgeDeleted, BIN_DAYS,
     listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
     archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS,
-    OP_FOLDERS, OTHER_FOLDERS, readOpVehicles, saveOpVehicles, readOpList, saveOpList, otherCustomFolders, addOtherFolder, removeOtherFolder, listShared, addShared, readShared, deleteShared, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
+    OP_FOLDERS, OTHER_FOLDERS, readOpVehicles, saveOpVehicles, readOpList, saveOpList, otherCustomFolders, addOtherFolder, removeOtherFolder, listShared, addShared, readShared, deleteShared, readTraining, saveTraining, trainingRows, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
     lockerHeader, lockerRead, lockerWrite, lockerRemove,
     getNotes, saveNotes, listChats, readChat, saveChat, deleteChat,
     getTimeline, saveTimeline, sortEvents,

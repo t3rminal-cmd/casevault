@@ -225,7 +225,7 @@ test('every listed placeholder has a value source', () => {
   const C = require('../js/closing.js');
   const keys = [...C.ARRESTEE_FIELDS, ...C.ARREST_FIELDS].map((f) => f.key);
   const groups = D.placeholderGroups(keys);
-  const ctx = D.templateContext({}, new Date(2026, 8, 29), null, { ...C.arrestContext(C.emptyArrest()), ...C.closureContext(null) });
+  const ctx = D.templateContext({}, new Date(2026, 8, 29), null, { ...C.arrestContext(C.emptyArrest()), ...C.closureContext(null), ...require('../js/training.js').context([]) });
   for (const k of groups.flatMap((g) => g.keys)) {
     if (k.startsWith('confirm:')) continue;
     assert.ok(Object.prototype.hasOwnProperty.call(ctx, k), k);

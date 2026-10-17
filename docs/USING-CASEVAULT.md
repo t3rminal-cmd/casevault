@@ -213,6 +213,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.140
+
+- **Certificate details (Training):** the pencil on a certificate card opens **Certificate Details**: Course, Given By, Date Completed, Hours and Expires. The card then shows the course name, the date completed and the hours, and when it expires. These details are kept with the vault (Training\.training.json) and are removed when the certificate is deleted
+- **Renewal reminders:** a certificate with an expiry date shows in **Needs Attention** 90 days and 30 days before it expires, and in red once it has expired ("Certificate Expired · 7 days ago"). Its card says **Renew in N days** or **Expired**. Click the reminder to go to Training
+- **Training Record (PDF):** the **Training Record** button in Training lists every course with its date, hours and expiry, and the total hours, with your letterhead and name (from My Profile). Tick **Add the certificates after the list** to put each certificate's pages behind the list, one per page
+- **{{training}} in Drafts:** a template can use **{{training}}** for the Training & Experience paragraph ("Your Affiant has completed the following training: Basic Narcotics Investigations (Example Police Academy, March 4, 2024, 40 hours); …. In total, your Affiant has completed 48 hours of training."). Also **{{training.list}}** (one course a line), **{{training.hours}}** and **{{training.count}}**. They are listed under **Your training** in the placeholder help
+
 ### What's new in v1.139
 
 - **Favicon and app icon:** the vault door, on navy with gold bolts, in the browser tab, the taskbar and the unlock screen
@@ -223,12 +230,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 - **Timeline:** an event's suspect now shows on the right of its box, in a name box the same width on every event, so the names line up down the timeline. Long names wrap instead of being cut off
 - **Top-left logo:** the vault door from the banner. Its handle turns a quarter when the mouse is over CaseVault
-
-### What's new in v1.137
-
-- **Home page:** the Year Summary tile has its icon; the Ask AI tile is gone (Ask AI is the round button in the lower corner)
-- **Top bar:** the Network, Local AI, Memory, SSD and Power Off icons no longer have words under them. Their colours still show the state, and holding the mouse over one says what it is
-- **Banner:** the shield is replaced with a vault door whose handle turns now and then, as if unlocking. It stays still when Windows is set to show fewer animations
 
 ### Earlier versions
 
