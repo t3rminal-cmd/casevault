@@ -588,7 +588,7 @@ input.pin { width: 6.5em; letter-spacing: .2em; }
 .sugg-text { background: var(--accent-soft); color: var(--text); border-radius: 3px; padding: 0 .1em; cursor: pointer; }
 .sugg-text:hover { outline: 1px solid var(--accent); }
 .sugg-foot { font-size: var(--fs-tiny); color: var(--muted); }
-.sugg-foot kbd { font-size: .68rem; }
+.sugg-foot kbd { font-size: var(--fs-small); }
 
 .confirm-panel { position: sticky; top: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .75rem 1rem; max-height: calc(75vh / var(--z, 1)); overflow-y: auto; }
 .confirm-panel h3 { display: flex; align-items: center; gap: .5rem; margin-bottom: .3rem; }
@@ -827,7 +827,7 @@ table.files td.fname { min-width: 14rem; }
    the Vault panel with its section list, and the Reference screens.
    ===================================================================== */
 
-body { font-size: 15px; letter-spacing: .005em; transition: background-color .2s, color .2s; }
+body { font-size: var(--fs-text); letter-spacing: .005em; transition: background-color .2s, color .2s; }
 h1, h2, h3 { font-weight: 600; letter-spacing: -.005em; }
 
 /* icons */
@@ -1547,7 +1547,7 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 .rf-page { --font-doc: var(--font); }
 .rf-section, .rf-actions { font-family: "Segoe UI", Calibri, system-ui, Arial, sans-serif; }
 .rf-section .field > span, .rf-section label.field > span:first-child { font-size: var(--fs-small); font-weight: 600; letter-spacing: .01em; color: var(--muted); white-space: normal; overflow-wrap: anywhere; }
-.rf-section input, .rf-section select, .rf-section textarea { font-family: "Segoe UI", Calibri, system-ui, Arial, sans-serif; font-size: 15px; }
+.rf-section input, .rf-section select, .rf-section textarea { font-family: "Segoe UI", Calibri, system-ui, Arial, sans-serif; font-size: var(--fs-text); }
 .rf-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .5rem 0 .2rem; }
 .rf-lines { display: grid; gap: .45rem; }
 .rf-lines > .field { display: grid; grid-template-columns: minmax(11rem, 17rem) minmax(0, 1fr); align-items: center; gap: .9rem; margin: 0; }
@@ -1597,7 +1597,7 @@ body.resizing-sidebar { cursor: col-resize; user-select: none; }
 .rf-include input { width: 1.15rem; height: 1.15rem; margin: 0; accent-color: var(--accent); cursor: pointer; }
 .rf-section.rf-off { opacity: .6; padding-bottom: .75rem; }
 .rf-section.rf-off .rf-head { margin-bottom: 0; }
-.rf-section.rf-off h3::after { content: "Not in the report"; margin-left: .6rem; font-size: .75rem; font-weight: 400; color: var(--muted); }
+.rf-section.rf-off h3::after { content: "Not in the report"; margin-left: .6rem; font-size: var(--fs-small); font-weight: 400; color: var(--muted); }
 .rf-body[hidden] { display: none; }
 .rf-list { margin-top: 1.1rem; }
 .rf-list h4 { margin: 0 0 .5rem; font-size: var(--fs-text); }
@@ -1745,14 +1745,14 @@ body.notes-open .toasts { right: auto; left: 1rem; }
    it), so no browser clips it; same font and weight as every other box. */
 .date-field, .field > span.date-field, .time-field, .field > span.time-field {
   align-items: center; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface);
-  font: inherit; font-size: 1rem; font-weight: 400; color: var(--text); letter-spacing: normal; transition: border-color .15s, box-shadow .15s;
+  font: inherit; font-size: var(--fs-text); font-weight: 400; color: var(--text); letter-spacing: normal; transition: border-color .15s, box-shadow .15s;
 }
 .date-field:focus-within, .time-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 .2rem var(--accent-soft); }
 .date-field .date-text, .time-field .time-text { border: 0; box-shadow: none !important; background: transparent; padding-right: .25rem; font-weight: 400; color: var(--text); }
 .date-field .date-text:focus, .time-field .time-text:focus { outline: none; }
 .date-field .date-btn, .time-field .time-btn { position: static; transform: none; flex: 0 0 auto; width: 1.9rem; height: 1.9rem; margin: 0 .15rem 0 0; }
 
-.rf-section .field > span.date-field, .rf-section .field > span.time-field { font-size: 15px; font-weight: 400; color: var(--text); letter-spacing: normal; }
+.rf-section .field > span.date-field, .rf-section .field > span.time-field { font-size: var(--fs-text); font-weight: 400; color: var(--text); letter-spacing: normal; }
 .time-field .time-mode { flex: 0 0 auto; border: 0; background: var(--surface-2); color: var(--muted); font: 600 var(--fs-tiny)/1 var(--font); padding: .25rem .25rem; border-radius: .35rem; cursor: pointer; margin-left: .1rem; }
 .time-field .time-mode:hover { color: var(--accent); background: var(--accent-soft); }
 .time-field .time-mode:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -1805,7 +1805,7 @@ body.notes-open .toasts { right: auto; left: 1rem; }
 .rf-item-head { display: flex; align-items: center; gap: .6rem; }
 .rf-item-head > .icon-btn { margin-left: auto; }
 .rf-item-unknown .date-field { opacity: .5; }
-.rf-section .field > span.rf-with-btn, .rf-section .field > span.rf-measure { font-size: 15px; font-weight: 400; color: var(--text); letter-spacing: normal; }
+.rf-section .field > span.rf-with-btn, .rf-section .field > span.rf-measure { font-size: var(--fs-text); font-weight: 400; color: var(--text); letter-spacing: normal; }
 .rf-section .field > span.rf-measure > .rf-unit { font-size: var(--fs-small); font-weight: 400; color: var(--muted); }
 .rf-item-grid.rf-grid-narcotics { grid-template-columns: minmax(0, 1.8fr) minmax(0, .8fr) minmax(0, .8fr) minmax(0, 1fr) minmax(0, 1.9fr); }
 
@@ -3431,7 +3431,7 @@ html .tl-item.deadline::before { transform: none; }
    button is boxed like Discovery; a folder's files can be arranged from the line above the table. */
 .files-table-wrap td.fadded { line-height: 1.25; }
 .fadded-day, .fadded-time { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fadded-time { font-size: .78em; opacity: .85; }
+.fadded-time { font-size: var(--fs-small); opacity: .85; }
 .files-where-row { display: flex; align-items: center; gap: .8rem; }
 .files-where-row .files-where { flex: 1; min-width: 0; }
 .files-where-row .files-arrange { flex: none; }
@@ -3606,7 +3606,7 @@ html .tl-item.deadline::before { transform: none; }
 .shortcuts-table td:first-child { width: 8rem; }
 .shortcuts-table kbd { display: inline-block; min-width: 1.6rem; padding: 1px 7px; border: 1px solid var(--box-edge, var(--border)); border-bottom-width: 2px; background: var(--surface-2); font: inherit; font-size: .8rem; font-weight: 700; text-align: center; }
 /* v1.85: Beta tag (Templates, Checks, Document Anonymizer). */
-.beta-tag { display: inline-block; margin-left: 6px; padding: 0 5px; font-size: .62rem; font-weight: 700; line-height: 1.5; letter-spacing: .08em; text-transform: uppercase; color: #92400e; background: #fef3c7; border: 1px solid #f59e0b; vertical-align: middle; }
+.beta-tag { display: inline-block; margin-left: 6px; padding: 0 5px; font-size: var(--fs-tiny); font-weight: 700; line-height: 1.5; letter-spacing: .08em; text-transform: uppercase; color: #92400e; background: #fef3c7; border: 1px solid #f59e0b; vertical-align: middle; }
 [data-theme="dark"] .beta-tag { color: #fde68a; background: #3a2a05; border-color: var(--warn); }
 .backup-drives { grid-template-columns: minmax(0, 1fr); }
 
@@ -4118,3 +4118,9 @@ table.op-cases-table td.op-closing { width: 9.5rem; min-width: 9.5rem; line-heig
 .view-switch .view-btn + .view-btn { margin-left: -1px; }
 .view-switch .view-btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); position: relative; }
 .tl-grouped .tl-who { display: none; } /* v1.141: the group heading names the suspect */
+/* v1.142: an Arrest stands out on the Timeline: a red badge with handcuffs, a red square on the line
+   (the others are round) and a thick red edge, whatever the suspect's colour (their name box keeps it). */
+.badge.arrest { display: inline-flex; align-items: center; gap: .3rem; background: var(--danger-soft); color: var(--danger); font-weight: 700; }
+.tl-cuffs { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.tl-modern .tl-item.arrest .tl-body, .tl-modern .tl-item.arrest.tl-colored:not(.overdue) .tl-body { border-left: 6px solid var(--danger); background: color-mix(in srgb, var(--danger) 6%, var(--surface)); }
+html .tl-modern .tl-item.arrest::before, html .tl-modern .tl-item.arrest.tl-colored:not(.overdue)::before { background: var(--danger); box-shadow: 0 0 0 2px var(--danger); border-radius: 0 !important; }

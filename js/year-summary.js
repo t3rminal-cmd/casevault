@@ -92,29 +92,29 @@
         { y -= R.letterhead(ops, lh, M, y, INNER, 'helvetica'); if (lh && lh.logo) pages[0].imgs.push(lh.logo.index); }
         R.navy(ops, () => text(M, y - 18, `YEAR SUMMARY ${s.year}`, 18, true));
         y -= 34;
-      } else { text(M, y - 10, `YEAR SUMMARY ${s.year} (continued)`, 9, true); y -= 20; }
+      } else { text(M, y - 10, `YEAR SUMMARY ${s.year} (continued)`, 10, true); y -= 20; }
     };
     const ensure = (hh) => { if (y - hh < BOTTOM) newPage(); };
-    const band = (label) => { ensure(40); R.bandBox(ops, M, y - 15, INNER, 15); R.navy(ops, () => text(M + 6, y - 11, label, 9.5, true)); y -= 21; };
+    const band = (label) => { ensure(40); R.bandBox(ops, M, y - 18, INNER, 18); R.navy(ops, () => text(M + 6, y - 13.5, label, 12, true)); y -= 24; };
     const row = (cells, cols, { bold = false, shade = false } = {}) => {
       ensure(14);
-      if (shade) fill(M, y - 12, INNER, 13, 0.94);
-      cells.forEach((v, i) => text(M + 4 + INNER * cols[i], y - 9.5, v, 9, bold));
+      if (shade) fill(M, y - 13, INNER, 14, 0.94);
+      cells.forEach((v, i) => text(M + 4 + INNER * cols[i], y - 9.5, v, 10, bold));
       y -= 14;
     };
-    const para = (t, size = 9.5) => { for (const line of R.wrap(clean(t), size, INNER - 8, false)) { ensure(size + 3); text(M + 4, y - size, line, size); y -= size + 3; } y -= 2; };
+    const para = (t, size = 10) => { for (const line of R.wrap(clean(t), size, INNER - 8, false)) { ensure(size + 3); text(M + 4, y - size, line, size); y -= size + 3; } y -= 2; };
 
     newPage();
     band('CASES');
     const C3 = [0, 0.3, 0.42];
     row(['', 'Count', 'Case numbers'], C3, { bold: true });
     for (const [label, list] of [['Opened', s.opened], ['Closed', s.closed], ['Archived', s.archived]]) {
-      const lines = R.wrap(list.join(', ') || '—', 9, INNER * 0.56, false);
-      ensure(lines.length * 12 + 2);
+      const lines = R.wrap(list.join(', ') || '—', 10, INNER * 0.56, false);
+      ensure(lines.length * 13 + 2);
       fill(M, y - 12, INNER, 13, 0.94);
-      text(M + 4, y - 9.5, label, 9, true); text(M + 4 + INNER * 0.3, y - 9.5, String(list.length), 9, true);
-      lines.forEach((l, n) => text(M + 4 + INNER * 0.42, y - 9.5 - n * 12, l, 9));
-      y -= lines.length * 12 + 4;
+      text(M + 4, y - 9.5, label, 10, true); text(M + 4 + INNER * 0.3, y - 9.5, String(list.length), 10, true);
+      lines.forEach((l, n) => text(M + 4 + INNER * 0.42, y - 9.5 - n * 13, l, 10));
+      y -= lines.length * 13 + 4;
     }
     y -= 6;
     band(`ARRESTS (${s.arrests})`);
@@ -128,12 +128,12 @@
     if (s.topCharges.length) {
       row(['Most common charges', 'Counts'], [0, 0.88], { bold: true });
       s.topCharges.forEach(([label, n], i) => {
-        const lines = R.wrap(label, 9, INNER * 0.84, false);
-        ensure(lines.length * 12 + 2);
-        if (i % 2 === 0) fill(M, y - 12 - (lines.length - 1) * 12, INNER, lines.length * 12 + 1, 0.96);
-        lines.forEach((l, k) => text(M + 4, y - 9.5 - k * 12, l, 9));
-        text(M + 4 + INNER * 0.88, y - 9.5, String(n), 9, true);
-        y -= lines.length * 12 + 2;
+        const lines = R.wrap(label, 10, INNER * 0.84, false);
+        ensure(lines.length * 13 + 2);
+        if (i % 2 === 0) fill(M, y - 12 - (lines.length - 1) * 13, INNER, lines.length * 13 + 1, 0.96);
+        lines.forEach((l, k) => text(M + 4, y - 9.5 - k * 13, l, 10));
+        text(M + 4 + INNER * 0.88, y - 9.5, String(n), 10, true);
+        y -= lines.length * 13 + 2;
       });
     } else para('No charges entered on Arrest Reports this year.');
     y -= 6;
@@ -144,7 +144,7 @@
       s.narcotics.forEach((n, i) => row([n.drug, `${n.total || '—'}${n.unit ? ` ${n.unit}` : ''}`, String(n.count)], CN, { shade: i % 2 === 0 }));
     } else para('No narcotics entered on Arrest Reports this year.');
     y -= 4;
-    para('Counted from the case index (dates opened, closed and archived) and the Arrest Reports (arrest date, charges, recovered narcotics). Cases in Recently Deleted are not counted.', 7.5);
+    para('Counted from the case index (dates opened, closed and archived) and the Arrest Reports (arrest date, charges, recovered narcotics). Cases in Recently Deleted are not counted.', 10);
 
     pages.forEach((pg, i) => {
       const t = `Page ${i + 1} of ${pages.length}`;

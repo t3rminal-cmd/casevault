@@ -371,7 +371,7 @@ test('v1.47: exhibit photo captions are not bold, on any line', () => {
   const d = F.normalize({ evidence: [{ number: 1, type: 'Narcotics', description: 'x' }] });
   const caption = 'Exhibit 1a: One knotted plastic bag containing a white powder purchased by the undercover officer during the controlled purchase at the example residence porch';
   const pages = P.layout(d, { photos: [{ w: 100, h: 80, index: 0, caption }] });
-  const capOps = pages.flatMap((p) => p.ops).filter((o) => / 9\.5 Tf /.test(o));
+  const capOps = pages.flatMap((p) => p.ops).filter((o) => / 10 Tf / .test(o) && /(Exhibit 1a|purchase|porch)/.test(o)); // v1.142: 10 pt
   assert.ok(capOps.length >= 2, 'the caption wraps to two lines');
   assert.ok(capOps.every((o) => o.includes('/F1 ')), 'regular font throughout');
 });

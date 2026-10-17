@@ -3,6 +3,19 @@
 'use strict';
 
 (function (root) {
+  /** v1.142: a small pair of handcuffs for the Arrest badge (drawn, so it follows the badge's colour). */
+  function cuffs() {
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 16 16'); svg.setAttribute('class', 'tl-cuffs'); svg.setAttribute('aria-hidden', 'true');
+    for (const [tag, a] of [['circle', { cx: 4.5, cy: 10.5, r: 3.2 }], ['circle', { cx: 11.5, cy: 10.5, r: 3.2 }], ['path', { d: 'M4.5 7.3V5.2a1.4 1.4 0 0 1 2.8 0M11.5 7.3V5.2a1.4 1.4 0 0 0-2.8 0M7.3 5.2h1.4' }]]) {
+      const el = document.createElementNS(NS, tag);
+      for (const [k, v] of Object.entries(a)) el.setAttribute(k, v);
+      svg.append(el);
+    }
+    return svg;
+  }
+
   function init(kit) {
     const { operationCases, state, h, today, Save, field, dueLabel, fmtDate, confirmDialog, openDialog, icon: I, toast, opOf } = kit;
 
@@ -29,13 +42,33 @@
         if (!full) { try { full = await Vault.getCase(m.id); } catch { /* moved */ } }
         for (const sx of (full && full.suspects) || []) if (sx && !sx.notIdentified && String(sx.name || '').trim()) suspectNames.push(String(sx.name).trim());
       }
+      // v1.142: each case number's Arrest Report: every arrestee with a name and an arrest date shows
+      // on the Timeline by itself (an Arrest event, read from the report; edited there, not here).
+      const arrests = new Map();
+      for (const m of members) {
+        const a = await Vault.readCaseJSON(m.id, 'arrest.json').catch(() => null);
+        if (a && Array.isArray(a.arrestees)) arrests.set(m.id, a);
+      }
       if (token !== state.renderToken) return;
+      const K = root.CVClosing;
+      const autoArrests = (caseId, own) => {
+        const a = arrests.get(caseId);
+        if (!a || !K) return [];
+        return K.normalizeArrest(a).arrestees.map((x, i) => ({ x, i })).filter(({ x }) => K.arresteeName(x) && /^\d{4}-\d{2}-\d{2}$/.test(x.date || ''))
+          .map(({ x, i }) => {
+            const name = K.arresteeName(x);
+            const charges = (x.charges || []).filter((ch) => String(ch.statute || '').trim() || String(ch.description || '').trim()).map((ch) => [ch.statute, ch.description].filter((v) => String(v || '').trim()).join(' ')).join('; ');
+            return { id: `arrest-${caseId}-${i}`, auto: true, kind: 'arrest', date: x.date, time: String(x.time || '').trim(), title: `Arrest of ${name}`, suspect: name, note: charges ? `Charged: ${charges}` : '', color: '' };
+          })
+          // An Arrest event you typed yourself for the same person on the same day stands for it.
+          .filter((ev) => !own.some((o) => o.kind === 'arrest' && o.date === ev.date && O.suspectKey(o.suspect) === O.suspectKey(ev.suspect)));
+      };
       let suspectFilter = ''; // a suspect key: only their events
 
       const f = {
         date: h('input', { type: 'date', required: true, value: today() }),
         time: CVTimeField.create({ label: 'Time' }),
-        kind: h('select', {}, h('option', { value: 'event' }, 'Event'), h('option', { value: 'buy' }, 'Buy'), h('option', { value: 'deadline' }, 'Deadline')),
+        kind: h('select', {}, h('option', { value: 'event' }, 'Event'), h('option', { value: 'buy' }, 'Buy'), h('option', { value: 'arrest' }, 'Arrest'), h('option', { value: 'deadline' }, 'Deadline')),
         title: h('input', { required: true, maxlength: 200, 'aria-label': 'Title', class: 'tl-title-input' }),
         note: h('textarea', { rows: 2, maxlength: 4000, 'aria-label': 'Note' }),
         caseSel: h('select', { 'aria-label': 'Case number' }, [...tls.keys()].map((id) => h('option', { value: id, selected: id === c.id }, numberOf(id)))),
@@ -239,7 +272,7 @@
       tools.prepend(groupBtn);
 
       function draw() {
-        const everything = CVOperation.mergeEvents([...tls.entries()].map(([caseId, t]) => ({ caseId, number: numberOf(caseId), events: t.events })));
+        const everything = CVOperation.mergeEvents([...tls.entries()].map(([caseId, t]) => ({ caseId, number: numberOf(caseId), events: [...t.events, ...autoArrests(caseId, t.events)] })));
         const colors = O.suspectColors(everything);
         drawLegend(colors);
         const now = today();
@@ -293,7 +326,7 @@
             h('div', { class: 'tl-body' }, h('div', { class: 'tl-main' },
               h('div', { class: 'tl-title' },
                 done,
-                h('span', { class: `badge ${ev.kind}` }, isDeadline ? 'Deadline' : ev.kind === 'buy' ? 'Buy' : 'Event'),
+                ev.kind === 'arrest' ? h('span', { class: 'badge arrest' }, cuffs(), 'Arrest') : h('span', { class: `badge ${ev.kind}` }, isDeadline ? 'Deadline' : ev.kind === 'buy' ? 'Buy' : 'Event'),
                 many ? h('span', { class: `tl-case${caseId === c.id ? ' current' : ''}`, title: caseId === c.id ? 'This case number' : 'Another case number of this mission' }, numberOf(caseId)) : null,
                 h('strong', {}, ev.title),
                 due && h('span', { class: `due ${due.cls}` }, due.text)),
@@ -301,7 +334,7 @@
               ev.note && h('div', { class: 'tl-note' }, ev.note)),
               // v1.138: the suspect on the right of the box, every name the same width so they line up.
               ev.suspect ? h('div', { class: 'tl-who' }, h('span', { class: 'tl-suspect', title: 'Suspect' }, ev.suspect)) : null),
-            h('div', { class: 'tl-actions' },
+            ev.auto ? h('div', { class: 'tl-actions' }, h('a', { class: 'btn small ghost', href: `#/case/${encodeURIComponent(caseId)}/arrest`, title: 'From the Arrest Report: change it there' }, 'Arrest Report')) : h('div', { class: 'tl-actions' },
               h('button', { class: 'btn small ghost', type: 'button', onclick: () => {
                 editing = { id: ev.id, caseId };
                 f.date.value = ev.date; f.time.value = ev.time || ''; f.kind.value = ev.kind;

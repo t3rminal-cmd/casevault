@@ -15,12 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.141
+## What's New in v1.142
 
-- **Find:** Ctrl+K finds certificates (course, who gave it) and Other Files by name
-- **Cards / List:** every folder can show its files as same-size cards or a list (kept per folder on this PC)
-- **Timeline:** Group by Suspect, on screen and in the PDF; the PDF's Suspect column lines up
-- **PDFs:** the vault mark in the header when no letterhead is set
+- **Timeline:** Arrest events (type and from the Arrest Report) in red with handcuffs
+- **Fonts:** app text 11 pt / small 10 pt / headers 12 pt; PDF text 10 pt / headers 12 pt
 
 ## What CaseVault Does
 

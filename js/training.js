@@ -102,38 +102,38 @@
         { y -= R.letterhead(ops, lh, M, y, INNER, 'helvetica'); if (lh && lh.logo) pages[0].imgs.push(lh.logo.index); }
         R.navy(ops, () => text(M, y - 18, 'TRAINING RECORD', 18, true));
         y -= 26;
-        if (clean(opts.name)) { text(M, y - 10, clean(opts.name), 11, true); y -= 16; }
+        if (clean(opts.name)) { text(M, y - 11, clean(opts.name), 12, true); y -= 18; }
         y -= 6;
-      } else { text(M, y - 10, 'TRAINING RECORD (continued)', 9, true); y -= 20; }
+      } else { text(M, y - 10, 'TRAINING RECORD (continued)', 10, true); y -= 20; }
     };
     const ensure = (hh) => { if (y - hh < BOTTOM) newPage(false); };
-    const band = (label) => { ensure(40); R.bandBox(ops, M, y - 15, INNER, 15); R.navy(ops, () => text(M + 6, y - 11, label, 9.5, true)); y -= 21; };
+    const band = (label) => { ensure(40); R.bandBox(ops, M, y - 18, INNER, 18); R.navy(ops, () => text(M + 6, y - 13.5, label, 12, true)); y -= 24; };
     // Columns: course (and provider under it) | completed | hours | expires.
-    const C = [0, 0.5, 0.68, 0.78];
-    const head = () => { fill(M, y - 12, INNER, 13, 0.94); ['Course', 'Completed', 'Hours', 'Expires'].forEach((t, i) => text(M + 4 + INNER * C[i], y - 9.5, t, 9, true)); y -= 16; };
+    const C = [0, 0.46, 0.65, 0.76];
+    const head = () => { fill(M, y - 12, INNER, 13, 0.94); ['Course', 'Completed', 'Hours', 'Expires'].forEach((t, i) => text(M + 4 + INNER * C[i], y - 9.5, t, 10, true)); y -= 16; };
 
     newPage(true);
     const total = totalHours(list);
     band(`COURSES (${list.length})${total ? ` · ${hoursText(total)}` : ''}`);
-    if (!list.length) { text(M + 4, y - 10, 'No certificates in Training yet.', 9.5); y -= 16; }
+    if (!list.length) { text(M + 4, y - 10, 'No certificates in Training yet.', 10); y -= 16; }
     else {
       head();
       list.forEach((r, i) => {
-        const cl = R.wrap(r.course, 9, INNER * 0.5, true);
-        const pl = r.provider ? R.wrap(r.provider, 8, INNER * 0.5, false) : [];
+        const cl = R.wrap(r.course, 10, INNER * 0.44, true);
+        const pl = r.provider ? R.wrap(r.provider, 10, INNER * 0.44, false) : [];
         const st = notice(r, opts.today || '');
-        const hh = Math.max(cl.length * 11 + pl.length * 10, st === 'expired' ? 21 : 0) + 4;
+        const hh = Math.max(cl.length * 13 + pl.length * 12, st === 'expired' ? 25 : 0) + 4;
         if (y - hh < BOTTOM) { newPage(false); head(); }
         if (i % 2 === 1) fill(M, y - hh + 2, INNER, hh, 0.97);
-        cl.forEach((l, k) => text(M + 4, y - 9.5 - k * 11, l, 9, true));
-        pl.forEach((l, k) => text(M + 4, y - 9.5 - cl.length * 11 - k * 10, l, 8));
-        text(M + 4 + INNER * C[1], y - 9.5, longDate(r.date) || '—', 9);
-        text(M + 4 + INNER * C[2], y - 9.5, r.hours || '—', 9);
-        text(M + 4 + INNER * C[3], y - 9.5, r.expires ? longDate(r.expires) : '—', 9, st === 'expired');
-        if (st === 'expired') text(M + 4 + INNER * C[3], y - 19.5, 'EXPIRED', 8, true);
+        cl.forEach((l, k) => text(M + 4, y - 10 - k * 13, l, 10, true));
+        pl.forEach((l, k) => text(M + 4, y - 10 - cl.length * 13 - k * 12, l, 10));
+        text(M + 4 + INNER * C[1], y - 9.5, longDate(r.date) || '—', 10);
+        text(M + 4 + INNER * C[2], y - 9.5, r.hours || '—', 10);
+        text(M + 4 + INNER * C[3], y - 9.5, r.expires ? longDate(r.expires) : '—', 10, st === 'expired');
+        if (st === 'expired') text(M + 4 + INNER * C[3], y - 22.5, 'EXPIRED', 10, true);
         y -= hh + 2;
       });
-      if (total) { ensure(18); fill(M, y - 12, INNER, 13, 0.94); text(M + 4, y - 9.5, 'Total hours', 9, true); text(M + 4 + INNER * C[2], y - 9.5, String(total), 9, true); y -= 18; }
+      if (total) { ensure(18); fill(M, y - 12, INNER, 13, 0.94); text(M + 4, y - 9.5, 'Total hours', 10, true); text(M + 4 + INNER * C[2], y - 9.5, String(total), 10, true); y -= 18; }
     }
     // The certificates, one page each, as large as fits under their caption.
     for (const a of opts.attachments || []) {

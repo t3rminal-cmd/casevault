@@ -213,6 +213,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.142
+
+- **Arrests stand out on the Timeline:** a new event Type **Arrest** with a red **ARREST** badge with handcuffs, a red square on the line (the others are round) and a thick red edge, whatever the suspect's colour (their name box keeps it)
+- **Arrests added by themselves:** every arrestee on the case's **Arrest Report** with a name and an Arrest Date shows on the Timeline as "Arrest of NAME" on that date (with the time and charges), with an **Arrest Report** button instead of Edit / Delete: change it on the Arrest Report. An Arrest event you add yourself for the same person on the same day takes its place, so it isn't listed twice. Mission timelines show the arrests of every case number. In the Timeline PDF an arrest is marked **[ARREST]** with a red square and rule
+- **Bigger, even text in CaseVault:** text 11 pt, small text (labels, hints, badges) 10 pt and never smaller, headers 12 pt, on every page
+- **Bigger, even text in the PDFs:** text 10 pt and section headers 12 pt on the Supplementary Report, Arrest Report, Timeline, Case Summary, Year Summary and Training Record. The small captions inside the form boxes stay small, as on a printed form, so the forms keep their layout
+
 ### What's new in v1.141
 
 - **Find (Ctrl+K) finds certificates and Other Files:** type part of a course name, who gave it or a file name ("narcotics academy", "lab request"). Certificates show as **Certificate** with who gave it and when; other files as **File** with their folder. Enter opens it. **Training** and **Training Record** are in Find too
@@ -226,12 +233,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Renewal reminders:** a certificate with an expiry date shows in **Needs Attention** 90 days and 30 days before it expires, and in red once it has expired ("Certificate Expired · 7 days ago"). Its card says **Renew in N days** or **Expired**. Click the reminder to go to Training
 - **Training Record (PDF):** the **Training Record** button in Training lists every course with its date, hours and expiry, and the total hours, with your letterhead and name (from My Profile). Tick **Add the certificates after the list** to put each certificate's pages behind the list, one per page
 - **{{training}} in Drafts:** a template can use **{{training}}** for the Training & Experience paragraph ("Your Affiant has completed the following training: Basic Narcotics Investigations (Example Police Academy, March 4, 2024, 40 hours); …. In total, your Affiant has completed 48 hours of training."). Also **{{training.list}}** (one course a line), **{{training.hours}}** and **{{training.count}}**. They are listed under **Your training** in the placeholder help
-
-### What's new in v1.139
-
-- **Favicon and app icon:** the vault door, on navy with gold bolts, in the browser tab, the taskbar and the unlock screen
-- **Other Files:** the folders show their name only (USPIS Files, DEA Files, INET Files, Training, Other and your own), so the tiles match. Holding the mouse over one still says what it is
-- **Training → certificates:** each file in Training shows as a card of the same size with a picture of its first page. Landscape and portrait certificates sit in the same frame, the cards line up in even rows, and the full name shows under each picture (without .pdf). Click a card to open it; the bin deletes it. Photos (JPG, PNG) show the same way. The pictures are made in memory while CaseVault is open; nothing is saved on the PC
 
 ### Earlier versions
 
