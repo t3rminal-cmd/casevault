@@ -836,7 +836,7 @@
   const notesOf = (c) => (c.notes ? [c.notes] : Array.isArray(c.activity) ? c.activity.filter((a) => a.note).map((a) => a.what) : []);
   // v1.97: Subject Names read "LAST, First" in every list (the saved name is kept as typed).
   const subj = (c) => CVOperation.subjectLabel(c && c.subject);
-  const matchesSearch = (c, q) => !q || [c.title, c.subject, subj(c), c.fileNumber, c.number, c.agencyNumber, c.client, c.status, CVOperation.opLabel(Vault.operationOf(c)), ...(c.tags || []), ...notesOf(c)].join(' ').toLowerCase().includes(q);
+  const matchesSearch = (c, q) => !q || [c.title, c.subject, subj(c), c.fileNumber, c.number, c.agencyNumber, c.client, c.status, CVOperation.opLabel(Vault.operationOf(c)), c.suspectGroup || '', ...(c.tags || []), ...notesOf(c)].join(' ').toLowerCase().includes(q);
 
   // Cases in cases/ (the archive has its own section below the list): open and pending first,
   // then closed, each most recently changed first. Typing a status in the search box finds those.
@@ -934,7 +934,7 @@
     const meta = op && group.partial ? `${cases.length} closed · ongoing`
       : op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : `${group.total} case${group.total === 1 ? '' : 's'}`; // v1.101: the title already says independent
     const det = h('details', { class: `op-group${op ? '' : ' general-group'}${bell ? ' has-reminder' : ''}`, open },
-      h('summary', { class: 'op-head', title: op && group.partial ? `${label}: the closed cases of this Mission, which is still going on. They stay in its folder in MISSION FILES too.` : op ? `${label}: open the Mission` : 'INDEPENDENT CASES: the cases not in a Mission. Click to open General Files, the list of every case.' },
+      h('summary', { class: 'op-head', title: op && group.partial ? `${label}: the closed cases of this Mission, which is still going on. They stay in its folder in OPERATION CASES too.` : op ? `${label}: open the Mission` : 'INDEPENDENT CASES: the cases not in a Mission. Click to open General Files, the list of every case.' },
         // v1.101: INDEPENDENT CASES has no room beside its name: its bell sits on the folder's corner.
         h('span', { class: `op-folder${op ? '' : ' gf-icon'}` }, I(op ? 'op-folder' : 'folder-fill'),
           bell && !op ? h('span', { class: 'case-bell folder-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
@@ -949,7 +949,7 @@
         // v1.83: GENERAL FILES has a + for a new case, like MISSION FILES has one for a new Mission.
         !op && !group.closed ? h('button', { class: 'icon-btn mission-add general-add', type: 'button', title: 'New independent case (not in a Mission)', onclick: (e) => { e.preventDefault(); e.stopPropagation(); newCase(); } }, I('plus-lg'), h('span', { class: 'sr-only' }, 'New case')) : null,
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
-      h('ul', { class: 'op-cases' }, cases.length ? cases.map((c) => caseItem(c, true, { dim: !!op && !group.closed && c.status === 'Closed' })) : [h('li', { class: 'empty muted small' }, op ? 'No cases in this Mission yet.' : 'No independent cases.')]));
+      h('ul', { class: 'op-cases' }, cases.length ? (op ? cases.map((c) => caseItem(c, true, { dim: !group.closed && c.status === 'Closed' })) : independentItems(cases)) : [h('li', { class: 'empty muted small' }, op ? 'No cases in this Mission yet.' : 'No independent cases.')]));
     // A click on the folder's name opens the Operation (or General Files); the arrow folds it.
     det.querySelector('summary').addEventListener('click', (e) => {
       if (e.target.closest('.op-chev') || e.target.closest('.general-add')) return;
@@ -962,6 +962,55 @@
       sideFold.set(key, det.open);
     });
     return h('li', { class: 'op-item' }, det);
+  }
+  /** v1.145: INDEPENDENT CASES: the cases in a suspect folder together under the person's name
+   * (A to Z, folded like the other folders), then the cases in none. Not a Mission: each case stays
+   * on its own; the folder only keeps them together. */
+  function independentItems(cases) {
+    const byGroup = new Map();
+    for (const c of cases) if (c.suspectGroup) byGroup.set(c.suspectGroup, [...(byGroup.get(c.suspectGroup) || []), c]);
+    const folders = [...byGroup.keys()].sort((a, b) => a.localeCompare(b)).map((g) => {
+      const list = byGroup.get(g);
+      const key = `sg:${g}`;
+      const open = sideFold.has(key) ? sideFold.get(key) : !!$('#case-search').value.trim() || list.some((c) => c.id === state.caseId);
+      const det = h('details', { class: 'suspect-group', open },
+        h('summary', { class: 'sg-head', title: `${g}: ${plural(list.length, 'case')} about this person, kept together (not a Mission)` },
+          h('span', { class: 'sg-name' }, g), h('span', { class: 'sg-icon' }, I('person-badge')), h('span', { class: 'sg-count' }, String(list.length)), h('span', { class: 'op-chev' }, I('chevron-down'))),
+        h('ul', { class: 'op-cases sg-cases' }, list.map((c) => caseItem(c, true))));
+      det.querySelector('summary').addEventListener('click', (e) => { e.preventDefault(); det.open = !det.open; sideFold.set(key, det.open); });
+      return h('li', { class: 'sg-item' }, det);
+    });
+    return [...folders, ...cases.filter((c) => !c.suspectGroup).map((c) => caseItem(c, true))];
+  }
+  /** v1.145: Suspect Folder (an independent case's Details): keep it with other cases about the same
+   * person under that person's name in INDEPENDENT CASES, without making a Mission. -> true when changed. */
+  async function suspectFolderDialog(c) {
+    await Save.flushAll();
+    const cur = c.suspectGroup || '';
+    const names = [...new Set([...Vault.suspectGroups(), c.subject, ...(c.suspects || []).filter((x) => x && !x.notIdentified).map((x) => x.name)]
+      .map((x) => String(x || '').trim()).filter(Boolean))];
+    const want = await openDialog((close) => {
+      const input = h('input', { type: 'text', maxlength: 80, value: cur || String(c.subject || '').trim(), list: 'sg-names', autofocus: 'true', spellcheck: 'false', placeholder: 'The suspect\'s name' });
+      return h('form', { class: 'sg-form', onsubmit: (e) => { e.preventDefault(); close(input.value.replace(/\s+/g, ' ').trim()); } },
+        h('h2', { icon: 'person-badge' }, 'Suspect Folder'),
+        h('p', { class: 'muted small' }, 'Keep this case with the other independent cases about the same person, in a folder with the person\'s name under INDEPENDENT CASES. It is not a Mission: each case stays on its own. Pick a name already used to join those cases.'),
+        field('Suspect Name', input),
+        h('datalist', { id: 'sg-names' }, names.map((n) => h('option', { value: n }))),
+        h('div', { class: 'dialog-actions' },
+          cur ? h('button', { class: 'btn', type: 'button', icon: 'x-circle', onclick: () => close('') }, 'Take Out of Folder') : null,
+          h('button', { class: 'btn', type: 'button', onclick: () => close(undefined) }, 'Cancel'),
+          h('button', { class: 'btn primary', type: 'submit', icon: 'person-badge' }, 'Save')));
+    });
+    if (want === undefined || want === cur) return false;
+    // The same person written another way ("doe, john") joins the folder already there ("DOE, John").
+    const same = want ? Vault.suspectGroups().find((g) => CVOperation.suspectKey(g) === CVOperation.suspectKey(want)) : '';
+    const name = same || want;
+    try { await Save.track(`sg:${c.id}`, () => Vault.setSuspectGroup(c.id, name)); } catch (err) { toast(err && err.message ? err.message : 'The suspect folder could not be saved.', 'error', 6000); return false; }
+    c.suspectGroup = name;
+    if (state.caseObj && state.caseObj.id === c.id) state.caseObj.suspectGroup = name;
+    renderCaseList();
+    toast(name ? `Case ${c.number || ''} is in the suspect folder ${name}.` : `Case ${c.number || ''} was taken out of its suspect folder.`, 'success', 3000);
+    return true;
   }
   const fileKey = (f) => String(f || '').trim();
   const byFileNumber = (a, b) => {
@@ -1009,7 +1058,7 @@
   }
   const isClosedGroup = (g) => g.closed;
 
-  // v1.78: MISSION FILES in the case list: every open Mission folder inside it, a + for a new one.
+  // v1.78: MISSION FILES in the case list (v1.145: named OPERATION CASES): every open Mission folder inside it, a + for a new one.
   function missionFolder(groups) {
     const key = 'missions';
     const searching = !!$('#case-search').value.trim();
@@ -1022,10 +1071,10 @@
       if (op) { renderCaseList(); location.hash = `#/operation/${encodeURIComponent(op.id)}`; }
     } }, I('plus-lg'), h('span', { class: 'sr-only' }, 'New Mission'));
     const det = h('details', { class: `op-group mission-group${bell ? ' has-reminder' : ''}`, open: open || searching },
-      h('summary', { class: 'op-head', title: 'MISSION FILES: every Mission. Click to see them all; the arrow folds the folder.' },
+      h('summary', { class: 'op-head', title: 'OPERATION CASES: every Mission. Click to see them all; the arrow folds the folder.' },
         h('span', { class: 'op-folder mission-icon' }, I('folder-mission')),
         h('span', { class: 'op-text' },
-          h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, 'MISSION FILES'), bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
+          h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, 'OPERATION CASES'), bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
           h('span', { class: 'op-meta muted' }, `${n} mission${n === 1 ? '' : 's'}`)),
         add,
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
@@ -1510,15 +1559,13 @@
         const d = CVTraining.normalize(meta[f.base]);
         const st = CVTraining.notice(d, today());
         const left = CVTraining.daysLeft(d, today());
-        const facts = [d.date ? `Completed ${shortDate(d.date)}` : '', d.hours ? `${d.hours} hr${d.hours === '1' ? '' : 's'}` : ''].filter(Boolean)
-          .flatMap((t, i) => [i ? ' · ' : '', h('span', { class: 'nowrap' }, t)]).filter(Boolean);
+        // v1.145: the card shows the course name and, when there is one, the expiry; the rest is in the pencil's details.
         const exp = d.expires ? h('span', { class: `cert-exp${st ? ` cert-exp-${st}` : ''}`, title: `Expires ${fmtDate(d.expires)}` },
           st === 'expired' ? 'Expired' : st ? `Renew in ${left} day${left === 1 ? '' : 's'}` : `Expires ${shortDate(d.expires)}`) : null;
         return h('div', { class: `cert-card${st ? ` cert-${st}` : ''}`, role: 'listitem', 'data-file': f.base },
           h('button', { type: 'button', class: 'cert-open', title: `Open ${f.base}`, onclick: () => previewFile(reader, f.base) }, art,
-            h('span', { class: 'cert-name' }, CVTraining.courseOf(f.base, d)),
-            h('span', { class: 'cert-facts muted small' }, ...(facts.length ? facts : [d.provider || 'Add the details with the pencil'])), exp),
-          h('div', { class: 'cert-foot' }, h('span', { class: 'muted small', title: `${f.base} · ${fmtSize(f.size)} · last updated ${fmtDateTime(f.modified)}` }, `Added ${f.modified ? new Date(f.modified).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}`),
+            h('span', { class: 'cert-name', title: `${f.base} · ${fmtSize(f.size)}${d.date ? ` · completed ${fmtDate(d.date)}` : ''}${d.hours ? ` · ${d.hours} hours` : ''}` }, CVTraining.courseOf(f.base, d)), exp),
+          h('div', { class: 'cert-foot' }, h('span', { class: 'spacer' }),
             h('span', { class: 'cert-tools' },
               h('button', { type: 'button', class: 'icon-btn cert-edit', title: 'Course, date completed, hours and expiry date', onclick: () => editCertificate(f.base, meta, draw) }, I('pencil-square'), h('span', { class: 'sr-only' }, `Details of ${f.base}`)),
               h('button', { type: 'button', class: 'icon-btn danger-icon', title: 'Delete this file', onclick: () => delFile(f) }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${f.base}`)))));
@@ -1949,7 +1996,8 @@
             dup ? h('span', { class: 'dup-flag', title: 'Another case has the same Case Number (made before numbers had to be unique). Nothing was changed.' }, I('exclamation-triangle-fill'), 'Duplicate') : null),
           ...nameCells(c.subject),
           // v1.118: the Mission's number on one line; its name in the hover box.
-          h('td', { class: 'gen-mission' }, op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, title: opLabel(op) }, op.number || op.name || 'Mission') : h('span', { class: 'muted' }, '—')),
+          h('td', { class: 'gen-mission' }, op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, title: opLabel(op) }, op.number || op.name || 'Mission')
+            : c.suspectGroup ? h('span', { class: 'gen-sg', title: `Suspect folder ${c.suspectGroup} (not a Mission)` }, c.suspectGroup, I('person-badge')) : h('span', { class: 'muted' }, '—')),
           h('td', {}, statusPill(arch ? 'Archived' : c.status)),
           h('td', { class: 'nowrap date-cell' }, dateCols(c.opened)),
           h('td', { class: 'nowrap age-cell' }, (() => { const o = openedAge(c.opened); return o ? (o.future ? h('span', { class: 'age-future', title: `${o.ageLong}: the Opened date is in the future. Check it on the Details tab.` }, I('exclamation-triangle-fill'), o.age) : h('span', { title: `${o.days} day${o.days === 1 ? '' : 's'} since it was opened` }, o.ageLong)) : '—'; })()),
@@ -2025,7 +2073,7 @@
    * a one-line description under it, and its button on the right. */
   function panelHead(title, desc, action = '') {
     return h('div', { class: 'section-head ov-head' },
-      h('div', { class: 'ov-head-text' }, h('h2', { class: `section-title caps${/ Files$/i.test(title) ? ' ov-files-title' : ''}` }, h('span', { class: /^Other Files$/i.test(title) ? 'ov-title-wide' : '' }, title)), h('span', { class: 'ov-desc muted small' }, desc)),
+      h('div', { class: 'ov-head-text' }, h('h2', { class: `section-title caps${/ (Files|Cases)$/i.test(title) ? ' ov-files-title' : ''}` }, h('span', { class: /^Other Files$/i.test(title) ? 'ov-title-wide' : '' }, title)), h('span', { class: 'ov-desc muted small' }, desc)),
       h('div', { class: 'spacer' }), action || h('span', { class: 'ov-action-space' }));
   }
   /** v1.74: OTHER FILES with New Folder in its header, like All Cases and All Operations. */
@@ -2127,7 +2175,8 @@
   function archivedSection(cases) {
     const items = cases.filter(isArchivedEntry).map((c) => {
       const r = Vault.ARCHIVE_FOLDERS.find(([k]) => k === c.archiveFolder);
-      return { year: yearOfDate(c.archived || c.closed), folder: r ? { k: r[0], name: r[1], icon: 'folder-archived', group: [c], title: `Archived: ${r[1]}` } : { k: 'other', name: 'Other', icon: 'folder-archived', group: [c], title: 'Archived for another reason' } };
+      const name = Vault.archiveFolderName(r ? r[0] : 'other'); // v1.145: as renamed
+      return { year: yearOfDate(c.archived || c.closed), folder: r ? { k: r[0], name, icon: 'folder-archived', group: [c], title: `Archived: ${name}` } : { k: 'other', name, icon: 'folder-archived', group: [c], title: `${name}: archived for another reason` } };
     });
     const order = [...Vault.ARCHIVE_FOLDERS.map(([k]) => k), 'other'];
     const years = byYear(items).map((y) => ({ ...y, folders: y.folders.sort((a, b) => order.indexOf(a.k) - order.indexOf(b.k)) }));
@@ -2142,7 +2191,28 @@
     const reviewBtn = due.length ? h('button', { class: 'btn small ov-btn-review', type: 'button', icon: 'hourglass-split', title: `Archived ${reviewYears} or more years ago`, onclick: () => archiveReviewDialog(due, reviewYears) }, `Review (${due.length})`) : null;
     return caseFolderSection({ cls: 'archived-section', title: 'Archived', desc: 'Archived cases, by the year they were archived, then by reason. Restore brings one back.', years, icon: 'folder-archived', what: 'archived', st: archFolderState,
       action: h('div', { class: 'ov-head-actions' }, reviewPick, reviewBtn,
+        h('button', { class: 'btn small ov-btn-rename', type: 'button', icon: 'pencil-square', title: 'Give the archive folders your own names. The cases in them stay where they are.', onclick: () => renameArchiveFolders() }, 'Rename Folders'),
         h('button', { class: 'btn small ov-btn-archived', type: 'button', icon: 'folder-archived', title: 'Every archived case, in a list', onclick: () => showGeneralWith('archived') }, 'All Archived')), empty: 'Nothing archived. Archive (on a closed case) moves it here.' });
+  }
+  /** v1.145: Rename Folders (Archived): your own name for each archive folder, kept in vault.json.
+   * Empty puts the standard name back. Only the names change; every case stays in its folder. */
+  async function renameArchiveFolders() {
+    const keys = [...Vault.ARCHIVE_FOLDERS.map(([k, label]) => [k, label]), ['other', 'Other']];
+    const own = { ...(Vault.data.settings.archiveFolderNames || {}) };
+    const names = await openDialog((close) => {
+      const inputs = keys.map(([k, std]) => {
+        const el = h('input', { type: 'text', maxlength: 40, value: own[k] || '', placeholder: std, 'aria-label': `Name for ${std}` });
+        return [k, el, field(`${std} Folder`, el)];
+      });
+      inputs[0][1].setAttribute('autofocus', 'true');
+      return h('form', { class: 'rename-arch-form', onsubmit: (e) => { e.preventDefault(); close(Object.fromEntries(inputs.map(([k, el]) => [k, el.value.trim().slice(0, 40)]).filter(([, v]) => v))); } },
+        h('h2', { icon: 'pencil-square' }, 'Rename Archive Folders'),
+        h('p', { class: 'muted small' }, 'Type a new name for any folder. Leave a box empty to keep the standard name. The cases stay in their folders; only the names change.'),
+        h('div', { class: 'form-grid' }, inputs.map(([, , f]) => f)),
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Save')));
+    });
+    if (!names) return;
+    try { await Save.track('settings', () => Vault.updateSettings({ archiveFolderNames: names })); toast('Archive folders renamed.', 'success', 2500); showDashboard(); } catch { /* reported */ }
   }
   /** v1.136: archived cases archived `years` or more years ago (oldest first); [] when off. */
   function archiveReviewDue(cases, years) {
@@ -2157,7 +2227,7 @@
       h('p', { class: 'muted small' }, `${plural(due.length, 'case')} archived ${years} or more years ago. Check each against your agency's records-retention rules. CaseVault deletes nothing on its own: Delete Case (on the case) moves one to Recently Deleted.`),
       h('table', { class: 'data-table review-table' }, h('thead', {}, h('tr', {}, h('th', {}, 'Case Number'), h('th', {}, 'Subject'), h('th', {}, 'Archived'), h('th', {}, 'Reason'), h('th', {}, ''))),
         h('tbody', {}, due.map((c) => h('tr', {}, h('td', {}, c.number || 'No case number'), h('td', {}, subj(c) || '—'), h('td', { class: 'nowrap' }, fmtDate(c.archived || c.closed)),
-          h('td', {}, (Vault.ARCHIVE_FOLDERS.find(([k]) => k === c.archiveFolder) || [, 'Other'])[1]),
+          h('td', {}, Vault.archiveFolderName(c.archiveFolder || 'other')),
           h('td', {}, h('a', { class: 'btn small', href: caseLink(c, 'details'), onclick: () => close() }, 'Open')))))),
       h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
   }
@@ -2220,7 +2290,7 @@
           h('div', { class: 'spacer' }),
           h('button', { type: 'button', class: 'btn small', onclick: () => newCase(open.op ? { operationId: open.op.id } : {}) }, open.op ? 'Add Case Number' : 'New Case')),
         h('div', { class: 'op-open-cases' }, open.group.length ? open.group.map((c) => overviewCard(c)) : [h('p', { class: 'muted' }, open.op ? 'No cases in this Mission yet. Add Case Number creates one here.' : 'No independent cases.')])) : null;
-      box.replaceChildren(...[panelHead('Mission Files', 'Case numbers worked together as a Mission. Click a folder to open it.', h('div', { class: 'ov-head-actions' },
+      box.replaceChildren(...[panelHead('Operation Cases', 'Case numbers worked together as a Mission. Click a folder to open it.', h('div', { class: 'ov-head-actions' },
           // v1.78: New Mission right here, beside All Missions.
           h('button', { class: 'btn small ov-btn-mission', type: 'button', icon: 'plus-lg', onclick: async () => { const op = await operationDialog(); if (op) { renderCaseList(); location.hash = `#/operation/${encodeURIComponent(op.id)}`; } } }, 'New Mission'),
           h('a', { class: 'btn small ov-btn-mission', href: '#/operations', icon: 'folder-mission' }, 'All Missions'))),
@@ -2815,7 +2885,7 @@
         h('label', { class: 'arch-folder-pick' }, h('span', { class: 'small' }, 'Archive Folder'),
           h('select', { 'aria-label': 'Archive folder', onchange: async (e) => {
             try { await Save.track(`archfolder:${c.id}`, () => Vault.setArchiveFolder(c.id, e.target.value)); c.archiveFolder = e.target.value; renderCaseList(); toast('Moved to the archive folder.', 'success'); } catch (err) { toast(`Not moved: ${err.message}`, 'error'); }
-          } }, [['', 'No Sub-folder'], ...Vault.ARCHIVE_FOLDERS].map(([k, label]) => h('option', { value: k, selected: (c.archiveFolder || '') === k }, label)))),
+          } }, [['', 'No Sub-folder'], ...Vault.ARCHIVE_FOLDERS.map(([k]) => [k, Vault.archiveFolderName(k)])].map(([k, label]) => h('option', { value: k, selected: (c.archiveFolder || '') === k }, label)))),
         h('button', { class: 'btn', type: 'button', icon: 'arrow-counterclockwise', onclick: () => restoreCase(c) }, 'Restore to active cases')) : null,
       // v1.46: the Case Number first, the Subject Name under it, and the Operation it's in.
       h('div', { class: 'case-head' },
@@ -2943,7 +3013,12 @@
         h('div', { class: 'case-op-bar', 'data-ro-ok': archived ? null : 'true' },
           // v1.119: the Mission's name and link are in the header above; here, only where the case is filed.
           h('span', { class: `case-op-label${op ? '' : ' gf-link'}` }, I(op ? 'op-folder' : 'folder-fill'), op ? `Filed in Mission ${op.number || ''}`.trim() : 'General Files: not in a Mission'),
+          // v1.145: an independent case can sit in a suspect folder with the other cases about that person.
+          !op && c.suspectGroup ? h('span', { class: 'case-sg-label', title: 'Suspect folder: kept together with the other independent cases about this person' }, c.suspectGroup, I('person-badge')) : null,
           h('div', { class: 'spacer' }),
+          !op && !archived ? h('button', { class: 'btn small sg-btn', type: 'button', icon: 'person-badge', title: 'Keep this case with the other independent cases about the same person, under the person\'s name (not a Mission)', onclick: async () => {
+            if (await suspectFolderDialog(c)) showCase(c.id, 'details');
+          } }, 'Suspect Folder') : null,
           // v1.50: Move File (it was "Assign to" / "Move to" and Unlink).
           archived ? null : h('button', { class: 'btn small', type: 'button', icon: 'folder-symlink', title: 'Move this case into a Mission, to another one, or back to General Files', onclick: async () => {
             if (await moveCaseDialog(Vault.data.cases.find((x) => x.id === c.id) || c)) { renderCaseList(); showCase(c.id, 'details'); }
@@ -3140,7 +3215,7 @@
       const note = h('textarea', { rows: 2, maxlength: 400, placeholder: 'Why the case is archived', 'aria-label': 'Reason for archiving' });
       const ok = h('button', { class: 'btn primary', type: 'submit', disabled: true }, 'Archive Case');
       const pick = h('div', { class: 'arch-pick', role: 'radiogroup', 'aria-label': 'Reason and archive folder' },
-        [...Vault.ARCHIVE_FOLDERS, ['', 'Other']].map(([k, label]) => h('label', { class: 'arch-opt' },
+        [...Vault.ARCHIVE_FOLDERS.map(([k]) => [k, Vault.archiveFolderName(k)]), ['', Vault.archiveFolderName('other')]].map(([k, label]) => h('label', { class: 'arch-opt' },
           h('input', { type: 'radio', name: 'arch-folder', value: k, checked: passed && k === 'expired' }), I(k ? 'folder-archived' : 'archive'),
           h('span', {}, h('strong', {}, label), h('span', { class: 'muted small block' }, REASONS[k])))));
       const hint = h('p', { class: 'small arch-need' });

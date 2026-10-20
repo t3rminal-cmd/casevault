@@ -213,6 +213,17 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.145
+
+- **Recently Updated:** in each status box the word (Open, Closed…) sits on the left and its icon on the right, in every row the same
+- **Operation Cases:** the MISSION FILES folder (case list and home page) is now called **OPERATION CASES**
+- **Archived → Rename Folders:** give the archive folders (EXPIRED, NOLLE PROSEQUI, PROSECUTION, Other) your own names. Only the names change; every case stays in its folder. Leave a box empty to go back to the standard name
+- **Suspect folders for independent cases:** on an independent case's Details, **Suspect Folder** puts it in a folder with the suspect's name under INDEPENDENT CASES, with the other cases about the same person. It is not a Mission: each case stays on its own. The same name written another way ("doe, john") joins the folder already there. **Take Out of Folder** takes it out; a case moved into a Mission leaves its folder. General Files shows the folder in the Mission column
+- **Training cards:** a certificate card shows just the course name and, when there is one, when it expires (the date completed and hours are in the pencil's details and the hover box)
+- **Password Manager, arranged your way:** the arrows on each row move it up or down; **Sort A to Z** puts the list in order once. The order is kept in the locker
+- **Password Manager, Edit:** each entry has an **Edit** button (with its word) to change the password, username, web address or notes
+- **Password Manager, old passwords:** when you change a password, the old one is kept with the day it changed. **Old (N)** on the row opens the list under it (each hidden until shown, with Copy); the Edit box lists them too, and one can be removed there. Up to 20 are kept per entry, encrypted in the locker like everything else. Covert Accounts keep their old passwords the same way
+
 ### What's new in v1.144
 
 - **Updater: a new look (updater 1.3):** the CaseVault Updater window now looks like CaseVault: off-white and navy, square corners, larger text (11 pt, headings 12 pt), and a navy banner with the vault door whose handle turns while it works
@@ -225,13 +236,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 - **Arrest Report: no more "null":** the word null showed on the Arrest Report tab under the arrestees (where nothing was meant to be). Gone; a check of every page now makes sure no "null", "undefined" or "NaN" shows anywhere
 - **Timeline: arrests under their suspect:** an arrest from the Arrest Report goes under the suspect it is about, even when the name is written another way ("Johnathan Q Doe" on the Arrest Report, "DOE, Johnathan" on the Timeline), so each suspect has one filter, not two. Filtering by the suspect shows their arrest with their other events, and their filter shows small red handcuffs when they were arrested. The arrest's title keeps the name from the Arrest Report
-
-### What's new in v1.142
-
-- **Arrests stand out on the Timeline:** a new event Type **Arrest** with a red **ARREST** badge with handcuffs, a red square on the line (the others are round) and a thick red edge, whatever the suspect's colour (their name box keeps it)
-- **Arrests added by themselves:** every arrestee on the case's **Arrest Report** with a name and an Arrest Date shows on the Timeline as "Arrest of NAME" on that date (with the time and charges), with an **Arrest Report** button instead of Edit / Delete: change it on the Arrest Report. An Arrest event you add yourself for the same person on the same day takes its place, so it isn't listed twice. Mission timelines show the arrests of every case number. In the Timeline PDF an arrest is marked **[ARREST]** with a red square and rule
-- **Bigger, even text in CaseVault:** text 11 pt, small text (labels, hints, badges) 10 pt and never smaller, headers 12 pt, on every page
-- **Bigger, even text in the PDFs:** text 10 pt and section headers 12 pt on the Supplementary Report, Arrest Report, Timeline, Case Summary, Year Summary and Training Record. The small captions inside the form boxes stay small, as on a printed form, so the forms keep their layout
 
 ### Earlier versions
 

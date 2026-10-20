@@ -150,9 +150,45 @@
   const emptyData = () => ({ v: 1, passwords: [], aliases: [], accounts: [], files: [] });
   function normalizeData(d) {
     const x = { ...emptyData(), ...(d && typeof d === 'object' ? d : {}) };
-    for (const t of Object.keys(TABLES)) x[t] = (Array.isArray(x[t]) ? x[t] : []).filter((r) => r && typeof r === 'object').map((r) => ({ id: String(r.id || ''), ...Object.fromEntries(TABLES[t].fields.map(([k]) => [k, String(r[k] == null ? '' : r[k])])) }));
+    for (const t of Object.keys(TABLES)) {
+      const keepsOld = TABLES[t].fields.some(([k]) => k === 'password');
+      x[t] = (Array.isArray(x[t]) ? x[t] : []).filter((r) => r && typeof r === 'object').map((r) => {
+        const row = { id: String(r.id || ''), ...Object.fromEntries(TABLES[t].fields.map(([k]) => [k, String(r[k] == null ? '' : r[k])])) };
+        if (keepsOld) row.history = cleanHistory(r.history); // v1.145: the passwords it had before
+        return row;
+      });
+    }
     x.files = (Array.isArray(x.files) ? x.files : []).filter((f) => f && /^[a-z0-9]{8,40}$/.test(String(f.id || ''))).map((f) => ({ id: String(f.id), name: String(f.name || 'file'), type: String(f.type || ''), size: Number(f.size) || 0, added: String(f.added || ''), label: String(f.label || ''), notes: String(f.notes || '') }));
     return x;
+  }
+  /* v1.145: old passwords. When a password is changed, the one it had goes on top of its history
+   * with the day it stopped being used: [{ password, changed: 'YYYY-MM-DD' }], newest first, 20 at most. */
+  const HISTORY_MAX = 20;
+  function cleanHistory(h) {
+    return (Array.isArray(h) ? h : []).filter((x) => x && typeof x === 'object' && String(x.password || ''))
+      .map((x) => ({ password: String(x.password), changed: /^\d{4}-\d{2}-\d{2}$/.test(String(x.changed || '')) ? String(x.changed) : '' }))
+      .slice(0, HISTORY_MAX);
+  }
+  /** The row as saved: when its password changed, the old one is added to its history. */
+  function withHistory(before, after, today) {
+    const old = before && typeof before === 'object' ? before : {};
+    const history = cleanHistory(after && after.history !== undefined ? after.history : old.history);
+    if (old.password && after.password !== old.password && !(history[0] && history[0].password === old.password)) history.unshift({ password: old.password, changed: today || '' });
+    return { ...after, history: history.slice(0, HISTORY_MAX) };
+  }
+  /** v1.145: the rows in a new order: the row with id one place up (dir -1) or down (+1). */
+  function moveRow(rows, id, dir) {
+    const i = rows.findIndex((r) => r.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= rows.length) return rows;
+    const out = [...rows];
+    [out[i], out[j]] = [out[j], out[i]];
+    return out;
+  }
+  /** v1.145: the rows A to Z by their first column (Site / System, Alias Name, Platform / App). */
+  function sortRows(table, rows) {
+    const k = TABLES[table].fields[0][0];
+    return [...rows].sort((a, b) => String(a[k] || '').localeCompare(String(b[k] || ''), undefined, { sensitivity: 'base', numeric: true }));
   }
   const newId = () => toB32(rand(10)).toLowerCase();
   /** Rows matching every word typed (any column but the secrets). */
@@ -171,5 +207,6 @@
   }
 
   return { ITER, RK_ITER, MIN_PASSWORD, passwordProblem, newRecoveryKey, cleanRecovery, groupRecovery, recoveryLooksRight, create, open, changePassword, newRecovery,
-    encrypt, decrypt, encryptJSON, decryptJSON, TABLES, emptyData, normalizeData, newId, filterRows, generatePassword };
+    encrypt, decrypt, encryptJSON, decryptJSON, TABLES, emptyData, normalizeData, newId, filterRows, generatePassword,
+    HISTORY_MAX, cleanHistory, withHistory, moveRow, sortRows };
 });

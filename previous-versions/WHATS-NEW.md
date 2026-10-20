@@ -4,6 +4,13 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.142
+
+- **Arrests stand out on the Timeline:** a new event Type **Arrest** with a red **ARREST** badge with handcuffs, a red square on the line (the others are round) and a thick red edge, whatever the suspect's colour (their name box keeps it)
+- **Arrests added by themselves:** every arrestee on the case's **Arrest Report** with a name and an Arrest Date shows on the Timeline as "Arrest of NAME" on that date (with the time and charges), with an **Arrest Report** button instead of Edit / Delete: change it on the Arrest Report. An Arrest event you add yourself for the same person on the same day takes its place, so it isn't listed twice. Mission timelines show the arrests of every case number. In the Timeline PDF an arrest is marked **[ARREST]** with a red square and rule
+- **Bigger, even text in CaseVault:** text 11 pt, small text (labels, hints, badges) 10 pt and never smaller, headers 12 pt, on every page
+- **Bigger, even text in the PDFs:** text 10 pt and section headers 12 pt on the Supplementary Report, Arrest Report, Timeline, Case Summary, Year Summary and Training Record. The small captions inside the form boxes stay small, as on a printed form, so the forms keep their layout
+
 ## What's new in v1.141
 
 - **Find (Ctrl+K) finds certificates and Other Files:** type part of a course name, who gave it or a file name ("narcotics academy", "lab request"). Certificates show as **Certificate** with who gave it and when; other files as **File** with their folder. Enter opens it. **Training** and **Training Record** are in Find too
