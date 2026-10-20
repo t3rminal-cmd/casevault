@@ -4162,3 +4162,7 @@ html .tl-modern .tl-item.arrest::before, html .tl-modern .tl-item.arrest.tl-colo
 .locker-hist li { display: flex; align-items: center; gap: .8rem; }
 .locker-hist li > .muted { min-width: 9rem; }
 .edit-hist { margin-top: .8rem; padding: .5rem .7rem; border: 1px solid var(--border); background: var(--surface-2); }
+/* v1.145: with Rename Folders beside it, the Archived buttons wrap instead of squeezing the Review box. */
+.archived-section .ov-head-actions { flex-wrap: wrap; justify-content: flex-end; }
+.archived-section .ov-head-actions > * { flex: none; }
+.archived-section .ov-review-pick { min-width: 11rem; }
