@@ -19,7 +19,9 @@
   const IDLE_MS = 5 * 60 * 1000;
   const CLIP_MS = 30 * 1000;
   const MAX_FILE = 200 * 1024 * 1024;
-  const mem = { key: null, header: null, data: null, idle: null, tab: 'passwords', fails: 0, wait: 0, query: {} };
+  const mem = { key: null, header: null, data: null, idle: null, tab: 'passwords', fails: 0, wait: 0, query: {}, openHist: new Set() };
+  // v1.145: today's date (this PC's), for the day an old password stopped being used.
+  const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
   /* ---------- lock state ---------- */
   function lock(why = '') {
@@ -253,22 +255,45 @@
     const draw = () => {
       mem.query[t] = q.value;
       const list = L().filterRows(t, rows, q.value);
-      tbody.replaceChildren(...(list.length ? list.map((r) => h('tr', {},
-        ...cols.map(([k, label, kind]) => h('td', { class: kind === 'secret' ? 'secret-cell' : '' }, kind === 'secret' ? secretCell(r[k], `${label} for ${r[cols[0][0]] || T.item}`) : (r[k] || h('span', { class: 'muted' }, '—')))),
-        h('td', { class: 'col-actions nowrap' },
-          r.notes || r.backstory ? h('span', { class: 'muted small locker-has-notes', title: r.notes || r.backstory }, I('pencil')) : '',
-          h('button', { type: 'button', class: 'icon-btn', title: `Edit this ${T.item.toLowerCase()}`, onclick: () => editRow(t, r) }, I('pencil'), h('span', { class: 'sr-only' }, 'Edit')),
-          h('button', { type: 'button', class: 'icon-btn danger-icon', title: `Delete this ${T.item.toLowerCase()}`, onclick: async () => {
-            if (!(await ui.confirmDialog({ title: `Delete ${r[cols[0][0]] || T.item}?`, message: `This ${T.item.toLowerCase()} is deleted from the locker.`, confirmText: 'Delete', danger: true }))) return;
-            mem.data[t] = mem.data[t].filter((x) => x !== r);
-            await saveSafe(); render();
-          } }, I('trash3'), h('span', { class: 'sr-only' }, 'Delete')))))
+      // v1.145: arrange the order with the arrows (not while searching); old passwords under the row.
+      const arranging = !q.value.trim() && rows.length > 1;
+      const move = async (r, dir) => { mem.data[t] = L().moveRow(mem.data[t], r.id, dir); await saveSafe(); render(); };
+      tbody.replaceChildren(...(list.length ? list.flatMap((r, i) => {
+        const name = r[cols[0][0]] || T.item;
+        const old = Array.isArray(r.history) ? r.history : [];
+        const histOpen = old.length > 0 && mem.openHist.has(r.id);
+        const row = h('tr', { 'data-id': r.id, class: histOpen ? 'hist-open' : '' },
+          ...cols.map(([k, label, kind]) => h('td', { class: kind === 'secret' ? 'secret-cell' : '' }, kind === 'secret' ? secretCell(r[k], `${label} for ${name}`) : (r[k] || h('span', { class: 'muted' }, '—')))),
+          h('td', { class: 'col-actions nowrap' },
+            r.notes || r.backstory ? h('span', { class: 'muted small locker-has-notes', title: r.notes || r.backstory }, I('journal-text')) : '',
+            old.length ? h('button', { type: 'button', class: `btn small locker-hist-btn${histOpen ? ' active' : ''}`, 'aria-expanded': String(histOpen), title: `The passwords ${name} had before`, onclick: () => {
+              if (mem.openHist.has(r.id)) mem.openHist.delete(r.id); else mem.openHist.add(r.id);
+              draw();
+            } }, `Old (${old.length})`, I(histOpen ? 'chevron-up' : 'clock-history')) : '',
+            h('button', { type: 'button', class: 'btn small locker-edit', title: `Change this ${T.item.toLowerCase()}: a new password, username, address or notes`, onclick: () => editRow(t, r) }, 'Edit', I('pencil-square')),
+            arranging ? h('span', { class: 'locker-move' },
+              h('button', { type: 'button', class: 'icon-btn', title: 'Move up', disabled: i === 0, onclick: () => move(r, -1) }, I('arrow-up'), h('span', { class: 'sr-only' }, `Move ${name} up`)),
+              h('button', { type: 'button', class: 'icon-btn', title: 'Move down', disabled: i === list.length - 1, onclick: () => move(r, 1) }, I('arrow-down'), h('span', { class: 'sr-only' }, `Move ${name} down`))) : '',
+            h('button', { type: 'button', class: 'icon-btn danger-icon', title: `Delete this ${T.item.toLowerCase()}`, onclick: async () => {
+              if (!(await ui.confirmDialog({ title: `Delete ${name}?`, message: `This ${T.item.toLowerCase()} is deleted from the locker${old.length ? ', with its old passwords' : ''}.`, confirmText: 'Delete', danger: true }))) return;
+              mem.data[t] = mem.data[t].filter((x) => x !== r);
+              await saveSafe(); render();
+            } }, I('trash3'), h('span', { class: 'sr-only' }, 'Delete'))));
+        if (!histOpen) return [row];
+        return [row, h('tr', { class: 'locker-hist-row' }, h('td', { colspan: cols.length + 1 },
+          h('div', { class: 'locker-hist' }, h('span', { class: 'locker-hist-title muted small' }, 'Old Passwords, newest first'),
+            h('ul', {}, old.map((x) => h('li', {}, h('span', { class: 'muted small nowrap' }, x.changed ? `Until ${ui.fmtDate(x.changed)}` : 'Earlier'), secretCell(x.password, `Old password for ${name}`)))))))];
+      })
         : [h('tr', {}, h('td', { colspan: cols.length + 1, class: 'muted empty-cell' }, rows.length ? 'Nothing matches.' : `No ${T.title.toLowerCase()} yet. Add ${T.item} to start.`))]));
     };
     q.addEventListener('input', draw);
     draw();
     return h('section', { class: 'locker-section' },
       h('div', { class: 'section-head' }, h('h2', { class: 'section-title caps', icon: T.icon }, T.title), h('div', { class: 'spacer' }), q,
+        // v1.145: put the list in A to Z order once; the arrows on each row arrange it by hand.
+        rows.length > 1 ? h('button', { class: 'btn small', type: 'button', icon: 'list-ol', title: `Put the ${T.title.toLowerCase()} in A to Z order. The arrows on each row move one up or down.`, onclick: async () => {
+          mem.data[t] = L().sortRows(t, mem.data[t]); await saveSafe(); render();
+        } }, 'Sort A to Z') : null,
         h('button', { class: 'btn primary small', type: 'button', icon: 'plus-lg', onclick: () => editRow(t, null) }, `Add ${T.item}`)),
       h('div', { class: 'table-wrap' }, h('table', { class: 'data-table locker-table' },
         h('thead', {}, h('tr', {}, ...cols.map(([, label]) => h('th', {}, label)), h('th', { class: 'col-actions' }, ''))), tbody)));
@@ -306,13 +331,25 @@
         return ui.field(label, box, kind === 'wide' ? 'span-2' : '');
       });
       inputs[0].querySelector('input, textarea').setAttribute('autofocus', 'true');
+      // v1.145: the old passwords of this one (each can be removed); a new password adds the current one.
+      const histBox = h('div', { class: 'locker-hist edit-hist' });
+      const drawHist = () => {
+        const old = draft.history || [];
+        histBox.hidden = !old.length;
+        histBox.replaceChildren(h('span', { class: 'locker-hist-title muted small' }, `Old Passwords (${old.length}). A new password keeps the one it replaces here.`),
+          h('ul', {}, old.map((x, i) => h('li', {}, h('span', { class: 'muted small nowrap' }, x.changed ? `Until ${ui.fmtDate(x.changed)}` : 'Earlier'), secretCell(x.password, 'Old password'),
+            h('button', { type: 'button', class: 'icon-btn danger-icon', title: 'Remove this old password', onclick: () => { draft.history = old.filter((_, j) => j !== i); drawHist(); } }, ui.icon('x-lg'), h('span', { class: 'sr-only' }, 'Remove'))))));
+      };
+      drawHist();
       return h('form', { class: 'locker-form', onsubmit: (e) => { e.preventDefault(); close(true); } },
         h('h2', { icon: T.icon }, row ? `Edit ${T.item}` : `Add ${T.item}`),
         h('div', { class: 'form-grid' }, inputs),
+        T.fields.some(([k]) => k === 'password') ? histBox : null,
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Save')));
     });
     if (!saved || !mem.key) return;
-    const clean = L().normalizeData({ [t]: [{ ...draft, id: draft.id || L().newId() }] })[t][0];
+    let clean = L().normalizeData({ [t]: [{ ...draft, id: draft.id || L().newId() }] })[t][0];
+    if (row && 'history' in clean) clean = L().withHistory(row, clean, todayISO()); // v1.145: keep the old password
     if (row) mem.data[t] = mem.data[t].map((x) => (x === row ? clean : x));
     else mem.data[t].push(clean);
     await saveSafe();

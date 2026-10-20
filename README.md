@@ -15,9 +15,12 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.144
+## What's New in v1.145
 
-- **Updater 1.3:** CaseVault look (navy banner with the vault door, 11/12 pt), Installed → Available strip, What's New before installing (files behind Show Files), Check · Download · Install · Done steps, Open CaseVault when done
+- **Home:** Recently Updated status word left / icon right; MISSION FILES renamed OPERATION CASES; Archived → Rename Folders
+- **Independent cases:** Suspect Folder groups cases about one person under INDEPENDENT CASES (not a Mission)
+- **Training:** cards show the course name and expiry only
+- **Password Manager:** arrange rows (arrows, Sort A to Z), an Edit button, old passwords kept per entry (Old (N))
 
 ## What CaseVault Does
 

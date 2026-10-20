@@ -35,7 +35,8 @@ const mdY = (iso) => `${iso.slice(5, 7)}.${iso.slice(8, 10)}.${iso.slice(0, 4)}`
   // The card: Training opens from the reminder; enter the other certificate's details.
   await p.click('.attention-row.att-cert'); await p.waitForSelector('.cert-grid .cert-card'); await p.waitForTimeout(400);
   const card = p.locator('.cert-card[data-file="Basic Narcotics.pdf"]');
-  ok(/Add the details/.test(await card.innerText()), 'a card without details asks for them');
+  // v1.145: a card without details shows its name only (the pencil adds them).
+  ok((await card.locator('.cert-open').innerText()).trim() === 'Basic Narcotics' && await card.locator('.cert-edit').count() === 1, 'a card without details shows its name, with the pencil');
   await card.locator('.cert-edit').click(); await p.waitForSelector('#dialog[open] .cert-form');
   await p.fill('#dialog[open] input[aria-label="Course"]', 'Basic Narcotics Investigations');
   await p.fill('#dialog[open] input[aria-label="Given By"]', 'Example Police Academy');
@@ -48,7 +49,8 @@ const mdY = (iso) => `${iso.slice(5, 7)}.${iso.slice(8, 10)}.${iso.slice(0, 4)}`
   const saved = await p.evaluate(() => Vault.readTraining());
   ok(saved['Basic Narcotics.pdf'] && saved['Basic Narcotics.pdf'].course === 'Basic Narcotics Investigations' && saved['Basic Narcotics.pdf'].date === '2024-03-04' && saved['Basic Narcotics.pdf'].hours === '40' && saved['Basic Narcotics.pdf'].expires === exp, `saved: ${JSON.stringify(saved['Basic Narcotics.pdf'])}`);
   const txt = (await p.locator('.cert-card[data-file="Basic Narcotics.pdf"]').innerText()).replace(/\s+/g, ' ');
-  ok(/Basic Narcotics Investigations/.test(txt) && /Completed Mar 4, 2024 · 40 hrs/.test(txt) && /Renew in 20 days/.test(txt), `the card shows the details: ${txt}`);
+  // v1.145: the card shows only the course name and the expiry (the rest is in the pencil's details).
+  ok(/Basic Narcotics Investigations/.test(txt) && !/Completed|40 hrs|Added/.test(txt) && /Renew in 20 days/.test(txt), `the card shows the course and expiry: ${txt}`);
   ok(await p.$('.cert-card[data-file="CPR.pdf"].cert-expired .cert-exp-expired') !== null, 'the expired certificate is marked');
   const sizes = await p.$$eval('.cert-card', (x) => x.map((c) => `${Math.round(c.getBoundingClientRect().width)}x${Math.round(c.getBoundingClientRect().height)}`));
   ok(new Set(sizes).size === 1, `the cards are still the same size: ${sizes.join(', ')}`);

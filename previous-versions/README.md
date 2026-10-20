@@ -4,6 +4,10 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.144)
+
+- **Updater 1.3:** CaseVault look (navy banner with the vault door, 11/12 pt), Installed → Available strip, What's New before installing (files behind Show Files), Check · Download · Install · Done steps, Open CaseVault when done
+
 ## Features (v1.143)
 
 - **Arrest Report:** no stray "null"

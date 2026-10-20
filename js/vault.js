@@ -23,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.144.0';
+  const APP_VERSION = '1.145.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -294,6 +294,8 @@ const Vault = (() => {
       // v1.67: the statute of limitations (narcotic charges, 3 years; v1.134: 18 months for misdemeanors) and the archive sub-folder.
       sol: prev?.sol || null,
       archiveFolder: c.archiveFolder || '',
+      // v1.145: independent cases kept together under a suspect's name (not a Mission).
+      suspectGroup: c.suspectGroup || '',
       // v1.90: Case History notes, so the case list search finds them.
       notes: (Array.isArray(c.activity) ? c.activity.filter((a) => a.note && a.what).map((a) => a.what).join(' \n ') : '').slice(0, 4000),
     };
@@ -1019,7 +1021,7 @@ const Vault = (() => {
     const cur = getOperation(entry.operationId);
     if (cur) throw validationError(`Case ${entry.number || entry.title} is already assigned to ${CVOperation.opLabel(cur)}. Unlink it there first.`);
     assertWritable(caseId);
-    const c = await writeLink(caseId, (x) => { x.operationId = op.id; x.operation = { number: op.number, name: op.name }; x.title = CVOperation.caseTitle(x, op); logActivity(x, `Moved into Mission ${CVOperation.opLabel(op)}`); });
+    const c = await writeLink(caseId, (x) => { x.operationId = op.id; x.operation = { number: op.number, name: op.name }; x.suspectGroup = ''; /* v1.145: a Mission case leaves its suspect folder */ x.title = CVOperation.caseTitle(x, op); logActivity(x, `Moved into Mission ${CVOperation.opLabel(op)}`); });
     await saveVault();
     return c;
   }
@@ -1452,6 +1454,35 @@ const Vault = (() => {
 
   /** v1.67: the archive sub-folder of an archived case: 'expired', 'nolle', 'prosecution' or ''. */
   const ARCHIVE_FOLDERS = [['expired', 'EXPIRED'], ['nolle', 'NOLLE PROSEQUI'], ['prosecution', 'PROSECUTION']];
+  /** v1.145: put an independent case in a suspect folder (several cases about one person, kept
+   * together in INDEPENDENT CASES without making a Mission), or take it out (name ''). */
+  function setSuspectGroup(id, name) {
+    assertWritable(id);
+    return serial(`case:${id}`, async () => {
+      const g = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+      const dir = await caseDir(id);
+      const c = await FS.readJSON(dir, 'case.json');
+      if (!c) throw new Error('The case was not found.');
+      if ((c.suspectGroup || '') === g) return c;
+      logActivity(c, g ? `Put in the suspect folder ${g}` : `Taken out of the suspect folder ${c.suspectGroup}`);
+      c.suspectGroup = g;
+      await FS.writeJSON(dir, 'case.json', c);
+      const entry = vault.cases.find((e) => e.id === id);
+      if (entry) entry.suspectGroup = g;
+      await saveVault();
+      return c;
+    });
+  }
+  /** v1.145: the suspect folders in use, A to Z. */
+  const suspectGroups = () => [...new Set((vault?.cases || []).map((c) => c.suspectGroup).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+  /** v1.145: an archive folder's name: yours (Archived → Rename Folders, kept in vault.json) or the
+   * standard one. k: 'expired', 'nolle', 'prosecution' or 'other'. Renaming never moves a case. */
+  function archiveFolderName(k) {
+    const own = vault && vault.settings && vault.settings.archiveFolderNames;
+    const name = own && typeof own[k] === 'string' ? own[k].trim().slice(0, 40) : '';
+    return name || (k === 'other' || !k ? 'Other' : (ARCHIVE_FOLDERS.find(([x]) => x === k) || [, 'Other'])[1]);
+  }
   function setArchiveFolder(id, folder) {
     return serial(`case:${id}`, async () => {
       const f = ARCHIVE_FOLDERS.some(([k]) => k === folder) ? folder : '';
@@ -1921,7 +1952,7 @@ const Vault = (() => {
     backupNow, listBackups, rebuildIndex, updateSettings, fullBackup, recordManualBackup, recordHelperBackup, restoreBackup, readLetterheadLogo, saveLetterheadLogo, deleteLetterheadLogo,
     createCase, getCase, saveCase, deleteCase, restoreCaseFromBackup, listDeleted, restoreDeleted, purgeDeleted, BIN_DAYS,
     listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
-    archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS,
+    archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS, archiveFolderName, setSuspectGroup, suspectGroups,
     OP_FOLDERS, OTHER_FOLDERS, readOpVehicles, saveOpVehicles, readOpList, saveOpList, otherCustomFolders, addOtherFolder, removeOtherFolder, listShared, addShared, readShared, deleteShared, readTraining, saveTraining, trainingRows, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
     lockerHeader, lockerRead, lockerWrite, lockerRemove,
     getNotes, saveNotes, listChats, readChat, saveChat, deleteChat,

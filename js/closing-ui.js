@@ -726,7 +726,7 @@
         if (op.status !== 'Closed') continue;
         const ok = await ui.confirmDialog({
           title: 'Reopen the Mission?',
-          message: `${label} is closed. Reopen the Mission too, so it is back in MISSION FILES with this case?`,
+          message: `${label} is closed. Reopen the Mission too, so it is back in OPERATION CASES with this case?`,
           confirmText: 'Reopen Mission',
           cancelText: 'Keep it closed',
         });

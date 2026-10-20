@@ -4126,3 +4126,39 @@ table.op-cases-table td.op-closing { width: 9.5rem; min-width: 9.5rem; line-heig
 html .tl-modern .tl-item.arrest::before, html .tl-modern .tl-item.arrest.tl-colored:not(.overdue)::before { background: var(--danger); box-shadow: 0 0 0 2px var(--danger); border-radius: 0 !important; }
 .tl-legend-cuffs { display: inline-flex; color: var(--danger); } /* v1.143: this suspect was arrested */
 .tl-legend-cuffs .tl-cuffs { width: .95em; height: .95em; }
+
+/* v1.145: Recently Updated: the status word on the left of its box, the icon on the right. */
+.recent-grid .recent-row .pill { justify-content: space-between; padding-left: .6rem; padding-right: .55rem; }
+/* v1.145: a training card shows the course name and the expiry only; the tools sit on the right. */
+.cert-foot > .spacer { flex: 1; }
+/* v1.145: a suspect folder inside INDEPENDENT CASES: the person's name, the person icon, the count
+   and the arrow; its cases under it, a step in. Not a Mission, so a plain grey row, not a coloured folder. */
+.suspect-group > .sg-head { display: flex; align-items: center; gap: .4rem; list-style: none; margin: .2rem 0; padding: .3rem .45rem; border: 1px solid var(--border); border-left: 3px solid var(--sec-general); background: var(--surface-2); color: var(--text); font-size: var(--fs-small); font-weight: 600; }
+.suspect-group > .sg-head::-webkit-details-marker { display: none; }
+.suspect-group > .sg-head:hover { border-color: var(--sec-general); }
+.suspect-group .sg-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.suspect-group .sg-icon { display: inline-flex; color: var(--sec-general); }
+.suspect-group .sg-icon .bi { width: .95rem; height: .95rem; }
+.suspect-group .sg-count { font-size: var(--fs-tiny); font-weight: 700; color: var(--sec-general); background: color-mix(in srgb, var(--sec-general) 12%, var(--surface)); padding: .02rem .45rem; }
+.suspect-group > .sg-head .op-chev .bi { transition: transform .15s; }
+.suspect-group:not([open]) > .sg-head .op-chev .bi { transform: rotate(-90deg); }
+.suspect-group > .sg-cases { margin: 0 0 .3rem .5rem; padding: 0 0 0 .5rem; border-left: 2px solid color-mix(in srgb, var(--sec-general) 35%, transparent); }
+.case-sg-label, .gen-sg { display: inline-flex; align-items: center; gap: .3rem; font-weight: 600; color: var(--sec-general); }
+.case-sg-label { margin-left: .6rem; padding: .1rem .5rem; border: 1px solid color-mix(in srgb, var(--sec-general) 40%, var(--border)); font-size: var(--fs-small); }
+.case-sg-label .bi, .gen-sg .bi { width: .9rem; height: .9rem; }
+.sg-btn { margin-right: .4rem; }
+/* v1.145: Password Manager: an Edit button with its word, the arrows to arrange the list, and the old
+   passwords of an entry in a row under it (and in its Edit box). */
+.locker-table .col-actions { white-space: nowrap; }
+.locker-table .col-actions > * { vertical-align: middle; }
+.locker-table .locker-edit, .locker-table .locker-hist-btn { margin-left: .3rem; }
+.locker-table .locker-hist-btn.active { border-color: var(--accent); color: var(--accent-strong, var(--accent)); background: var(--accent-soft); }
+.locker-table .locker-move { display: inline-flex; margin-left: .3rem; border: 1px solid var(--border); }
+.locker-table .locker-move .icon-btn:disabled { opacity: .35; }
+.locker-table tr.hist-open > td { border-bottom-color: transparent; }
+.locker-hist-row > td { background: var(--surface-2); padding: .35rem .75rem .55rem; }
+.locker-hist { display: flex; flex-direction: column; gap: .3rem; }
+.locker-hist ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .2rem; }
+.locker-hist li { display: flex; align-items: center; gap: .8rem; }
+.locker-hist li > .muted { min-width: 9rem; }
+.edit-hist { margin-top: .8rem; padding: .5rem .7rem; border: 1px solid var(--border); background: var(--surface-2); }
