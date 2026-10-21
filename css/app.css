@@ -4166,3 +4166,33 @@ html .tl-modern .tl-item.arrest::before, html .tl-modern .tl-item.arrest.tl-colo
 .archived-section .ov-head-actions { flex-wrap: wrap; justify-content: flex-end; }
 .archived-section .ov-head-actions > * { flex: none; }
 .archived-section .ov-review-pick { min-width: 11rem; }
+/* v1.146: the Password Manager (and Covert) tables fit their box: long names and web addresses are cut
+   with … (hover shows all), the password column and the buttons keep their room, so Edit and the
+   arrows are always there (they were pushed out of sight by a long web address). */
+.locker-rows { table-layout: fixed; width: 100%; }
+.locker-rows td.text-cell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.locker-rows th, .locker-rows td { overflow: hidden; }
+.locker-rows th:last-child, .locker-rows td.col-actions { width: 18.5rem; text-align: right; overflow: visible; }
+.locker-rows .secret-cell { width: 10.5rem; }
+.locker-rows tr > :nth-child(3):not(.col-actions) { width: 10.5rem; }
+.locker-section .table-wrap:has(.locker-rows) { overflow-x: auto; }
+/* v1.146: Confidential Files: Active (green) or Inactive (red); click to switch. */
+.locker-status { min-width: 5.6rem; justify-content: center; font-weight: 700; }
+.locker-status.active { color: var(--ok, #2e7d4f); border-color: var(--ok, #2e7d4f); background: color-mix(in srgb, var(--ok, #2e7d4f) 10%, var(--surface)); }
+.locker-status.inactive { color: var(--danger); border-color: var(--danger); background: var(--danger-soft); }
+/* v1.146: the two main folders' names (OPERATION CASES, INDEPENDENT CASES) the same size. */
+#sidebar .mission-group > .op-head .op-name, #sidebar .general-group > .op-head .ind-name { font-size: var(--fs-text); font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
+/* v1.146: the red bell stays on OPERATION CASES and INDEPENDENT CASES only; inside them, the case that
+   is due is the one shown in red (no bell or red edge on a Mission's own folder or a case group). */
+#sidebar .mission-children .op-group.has-reminder { border-color: var(--border); border-left-color: var(--sec-mission); }
+#sidebar .case-item.has-reminder { background: var(--danger-soft); box-shadow: inset 4px 0 0 var(--danger), inset 0 0 0 1px var(--danger); }
+#sidebar .case-item.has-reminder .case-item-title { color: var(--danger); }
+#sidebar .op-cases .case-item.has-reminder.active { box-shadow: inset 4px 0 0 var(--danger), inset 0 0 0 2px var(--danger); }
+/* v1.146: Case Groups: the group open on screen is marked in the case list; its page has the person icon. */
+.suspect-group > .sg-head.active { border-color: var(--sec-general); background: color-mix(in srgb, var(--sec-general) 12%, var(--surface)); }
+.group-page .cg-icon { color: var(--sec-general); }
+.group-page .cg-icon .bi { width: 2rem; height: 2rem; }
+.cg-form .pick-list { max-height: 18rem; }
+a.case-sg-label, a.gen-sg { text-decoration: none; }
+.locker-table .btn.locker-status.active, .locker-table .btn.locker-status.active:hover { color: var(--ok, #2e7d4f); border-color: var(--ok, #2e7d4f); }
+.locker-table .btn.locker-status.inactive, .locker-table .btn.locker-status.inactive:hover { color: var(--danger); border-color: var(--danger); }

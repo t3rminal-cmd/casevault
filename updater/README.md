@@ -7,24 +7,22 @@ runs on its own, and it never touches `CaseVault-Data`.
 ## The window (how you'll normally use it)
 
 Double-click **`Check-For-Updates.bat`** in `V:\CaseVault-App\updater\`. The **CaseVault Updater**
-window opens. Since updater 1.3 it is dressed like CaseVault: off-white and navy, square corners, a
-navy banner with the vault door (its handle turns while the updater works), 11 pt text and 12 pt
-headings. Under the banner, **Installed 1.142** shows the version on the SSD.
+opens as a small, plain window (updater 1.3.1): a slim navy banner with the vault door (its handle
+turns while it works), the version line (**Installed 1.145**), one line of status, the progress bar
+and the buttons. Nothing else is on screen until you ask for it.
 
 1. **Check for Updates**: it checks GitHub, compares every file on the SSD and downloads only the
-   ones that changed. The four steps (**Check · Download · Install · Done**) show where it is, and
-   the progress bar moves; nothing in CaseVault is changed yet.
-2. If there is an update, the strip says **Installed 1.142 → Available 1.143** and **What's New**
-   lists what each newer version brings (from the guide). **Show Files** switches to the list of
-   files it will change. It offers **Install Now** or **Not Now**. Not Now keeps the download, so
-   installing later is quick.
+   ones that changed. The progress bar moves; nothing in CaseVault is changed yet.
+2. If there is an update, the line says **Installed 1.145 → Available 1.146** and offers **Install
+   Now** or **Not Now**. **What's New** opens what each newer version brings (from the guide);
+   **Show Files** in it lists the files it will change. Not Now keeps the download, so installing
+   later is quick.
 3. **Install Now**: it closes the CaseVault helper window if it runs (Firefox), backs up the files it
    replaces, installs, and starts the helper again. With Edge, close CaseVault first and reload it
    afterwards (the window says which).
-4. **Done**: all four steps turn green and the strip says **Up To Date**. **Open CaseVault** starts
-   it (Start-CaseVault.bat on the CV-AI drive, or CaseVault's page on the SSD). If something went
-   wrong, the step where it stopped turns red and the message says what happened (everything is put
-   back).
+4. **Done**: the line says **Up To Date**, and **Open CaseVault** starts it (Start-CaseVault.bat on the
+   CV-AI drive, or CaseVault's page on the SSD). If something went wrong, the message says what
+   happened in red (everything is put back).
 
 **The updater updates itself (v1.35).** Its own new files (the `casevault_updater` folder and this
 README) are put in `updater\_next`, because a running program can't safely replace itself. The next

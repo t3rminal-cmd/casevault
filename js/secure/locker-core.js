@@ -158,7 +158,7 @@
         return row;
       });
     }
-    x.files = (Array.isArray(x.files) ? x.files : []).filter((f) => f && /^[a-z0-9]{8,40}$/.test(String(f.id || ''))).map((f) => ({ id: String(f.id), name: String(f.name || 'file'), type: String(f.type || ''), size: Number(f.size) || 0, added: String(f.added || ''), label: String(f.label || ''), notes: String(f.notes || '') }));
+    x.files = (Array.isArray(x.files) ? x.files : []).filter((f) => f && /^[a-z0-9]{8,40}$/.test(String(f.id || ''))).map((f) => ({ id: String(f.id), name: String(f.name || 'file'), type: String(f.type || ''), size: Number(f.size) || 0, added: String(f.added || ''), label: String(f.label || ''), notes: String(f.notes || ''), status: f.status === 'inactive' ? 'inactive' : 'active' })); // v1.146: Active / Inactive
     return x;
   }
   /* v1.145: old passwords. When a password is changed, the one it had goes on top of its history

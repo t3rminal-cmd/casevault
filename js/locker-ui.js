@@ -263,7 +263,8 @@
         const old = Array.isArray(r.history) ? r.history : [];
         const histOpen = old.length > 0 && mem.openHist.has(r.id);
         const row = h('tr', { 'data-id': r.id, class: histOpen ? 'hist-open' : '' },
-          ...cols.map(([k, label, kind]) => h('td', { class: kind === 'secret' ? 'secret-cell' : '' }, kind === 'secret' ? secretCell(r[k], `${label} for ${name}`) : (r[k] || h('span', { class: 'muted' }, '—')))),
+          // v1.146: long text is cut with … (the whole of it in the hover box), so the buttons always show.
+          ...cols.map(([k, label, kind]) => h('td', { class: kind === 'secret' ? 'secret-cell' : 'text-cell', title: kind === 'secret' ? null : r[k] || null }, kind === 'secret' ? secretCell(r[k], `${label} for ${name}`) : (r[k] || h('span', { class: 'muted' }, '—')))),
           h('td', { class: 'col-actions nowrap' },
             r.notes || r.backstory ? h('span', { class: 'muted small locker-has-notes', title: r.notes || r.backstory }, I('journal-text')) : '',
             old.length ? h('button', { type: 'button', class: `btn small locker-hist-btn${histOpen ? ' active' : ''}`, 'aria-expanded': String(histOpen), title: `The passwords ${name} had before`, onclick: () => {
@@ -295,7 +296,7 @@
           mem.data[t] = L().sortRows(t, mem.data[t]); await saveSafe(); render();
         } }, 'Sort A to Z') : null,
         h('button', { class: 'btn primary small', type: 'button', icon: 'plus-lg', onclick: () => editRow(t, null) }, `Add ${T.item}`)),
-      h('div', { class: 'table-wrap' }, h('table', { class: 'data-table locker-table' },
+      h('div', { class: 'table-wrap' }, h('table', { class: 'data-table locker-table locker-rows' },
         h('thead', {}, h('tr', {}, ...cols.map(([, label]) => h('th', {}, label)), h('th', { class: 'col-actions' }, ''))), tbody)));
   }
 
@@ -370,17 +371,21 @@
     const draw = () => {
       mem.query.files = q.value;
       const words = q.value.toLowerCase().split(/\s+/).filter(Boolean);
-      const list = mem.data.files.filter((f) => { const t = `${f.name} ${f.label} ${f.notes}`.toLowerCase(); return words.every((w) => t.includes(w)); }).sort((a, b) => String(b.added).localeCompare(String(a.added)));
+      const list = mem.data.files.filter((f) => { const t = `${f.name} ${f.label} ${f.notes} ${f.status === 'inactive' ? 'inactive' : 'active'}`.toLowerCase(); return words.every((w) => t.includes(w)); }).sort((a, b) => String(b.added).localeCompare(String(a.added)));
       tbody.replaceChildren(...(list.length ? list.map((f) => h('tr', {},
         h('td', {}, h('button', { type: 'button', class: 'linklike', title: 'Open', onclick: () => openFile(f) }, I('shield-lock-fill'), ' ', f.name)),
         h('td', {}, f.label || h('span', { class: 'muted' }, '—')),
+        // v1.146: Active (green) or Inactive (red), e.g. an informant still working or not; click to switch.
+        h('td', {}, h('button', { type: 'button', class: `btn small locker-status ${f.status === 'inactive' ? 'inactive' : 'active'}`, title: `${f.status === 'inactive' ? 'Inactive' : 'Active'}: click to mark it ${f.status === 'inactive' ? 'Active' : 'Inactive'}`, onclick: async () => {
+          f.status = f.status === 'inactive' ? 'active' : 'inactive'; await saveSafe(); render();
+        } }, f.status === 'inactive' ? 'Inactive' : 'Active')),
         h('td', { class: 'num muted' }, ui.fmtSize(f.size)),
         h('td', { class: 'muted date-cell' }, f.added ? ui.fmtDate(f.added.slice(0, 10)) : '—'),
         h('td', { class: 'col-actions nowrap' },
           h('button', { type: 'button', class: 'icon-btn', title: 'Informant / label and notes', onclick: () => labelFile(f) }, I('pencil'), h('span', { class: 'sr-only' }, 'Edit label')),
           h('button', { type: 'button', class: 'icon-btn', title: 'Save a copy outside the locker (not encrypted)', onclick: () => saveCopy(f) }, I('download'), h('span', { class: 'sr-only' }, 'Save a copy')),
           h('button', { type: 'button', class: 'icon-btn danger-icon', title: 'Delete from the locker', onclick: () => deleteFile(f) }, I('trash3'), h('span', { class: 'sr-only' }, 'Delete')))))
-        : [h('tr', {}, h('td', { colspan: 5, class: 'muted empty-cell' }, mem.data.files.length ? 'Nothing matches.' : 'No confidential files yet. Add Files, or drop files here.'))]));
+        : [h('tr', {}, h('td', { colspan: 6, class: 'muted empty-cell' }, mem.data.files.length ? 'Nothing matches.' : 'No confidential files yet. Add Files, or drop files here.'))]));
     };
     q.addEventListener('input', draw);
     draw();
@@ -389,7 +394,7 @@
         h('button', { class: 'btn primary small', type: 'button', icon: 'upload', onclick: () => picker.click() }, 'Add Files'), picker),
       h('p', { class: 'muted small' }, 'Informant files and anything else to keep locked: each file is encrypted on the SSD. Give each an informant number or label to find it again. The original you picked is not deleted: delete it yourself once it is in the locker.'),
       h('div', { class: 'table-wrap' }, h('table', { class: 'data-table locker-table' },
-        h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', {}, 'Informant / Label'), h('th', { class: 'num' }, 'Size'), h('th', { class: 'date-cell' }, 'Added'), h('th', { class: 'col-actions' }, ''))), tbody)));
+        h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', {}, 'Informant / Label'), h('th', {}, 'Status'), h('th', { class: 'num' }, 'Size'), h('th', { class: 'date-cell' }, 'Added'), h('th', { class: 'col-actions' }, ''))), tbody)));
     sec.addEventListener('dragover', (e) => { e.preventDefault(); sec.classList.add('drag'); });
     sec.addEventListener('dragleave', () => sec.classList.remove('drag'));
     sec.addEventListener('drop', (e) => { e.preventDefault(); sec.classList.remove('drag'); addFiles([...e.dataTransfer.files]); });

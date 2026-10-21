@@ -4,6 +4,13 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.145)
+
+- **Home:** Recently Updated status word left / icon right; MISSION FILES renamed OPERATION CASES; Archived → Rename Folders
+- **Independent cases:** Suspect Folder groups cases about one person under INDEPENDENT CASES (not a Mission)
+- **Training:** cards show the course name and expiry only
+- **Password Manager:** arrange rows (arrows, Sort A to Z), an Edit button, old passwords kept per entry (Old (N))
+
 ## Features (v1.144)
 
 - **Updater 1.3:** CaseVault look (navy banner with the vault door, 11/12 pt), Installed → Available strip, What's New before installing (files behind Show Files), Check · Download · Install · Done steps, Open CaseVault when done

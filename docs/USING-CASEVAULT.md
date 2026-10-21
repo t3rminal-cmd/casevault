@@ -213,6 +213,15 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.146
+
+- **Case Groups for independent cases:** keep related independent cases together under a name you give (a suspect, a family, a crew), like an Operation but not one. **New Case Group** (General Files) or **Case Group** (on an independent case's Details) asks for the name and lets you tick the cases that belong. The group shows in INDEPENDENT CASES with its cases under it; its name opens the group's own page (its cases as cards, **Edit Group** to rename it or change its cases, **Ungroup** to take it apart). The same name written another way ("doe, john") joins the group already there. (This replaces v1.145's Suspect Folder; groups made then are kept.)
+- **Case list:** OPERATION CASES and INDEPENDENT CASES are written the same size. The red bell is only on those two main folders; inside them, a case that is due is shown in red (no bell on a Mission's own folder)
+- **Password Manager:** Edit and the arrows were pushed out of sight by a long site name or web address (they only showed while searching). Long text is now cut with … (hold the mouse over it for all of it), and the buttons always show
+- **Confidential Files:** each file is marked **Active** (green) or **Inactive** (red); click it to switch. New files start Active
+- **Updater (1.3.1):** a small, plain window again: the banner, the version line, one line of status, the progress bar and the buttons. **What's New** opens the notes (and Show Files) only when you ask
+- **Tidy up:** unused folder icons removed; the README brought up to date with a map of the repository's folders
+
 ### What's new in v1.145
 
 - **Recently Updated:** in each status box the word (Open, Closed…) sits on the left and its icon on the right, in every row the same
@@ -231,11 +240,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Updater: What's New:** before you install, the window lists what each newer version brings (the same notes as here) instead of a list of file names. **Show Files** still shows the files it will change
 - **Updater: steps:** **Check · Download · Install · Done** across the top show where it is; each turns green when finished, and red where something stopped
 - **Updater: Open CaseVault:** when the update is done, **Open CaseVault** starts it for you. The updater updates itself, so the new look shows the next time you start Check-For-Updates.bat
-
-### What's new in v1.143
-
-- **Arrest Report: no more "null":** the word null showed on the Arrest Report tab under the arrestees (where nothing was meant to be). Gone; a check of every page now makes sure no "null", "undefined" or "NaN" shows anywhere
-- **Timeline: arrests under their suspect:** an arrest from the Arrest Report goes under the suspect it is about, even when the name is written another way ("Johnathan Q Doe" on the Arrest Report, "DOE, Johnathan" on the Timeline), so each suspect has one filter, not two. Filtering by the suspect shows their arrest with their other events, and their filter shows small red handcuffs when they were arrested. The arrest's title keeps the name from the Arrest Report
 
 ### Earlier versions
 
