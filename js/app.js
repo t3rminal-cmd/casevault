@@ -943,7 +943,7 @@
           h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, ...(op
             ? [h('span', { class: 'op-num' }, op.number || 'No number'), op.name ? h('span', { class: 'op-title' }, op.name) : null].filter(Boolean)
             : [h('span', { class: 'ind-name' }, 'INDEPENDENT CASES')])), // v1.77: the folder names in capitals; v1.85: was GENERAL FILES
-            bell && op ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
+            null), // v1.146: no bell on a Mission's own folder: OPERATION CASES has it, and the case itself is red
           h('span', { class: 'op-meta muted' }, meta)),
         cases.length > 1 ? h('span', { class: 'op-count' }, String(cases.length)) : null,
         // v1.83: GENERAL FILES has a + for a new case, like MISSION FILES has one for a new Mission.
@@ -963,7 +963,7 @@
     });
     return h('li', { class: 'op-item' }, det);
   }
-  /** v1.145: INDEPENDENT CASES: the cases in a suspect folder together under the person's name
+  /** v1.145: INDEPENDENT CASES: the cases in a Case Group (v1.145: suspect folder) together under its name
    * (A to Z, folded like the other folders), then the cases in none. Not a Mission: each case stays
    * on its own; the folder only keeps them together. */
   function independentItems(cases) {
@@ -972,45 +972,93 @@
     const folders = [...byGroup.keys()].sort((a, b) => a.localeCompare(b)).map((g) => {
       const list = byGroup.get(g);
       const key = `sg:${g}`;
-      const open = sideFold.has(key) ? sideFold.get(key) : !!$('#case-search').value.trim() || list.some((c) => c.id === state.caseId);
+      const open = sideFold.has(key) ? sideFold.get(key) : !!$('#case-search').value.trim() || list.some((c) => c.id === state.caseId) || location.hash === `#/group/${encodeURIComponent(g)}`;
       const det = h('details', { class: 'suspect-group', open },
-        h('summary', { class: 'sg-head', title: `${g}: ${plural(list.length, 'case')} about this person, kept together (not a Mission)` },
-          h('span', { class: 'sg-name' }, g), h('span', { class: 'sg-icon' }, I('person-badge')), h('span', { class: 'sg-count' }, String(list.length)), h('span', { class: 'op-chev' }, I('chevron-down'))),
+        h('summary', { class: `sg-head${location.hash === `#/group/${encodeURIComponent(g)}` ? ' active' : ''}`, title: `${g}: a Case Group of ${plural(list.length, 'case')}, kept together (not an Operation). Click to open it; the arrow folds it.` },
+          h('span', { class: 'sg-name' }, g), h('span', { class: 'sg-icon' }, I('person-badge')), h('span', { class: 'sg-count' }, String(list.length)), h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
         h('ul', { class: 'op-cases sg-cases' }, list.map((c) => caseItem(c, true))));
-      det.querySelector('summary').addEventListener('click', (e) => { e.preventDefault(); det.open = !det.open; sideFold.set(key, det.open); });
+      // v1.146: the name opens the group's page; the arrow folds it.
+      det.querySelector('summary').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (e.target.closest('.op-chev')) { det.open = !det.open; sideFold.set(key, det.open); return; }
+        location.hash = `#/group/${encodeURIComponent(g)}`;
+      });
       return h('li', { class: 'sg-item' }, det);
     });
     return [...folders, ...cases.filter((c) => !c.suspectGroup).map((c) => caseItem(c, true))];
   }
-  /** v1.145: Suspect Folder (an independent case's Details): keep it with other cases about the same
-   * person under that person's name in INDEPENDENT CASES, without making a Mission. -> true when changed. */
-  async function suspectFolderDialog(c) {
+  /** v1.146: a Case Group: independent cases kept together under a name you give it (a suspect's
+   * name, a family, a crew...), like an Operation but not one. Each case stays on its own; the group
+   * only keeps them together in INDEPENDENT CASES and on its own page. Opened from a case (Details →
+   * Case Group), from General Files (New Case Group) or from the group's page (Edit Group).
+   * original: the group being edited ('' for a new one); preset: case ids ticked to begin with.
+   * -> the group's name ('' when it was ungrouped), or null when cancelled. */
+  async function caseGroupDialog({ original = '', preset = [], suggest = '' } = {}) {
     await Save.flushAll();
-    const cur = c.suspectGroup || '';
-    const names = [...new Set([...Vault.suspectGroups(), c.subject, ...(c.suspects || []).filter((x) => x && !x.notIdentified).map((x) => x.name)]
-      .map((x) => String(x || '').trim()).filter(Boolean))];
-    const want = await openDialog((close) => {
-      const input = h('input', { type: 'text', maxlength: 80, value: cur || String(c.subject || '').trim(), list: 'sg-names', autofocus: 'true', spellcheck: 'false', placeholder: 'The suspect\'s name' });
-      return h('form', { class: 'sg-form', onsubmit: (e) => { e.preventDefault(); close(input.value.replace(/\s+/g, ' ').trim()); } },
-        h('h2', { icon: 'person-badge' }, 'Suspect Folder'),
-        h('p', { class: 'muted small' }, 'Keep this case with the other independent cases about the same person, in a folder with the person\'s name under INDEPENDENT CASES. It is not a Mission: each case stays on its own. Pick a name already used to join those cases.'),
-        field('Suspect Name', input),
-        h('datalist', { id: 'sg-names' }, names.map((n) => h('option', { value: n }))),
+    const pool = (Vault.data.cases || []).filter((c) => !isArchivedEntry(c) && !opOf(c)).sort(byNumber);
+    const names = [...new Set([...Vault.suspectGroups(), ...pool.map((c) => String(c.subject || '').trim())].filter(Boolean))];
+    const before = original ? pool.filter((c) => c.suspectGroup === original).map((c) => c.id) : [];
+    const res = await openDialog((close) => {
+      const picked = new Set([...before, ...preset]);
+      const nameIn = h('input', { type: 'text', maxlength: 80, value: original || suggest, list: 'cg-names', autofocus: 'true', spellcheck: 'false', placeholder: 'e.g. DOE, John or Doe Family', 'aria-label': 'Group name' });
+      const q = h('input', { type: 'search', placeholder: 'Search by case number or subject', 'aria-label': 'Search cases' });
+      const rows = h('div', { class: 'pick-list cg-pick', role: 'list' });
+      const ok = h('button', { class: 'btn primary', type: 'submit', icon: 'person-badge' }, 'Save Group');
+      const sync = () => { ok.disabled = !nameIn.value.trim() || !picked.size; };
+      const draw = () => {
+        const t = q.value.trim().toLowerCase();
+        const list = pool.filter((c) => !t || [c.number, c.subject, subj(c), c.suspectGroup].join(' ').toLowerCase().includes(t));
+        rows.replaceChildren(...(list.length ? list.map((c) => {
+          const box = h('input', { type: 'checkbox', checked: picked.has(c.id) });
+          box.addEventListener('change', () => { if (box.checked) picked.add(c.id); else picked.delete(c.id); sync(); });
+          const elsewhere = c.suspectGroup && c.suspectGroup !== original ? `In ${c.suspectGroup}` : c.status;
+          return h('label', { class: 'pick-row', role: 'listitem' }, box,
+            h('span', { class: 'pick-num' }, c.number || 'No case number'), h('span', { class: 'pick-subject' }, subj(c) || 'No subject yet'),
+            h('span', { class: 'pick-op muted small' }, elsewhere));
+        }) : [h('p', { class: 'muted' }, t ? 'No cases match.' : 'No independent cases yet.')]));
+      };
+      nameIn.addEventListener('input', sync);
+      q.addEventListener('input', draw);
+      draw(); sync();
+      return h('form', { class: 'add-existing cg-form', onsubmit: (e) => { e.preventDefault(); close({ name: nameIn.value.replace(/\s+/g, ' ').trim(), ids: [...picked] }); } },
+        h('h2', { icon: 'person-badge' }, original ? 'Edit Case Group' : 'New Case Group'),
+        h('p', { class: 'muted small' }, 'Independent cases about the same person or people, kept together under one name in INDEPENDENT CASES. It is not an Operation: each case stays on its own. Tick the cases that belong in it.'),
+        field('Group Name', nameIn),
+        h('datalist', { id: 'cg-names' }, names.map((n) => h('option', { value: n }))),
+        q, rows,
         h('div', { class: 'dialog-actions' },
-          cur ? h('button', { class: 'btn', type: 'button', icon: 'x-circle', onclick: () => close('') }, 'Take Out of Folder') : null,
-          h('button', { class: 'btn', type: 'button', onclick: () => close(undefined) }, 'Cancel'),
-          h('button', { class: 'btn primary', type: 'submit', icon: 'person-badge' }, 'Save')));
+          original ? h('button', { class: 'btn', type: 'button', icon: 'x-circle', title: 'Take every case out of this group; the cases stay as they are', onclick: () => close({ name: '', ids: [] }) }, 'Ungroup') : null,
+          h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), ok));
     });
-    if (want === undefined || want === cur) return false;
-    // The same person written another way ("doe, john") joins the folder already there ("DOE, John").
-    const same = want ? Vault.suspectGroups().find((g) => CVOperation.suspectKey(g) === CVOperation.suspectKey(want)) : '';
-    const name = same || want;
-    try { await Save.track(`sg:${c.id}`, () => Vault.setSuspectGroup(c.id, name)); } catch (err) { toast(err && err.message ? err.message : 'The suspect folder could not be saved.', 'error', 6000); return false; }
-    c.suspectGroup = name;
-    if (state.caseObj && state.caseObj.id === c.id) state.caseObj.suspectGroup = name;
+    if (!res) return null;
+    // The same name written another way ("doe, john") joins the group already there ("DOE, John").
+    const same = res.name ? Vault.suspectGroups().find((g) => g !== original && CVOperation.suspectKey(g) === CVOperation.suspectKey(res.name)) : '';
+    const name = res.name ? same || res.name : '';
+    const keep = new Set(name ? res.ids : []);
+    const changed = [];
+    try {
+      for (const id of keep) { await Save.track(`sg:${id}`, () => Vault.setSuspectGroup(id, name)); changed.push([id, name]); }
+      for (const id of before) if (!keep.has(id)) { await Save.track(`sg:${id}`, () => Vault.setSuspectGroup(id, '')); changed.push([id, '']); }
+    } catch (err) { toast(err && err.message ? err.message : 'The case group could not be saved.', 'error', 6000); }
+    for (const [id, g] of changed) if (state.caseObj && state.caseObj.id === id) state.caseObj.suspectGroup = g;
     renderCaseList();
-    toast(name ? `Case ${c.number || ''} is in the suspect folder ${name}.` : `Case ${c.number || ''} was taken out of its suspect folder.`, 'success', 3000);
-    return true;
+    toast(name ? `${plural(keep.size, 'case')} in the group ${name}.` : 'The group was taken apart; its cases are still in INDEPENDENT CASES.', 'success', 3500);
+    return name;
+  }
+  /** v1.146: a Case Group's page: its name, Edit Group, and its cases as cards (like an Operation's). */
+  function showCaseGroup(name) {
+    pageStart(name);
+    const list = (Vault.data.cases || []).filter((c) => !isArchivedEntry(c) && !opOf(c) && c.suspectGroup === name).sort(byNumber);
+    const edit = async () => { const n = await caseGroupDialog({ original: name }); if (n !== null) location.hash = n ? `#/group/${encodeURIComponent(n)}` : '#/general'; };
+    $('#main').replaceChildren(h('section', { class: 'ops-page group-page' },
+      h('div', { class: 'page-head' },
+        h('span', { class: 'page-icon cg-icon' }, I('person-badge')),
+        h('div', { class: 'page-title' }, h('h1', { 'data-keep-case': 'true' }, name), h('div', { class: 'muted small' }, `Case Group · ${plural(list.length, 'independent case')} kept together (not an Operation)`)),
+        h('div', { class: 'spacer' }),
+        h('a', { class: 'btn', href: '#/general', icon: 'folder-fill' }, 'General Files'),
+        h('button', { class: 'btn primary', type: 'button', icon: 'pencil-square', title: 'Rename the group, or pick its cases', onclick: edit }, 'Edit Group')),
+      list.length ? h('div', { class: 'op-open-cases cg-cases' }, list.map((c) => overviewCard(c)))
+        : h('div', { class: 'empty-state' }, h('p', {}, 'No cases in this group any more.'), h('p', { class: 'muted small' }, 'Edit Group picks its cases.'))));
   }
   const fileKey = (f) => String(f || '').trim();
   const byFileNumber = (a, b) => {
@@ -1169,6 +1217,9 @@
     const opm = location.hash.match(/^#\/operation\/([^/]+)/);
     if (opm) return showOperation(decodeURIComponent(opm[1]));
     if (/^#\/general\b/.test(location.hash)) return showGeneralFiles();
+    // v1.146: a Case Group of independent cases.
+    const grp = location.hash.match(/^#\/group\/([^/]+)/);
+    if (grp) return showCaseGroup(decodeURIComponent(grp[1]));
     // v1.111: Other Files → Secure Locker.
     if (/^#\/locker\b/.test(location.hash)) { pageStart('Secure Locker'); return CVLockerUI.show($('#main')); }
     const m = location.hash.match(/^#\/case\/([^/]+)(?:\/(\w+))?(?:\/([^/]+))?/);
@@ -1997,7 +2048,7 @@
           ...nameCells(c.subject),
           // v1.118: the Mission's number on one line; its name in the hover box.
           h('td', { class: 'gen-mission' }, op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, title: opLabel(op) }, op.number || op.name || 'Mission')
-            : c.suspectGroup ? h('span', { class: 'gen-sg', title: `Suspect folder ${c.suspectGroup} (not a Mission)` }, c.suspectGroup, I('person-badge')) : h('span', { class: 'muted' }, '—')),
+            : c.suspectGroup ? h('a', { class: 'gen-sg', href: `#/group/${encodeURIComponent(c.suspectGroup)}`, title: `Case Group ${c.suspectGroup} (not an Operation)` }, c.suspectGroup, I('person-badge')) : h('span', { class: 'muted' }, '—')),
           h('td', {}, statusPill(arch ? 'Archived' : c.status)),
           h('td', { class: 'nowrap date-cell' }, dateCols(c.opened)),
           h('td', { class: 'nowrap age-cell' }, (() => { const o = openedAge(c.opened); return o ? (o.future ? h('span', { class: 'age-future', title: `${o.ageLong}: the Opened date is in the future. Check it on the Details tab.` }, I('exclamation-triangle-fill'), o.age) : h('span', { title: `${o.days} day${o.days === 1 ? '' : 's'} since it was opened` }, o.ageLong)) : '—'; })()),
@@ -2013,6 +2064,8 @@
         h('div', { class: 'page-title' }, h('h1', {}, 'General Files'), h('div', { class: 'muted small' }, 'Every case, in a Mission or not. A Mission only links cases; they are always kept here.')),
         h('div', { class: 'spacer' }),
         h('a', { class: 'btn', href: '#/operations', icon: 'op-folder' }, 'Missions'),
+        // v1.146: group related independent cases under a name (not an Operation).
+        h('button', { class: 'btn', type: 'button', icon: 'person-badge', title: 'Group related independent cases under a name you give it', onclick: async () => { const n = await caseGroupDialog(); if (n) location.hash = `#/group/${encodeURIComponent(n)}`; } }, 'New Case Group'),
         h('button', { class: 'btn primary', type: 'button', icon: 'plus-lg', onclick: () => newCase() }, 'New Case')),
       dups.size ? h('p', { class: 'warn-note small', role: 'note' }, I('exclamation-triangle-fill'), ` ${plural(dups.size, 'Case Number')} ${dups.size === 1 ? 'is' : 'are'} used by more than one case (made before numbers had to be unique). They are flagged below; nothing was changed.`) : null,
       h('div', { class: 'general-tools' }, q, show, countEl),
@@ -3013,12 +3066,13 @@
         h('div', { class: 'case-op-bar', 'data-ro-ok': archived ? null : 'true' },
           // v1.119: the Mission's name and link are in the header above; here, only where the case is filed.
           h('span', { class: `case-op-label${op ? '' : ' gf-link'}` }, I(op ? 'op-folder' : 'folder-fill'), op ? `Filed in Mission ${op.number || ''}`.trim() : 'General Files: not in a Mission'),
-          // v1.145: an independent case can sit in a suspect folder with the other cases about that person.
-          !op && c.suspectGroup ? h('span', { class: 'case-sg-label', title: 'Suspect folder: kept together with the other independent cases about this person' }, c.suspectGroup, I('person-badge')) : null,
+          // v1.146: an independent case can be in a Case Group (a name you give it) with related cases.
+          !op && c.suspectGroup ? h('a', { class: 'case-sg-label', href: `#/group/${encodeURIComponent(c.suspectGroup)}`, title: 'Case Group: open it' }, c.suspectGroup, I('person-badge')) : null,
           h('div', { class: 'spacer' }),
-          !op && !archived ? h('button', { class: 'btn small sg-btn', type: 'button', icon: 'person-badge', title: 'Keep this case with the other independent cases about the same person, under the person\'s name (not a Mission)', onclick: async () => {
-            if (await suspectFolderDialog(c)) showCase(c.id, 'details');
-          } }, 'Suspect Folder') : null,
+          !op && !archived ? h('button', { class: 'btn small sg-btn', type: 'button', icon: 'person-badge', title: 'Group this case with related independent cases under a name you give it (not an Operation)', onclick: async () => {
+            const n = await caseGroupDialog({ original: c.suspectGroup || '', preset: [c.id], suggest: String(c.subject || '').trim() });
+            if (n !== null) showCase(c.id, 'details');
+          } }, 'Case Group') : null,
           // v1.50: Move File (it was "Assign to" / "Move to" and Unlink).
           archived ? null : h('button', { class: 'btn small', type: 'button', icon: 'folder-symlink', title: 'Move this case into a Mission, to another one, or back to General Files', onclick: async () => {
             if (await moveCaseDialog(Vault.data.cases.find((x) => x.id === c.id) || c)) { renderCaseList(); showCase(c.id, 'details'); }

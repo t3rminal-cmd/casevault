@@ -4,6 +4,11 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.143
+
+- **Arrest Report: no more "null":** the word null showed on the Arrest Report tab under the arrestees (where nothing was meant to be). Gone; a check of every page now makes sure no "null", "undefined" or "NaN" shows anywhere
+- **Timeline: arrests under their suspect:** an arrest from the Arrest Report goes under the suspect it is about, even when the name is written another way ("Johnathan Q Doe" on the Arrest Report, "DOE, Johnathan" on the Timeline), so each suspect has one filter, not two. Filtering by the suspect shows their arrest with their other events, and their filter shows small red handcuffs when they were arrested. The arrest's title keeps the name from the Arrest Report
+
 ## What's new in v1.142
 
 - **Arrests stand out on the Timeline:** a new event Type **Arrest** with a red **ARREST** badge with handcuffs, a red square on the line (the others are round) and a thick red edge, whatever the suspect's colour (their name box keeps it)

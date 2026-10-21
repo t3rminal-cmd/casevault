@@ -46,8 +46,8 @@ const SP = process.env.SP + '/v1145';
   const c4 = await p.evaluate(async () => (await Vault.createCase({ number: 'EX-400', subject: 'John Doe' })).id);
   const putIn = async (id, name) => {
     await p.evaluate((i) => { location.hash = '#/x'; location.hash = `#/case/${i}/details`; }, id); await p.waitForSelector('.case-op-bar .sg-btn');
-    await p.click('.case-op-bar .sg-btn'); await p.waitForSelector('#dialog[open] .sg-form');
-    if (name != null) await p.fill('#dialog[open] .sg-form input', name);
+    await p.click('.case-op-bar .sg-btn'); await p.waitForSelector('#dialog[open] .cg-form');
+    if (name != null) await p.fill('#dialog[open] .cg-form input[aria-label="Group name"]', name);
     await p.click('#dialog[open] button[type=submit]'); await p.waitForTimeout(700);
   };
   await putIn(ids.c, null); // the subject's name is offered
@@ -65,13 +65,14 @@ const SP = process.env.SP + '/v1145';
   const sg = await p.$$eval('#sidebar .general-group .suspect-group', (x) => x.map((d) => ({ name: d.querySelector('.sg-name').textContent, n: d.querySelector('.sg-count').textContent, cases: [...d.querySelectorAll('.case-item-title')].map((e) => e.textContent.trim()) })));
   ok(sg.length === 1 && sg[0].name === 'John Doe' && sg[0].n === '2' && sg[0].cases.join() === 'EX-100,EX-400', `INDEPENDENT CASES has the folder John Doe with both cases: ${JSON.stringify(sg)}`);
   if (!(await p.$eval('#sidebar .general-group', (d) => d.open))) { await p.click('#sidebar .general-group > summary .op-chev'); await p.waitForTimeout(300); }
+  // v1.146: the arrow folds the group; its name opens the group's page.
   const was = await p.$eval('#sidebar .suspect-group', (d) => d.open);
-  await p.click('#sidebar .suspect-group > summary'); await p.waitForTimeout(200);
+  await p.click('#sidebar .suspect-group > summary .op-chev'); await p.waitForTimeout(200);
   const once = await p.$eval('#sidebar .suspect-group', (d) => d.open);
-  await p.click('#sidebar .suspect-group > summary'); await p.waitForTimeout(200);
+  await p.click('#sidebar .suspect-group > summary .op-chev'); await p.waitForTimeout(200);
   const twice = await p.$eval('#sidebar .suspect-group', (d) => d.open);
   ok(once === !was && twice === was, `the folder folds and opens (${was} → ${once} → ${twice})`);
-  if (!twice) { await p.click('#sidebar .suspect-group > summary'); await p.waitForTimeout(200); }
+  if (!twice) { await p.click('#sidebar .suspect-group > summary .op-chev'); await p.waitForTimeout(200); }
   await p.locator('#sidebar').screenshot({ path: `${SP}/sidebar.png` }).catch(() => {});
   await p.evaluate(() => { location.hash = '#/general'; }); await p.waitForSelector('.gen-sg');
   ok((await p.$$eval('.gen-sg', (x) => x.map((e) => e.textContent.trim()))).filter((t) => t === 'John Doe').length === 2, 'General Files shows the folder in the Mission column');
@@ -80,9 +81,9 @@ const SP = process.env.SP + '/v1145';
   ok(await p.evaluate((id) => Vault.data.cases.find((c) => c.id === id).suspectGroup, c4) === '', 'a case put in a Mission leaves the suspect folder');
   // Take Out of Folder.
   await p.evaluate((i) => { location.hash = '#/x'; location.hash = `#/case/${i}/details`; }, ids.c); await p.waitForSelector('.case-op-bar .sg-btn');
-  await p.click('.case-op-bar .sg-btn'); await p.waitForSelector('#dialog[open] .sg-form');
-  await p.click('#dialog[open] button:has-text("Take Out of Folder")'); await p.waitForTimeout(600);
-  ok(await p.evaluate((id) => Vault.data.cases.find((c) => c.id === id).suspectGroup, ids.c) === '' && await p.locator('#sidebar .suspect-group').count() === 0, 'Take Out of Folder empties it, and the folder goes');
+  await p.click('.case-op-bar .sg-btn'); await p.waitForSelector('#dialog[open] .cg-form');
+  await p.click('#dialog[open] button:has-text("Ungroup")'); await p.waitForTimeout(600);
+  ok(await p.evaluate((id) => Vault.data.cases.find((c) => c.id === id).suspectGroup, ids.c) === '' && await p.locator('#sidebar .suspect-group').count() === 0, 'Ungroup empties it, and the folder goes');
 
   // 5. Password Manager: order, Edit, old passwords.
   await home();

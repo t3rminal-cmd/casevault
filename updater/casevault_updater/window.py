@@ -1,13 +1,14 @@
-"""The CaseVault Updater window (updater 1.3: dressed like CaseVault).
+"""The CaseVault Updater window (updater 1.3: dressed like CaseVault; 1.3.1: a small, plain popup).
 
     Check for Updates → (checks, compares, downloads only what changed; nothing is changed yet)
     → "Installed 1.142 → Available 1.143" with What's New (the file list behind Show Files)
     → Install Now / Not Now → progress while it backs up, installs and restarts CaseVault
     → Done, with Open CaseVault.
 
-Across the top: a navy banner with the vault door (its handle turns while the updater works), then
-the version strip, the four steps (Check · Download · Install · Done), the progress bar and the
-What's New panel. Off-white and navy like the app, square corners, 11 pt text and 12 pt headings.
+1.3.1 keeps it minimal: a slim navy banner with the vault door (its handle turns while the updater
+works), the version line, one line of status, the progress bar and the buttons. What's New (and the
+list of files) opens only when you press What's New. Off-white and navy like the app, square corners,
+11 pt text and 12 pt headings. (The four steps are still tracked, for the tests, but not drawn.)
 
 Standard library only (tkinter). The work runs in controller.Controller on a background thread;
 this file only draws what it posts.
@@ -91,9 +92,9 @@ class HeroHeader:
     """The navy banner: the vault door on the left, the title and what's on the SSD next to it.
     spin(True) turns the door's handle while the updater works, like the app's banner."""
 
-    DOOR = 60
+    DOOR = 36
 
-    def __init__(self, parent: tk.Misc, title: str, sub: str, height: int = 96):
+    def __init__(self, parent: tk.Misc, title: str, sub: str, height: int = 56):
         self.c = tk.Canvas(parent, height=height, highlightthickness=0, bd=0, bg=NAVY_DARK)
         self.title, self.sub, self.h = title, sub, height
         self.angle, self.spinning = 0.0, False
@@ -136,8 +137,8 @@ class HeroHeader:
         c.create_rectangle(0, h - 3, w, h, fill=GOLD, outline="")
         self._door()
         left = 22 + self.DOOR + 18
-        c.create_text(left, 30, text=self.title, anchor="w", fill="#ffffff", font=(FONT, 16, "bold"))
-        c.create_text(left, 52, text=self.sub, anchor="nw", fill="#dbe4f0", font=(FONT, SMALL), width=max(160, w - left - 22))
+        # 1.3.1: just the title; what's on the SSD is in the version line under the banner (and on hover).
+        c.create_text(left, h / 2 - 1, text=self.title, anchor="w", fill="#ffffff", font=(FONT, 14, "bold"))
 
 
 class Steps:
@@ -206,11 +207,11 @@ class UpdaterWindow:
         self.news: List[Tuple[str, List[str]]] = []
         self.file_lines: List[str] = []
         self.showing_files = False
+        self.panel_open = False  # 1.3.1: What's New shows only when asked for
 
         root.title("CaseVault Updater")
         root.configure(bg=BG)
-        root.minsize(640, 600)
-        root.geometry("700x660")
+        root.minsize(560, 0)  # 1.3.1: as tall as what it shows, no taller
         self._style()
 
         self.local = HeroHeader(root, "CaseVault Updater", local_text(settings))
@@ -227,14 +228,14 @@ class UpdaterWindow:
         self.v_arrow = tk.Label(strip, text="→", bg=BG, fg=MUTED, font=(FONT, HEAD, "bold"), padx=8)
         self.v_new = tk.Label(strip, text="", bg=NAVY, fg="#ffffff", font=(FONT, HEAD, "bold"), padx=12, pady=6,
                               highlightthickness=1, highlightbackground=NAVY)
+        self.news_btn = flat_button(strip, "What's New", self.toggle_panel, small=True)
         self._versions(read_app_version(settings.app_dir), None)
 
         card = tk.Frame(outer, bg=CARD, highlightbackground=BORDER, highlightthickness=1, padx=16, pady=12)
-        card.pack(fill="both", expand=True, pady=(0, 12))
-        self.steps = Steps(card)
-        self.steps.pack(fill="x", pady=(0, 8))
+        card.pack(fill="x", pady=(0, 12))
+        self.steps = Steps(card)  # 1.3.1: kept for its state, not drawn
         self.status = tk.Label(card, text="Press Check for Updates to see whether a newer CaseVault is on GitHub. Nothing is changed until you say Install.",
-                               bg=CARD, fg=TEXT, font=(FONT, BODY), anchor="w", justify="left", wraplength=600)
+                               bg=CARD, fg=TEXT, font=(FONT, BODY), anchor="w", justify="left", wraplength=520)
         self.status.pack(fill="x")
         card.bind("<Configure>", lambda e: self.status.configure(wraplength=max(300, e.width - 40)))
         self.bar = ttk.Progressbar(card, mode="determinate", maximum=1000, style="CV.Horizontal.TProgressbar")
@@ -280,7 +281,7 @@ class UpdaterWindow:
         self._undo_state(self.ctl.can_undo())
 
         self.footer = tk.Label(outer, text=f"Updater {__version__} · reads github.com/{settings.repo_slug} · CaseVault-Data is never touched",
-                               bg=BG, fg=MUTED, font=(FONT, SMALL), anchor="w", justify="left")
+                               bg=BG, fg=MUTED, font=(FONT, SMALL), anchor="w", justify="left", wraplength=520)
         self.footer.pack(fill="x", pady=(8, 0), side="bottom", before=foot)  # packed first = lowest
         outer.bind("<Configure>", lambda e: self.footer.configure(wraplength=max(200, e.width - 40)))  # wraps, never cut off
 
@@ -375,9 +376,25 @@ class UpdaterWindow:
             self.files_btn.pack_forget()
         if self.news or self.file_lines:
             self._fill()
-            self.listbox.pack(fill="both", expand=True, pady=(12, 0))
+            self.news_btn.configure(text="Hide What's New" if self.panel_open else ("What's New" if self.news else "Show Files"))
+            self.news_btn.pack(side="right")
         else:
+            self.news_btn.pack_forget()
+            self.panel_open = False
+        self._place_panel()
+
+    def _place_panel(self) -> None:
+        """1.3.1: the What's New / files box shows only when opened, and the window grows to hold it."""
+        if self.panel_open and (self.news or self.file_lines):
+            if not self.listbox.winfo_ismapped():
+                self.listbox.pack(fill="both", expand=True, pady=(12, 0))
+        elif self.listbox.winfo_ismapped():
             self.listbox.pack_forget()
+
+    def toggle_panel(self) -> None:
+        self.panel_open = not self.panel_open
+        self.news_btn.configure(text="Hide What's New" if self.panel_open else ("What's New" if self.news else "Show Files"))
+        self._place_panel()
 
     def _show_files(self, lines) -> None:
         self._show_panel([], lines)

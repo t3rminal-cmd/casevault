@@ -15,17 +15,18 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.145
+## What's New in v1.146
 
-- **Home:** Recently Updated status word left / icon right; MISSION FILES renamed OPERATION CASES; Archived → Rename Folders
-- **Independent cases:** Suspect Folder groups cases about one person under INDEPENDENT CASES (not a Mission)
-- **Training:** cards show the course name and expiry only
-- **Password Manager:** arrange rows (arrows, Sort A to Z), an Edit button, old passwords kept per entry (Old (N))
+- **Case Groups:** related independent cases under a name you give, with their own page (New Case Group, Edit Group, Ungroup); replaces Suspect Folder
+- **Case list:** main folder names the same size; red bell on the main folders only, due cases in red
+- **Secure Locker:** Password Manager buttons always in view (long text cut with …); Confidential Files Active / Inactive
+- **Updater 1.3.1:** minimal window, What's New on request
 
 ## What CaseVault Does
 
-**Cases and Missions**
-- Cases with a Case Number, File Number, Agency Case Number, subject, client and status (Open, Closed, Archived); several case numbers grouped under a **Mission**, or kept as **Independent Cases**
+**Cases, Operations and Case Groups**
+- Cases with a Case Number, File Number, Agency Case Number, subject, client and status (Open, Closed, Archived); several case numbers worked together as an **Operation** (a Mission; the OPERATION CASES folder), or kept as **Independent Cases**
+- **Case Groups**: related independent cases kept together under a name you give (a suspect, a family, a crew), with their own page, without making an Operation
 - Details tab: suspects, contacts (Case Officer, ASA/AUSA and others), LEO partners, deconfliction, and **Case History** with your own dated notes
 - Closing asks for a disposition and the arrest report; archiving asks for a reason (EXPIRED, NOLLE PROSEQUI, PROSECUTION or your own); a closed case can be reopened and an archived one restored
 - Timeline of events, buys and deadlines, coloured by suspect, a red bell for anything due, and the statute of limitations for narcotic charges
@@ -46,11 +47,12 @@ The app detects the browser and picks the mode by itself. The data format on the
 
 **Also**
 - **Quick Links** (Reference, OSINT, LEO) in a panel that slides in from the right; **Reference** charts, codes and the narcotic street-value calculator
-- **Secure Locker**: passwords, aliases and files kept encrypted on the SSD
+- **Secure Locker**: passwords (arranged your way, with each entry's old passwords), covert aliases and accounts, and confidential files marked Active or Inactive, all encrypted on the SSD
 - **Settings** (gear on the home page): My Profile, letterhead, Library and templates, Quick links, mail, logs and backups
 
 **Data safety**
 - Everything is saved on the SSD as you type, with a **Saved to SSD** indicator; changes wait and are written when a disconnected SSD comes back
+- **Updates** with the CaseVault Updater on the SSD (`updater\Check-For-Updates.bat`): a small window that fetches only the changed files from this repository, backs up what it replaces, and can undo the last update
 - A daily backup of the vault index; **Back Up Everything** copies the whole vault to a second drive and checks every file (in Firefox through the helper)
 - Privacy screen with a PIN and an idle timer; Power Off saves, closes and ejects the drives
 
@@ -67,6 +69,20 @@ Case management (cases, Missions, the Draft and its PDFs, Files, Discovery, back
 - **Ask AI and Draft with AI** depend on the model installed; small models make mistakes, so read every answer
 
 Use ⋮ → Report a Problem to save a report (with case details scrubbed) for the developer.
+
+## Repository Layout
+
+| Folder | What is in it |
+|---|---|
+| `index.html`, `css/`, `js/`, `icons/`, `vendor/` | The app itself (plain HTML, CSS and JavaScript; every library bundled) |
+| `discovery/` | The viewer copied into every Discovery package |
+| `tools/` | The launcher and the Firefox helper for the CV-AI drive |
+| `updater/` | The CaseVault Updater for the SSD (Python, standard library only) and its tests |
+| `docs/` | The guides below |
+| `previous-versions/` | What every earlier version added, and its What's New notes |
+| `tests/` | Unit tests and the browser tests (made-up Doe/Roe/Poe data only) |
+| `scripts/` | The icon builder and the CI guard against committed case data |
+| `.github/` | The publish workflow (tests, safety checks, GitHub Pages) and Dependabot |
 
 ## Guides
 

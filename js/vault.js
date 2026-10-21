@@ -23,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.145.0';
+  const APP_VERSION = '1.146.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -1454,7 +1454,7 @@ const Vault = (() => {
 
   /** v1.67: the archive sub-folder of an archived case: 'expired', 'nolle', 'prosecution' or ''. */
   const ARCHIVE_FOLDERS = [['expired', 'EXPIRED'], ['nolle', 'NOLLE PROSEQUI'], ['prosecution', 'PROSECUTION']];
-  /** v1.145: put an independent case in a suspect folder (several cases about one person, kept
+  /** v1.145: put an independent case in a Case Group (v1.146; was "suspect folder": several related cases, kept
    * together in INDEPENDENT CASES without making a Mission), or take it out (name ''). */
   function setSuspectGroup(id, name) {
     assertWritable(id);
@@ -1464,7 +1464,7 @@ const Vault = (() => {
       const c = await FS.readJSON(dir, 'case.json');
       if (!c) throw new Error('The case was not found.');
       if ((c.suspectGroup || '') === g) return c;
-      logActivity(c, g ? `Put in the suspect folder ${g}` : `Taken out of the suspect folder ${c.suspectGroup}`);
+      logActivity(c, g ? `Put in the Case Group ${g}` : `Taken out of the Case Group ${c.suspectGroup}`);
       c.suspectGroup = g;
       await FS.writeJSON(dir, 'case.json', c);
       const entry = vault.cases.find((e) => e.id === id);
