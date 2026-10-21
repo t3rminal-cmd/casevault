@@ -252,6 +252,14 @@
     const q = h('input', { type: 'search', placeholder: `Search ${T.title}`, 'aria-label': `Search ${T.title}`, value: mem.query[t] || '' });
     const tbody = h('tbody', {});
     const cols = T.fields.filter(([, , kind]) => kind !== 'wide');
+    const keepsAge = T.fields.some(([k]) => k === 'password');
+    // v1.148: how old a password is ("Changed 400 days ago"), red once past the reminder.
+    const ageTag = (r) => {
+      const n = L().daysBetween(r.changed, todayISO());
+      if (n === null) return null;
+      const stale = L().isStale(r, mem.data.pwRemind, todayISO());
+      return h('span', { class: `pw-age${stale ? ' stale' : ''}`, title: `Password set ${ui.fmtDate(r.changed)}${stale ? `: older than ${mem.data.pwRemind} days, time to change it` : ''}` }, n === 0 ? 'Changed today' : `Changed ${n} day${n === 1 ? '' : 's'} ago`);
+    };
     const draw = () => {
       mem.query[t] = q.value;
       const list = L().filterRows(t, rows, q.value);
@@ -262,9 +270,14 @@
         const name = r[cols[0][0]] || T.item;
         const old = Array.isArray(r.history) ? r.history : [];
         const histOpen = old.length > 0 && mem.openHist.has(r.id);
-        const row = h('tr', { 'data-id': r.id, class: histOpen ? 'hist-open' : '' },
+        const stale = keepsAge && L().isStale(r, mem.data.pwRemind, todayISO());
+        const row = h('tr', { 'data-id': r.id, class: `${histOpen ? 'hist-open' : ''}${stale ? ' pw-stale' : ''}` },
           // v1.146: long text is cut with … (the whole of it in the hover box), so the buttons always show.
-          ...cols.map(([k, label, kind]) => h('td', { class: kind === 'secret' ? 'secret-cell' : 'text-cell', title: kind === 'secret' ? null : r[k] || null }, kind === 'secret' ? secretCell(r[k], `${label} for ${name}`) : (r[k] || h('span', { class: 'muted' }, '—')))),
+          ...cols.map(([k, label, kind]) => h('td', { class: kind === 'secret' ? 'secret-cell' : `text-cell${COPYABLE.includes(k) && r[k] ? ' copy-cell' : ''}`, title: kind === 'secret' ? null : r[k] || null },
+            kind === 'secret' ? [secretCell(r[k], `${label} for ${name}`), k === 'password' ? ageTag(r) : null]
+              // v1.148: the username has its own Copy button.
+              : COPYABLE.includes(k) && r[k] ? h('div', { class: 'copy-wrap' }, h('span', { class: 'copy-text' }, r[k]), h('button', { type: 'button', class: 'icon-btn copy-user', title: `Copy the ${label.toLowerCase()}`, onclick: () => copySecret(r[k], label) }, I('copy'), h('span', { class: 'sr-only' }, `Copy ${label}`)))
+              : (r[k] || h('span', { class: 'muted' }, '—')))),
           h('td', { class: 'col-actions nowrap' },
             r.notes || r.backstory ? h('span', { class: 'muted small locker-has-notes', title: r.notes || r.backstory }, I('journal-text')) : '',
             old.length ? h('button', { type: 'button', class: `btn small locker-hist-btn${histOpen ? ' active' : ''}`, 'aria-expanded': String(histOpen), title: `The passwords ${name} had before`, onclick: () => {
@@ -292,6 +305,8 @@
     return h('section', { class: 'locker-section' },
       h('div', { class: 'section-head' }, h('h2', { class: 'section-title caps', icon: T.icon }, T.title), h('div', { class: 'spacer' }), q,
         // v1.145: put the list in A to Z order once; the arrows on each row arrange it by hand.
+        // v1.148: a reminder to change passwords after 90, 180 or 365 days.
+        keepsAge ? remindPick() : null,
         rows.length > 1 ? h('button', { class: 'btn small', type: 'button', icon: 'list-ol', title: `Put the ${T.title.toLowerCase()} in A to Z order. The arrows on each row move one up or down.`, onclick: async () => {
           mem.data[t] = L().sortRows(t, mem.data[t]); await saveSafe(); render();
         } }, 'Sort A to Z') : null,
@@ -300,6 +315,15 @@
         h('thead', {}, h('tr', {}, ...cols.map(([, label]) => h('th', {}, label)), h('th', { class: 'col-actions' }, ''))), tbody)));
   }
 
+  const COPYABLE = ['username', 'handle']; // v1.148
+  /** v1.148: Remind: Off / 90 / 180 / 365 days (kept in the locker, for every password). */
+  function remindPick() {
+    const { h } = ui;
+    const sel = h('select', { class: 'pw-remind', 'aria-label': 'Remind to change passwords', title: 'Marks passwords older than this in red, as a reminder to change them' },
+      [[0, 'Remind: Off'], [90, 'Remind After 90 Days'], [180, 'Remind After 180 Days'], [365, 'Remind After 1 Year']].map(([n, label]) => h('option', { value: String(n), selected: n === mem.data.pwRemind }, label)));
+    sel.addEventListener('change', async () => { mem.data.pwRemind = Number(sel.value); await saveSafe(); render(); });
+    return sel;
+  }
   function secretCell(value, what) {
     const { h, icon: I } = ui;
     if (!value) return h('span', { class: 'muted' }, '—');
@@ -350,7 +374,7 @@
     });
     if (!saved || !mem.key) return;
     let clean = L().normalizeData({ [t]: [{ ...draft, id: draft.id || L().newId() }] })[t][0];
-    if (row && 'history' in clean) clean = L().withHistory(row, clean, todayISO()); // v1.145: keep the old password
+    if ('history' in clean) clean = L().withHistory(row || {}, clean, todayISO()); // v1.145: keep the old password; v1.148: and the day it was set
     if (row) mem.data[t] = mem.data[t].map((x) => (x === row ? clean : x));
     else mem.data[t].push(clean);
     await saveSafe();
@@ -371,7 +395,9 @@
     const draw = () => {
       mem.query.files = q.value;
       const words = q.value.toLowerCase().split(/\s+/).filter(Boolean);
-      const list = mem.data.files.filter((f) => { const t = `${f.name} ${f.label} ${f.notes} ${f.status === 'inactive' ? 'inactive' : 'active'}`.toLowerCase(); return words.every((w) => t.includes(w)); }).sort((a, b) => String(b.added).localeCompare(String(a.added)));
+      const list = mem.data.files.filter((f) => { const t = `${f.name} ${f.label} ${f.notes} ${f.status === 'inactive' ? 'inactive' : 'active'}`.toLowerCase(); return words.every((w) => t.includes(w)); })
+        // v1.148: newest added first, or by Last Contact (the longest ago first, so who needs a call is on top).
+        .sort((a, b) => (mem.fileSort === 'contact' ? (a.lastContact || '0000').localeCompare(b.lastContact || '0000') : 0) || String(b.added).localeCompare(String(a.added)));
       tbody.replaceChildren(...(list.length ? list.map((f) => h('tr', {},
         h('td', {}, h('button', { type: 'button', class: 'linklike', title: 'Open', onclick: () => openFile(f) }, I('shield-lock-fill'), ' ', f.name)),
         h('td', {}, f.label || h('span', { class: 'muted' }, '—')),
@@ -379,13 +405,14 @@
         h('td', {}, h('button', { type: 'button', class: `btn small locker-status ${f.status === 'inactive' ? 'inactive' : 'active'}`, title: `${f.status === 'inactive' ? 'Inactive' : 'Active'}: click to mark it ${f.status === 'inactive' ? 'Active' : 'Inactive'}`, onclick: async () => {
           f.status = f.status === 'inactive' ? 'active' : 'inactive'; await saveSafe(); render();
         } }, f.status === 'inactive' ? 'Inactive' : 'Active')),
+        h('td', { class: 'muted date-cell' }, f.lastContact ? ui.fmtDate(f.lastContact) : '—'),
         h('td', { class: 'num muted' }, ui.fmtSize(f.size)),
         h('td', { class: 'muted date-cell' }, f.added ? ui.fmtDate(f.added.slice(0, 10)) : '—'),
         h('td', { class: 'col-actions nowrap' },
           h('button', { type: 'button', class: 'icon-btn', title: 'Informant / label and notes', onclick: () => labelFile(f) }, I('pencil'), h('span', { class: 'sr-only' }, 'Edit label')),
           h('button', { type: 'button', class: 'icon-btn', title: 'Save a copy outside the locker (not encrypted)', onclick: () => saveCopy(f) }, I('download'), h('span', { class: 'sr-only' }, 'Save a copy')),
           h('button', { type: 'button', class: 'icon-btn danger-icon', title: 'Delete from the locker', onclick: () => deleteFile(f) }, I('trash3'), h('span', { class: 'sr-only' }, 'Delete')))))
-        : [h('tr', {}, h('td', { colspan: 6, class: 'muted empty-cell' }, mem.data.files.length ? 'Nothing matches.' : 'No confidential files yet. Add Files, or drop files here.'))]));
+        : [h('tr', {}, h('td', { colspan: 7, class: 'muted empty-cell' }, mem.data.files.length ? 'Nothing matches.' : 'No confidential files yet. Add Files, or drop files here.'))]));
     };
     q.addEventListener('input', draw);
     draw();
@@ -394,7 +421,9 @@
         h('button', { class: 'btn primary small', type: 'button', icon: 'upload', onclick: () => picker.click() }, 'Add Files'), picker),
       h('p', { class: 'muted small' }, 'Informant files and anything else to keep locked: each file is encrypted on the SSD. Give each an informant number or label to find it again. The original you picked is not deleted: delete it yourself once it is in the locker.'),
       h('div', { class: 'table-wrap' }, h('table', { class: 'data-table locker-table' },
-        h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', {}, 'Informant / Label'), h('th', {}, 'Status'), h('th', { class: 'num' }, 'Size'), h('th', { class: 'date-cell' }, 'Added'), h('th', { class: 'col-actions' }, ''))), tbody)));
+        h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', {}, 'Informant / Label'), h('th', {}, 'Status'),
+          h('th', { class: 'date-cell' }, h('button', { type: 'button', class: 'th-sort', title: mem.fileSort === 'contact' ? 'Sorted by Last Contact (longest ago first). Click to sort by Added.' : 'Sort by Last Contact, longest ago first', onclick: () => { mem.fileSort = mem.fileSort === 'contact' ? '' : 'contact'; render(); } }, 'Last Contact', mem.fileSort === 'contact' ? ' ▲' : '')),
+          h('th', { class: 'num' }, 'Size'), h('th', { class: 'date-cell' }, 'Added'), h('th', { class: 'col-actions' }, ''))), tbody)));
     sec.addEventListener('dragover', (e) => { e.preventDefault(); sec.classList.add('drag'); });
     sec.addEventListener('dragleave', () => sec.classList.remove('drag'));
     sec.addEventListener('drop', (e) => { e.preventDefault(); sec.classList.remove('drag'); addFiles([...e.dataTransfer.files]); });
@@ -462,8 +491,10 @@
     const vals = await openDialog((close) => {
       const label = h('input', { value: f.label, maxlength: 120, autofocus: true, placeholder: 'CI-1234', 'aria-label': 'Informant or label' });
       const notes = h('textarea', { rows: 3 }); notes.value = f.notes;
-      return h('form', { class: 'locker-form', onsubmit: (e) => { e.preventDefault(); close({ label: label.value.trim(), notes: notes.value }); } },
-        h('h2', { icon: 'pencil' }, f.name), ui.field('Informant / Label', label), ui.field('Notes', notes),
+      const contact = h('input', { type: 'date', value: f.lastContact || '', 'aria-label': 'Last contact' }); // v1.148
+      const contactValue = () => String(contact.value || '');
+      return h('form', { class: 'locker-form', onsubmit: (e) => { e.preventDefault(); close({ label: label.value.trim(), notes: notes.value, lastContact: /^\d{4}-\d{2}-\d{2}$/.test(contactValue()) ? contactValue() : '' }); } },
+        h('h2', { icon: 'pencil' }, f.name), ui.field('Informant / Label', label), ui.field('Last Contact', contact), ui.field('Notes', notes),
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Save')));
     });
     if (!vals || !mem.key) return;

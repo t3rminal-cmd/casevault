@@ -213,6 +213,18 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.148
+
+- **Case Group page:** **Timeline** shows the events of every case in the group on one Timeline (each case's Timeline tab does the same, like an Operation's). **Summary PDF** lists each case (number, subject, status, opened, next deadline, charges from the Arrest Report) with your letterhead. **Make Operation** turns the group into an Operation with the same cases when the investigation grows
+- **How many are due:** a red Operation in OPERATION, or a red Case Group in INDEPENDENT, shows a small red number: how many of its cases have something due. Hold the mouse over it for the list (case, what, when)
+- **Snooze a deadline:** on the Timeline, **Snooze** on a deadline that is due quiets its alert for a day, 3 days or a week ("Snoozed until …"); the bell and the red case come back by themselves after that, or at once with **Wake**. Another deadline of the same case still rings
+- **Password age:** each password shows when it was set ("Changed 400 days ago"). **Remind After 90 / 180 Days / 1 Year** (in the Password Manager's header) marks older ones in red. Passwords saved before this version show their age once they are changed
+- **Copy Username:** the username has its own Copy button, like the password
+- **Last Contact (Confidential Files):** the pencil on a file now has **Last Contact**; it shows in its own column, and a click on the column heading sorts the longest-ago first
+- **Operation folders in order:** By Number, Newest First, or Most Alerts First, in the Operation Cases header (kept on this PC)
+- **Pin a case:** the pin by a case in Recently Updated (or **Pin** on the case's Details) keeps it at the top of Recently Updated, even after Clear
+- **Updater (1.3.2):** when an update fails, **Save Problem Report** writes a text file (what the updater did, the error, the versions; no case data) in `updater\problem-reports` to send to the developer
+
 ### What's new in v1.147
 
 - **Home page folders:** the names under the folders (Operation Cases, General Files, Closed Files, Archived, Other Files) start at the left, under the left edge of each folder
@@ -228,17 +240,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Confidential Files:** each file is marked **Active** (green) or **Inactive** (red); click it to switch. New files start Active
 - **Updater (1.3.1):** a small, plain window again: the banner, the version line, one line of status, the progress bar and the buttons. **What's New** opens the notes (and Show Files) only when you ask
 - **Tidy up:** unused folder icons removed; the README brought up to date with a map of the repository's folders
-
-### What's new in v1.145
-
-- **Recently Updated:** in each status box the word (Open, Closed…) sits on the left and its icon on the right, in every row the same
-- **Operation Cases:** the MISSION FILES folder (case list and home page) is now called **OPERATION CASES**
-- **Archived → Rename Folders:** give the archive folders (EXPIRED, NOLLE PROSEQUI, PROSECUTION, Other) your own names. Only the names change; every case stays in its folder. Leave a box empty to go back to the standard name
-- **Suspect folders for independent cases:** on an independent case's Details, **Suspect Folder** puts it in a folder with the suspect's name under INDEPENDENT CASES, with the other cases about the same person. It is not a Mission: each case stays on its own. The same name written another way ("doe, john") joins the folder already there. **Take Out of Folder** takes it out; a case moved into a Mission leaves its folder. General Files shows the folder in the Mission column
-- **Training cards:** a certificate card shows just the course name and, when there is one, when it expires (the date completed and hours are in the pencil's details and the hover box)
-- **Password Manager, arranged your way:** the arrows on each row move it up or down; **Sort A to Z** puts the list in order once. The order is kept in the locker
-- **Password Manager, Edit:** each entry has an **Edit** button (with its word) to change the password, username, web address or notes
-- **Password Manager, old passwords:** when you change a password, the old one is kept with the day it changed. **Old (N)** on the row opens the list under it (each hidden until shown, with Copy); the Edit box lists them too, and one can be removed there. Up to 20 are kept per entry, encrypted in the locker like everything else. Covert Accounts keep their old passwords the same way
 
 ### Earlier versions
 

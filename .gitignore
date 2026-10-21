@@ -98,6 +98,7 @@ node_modules/
 # CaseVault Updater: the SSD's own files, never committed
 /version.json
 updater/python/
+updater/problem-reports/
 updater/updater-settings.json
 .update-staging/
 .update-backup/

@@ -175,8 +175,10 @@ class WindowTests(InstallBase):
         self.assertIn("Start-CaseVault.bat", w.files.get("1.0", "end"))
         self.assertTrue(w.panel_title.cget("text").startswith("Files ("))
         w.toggle_files()
+        self.assertFalse(w.report_btn.winfo_ismapped())  # 1.3.2: only after an error
         w.on_answer(True)
         self.assertTrue(until(lambda: not w.ctl.busy and "Installed" in w.status.cget("text") and not w.local.spinning))
+        self.assertTrue(any(k == "confirm" or k == "progress" for k, _ in w.log) or w.log)
         seen.append(w.status.cget("text"))
         self.assertEqual(int(w.bar["value"]), 1000)
         self.assertIn("1.23.0", w.local.cget("text"))
@@ -184,6 +186,11 @@ class WindowTests(InstallBase):
         self.assertEqual([w.steps.state_of(i) for i in range(4)], ["done"] * 4)
         self.assertEqual(w.v_have.cget("text"), "Installed 1.23 · Up To Date")
         self.assertTrue(w.open_btn.winfo_ismapped(), "Open CaseVault is offered when it's done")
+        # 1.3.2: an error offers Save Problem Report.
+        w.handle("error", {"text": "Can't reach GitHub"})
+        root.update()
+        self.assertTrue(w.report_btn.winfo_ismapped())
+        self.assertEqual(w.last_error, "Can't reach GitHub")
         root.destroy()
         self.assert_new()
 

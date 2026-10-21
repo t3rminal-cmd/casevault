@@ -15,7 +15,7 @@
    * <svg> underneath, for places that need a single colour (white on a blue button, the Overview
    * banner): app.css shows one or the other. Names without a Bootstrap shape are colour only. */
   const COLOR = {
-    'trash3': 'trash', 'archive': 'archive-box', 'hourglass-split': 'hourglass', 'geo-alt': 'pin', 'geo': 'pin',
+    'trash3': 'trash', 'archive': 'archive-box', 'hourglass-split': 'hourglass', 'geo-alt': 'pin', 'geo': 'pin', 'pin-angle': 'pin', // v1.148: pinned cases
     'calculator': 'calculator', 'calculator-fill': 'calculator', 'fingerprint': 'fingerprint', 'map': 'map',
     'telephone': 'phone', 'currency-bitcoin': 'crypto', 'image': 'image', 'file-earmark-image': 'image',
     'google': 'google', 'snapchat': 'snapchat', 'meta': 'meta', 'send': 'send', 'telegram': 'telegram',

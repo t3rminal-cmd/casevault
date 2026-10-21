@@ -4,6 +4,17 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.145
+
+- **Recently Updated:** in each status box the word (Open, Closed…) sits on the left and its icon on the right, in every row the same
+- **Operation Cases:** the MISSION FILES folder (case list and home page) is now called **OPERATION CASES**
+- **Archived → Rename Folders:** give the archive folders (EXPIRED, NOLLE PROSEQUI, PROSECUTION, Other) your own names. Only the names change; every case stays in its folder. Leave a box empty to go back to the standard name
+- **Suspect folders for independent cases:** on an independent case's Details, **Suspect Folder** puts it in a folder with the suspect's name under INDEPENDENT CASES, with the other cases about the same person. It is not a Mission: each case stays on its own. The same name written another way ("doe, john") joins the folder already there. **Take Out of Folder** takes it out; a case moved into a Mission leaves its folder. General Files shows the folder in the Mission column
+- **Training cards:** a certificate card shows just the course name and, when there is one, when it expires (the date completed and hours are in the pencil's details and the hover box)
+- **Password Manager, arranged your way:** the arrows on each row move it up or down; **Sort A to Z** puts the list in order once. The order is kept in the locker
+- **Password Manager, Edit:** each entry has an **Edit** button (with its word) to change the password, username, web address or notes
+- **Password Manager, old passwords:** when you change a password, the old one is kept with the day it changed. **Old (N)** on the row opens the list under it (each hidden until shown, with Copy); the Edit box lists them too, and one can be removed there. Up to 20 are kept per entry, encrypted in the locker like everything else. Covert Accounts keep their old passwords the same way
+
 ## What's new in v1.144
 
 - **Updater: a new look (updater 1.3):** the CaseVault Updater window now looks like CaseVault: off-white and navy, square corners, larger text (11 pt, headings 12 pt), and a navy banner with the vault door whose handle turns while it works

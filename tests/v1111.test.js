@@ -44,7 +44,7 @@ test('v1.111: a locker opens with its password or its recovery key, and nothing 
 test('v1.111: locker tables, search and password generator', () => {
   const d = L.normalizeData({ passwords: [{ id: 'a', site: 'Example Portal', username: 'jdoe', password: 'Zq9secret' }, null], files: [{ id: 'bad!' }, { id: 'abcdefgh12', name: 'CI-1 contract.pdf', size: 10 }] });
   assert.strictEqual(d.passwords.length, 1);
-  assert.deepStrictEqual(Object.keys(d.passwords[0]), ['id', 'site', 'username', 'password', 'url', 'notes', 'history']); // v1.145: old passwords
+  assert.deepStrictEqual(Object.keys(d.passwords[0]), ['id', 'site', 'username', 'password', 'url', 'notes', 'history', 'changed']); // v1.145: old passwords; v1.148: when set
   assert.strictEqual(d.files.length, 1);
   assert.strictEqual(L.filterRows('passwords', d.passwords, 'portal jdoe').length, 1);
   assert.strictEqual(L.filterRows('passwords', d.passwords, 'zq9').length, 0, 'passwords are not searched');

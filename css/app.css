@@ -4206,3 +4206,29 @@ a.case-sg-label, a.gen-sg { text-decoration: none; }
 .dashboard .op-folder-name, .dashboard .op-folder-name.op-two-line { text-align: left; align-items: flex-start; justify-content: flex-start; }
 /* v1.147: every Status column: the word on the left of its box, the icon on the right, the boxes one width. */
 :is(.ops-table, .op-cases-table, .general-table, .data-table) td > .pill { display: inline-flex; justify-content: space-between; align-items: center; box-sizing: border-box; width: 7.3em; padding-left: .55rem; padding-right: .5rem; white-space: nowrap; }
+/* v1.148: a red folder's count of due cases (an Operation in OPERATION, or a Case Group). */
+#sidebar .alert-count { flex: none; min-width: 1.35rem; padding: .02rem .35rem; text-align: center; font-size: var(--fs-tiny); font-weight: 700; color: #fff; background: var(--danger); border: 1px solid var(--danger); }
+/* v1.148: a snoozed deadline on the Timeline. */
+.tl-item .due.snoozed { color: var(--muted); border-color: var(--border); background: var(--surface-2); }
+.suspect-group > .sg-head:has(.alert-count) { border-color: var(--danger); border-left-color: var(--danger); background: var(--danger-soft); }
+.snooze-form .snooze-picks { display: flex; gap: .5rem; margin: .8rem 0 .4rem; }
+/* v1.148: Password Manager: the password's age under it (red once past the reminder), a Copy button
+   by the username, the reminder choice in the header. */
+.locker-rows .secret-cell .pw-age { display: block; margin-top: .1rem; font-size: var(--fs-tiny); color: var(--muted); white-space: nowrap; }
+.locker-rows .secret-cell .pw-age.stale { color: var(--danger); font-weight: 700; }
+.locker-rows tr.pw-stale > td:first-child { box-shadow: inset 4px 0 0 var(--danger); }
+.locker-rows td.copy-cell .copy-wrap { display: flex; align-items: center; gap: .25rem; min-width: 0; }
+.locker-rows td.copy-cell .copy-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.locker-rows td.copy-cell .copy-user { flex: none; }
+.locker-section .pw-remind { width: auto; }
+/* v1.148: pinned cases at the top of Recently Updated; the pin before the subject. */
+.recent-grid .recent-subject { display: flex; align-items: center; gap: .35rem; }
+.recent-grid .recent-subject-text { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.recent-grid .recent-cell.recent-subject { white-space: normal; overflow: visible; }
+.recent-grid .pin-btn { flex: none; width: 1.5rem; height: 1.5rem; color: var(--muted); opacity: .55; }
+.recent-grid a.recent-row:hover .pin-btn { opacity: 1; }
+.recent-grid .pin-btn.on { opacity: 1; color: var(--accent-strong, var(--accent)); background: var(--accent-soft); border: 1px solid var(--accent); }
+.recent-grid a.recent-row.pinned { background: color-mix(in srgb, var(--accent-soft) 60%, transparent); }
+.dashboard .ov-op-sort { width: auto; }
+.case-op-bar .pin-case { margin-right: .4rem; }
+.case-op-bar .pin-case.on { border-color: var(--accent); color: var(--accent-strong, var(--accent)); background: var(--accent-soft); }
