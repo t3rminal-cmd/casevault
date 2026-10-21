@@ -934,7 +934,7 @@
     const meta = op && group.partial ? `${cases.length} closed · ongoing`
       : op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : `${group.total} case${group.total === 1 ? '' : 's'}`; // v1.101: the title already says independent
     const det = h('details', { class: `op-group${op ? '' : ' general-group'}${bell ? ' has-reminder' : ''}`, open },
-      h('summary', { class: 'op-head', title: op && group.partial ? `${label}: the closed cases of this Mission, which is still going on. They stay in its folder in OPERATION CASES too.` : op ? `${label}: open the Mission` : 'INDEPENDENT CASES: the cases not in a Mission. Click to open General Files, the list of every case.' },
+      h('summary', { class: 'op-head', title: op && group.partial ? `${label}: the closed cases of this Mission, which is still going on. They stay in its folder in OPERATION CASES too.` : op ? `${label}: open the Mission` : 'INDEPENDENT: the cases not in an Operation. Click to open General Files, the list of every case.' },
         // v1.101: INDEPENDENT CASES has no room beside its name: its bell sits on the folder's corner.
         h('span', { class: `op-folder${op ? '' : ' gf-icon'}` }, I(op ? 'op-folder' : 'folder-fill'),
           bell && !op ? h('span', { class: 'case-bell folder-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
@@ -942,7 +942,7 @@
           // v1.60: an Operation's number on top, its name under it.
           h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, ...(op
             ? [h('span', { class: 'op-num' }, op.number || 'No number'), op.name ? h('span', { class: 'op-title' }, op.name) : null].filter(Boolean)
-            : [h('span', { class: 'ind-name' }, 'INDEPENDENT CASES')])), // v1.77: the folder names in capitals; v1.85: was GENERAL FILES
+            : [h('span', { class: 'ind-name' }, 'INDEPENDENT')])), // v1.147: no "CASES"; v1.77: the folder names in capitals; v1.85: was GENERAL FILES
             null), // v1.146: no bell on a Mission's own folder: OPERATION CASES has it, and the case itself is red
           h('span', { class: 'op-meta muted' }, meta)),
         cases.length > 1 ? h('span', { class: 'op-count' }, String(cases.length)) : null,
@@ -1119,10 +1119,10 @@
       if (op) { renderCaseList(); location.hash = `#/operation/${encodeURIComponent(op.id)}`; }
     } }, I('plus-lg'), h('span', { class: 'sr-only' }, 'New Mission'));
     const det = h('details', { class: `op-group mission-group${bell ? ' has-reminder' : ''}`, open: open || searching },
-      h('summary', { class: 'op-head', title: 'OPERATION CASES: every Mission. Click to see them all; the arrow folds the folder.' },
+      h('summary', { class: 'op-head', title: 'OPERATION: every Operation (Mission). Click to see them all; the arrow folds the folder.' },
         h('span', { class: 'op-folder mission-icon' }, I('folder-mission')),
         h('span', { class: 'op-text' },
-          h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, 'OPERATION CASES'), bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
+          h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, 'OPERATION'), bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
           h('span', { class: 'op-meta muted' }, `${n} mission${n === 1 ? '' : 's'}`)),
         add,
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),

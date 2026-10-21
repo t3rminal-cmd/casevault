@@ -4,6 +4,13 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.146)
+
+- **Case Groups:** related independent cases under a name you give, with their own page (New Case Group, Edit Group, Ungroup); replaces Suspect Folder
+- **Case list:** main folder names the same size; red bell on the main folders only, due cases in red
+- **Secure Locker:** Password Manager buttons always in view (long text cut with …); Confidential Files Active / Inactive
+- **Updater 1.3.1:** minimal window, What's New on request
+
 ## Features (v1.145)
 
 - **Home:** Recently Updated status word left / icon right; MISSION FILES renamed OPERATION CASES; Archived → Rename Folders

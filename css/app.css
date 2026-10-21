@@ -4184,7 +4184,10 @@ html .tl-modern .tl-item.arrest::before, html .tl-modern .tl-item.arrest.tl-colo
 #sidebar .mission-group > .op-head .op-name, #sidebar .general-group > .op-head .ind-name { font-size: var(--fs-text); font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
 /* v1.146: the red bell stays on OPERATION CASES and INDEPENDENT CASES only; inside them, the case that
    is due is the one shown in red (no bell or red edge on a Mission's own folder or a case group). */
-#sidebar .mission-children .op-group.has-reminder { border-color: var(--border); border-left-color: var(--sec-mission); }
+/* v1.147: an Operation inside OPERATION with a case that is due is highlighted red too (no bell), so you can see which one. */
+#sidebar .mission-children .op-group.has-reminder { border-color: var(--danger); border-left-color: var(--danger); }
+#sidebar .mission-children .op-group.has-reminder > .op-head { background: var(--danger-soft); }
+#sidebar .mission-children .op-group.has-reminder > .op-head .op-num { color: var(--danger); }
 #sidebar .case-item.has-reminder { background: var(--danger-soft); box-shadow: inset 4px 0 0 var(--danger), inset 0 0 0 1px var(--danger); }
 #sidebar .case-item.has-reminder .case-item-title { color: var(--danger); }
 #sidebar .op-cases .case-item.has-reminder.active { box-shadow: inset 4px 0 0 var(--danger), inset 0 0 0 2px var(--danger); }
@@ -4196,3 +4199,10 @@ html .tl-modern .tl-item.arrest::before, html .tl-modern .tl-item.arrest.tl-colo
 a.case-sg-label, a.gen-sg { text-decoration: none; }
 .locker-table .btn.locker-status.active, .locker-table .btn.locker-status.active:hover { color: var(--ok, #2e7d4f); border-color: var(--ok, #2e7d4f); }
 .locker-table .btn.locker-status.inactive, .locker-table .btn.locker-status.inactive:hover { color: var(--danger); border-color: var(--danger); }
+
+/* v1.147: the names under the folders on the home page (Operation Cases, General Files, Closed Files,
+   Archived, Other Files) start at the left of their tile, under the left edge of the folder. */
+.dashboard .op-folder-tile { align-items: flex-start; text-align: left; padding-left: .75rem; padding-right: .75rem; }
+.dashboard .op-folder-name, .dashboard .op-folder-name.op-two-line { text-align: left; align-items: flex-start; justify-content: flex-start; }
+/* v1.147: every Status column: the word on the left of its box, the icon on the right, the boxes one width. */
+:is(.ops-table, .op-cases-table, .general-table, .data-table) td > .pill { display: inline-flex; justify-content: space-between; align-items: center; box-sizing: border-box; width: 7.3em; padding-left: .55rem; padding-right: .5rem; white-space: nowrap; }
