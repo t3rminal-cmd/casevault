@@ -15,12 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.146
+## What's New in v1.147
 
-- **Case Groups:** related independent cases under a name you give, with their own page (New Case Group, Edit Group, Ungroup); replaces Suspect Folder
-- **Case list:** main folder names the same size; red bell on the main folders only, due cases in red
-- **Secure Locker:** Password Manager buttons always in view (long text cut with …); Confidential Files Active / Inactive
-- **Updater 1.3.1:** minimal window, What's New on request
+- **Home:** folder names left-aligned under the folders; Status columns word left / icon right
+- **Case list:** OPERATION and INDEPENDENT; an Operation with an alert highlighted red
 
 ## What CaseVault Does
 

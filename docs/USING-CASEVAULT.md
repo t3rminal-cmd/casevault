@@ -213,6 +213,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.147
+
+- **Home page folders:** the names under the folders (Operation Cases, General Files, Closed Files, Archived, Other Files) start at the left, under the left edge of each folder
+- **Case list alerts:** an Operation inside OPERATION that has a case due is highlighted red (red edge and shading, its number in red), so you can see which one has the alert. The bell stays on the main folder
+- **Status columns:** in General Files, Missions and every other list, the status word (Open, Closed, Archived) is on the left of its box and its icon on the right, every box the same width
+- **Case list:** the main folders are now just **OPERATION** and **INDEPENDENT**
+
 ### What's new in v1.146
 
 - **Case Groups for independent cases:** keep related independent cases together under a name you give (a suspect, a family, a crew), like an Operation but not one. **New Case Group** (General Files) or **Case Group** (on an independent case's Details) asks for the name and lets you tick the cases that belong. The group shows in INDEPENDENT CASES with its cases under it; its name opens the group's own page (its cases as cards, **Edit Group** to rename it or change its cases, **Ungroup** to take it apart). The same name written another way ("doe, john") joins the group already there. (This replaces v1.145's Suspect Folder; groups made then are kept.)
@@ -232,14 +239,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Password Manager, arranged your way:** the arrows on each row move it up or down; **Sort A to Z** puts the list in order once. The order is kept in the locker
 - **Password Manager, Edit:** each entry has an **Edit** button (with its word) to change the password, username, web address or notes
 - **Password Manager, old passwords:** when you change a password, the old one is kept with the day it changed. **Old (N)** on the row opens the list under it (each hidden until shown, with Copy); the Edit box lists them too, and one can be removed there. Up to 20 are kept per entry, encrypted in the locker like everything else. Covert Accounts keep their old passwords the same way
-
-### What's new in v1.144
-
-- **Updater: a new look (updater 1.3):** the CaseVault Updater window now looks like CaseVault: off-white and navy, square corners, larger text (11 pt, headings 12 pt), and a navy banner with the vault door whose handle turns while it works
-- **Updater: versions at a glance:** a strip under the banner says **Installed 1.143 → Available 1.144**, and **Installed 1.144 · Up To Date** when there is nothing new
-- **Updater: What's New:** before you install, the window lists what each newer version brings (the same notes as here) instead of a list of file names. **Show Files** still shows the files it will change
-- **Updater: steps:** **Check · Download · Install · Done** across the top show where it is; each turns green when finished, and red where something stopped
-- **Updater: Open CaseVault:** when the update is done, **Open CaseVault** starts it for you. The updater updates itself, so the new look shows the next time you start Check-For-Updates.bat
 
 ### Earlier versions
 

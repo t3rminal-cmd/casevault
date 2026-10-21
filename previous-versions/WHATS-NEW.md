@@ -4,6 +4,14 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.144
+
+- **Updater: a new look (updater 1.3):** the CaseVault Updater window now looks like CaseVault: off-white and navy, square corners, larger text (11 pt, headings 12 pt), and a navy banner with the vault door whose handle turns while it works
+- **Updater: versions at a glance:** a strip under the banner says **Installed 1.143 → Available 1.144**, and **Installed 1.144 · Up To Date** when there is nothing new
+- **Updater: What's New:** before you install, the window lists what each newer version brings (the same notes as here) instead of a list of file names. **Show Files** still shows the files it will change
+- **Updater: steps:** **Check · Download · Install · Done** across the top show where it is; each turns green when finished, and red where something stopped
+- **Updater: Open CaseVault:** when the update is done, **Open CaseVault** starts it for you. The updater updates itself, so the new look shows the next time you start Check-For-Updates.bat
+
 ## What's new in v1.143
 
 - **Arrest Report: no more "null":** the word null showed on the Arrest Report tab under the arrestees (where nothing was meant to be). Gone; a check of every page now makes sure no "null", "undefined" or "NaN" shows anywhere
