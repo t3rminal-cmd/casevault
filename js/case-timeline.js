@@ -21,6 +21,15 @@
 
     /* ---------- Timeline ---------- */
 
+    /** v1.148: how long to snooze a deadline: 1, 3 or 7 days (null when cancelled). */
+    function snoozeDialog(ev) {
+      return openDialog((close) => h('div', { class: 'snooze-form' },
+        h('h2', { icon: 'bell-fill' }, 'Snooze Deadline'),
+        h('p', { class: 'muted small' }, `"${ev.title || 'Deadline'}" stays on the Timeline, but its red alert (the bell and the red case) waits until then.`),
+        h('div', { class: 'snooze-picks' }, [[1, 'Tomorrow'], [3, '3 Days'], [7, '1 Week']].map(([n, label]) => h('button', { class: 'btn', type: 'button', onclick: () => close(n) }, label))),
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'))));
+    }
+
     // v1.27: the Timeline is the operation's: the events of all its case numbers, in date order, each
     // marked with its case number. New events go to the case number picked (this one by default).
     async function renderTimeline(panel, c, token) {
@@ -330,7 +339,9 @@
           const mk = ev.date.slice(0, 7);
           if (mk !== month) { month = mk; items.push(h('li', { class: 'tl-month' }, monthName(ev.date))); }
           const isDeadline = ev.kind === 'deadline';
-          const due = isDeadline && !ev.done ? dueLabel(ev.date) : null;
+          // v1.148: a snoozed deadline ("remind me in 3 days") is quiet until its snooze runs out.
+          const snoozed = isDeadline && !ev.done && ev.snooze && ev.snooze > now;
+          const due = isDeadline && !ev.done && !snoozed ? dueLabel(ev.date) : null;
           const done = isDeadline ? h('input', { type: 'checkbox', checked: !!ev.done, 'aria-label': 'Done', title: 'Mark done' }) : null;
           if (done) done.addEventListener('change', () => { ev.done = done.checked; draw(); persist(caseId); });
           const [, , dd] = ev.date.split('-');
@@ -344,7 +355,8 @@
                 ev.kind === 'arrest' ? h('span', { class: 'badge arrest' }, cuffs(), 'Arrest') : h('span', { class: `badge ${ev.kind}` }, isDeadline ? 'Deadline' : ev.kind === 'buy' ? 'Buy' : 'Event'),
                 many ? h('span', { class: `tl-case${caseId === c.id ? ' current' : ''}`, title: caseId === c.id ? 'This case number' : 'Another case number of this mission' }, numberOf(caseId)) : null,
                 h('strong', {}, ev.title),
-                due && h('span', { class: `due ${due.cls}` }, due.text)),
+                due && h('span', { class: `due ${due.cls}` }, due.text),
+                snoozed ? h('span', { class: 'due snoozed', title: 'Snoozed: no alert until then' }, `Snoozed until ${fmtDate(ev.snooze)}`) : null),
               ev.kind === 'buy' && O.buyLine(ev) ? h('div', { class: 'tl-buy' }, O.buyLine(ev)) : null,
               ev.note && h('div', { class: 'tl-note' }, ev.note)),
               // v1.138: the suspect on the right of the box, every name the same width so they line up.
@@ -360,6 +372,13 @@
                 submit.textContent = 'Save changes'; cancel.hidden = false;
                 f.title.focus();
               } }, 'Edit'),
+              isDeadline && !ev.done && (due || snoozed) ? h('button', { class: 'btn small ghost tl-snooze', type: 'button', title: snoozed ? 'Ring for this deadline again now' : 'No alert for this deadline for a few days', onclick: async () => {
+                const days = snoozed ? 0 : await snoozeDialog(ev);
+                if (days === null) return;
+                if (days) { const d = new Date(`${now}T12:00:00`); d.setDate(d.getDate() + days); ev.snooze = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; } else delete ev.snooze;
+                draw();
+                persist(caseId);
+              } }, snoozed ? 'Wake' : 'Snooze') : null,
               h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
                 if (!(await confirmDialog({ title: 'Delete this entry?', message: `"${ev.title}" on ${fmtDate(ev.date)}${many ? ` (${numberOf(caseId)})` : ''}`, confirmText: 'Delete', danger: true }))) return;
                 const t = tls.get(caseId);

@@ -23,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.147.0';
+  const APP_VERSION = '1.148.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -270,7 +270,19 @@ const Vault = (() => {
     const open = (timeline?.events || [])
       .filter((e) => e.kind === 'deadline' && !e.done && e.date)
       .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
-    return open.length ? { date: open[0].date, time: open[0].time || '', title: open[0].title || '' } : null;
+    if (!open.length) return null;
+    // v1.148: a snoozed deadline ("remind me in 3 days") keeps its date; the next one not snoozed is
+    // kept too, so the case can still ring for another deadline while one is snoozed.
+    const pick = (e) => ({ date: e.date, time: e.time || '', title: e.title || '' });
+    const out = pick(open[0]);
+    if (open[0].snooze) {
+      out.snooze = open[0].snooze;
+      const other = open.find((e) => !e.snooze);
+      if (other) out.other = { ...pick(other), snoozeOf: '' };
+      const later = open.filter((e) => e.snooze && e !== open[0]).map((e) => ({ ...pick(e), snooze: e.snooze }));
+      if (later.length) out.snoozed = later;
+    }
+    return out;
   }
 
   function indexEntry(c, timeline, prev, location = 'active') {

@@ -107,6 +107,19 @@
     return { text: `in ${n} days`, cls: n <= 7 ? 'soon' : '' };
   }
 
+  /** v1.148: the deadline a case rings for: its next deadline unless snoozed past today (then the next
+   * one not snoozed, or a snoozed one whose snooze has run out); null when nothing is due soon. */
+  function effDeadline(c) {
+    const nd = c && c.nextDeadline;
+    if (!nd || !nd.date) return null;
+    const now = today();
+    const cands = [nd, ...(nd.snoozed || []), nd.other].filter(Boolean).filter((d) => !d.snooze || d.snooze <= now);
+    return cands.sort((a, b) => a.date.localeCompare(b.date))[0] || null;
+  }
+  function caseDue(c) {
+    const d = effDeadline(c);
+    return d ? { ...dueLabel(d.date), date: d.date, title: d.title } : null;
+  }
   // v1.67: the statute of limitations of a case in the index: 'warn' (5 days or less), 'expired' or ''.
   const solState = (c) => (c && c.sol && !isArchivedEntry(c) && c.status !== 'Closed' && globalThis.CVLimits ? CVLimits.state(c.sol, today()) : '');
   // v1.62: a heading inside a popup form (a thin line with its name) and a hint box.
@@ -854,7 +867,7 @@
   function caseItem(c, inGroup = false, { dim = false } = {}) {
     const sol = solState(c);
     const due = sol ? { cls: 'overdue', text: sol === 'expired' ? 'statute of limitations expired' : 'statute of limitations expiring' }
-      : c.nextDeadline && !isArchivedEntry(c) ? dueLabel(c.nextDeadline.date) : null;
+      : c.nextDeadline && !isArchivedEntry(c) ? caseDue(c) : null;
     // Any open deadline on the case's Timeline rings the red bell (right of the title).
     // v1.28: the bell sits right after the title; a case number inside an operation leaves it to
     // the operation's name.
@@ -930,7 +943,8 @@
     const { key, op, cases } = group;
     const label = op ? opLabel(op) : 'Independent Cases';
     const open = folderOpen(group);
-    const bell = cases.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date));
+    const dueCases = cases.filter((c) => caseDue(c)); // v1.148: snoozed deadlines don't ring
+    const bell = dueCases.length > 0;
     const meta = op && group.partial ? `${cases.length} closed · ongoing`
       : op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : `${group.total} case${group.total === 1 ? '' : 's'}`; // v1.101: the title already says independent
     const det = h('details', { class: `op-group${op ? '' : ' general-group'}${bell ? ' has-reminder' : ''}`, open },
@@ -945,6 +959,8 @@
             : [h('span', { class: 'ind-name' }, 'INDEPENDENT')])), // v1.147: no "CASES"; v1.77: the folder names in capitals; v1.85: was GENERAL FILES
             null), // v1.146: no bell on a Mission's own folder: OPERATION CASES has it, and the case itself is red
           h('span', { class: 'op-meta muted' }, meta)),
+        // v1.148: how many of its cases are due, in a red box; the hover box lists them.
+        op && !group.partial && dueCases.length ? h('span', { class: 'alert-count', title: alertList(dueCases), 'aria-label': `${dueCases.length} due` }, String(dueCases.length)) : null,
         cases.length > 1 ? h('span', { class: 'op-count' }, String(cases.length)) : null,
         // v1.83: GENERAL FILES has a + for a new case, like MISSION FILES has one for a new Mission.
         !op && !group.closed ? h('button', { class: 'icon-btn mission-add general-add', type: 'button', title: 'New independent case (not in a Mission)', onclick: (e) => { e.preventDefault(); e.stopPropagation(); newCase(); } }, I('plus-lg'), h('span', { class: 'sr-only' }, 'New case')) : null,
@@ -963,6 +979,8 @@
     });
     return h('li', { class: 'op-item' }, det);
   }
+  /** v1.148: the hover box of a red folder's count: each due case, what is due and when. */
+  const alertList = (list) => list.map((c) => { const d = caseDue(c); return `${c.number || 'No case number'}: ${d.title || 'Deadline'}, ${fmtDate(d.date)} (${d.text})`; }).join('\n');
   /** v1.145: INDEPENDENT CASES: the cases in a Case Group (v1.145: suspect folder) together under its name
    * (A to Z, folded like the other folders), then the cases in none. Not a Mission: each case stays
    * on its own; the folder only keeps them together. */
@@ -975,7 +993,9 @@
       const open = sideFold.has(key) ? sideFold.get(key) : !!$('#case-search').value.trim() || list.some((c) => c.id === state.caseId) || location.hash === `#/group/${encodeURIComponent(g)}`;
       const det = h('details', { class: 'suspect-group', open },
         h('summary', { class: `sg-head${location.hash === `#/group/${encodeURIComponent(g)}` ? ' active' : ''}`, title: `${g}: a Case Group of ${plural(list.length, 'case')}, kept together (not an Operation). Click to open it; the arrow folds it.` },
-          h('span', { class: 'sg-name' }, g), h('span', { class: 'sg-icon' }, I('person-badge')), h('span', { class: 'sg-count' }, String(list.length)), h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
+          h('span', { class: 'sg-name' }, g), h('span', { class: 'sg-icon' }, I('person-badge')),
+          list.some((c) => caseDue(c)) ? h('span', { class: 'alert-count', title: alertList(list.filter((c) => caseDue(c))) }, String(list.filter((c) => caseDue(c)).length)) : null,
+          h('span', { class: 'sg-count' }, String(list.length)), h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
         h('ul', { class: 'op-cases sg-cases' }, list.map((c) => caseItem(c, true))));
       // v1.146: the name opens the group's page; the arrow folds it.
       det.querySelector('summary').addEventListener('click', (e) => {
@@ -1045,17 +1065,42 @@
     toast(name ? `${plural(keep.size, 'case')} in the group ${name}.` : 'The group was taken apart; its cases are still in INDEPENDENT CASES.', 'success', 3500);
     return name;
   }
+  /** v1.148: the Case Group Summary PDF: each case's number, subject, status, opened date, next
+   * deadline and charges, with the letterhead. */
+  async function groupSummary(name, list) {
+    const arrests = new Map();
+    const full = [];
+    for (const c of list) {
+      arrests.set(c.id, await Vault.readCaseJSON(c.id, 'arrest.json').catch(() => null));
+      full.push(c);
+    }
+    const bytes = CVGroupSummary.build(name, CVGroupSummary.rows(full, arrests), { letterhead: await CVLetterhead.forPdf().catch(() => null), printed: fmtDate(today()) });
+    await openDialog((done) => h('div', { class: 'pdf-view' }, h('h2', { 'data-keep-case': 'true' }, `Case Group Summary: ${name}`), CVPdfViewer.create(bytes, { h, icon: I, title: `Case Group Summary ${name}`, fileName: `Case Group Summary ${name.replace(/[\\/:*?"<>|]+/g, ' ')}.pdf` }),
+      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => done() }, 'Close'))));
+  }
   /** v1.146: a Case Group's page: its name, Edit Group, and its cases as cards (like an Operation's). */
   function showCaseGroup(name) {
     pageStart(name);
     const list = (Vault.data.cases || []).filter((c) => !isArchivedEntry(c) && !opOf(c) && c.suspectGroup === name).sort(byNumber);
     const edit = async () => { const n = await caseGroupDialog({ original: name }); if (n !== null) location.hash = n ? `#/group/${encodeURIComponent(n)}` : '#/general'; };
+    // v1.148: the group's PDF summary, and making it an Operation when the investigation grows.
+    const summary = () => groupSummary(name, list);
+    const makeOp = async () => {
+      if (!(await confirmDialog({ title: `Make ${name} an Operation?`, message: `A new Operation (Mission) is made with ${plural(list.length, 'case')} of this group in it, and the group is taken apart. The cases and their files stay where they are.`, confirmText: 'Make Operation' }))) return;
+      const op = await operationDialog(null, { name });
+      if (!op) return;
+      for (const c of list) { await Save.track(`sg:${c.id}`, () => Vault.setSuspectGroup(c.id, '')).catch(() => {}); await linkCase(c.id, op.id); }
+      renderCaseList();
+      location.hash = `#/operation/${encodeURIComponent(op.id)}`;
+    };
     $('#main').replaceChildren(h('section', { class: 'ops-page group-page' },
       h('div', { class: 'page-head' },
         h('span', { class: 'page-icon cg-icon' }, I('person-badge')),
         h('div', { class: 'page-title' }, h('h1', { 'data-keep-case': 'true' }, name), h('div', { class: 'muted small' }, `Case Group · ${plural(list.length, 'independent case')} kept together (not an Operation)`)),
         h('div', { class: 'spacer' }),
-        h('a', { class: 'btn', href: '#/general', icon: 'folder-fill' }, 'General Files'),
+        list.length ? h('a', { class: 'btn', href: `#/case/${encodeURIComponent(list[0].id)}/timeline`, icon: 'calendar-event', title: 'The events of every case in this group on one Timeline' }, 'Timeline') : null,
+        list.length ? h('button', { class: 'btn', type: 'button', icon: 'file-earmark-pdf', title: 'Every case of the group on one page, as a PDF with your letterhead', onclick: summary }, 'Summary PDF') : null,
+        list.length ? h('button', { class: 'btn', type: 'button', icon: 'op-folder', title: 'Make this group an Operation (Mission) with the same cases', onclick: makeOp }, 'Make Operation') : null,
         h('button', { class: 'btn primary', type: 'button', icon: 'pencil-square', title: 'Rename the group, or pick its cases', onclick: edit }, 'Edit Group')),
       list.length ? h('div', { class: 'op-open-cases cg-cases' }, list.map((c) => overviewCard(c)))
         : h('div', { class: 'empty-state' }, h('p', {}, 'No cases in this group any more.'), h('p', { class: 'muted small' }, 'Edit Group picks its cases.'))));
@@ -1112,7 +1157,7 @@
     const searching = !!$('#case-search').value.trim();
     const open = sideFold.has(key) ? sideFold.get(key) : true;
     const n = groups.filter((g) => g.op).length;
-    const bell = groups.some((g) => g.cases.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date)));
+    const bell = groups.some((g) => g.cases.some((c) => caseDue(c)));
     const add = h('button', { class: 'icon-btn mission-add', type: 'button', title: 'New Mission', onclick: async (e) => {
       e.preventDefault(); e.stopPropagation();
       const op = await operationDialog();
@@ -1656,11 +1701,16 @@
     renderCaseList();
     const cases = Vault.data.cases;
     const count = (s) => cases.filter((c) => c.status === s).length;
+    // v1.148: a snoozed deadline is left out until its snooze runs out (the case's next one counts instead).
     const deadlines = cases.filter((c) => c.nextDeadline && c.status !== 'Closed' && c.status !== 'Archived')
+      .map((c) => { const d = effDeadline(c); return d ? { ...c, nextDeadline: d } : null; }).filter(Boolean)
       .sort((a, b) => (a.nextDeadline.date + a.nextDeadline.time).localeCompare(b.nextDeadline.date + b.nextDeadline.time));
     // Recently Updated can be cleared (v1.32): only cases changed after that show again.
     const clearedAt = (Vault.data.settings && Vault.data.settings.recentClearedAt) || '';
-    const recent = [...cases].filter((c) => (c.updated || '') > clearedAt).sort((a, b) => (b.updated || '').localeCompare(a.updated || '')).slice(0, 8);
+    // v1.148: pinned cases stay at the top (Clear leaves them), then the most recently changed.
+    const pins = pinnedIds();
+    const pinned = pins.map((id) => cases.find((c) => c.id === id)).filter(Boolean);
+    const recent = [...pinned, ...[...cases].filter((c) => !pins.includes(c.id) && (c.updated || '') > clearedAt).sort((a, b) => (b.updated || '').localeCompare(a.updated || '')).slice(0, 8)];
     const tlBox = h('div', { class: 'dash-section op-timeline-section', hidden: true });
     const opBox = h('div', { class: 'dash-section op-open-section', hidden: true });
 
@@ -1691,8 +1741,8 @@
       recent.length
         ? h('div', { class: 'recent-grid', role: 'table' },
           h('div', { class: 'recent-row recent-headrow', role: 'row' }, ...['Subject', 'Case Number', 'File Number', 'Status', 'Updated'].map((t) => h('span', { role: 'columnheader' }, t))),
-          ...recent.map((c) => h('a', { href: `#/case/${encodeURIComponent(c.id)}`, class: 'recent-row', role: 'row' },
-            h('span', { class: 'recent-cell' }, (c.title && c.title !== c.subject ? c.title : subj(c) || c.title) || 'Untitled case'),
+          ...recent.map((c) => h('a', { href: `#/case/${encodeURIComponent(c.id)}`, class: `recent-row${pins.includes(c.id) ? ' pinned' : ''}`, role: 'row' },
+            h('span', { class: 'recent-cell recent-subject' }, pinBtn(c), h('span', { class: 'recent-subject-text' }, (c.title && c.title !== c.subject ? c.title : subj(c) || c.title) || 'Untitled case')),
             h('span', { class: 'recent-cell' }, c.number || '—'),
             h('span', { class: 'recent-cell' }, c.fileNumber || '—'),
             h('span', { class: 'recent-cell' }, statusPill(c.status)),
@@ -1702,6 +1752,19 @@
     // v1.63: Quick Links in the footer bar under the page, from the case list to the right edge.
   }
 
+  /** v1.148: pinned cases (kept in vault.json): they stay at the top of Recently Updated. */
+  const pinnedIds = () => ((Vault.data.settings && Array.isArray(Vault.data.settings.pinnedCases)) ? Vault.data.settings.pinnedCases : []).filter((id) => (Vault.data.cases || []).some((c) => c.id === id));
+  async function togglePin(c) {
+    const ids = pinnedIds();
+    const next = ids.includes(c.id) ? ids.filter((x) => x !== c.id) : [...ids, c.id].slice(-12);
+    try { await Save.track('settings', () => Vault.updateSettings({ pinnedCases: next })); } catch { return; }
+    toast(next.includes(c.id) ? `Case ${c.number || ''} pinned to the top of Recently Updated.` : `Case ${c.number || ''} unpinned.`, 'success', 2500);
+  }
+  const pinBtn = (c, after = () => showDashboard()) => {
+    const on = pinnedIds().includes(c.id);
+    return h('button', { type: 'button', class: `icon-btn pin-btn${on ? ' on' : ''}`, title: on ? 'Unpin: let it move with the others' : 'Pin to the top of Recently Updated', 'aria-pressed': String(on),
+      onclick: async (e) => { e.preventDefault(); e.stopPropagation(); await togglePin(c); after(); } }, I('pin-angle'), h('span', { class: 'sr-only' }, on ? 'Unpin' : 'Pin'));
+  };
   /** v1.121: Quick Links in a panel that slides in from the right, opened by the Quick Links
    * buttons (beside Reference on the home page, and in the sidebar's icon row). It takes no room
    * until it is opened; Esc, × or a click outside it closes it. (The bottom bar of v1.63–v1.120 is gone.) */
@@ -1746,9 +1809,9 @@
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
   /** New or edit Operation. Resolves to the saved Operation, or null. */
-  async function operationDialog(op = null) {
+  async function operationDialog(op = null, preset = null) {
     const saved = await openDialog((close) => {
-      const v = op || { status: 'Open', start: today() };
+      const v = op || { status: 'Open', start: today(), ...(preset || {}) }; // v1.148: preset, e.g. a Case Group's name
       const numberIn = h('input', { name: 'number', required: true, maxlength: 100, autocomplete: 'off', autofocus: true, value: v.number || (op ? '' : CVOperation.nextOpNumber(Vault.listOperations())) });
       const nameIn = h('input', { name: 'name', required: true, maxlength: 200, autocomplete: 'off', value: v.name || '' });
       const statusIn = h('select', { name: 'status' }, CVOperation.OP_STATUSES.map((x) => h('option', { selected: x === v.status }, x)));
@@ -2019,7 +2082,7 @@
         if (show.value === 'linked' && !op) return false;
         if (show.value === 'archived' && !isArchivedEntry(c)) return false;
         if (['open', 'closed'].includes(show.value) && (isArchivedEntry(c) || String(c.status).toLowerCase() !== show.value)) return false;
-        if (show.value === 'overdue' && (isArchivedEntry(c) || c.status === 'Closed' || !c.nextDeadline || dueLabel(c.nextDeadline.date).cls !== 'overdue')) return false;
+        if (show.value === 'overdue' && (isArchivedEntry(c) || c.status === 'Closed' || !caseDue(c) || caseDue(c).cls !== 'overdue')) return false;
         return !t || [c.number, c.subject, subj(c), c.title, c.fileNumber, c.status, op ? opLabel(op) : 'general files'].join(' ').toLowerCase().includes(t);
       }).sort(byNumber);
       // v1.101: sort by any column heading; Age (and Opened) put the oldest or newest case first.
@@ -2296,7 +2359,7 @@
     const draw = () => {
       const open = list.find((o) => o.k === yearFolderState.open);
       const tiles = h('div', { class: 'op-folders', role: 'list' }, list.map((o) => {
-        const bell = o.group.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date) && c.status !== 'Closed');
+        const bell = o.group.some((c) => caseDue(c) && c.status !== 'Closed');
         return h('button', { type: 'button', role: 'listitem', class: `op-folder-tile year-tile ${open === o ? 'open' : ''}${o.placeholder ? ' placeholder-tile' : ''}`, 'aria-expanded': String(open === o),
           title: o.placeholder ? 'No cases outside a Mission yet: New Case puts one here' : `${o.name}: ${o.group.length} case${o.group.length === 1 ? '' : 's'} not in a Mission`,
           onclick: () => { yearFolderState.open = open === o ? '' : o.k; draw(); } },
@@ -2322,14 +2385,21 @@
     // v1.46: a folder for each Operation (Operation Number order, as in the case list), then
     // General Files with the cases that aren't in one.
     // v1.116: closed Missions, and the closed case numbers of the open ones, are under CLOSED FILES.
+    // v1.148: in Operation Number order, the newest first, or the most alerts first (kept on this PC).
+    const opSort = (() => { try { return localStorage.getItem('cv-op-sort') || 'number'; } catch { return 'number'; } })();
+    const alerts = (o) => o.group.filter((c) => caseDue(c)).length;
+    const newest = (o) => o.op.start || o.op.created || '';
     const list = Vault.listOperations().filter((op) => !missionClosed(op, active)).map((op) => ({ k: op.id, op, name: opLabel(op), group: active.filter((c) => c.operationId === op.id && c.status !== 'Closed').sort(byNumber) }))
-      .sort((a, b) => byFileNumber(a.op.number, b.op.number) || a.op.name.localeCompare(b.op.name));
+      .sort((a, b) => (opSort === 'newest' ? newest(b).localeCompare(newest(a)) : opSort === 'alerts' ? alerts(b) - alerts(a) : 0) || byFileNumber(a.op.number, b.op.number) || a.op.name.localeCompare(b.op.name));
+    const sortPick = h('select', { class: 'ov-op-sort', 'aria-label': 'Order of the Operation folders', title: 'The order of the folders (kept on this PC)' },
+      [['number', 'By Number'], ['newest', 'Newest First'], ['alerts', 'Most Alerts First']].map(([v, l]) => h('option', { value: v, selected: v === opSort }, l)));
+    sortPick.addEventListener('change', () => { try { localStorage.setItem('cv-op-sort', sortPick.value); } catch { /* this time only */ } showDashboard(); });
     // v1.47: General Files has its own section below, by year.
     const box = h('div', { class: 'dash-section ov-panel op-folders-section' });
     const draw = () => {
       const open = list.find((o) => o.k === opFolderState.open);
       const tiles = h('div', { class: 'op-folders', role: 'list' }, list.map((o) => {
-        const bell = o.group.some((c) => c.nextDeadline && dueLabel(c.nextDeadline.date) && c.status !== 'Closed');
+        const bell = o.group.some((c) => caseDue(c) && c.status !== 'Closed');
         return h('button', { type: 'button', role: 'listitem', class: `op-folder-tile ${open === o ? 'open' : ''}`, 'aria-expanded': String(open === o),
           title: `${o.name}: ${o.group.length} case number${o.group.length === 1 ? '' : 's'}`,
           onclick: () => { opFolderState.open = open === o ? '' : o.k; draw(); } },
@@ -2344,6 +2414,7 @@
           h('button', { type: 'button', class: 'btn small', onclick: () => newCase(open.op ? { operationId: open.op.id } : {}) }, open.op ? 'Add Case Number' : 'New Case')),
         h('div', { class: 'op-open-cases' }, open.group.length ? open.group.map((c) => overviewCard(c)) : [h('p', { class: 'muted' }, open.op ? 'No cases in this Mission yet. Add Case Number creates one here.' : 'No independent cases.')])) : null;
       box.replaceChildren(...[panelHead('Operation Cases', 'Case numbers worked together as a Mission. Click a folder to open it.', h('div', { class: 'ov-head-actions' },
+          list.length > 1 ? sortPick : null,
           // v1.78: New Mission right here, beside All Missions.
           h('button', { class: 'btn small ov-btn-mission', type: 'button', icon: 'plus-lg', onclick: async () => { const op = await operationDialog(); if (op) { renderCaseList(); location.hash = `#/operation/${encodeURIComponent(op.id)}`; } } }, 'New Mission'),
           h('a', { class: 'btn small ov-btn-mission', href: '#/operations', icon: 'folder-mission' }, 'All Missions'))),
@@ -3073,6 +3144,8 @@
             const n = await caseGroupDialog({ original: c.suspectGroup || '', preset: [c.id], suggest: String(c.subject || '').trim() });
             if (n !== null) showCase(c.id, 'details');
           } }, 'Case Group') : null,
+          // v1.148: pin the case to the top of Recently Updated.
+          archived ? null : h('button', { class: `btn small pin-case${pinnedIds().includes(c.id) ? ' on' : ''}`, type: 'button', icon: 'pin-angle', title: 'Keep this case at the top of Recently Updated on the home page', onclick: async () => { await togglePin(c); showCase(c.id, 'details'); } }, pinnedIds().includes(c.id) ? 'Unpin' : 'Pin'),
           // v1.50: Move File (it was "Assign to" / "Move to" and Unlink).
           archived ? null : h('button', { class: 'btn small', type: 'button', icon: 'folder-symlink', title: 'Move this case into a Mission, to another one, or back to General Files', onclick: async () => {
             if (await moveCaseDialog(Vault.data.cases.find((x) => x.id === c.id) || c)) { renderCaseList(); showCase(c.id, 'details'); }
@@ -4263,7 +4336,15 @@
 
   // v1.98: the parts of the app kept in their own files get the helpers they use.
   PARTS.files = CVFilesTab.init({ state, h, I, toast, Save, showCase, FOLDER_ICONS, onDriveLost, confirmDialog, fmtDate, fileTypeLabel, fileKind, FILE_ICONS, fmtSize, fmtDateTime, fmtTime, openDialog, field });
-  PARTS.timeline = CVCaseTimeline.init({ operationCases, state, h, today, Save, field, dueLabel, fmtDate, confirmDialog, openDialog, icon: I, toast, opOf });
+  // v1.148: a Timeline shows the whole Operation, or the whole Case Group for an independent case in one.
+  const timelineCases = (c) => {
+    const ops = operationCases(c);
+    if (ops.length) return ops;
+    const e = (Vault.data?.cases || []).find((x) => x.id === (typeof c === 'string' ? c : c && c.id));
+    if (!e || !e.suspectGroup || opOf(e)) return [];
+    return Vault.data.cases.filter((x) => !isArchivedEntry(x) && !opOf(x) && x.suspectGroup === e.suspectGroup).sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
+  };
+  PARTS.timeline = CVCaseTimeline.init({ operationCases: timelineCases, state, h, today, Save, field, dueLabel, fmtDate, confirmDialog, openDialog, icon: I, toast, opOf });
   PARTS.overview = CVCaseOverview.init({ h, field, dnaCombo, I, today, fmtDate, dueLabel, opOf, Save, newCase, openDialog, fmtDateTime });
 
   // Small toolkit shared with the consistency checker screen (js/checker/checks-ui.js).

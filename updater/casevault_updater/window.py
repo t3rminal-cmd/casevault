@@ -208,6 +208,8 @@ class UpdaterWindow:
         self.file_lines: List[str] = []
         self.showing_files = False
         self.panel_open = False  # 1.3.1: What's New shows only when asked for
+        self.log: List[Tuple[str, str]] = []  # 1.3.2: what happened, for Save Problem Report
+        self.last_error = ""
 
         root.title("CaseVault Updater")
         root.configure(bg=BG)
@@ -276,6 +278,7 @@ class UpdaterWindow:
         self.later_btn = flat_button(foot, "Not Now", lambda: self.on_answer(False))
         self.open_btn = flat_button(foot, "Open CaseVault", self.on_open, primary=True)
         self.close_btn = flat_button(foot, "Close", self.on_close)
+        self.report_btn = flat_button(foot, "Save Problem Report", self.on_report, small=True)  # 1.3.2: shown after an error
         self.close_btn.pack(side="right")
         self.check_btn.pack(side="right", padx=(0, 8))
         self._undo_state(self.ctl.can_undo())
@@ -411,6 +414,7 @@ class UpdaterWindow:
 
     # ---------------------------------------------------------------- buttons
     def on_check(self) -> None:
+        self.report_btn.pack_forget()
         self._show_panel([], [])
         self.bar["value"] = 0
         self.pct.configure(text="")
@@ -428,6 +432,21 @@ class UpdaterWindow:
             self._say("Installing…")
             self.steps.set(2, 1)
         self.ctl.answer(yes)
+
+    def on_report(self) -> None:
+        """1.3.2: save what happened and the error to a text file for the developer (no case data)."""
+        from .report import save_report
+        try:
+            path = save_report(self.settings, self.log, self.last_error)
+        except OSError as e:
+            messagebox.showerror("Save Problem Report", f"The report couldn't be saved: {e}", parent=self.root)
+            return
+        messagebox.showinfo("Save Problem Report", f"Saved:\n{path}\n\nSend this file to the developer. It holds what the updater did and the error; no case data.", parent=self.root)
+        if os.name == "nt":
+            try:
+                os.startfile(os.path.dirname(path))  # noqa: S606 - opens the folder in Explorer
+            except OSError:
+                pass
 
     def on_open(self) -> None:
         if not self.ctl.open_app():
@@ -465,6 +484,9 @@ class UpdaterWindow:
             self.root.after(60, self._pump)
 
     def handle(self, kind: str, data: dict) -> None:
+        text = data.get("text") if isinstance(data, dict) else ""
+        if text:
+            self.log.append((kind, str(text)[:300]))
         if kind == "busy":
             self._say(data["text"])
         elif kind == "progress":
@@ -512,6 +534,8 @@ class UpdaterWindow:
                 self._show_panel([], [])
                 self._buttons("idle")
         elif kind == "error":
+            self.last_error = data["text"]
+            self.report_btn.pack(side="left", padx=(8, 0))
             self.detail.configure(text="")
             self._say(data["text"], RED)
             self.steps.set(max(self.steps.active, 0), self.steps.done, failed=True)

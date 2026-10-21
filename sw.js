@@ -8,7 +8,7 @@
 
 // VERSION is bumped with each release; BUILD is replaced with the commit SHA by the GitHub Pages
 // workflow. Either change gives a new cache, so the installed app picks up the update.
-const VERSION = '1.147.0';
+const VERSION = '1.148.0';
 const BUILD = 'dev';
 const CACHE = `casevault-${VERSION}-${BUILD}`;
 
@@ -80,6 +80,7 @@ const APP_FILES = [
   './js/case-summary.js',
   './js/year-summary.js',
   './js/training.js',
+  './js/group-summary.js',
   './js/timeline-pdf.js',
   './js/person-view.js',
   './js/draft-pdf.js',

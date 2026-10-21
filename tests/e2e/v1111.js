@@ -58,7 +58,7 @@ const SP = process.env.SP + '/v1111';
   await inp.nth(0).fill('Example Portal'); await inp.nth(1).fill('jdoe'); await inp.nth(2).fill('Synthetic-Pass-77');
   await p.click('#dialog[open] button[type=submit]'); await p.waitForTimeout(800);
   const cells = await p.$$eval('.locker-table tbody tr td', (x) => x.map((e) => e.textContent.trim()));
-  ok(cells.includes('Example Portal') && cells.includes('jdoe') && !cells.join().includes('Synthetic-Pass-77'), `the password table shows the entry with the password hidden: ${cells.slice(0, 4).join(' | ')}`);
+  ok(cells.includes('Example Portal') && cells.some((t) => t.startsWith('jdoe')) /* v1.148: the username has a Copy button */ && !cells.join().includes('Synthetic-Pass-77'), `the password table shows the entry with the password hidden: ${cells.slice(0, 4).join(' | ')}`);
   await p.click('.locker-table .secret-wrap button[title="Show"]');
   ok(/Synthetic-Pass-77/.test(await p.textContent('.locker-table .secret-wrap')), 'Show reveals it');
   await p.locator('.locker-page').screenshot({ path: `${SP}/passwords.png` }).catch(() => {});

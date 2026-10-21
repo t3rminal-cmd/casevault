@@ -154,11 +154,16 @@
       const keepsOld = TABLES[t].fields.some(([k]) => k === 'password');
       x[t] = (Array.isArray(x[t]) ? x[t] : []).filter((r) => r && typeof r === 'object').map((r) => {
         const row = { id: String(r.id || ''), ...Object.fromEntries(TABLES[t].fields.map(([k]) => [k, String(r[k] == null ? '' : r[k])])) };
-        if (keepsOld) row.history = cleanHistory(r.history); // v1.145: the passwords it had before
+        if (keepsOld) {
+          row.history = cleanHistory(r.history); // v1.145: the passwords it had before
+          row.changed = /^\d{4}-\d{2}-\d{2}$/.test(String(r.changed || '')) ? String(r.changed) : ''; // v1.148: when the password was set
+        }
         return row;
       });
     }
-    x.files = (Array.isArray(x.files) ? x.files : []).filter((f) => f && /^[a-z0-9]{8,40}$/.test(String(f.id || ''))).map((f) => ({ id: String(f.id), name: String(f.name || 'file'), type: String(f.type || ''), size: Number(f.size) || 0, added: String(f.added || ''), label: String(f.label || ''), notes: String(f.notes || ''), status: f.status === 'inactive' ? 'inactive' : 'active' })); // v1.146: Active / Inactive
+    x.files = (Array.isArray(x.files) ? x.files : []).filter((f) => f && /^[a-z0-9]{8,40}$/.test(String(f.id || ''))).map((f) => ({ id: String(f.id), name: String(f.name || 'file'), type: String(f.type || ''), size: Number(f.size) || 0, added: String(f.added || ''), label: String(f.label || ''), notes: String(f.notes || ''), status: f.status === 'inactive' ? 'inactive' : 'active', // v1.146: Active / Inactive
+      lastContact: /^\d{4}-\d{2}-\d{2}$/.test(String(f.lastContact || '')) ? String(f.lastContact) : '' })); // v1.148: last contact (informant files)
+    x.pwRemind = [90, 180, 365].includes(Number(x.pwRemind)) ? Number(x.pwRemind) : 0; // v1.148: change-password reminder (days, 0 = off)
     return x;
   }
   /* v1.145: old passwords. When a password is changed, the one it had goes on top of its history
@@ -174,7 +179,9 @@
     const old = before && typeof before === 'object' ? before : {};
     const history = cleanHistory(after && after.history !== undefined ? after.history : old.history);
     if (old.password && after.password !== old.password && !(history[0] && history[0].password === old.password)) history.unshift({ password: old.password, changed: today || '' });
-    return { ...after, history: history.slice(0, HISTORY_MAX) };
+    // v1.148: the day the password was set: today when it is new or changed, else as it was.
+    const changed = after.password && after.password !== old.password ? today || '' : old.changed || after.changed || '';
+    return { ...after, history: history.slice(0, HISTORY_MAX), changed };
   }
   /** v1.145: the rows in a new order: the row with id one place up (dir -1) or down (+1). */
   function moveRow(rows, id, dir) {
@@ -190,6 +197,15 @@
     const k = TABLES[table].fields[0][0];
     return [...rows].sort((a, b) => String(a[k] || '').localeCompare(String(b[k] || ''), undefined, { sensitivity: 'base', numeric: true }));
   }
+  /** v1.148: whole days from the YYYY-MM-DD `from` to `to` (null when either is missing). */
+  function daysBetween(from, to) {
+    const ok = (d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d || ''));
+    if (!ok(from) || !ok(to)) return null;
+    const n = (d) => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) / 86400000;
+    return Math.round(n(to) - n(from));
+  }
+  /** v1.148: a password due for a change: its age is at least the reminder (days; 0 = off). */
+  const isStale = (row, remind, today) => !!remind && daysBetween(row && row.changed, today) !== null && daysBetween(row.changed, today) >= remind;
   const newId = () => toB32(rand(10)).toLowerCase();
   /** Rows matching every word typed (any column but the secrets). */
   function filterRows(table, rows, q) {
@@ -208,5 +224,5 @@
 
   return { ITER, RK_ITER, MIN_PASSWORD, passwordProblem, newRecoveryKey, cleanRecovery, groupRecovery, recoveryLooksRight, create, open, changePassword, newRecovery,
     encrypt, decrypt, encryptJSON, decryptJSON, TABLES, emptyData, normalizeData, newId, filterRows, generatePassword,
-    HISTORY_MAX, cleanHistory, withHistory, moveRow, sortRows };
+    HISTORY_MAX, cleanHistory, withHistory, moveRow, sortRows, daysBetween, isStale };
 });

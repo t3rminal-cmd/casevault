@@ -23,6 +23,8 @@ and the buttons. Nothing else is on screen until you ask for it.
 4. **Done**: the line says **Up To Date**, and **Open CaseVault** starts it (Start-CaseVault.bat on the
    CV-AI drive, or CaseVault's page on the SSD). If something went wrong, the message says what
    happened in red (everything is put back).
+   **Save Problem Report** (updater 1.3.2) then writes a text file in `updater\problem-reports\`
+   with what the updater did, the error and the versions (no case data), to send to the developer.
 
 **The updater updates itself (v1.35).** Its own new files (the `casevault_updater` folder and this
 README) are put in `updater\_next`, because a running program can't safely replace itself. The next
