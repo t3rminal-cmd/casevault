@@ -24,6 +24,53 @@
     await ui.Save.track('library', () => Vault.writeLibraryMeta(meta));
   }
 
+  /* ---------- v1.149: real names in examples ---------- */
+  /** What CaseVault knows to look for: every case's numbers, clients and subjects, this case's
+   * people, you, and the watch list (Settings). Plus the usual patterns (phones, addresses, SSNs…). */
+  function knownFor(caseObj = null) {
+    const s = (Vault.data && Vault.data.settings) || {};
+    const cases = (Vault.data && Vault.data.cases) || [];
+    const subjects = cases.map((c) => String(c.subject || '').trim()).filter((v) => v.length >= 3).map((value) => ({ value, type: 'known' }));
+    return [...root.CVPii.knownTerms({ caseObj, affiant: s.affiant, watchlist: s.piiWatchlist || [], caseIndex: cases }), ...subjects];
+  }
+  const scrubScan = (text, caseObj = null) => root.CVPii.scan(text, { known: knownFor(caseObj) });
+  /** The findings as a short list: "Name: DOE, John", at most 12, then "and N more". */
+  function findingsList(findings) {
+    const { h } = ui;
+    const seen = new Set(); const rows = [];
+    for (const f of findings) { const k = `${f.label}|${f.value.toLowerCase()}`; if (seen.has(k)) continue; seen.add(k); rows.push(f); }
+    return h('ul', { class: 'scrub-list' }, ...rows.slice(0, 12).map((f) => h('li', {}, h('span', { class: 'scrub-type' }, f.label), ' ', h('span', { class: 'scrub-value' }, f.value))),
+      rows.length > 12 ? h('li', { class: 'muted' }, `and ${rows.length - 12} more`) : null);
+  }
+  /** The example folder for a document type: warrants and affidavits apart from reports. */
+  const folderFor = (docType) => (['affidavit', 'warrant'].includes(docType) ? 'warrants' : 'examples');
+
+  /** v1.149: Use as AI Example (a report's Export menu): the report's text with names, numbers and
+   * addresses swapped for placeholders ([NAME_1]…), saved in the Library as an example. */
+  async function addFromReport(caseObj, title, text, type) {
+    const { h } = ui;
+    const findings = scrubScan(text, caseObj);
+    const { text: clean, replaced } = root.CVPii.redact(text, findings);
+    const guess = L().DOC_TYPES.some(([k]) => k === type) ? type : L().guessDocType(`${title} ${type}`);
+    const docSel = h('select', { 'aria-label': 'Example of' }, L().DOC_TYPES.map(([k, label]) => h('option', { value: k, selected: k === guess }, label)));
+    const pre = h('textarea', { class: 'scrub-preview', rows: 10, readonly: true }); pre.value = clean;
+    const ok = await ui.openDialog((close) => h('form', { class: 'scrub-form', onsubmit: (e) => { e.preventDefault(); close(true); } },
+      h('h2', { icon: 'journal-bookmark' }, 'Use as AI Example'),
+      h('p', { class: 'muted small' }, replaced ? `${replaced} name${replaced === 1 ? '' : 's'}, number${replaced === 1 ? '' : 's'} or address${replaced === 1 ? '' : 'es'} were swapped for placeholders like [NAME_1], so the AI learns the wording, not the people. Read it before saving: unusual names can slip through.` : 'Nothing that looks like a name, number or address was found. Read it before saving: unusual names can slip through.'),
+      replaced ? findingsList(findings) : null,
+      ui.field('Example Of', docSel), pre,
+      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit', icon: 'journal-bookmark' }, 'Save Example'))));
+    if (!ok) return false;
+    const cat = L().category(folderFor(docSel.value));
+    const name = `${FS.safeName(title || 'Report')} (example).md`;
+    try {
+      const path = await ui.Save.track('library', () => Vault.saveLibraryFile(cat.folder, name, new File([pre.value], name, { type: 'text/markdown' })));
+      await setMeta(path, { docType: docSel.value, always: false });
+      ui.toast(`Saved in Settings → Library → ${cat.label}.`, 'success', 4000);
+      return true;
+    } catch { return false; }
+  }
+
   /** The file's text, read once and kept in library/.cache on the SSD. */
   async function textOf(path) {
     const file = await Vault.readLibraryFile(path);
@@ -69,11 +116,37 @@
       const cat = L().category(target.value);
       const list = files.filter((f) => !f.name.startsWith('.'));
       if (!list.length) return;
+      // v1.149: look in each file for real names, numbers and addresses before it goes in.
+      const checking = toast(`Checking ${list.length} file${list.length === 1 ? '' : 's'} for names and numbers…`, 'info', 600000);
+      const flagged = new Map();
+      for (const f of list) {
+        try {
+          const text = /\.(md|txt)$/i.test(f.name) ? await f.text() : ((await CVExtract.extract(f, f.name)).paragraphs || []).map((p) => p.text).join('\n\n');
+          const found = text.trim() ? scrubScan(text) : [];
+          if (found.length) flagged.set(f, { text, found });
+        } catch { /* unreadable: added as it is */ }
+      }
+      checking.remove();
+      let mode = 'asis';
+      if (flagged.size) {
+        mode = await ui.openDialog((close) => h('div', { class: 'scrub-form' },
+          h('h2', { icon: 'exclamation-triangle-fill' }, 'Real Names Found'),
+          h('p', { class: 'small' }, `${flagged.size} of ${list.length} file${list.length === 1 ? '' : 's'} have what look like real names, phone numbers, addresses or case numbers. A small AI can copy them into a new draft. Save an anonymized copy instead (the text with [NAME_1]-style placeholders, as a text file), or keep the files as they are.`),
+          ...[...flagged.entries()].map(([f, x]) => h('div', { class: 'scrub-file' }, h('strong', {}, f.name), findingsList(x.found))),
+          h('div', { class: 'dialog-actions' },
+            h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
+            h('button', { class: 'btn', type: 'button', onclick: () => close('asis') }, 'Keep As They Are'),
+            h('button', { class: 'btn primary', type: 'button', icon: 'shield-lock-fill', onclick: () => close('clean') }, 'Save Anonymized Copies'))));
+        if (!mode) return;
+      }
       const note = toast(`Copying ${list.length} file${list.length === 1 ? '' : 's'} into the Library…`, 'info', 600000);
       let n = 0;
       try {
         for (const f of list) {
-          const path = await Save.track('library', () => Vault.saveLibraryFile(cat.folder, f.name, f));
+          const x = mode === 'clean' ? flagged.get(f) : null;
+          const name = x ? `${f.name.replace(/\.[^.]+$/, '')} (anonymized).md` : f.name;
+          const data = x ? new File([root.CVPii.redact(x.text, x.found).text], name, { type: 'text/markdown' }) : f;
+          const path = await Save.track('library', () => Vault.saveLibraryFile(cat.folder, name, data));
           await setMeta(path, { docType: L().guessDocType(f.name), always: cat.key === 'directives' });
           n++;
         }
@@ -87,7 +160,14 @@
     async function draw() {
       let list = [];
       try { list = await items(); } catch (err) { if (FS.isDisconnectError(err)) return ui.onDriveLost(); }
-      box.replaceChildren(...L().CATEGORIES.map((cat) => {
+      // v1.149: which document types Draft with AI has examples for, and which have none.
+      const examples = list.filter((i) => (L().category(i.category) || {}).role === 'example');
+      const cover = L().DOC_TYPES.filter(([k]) => k !== 'any').map(([k, label]) => [k, label, examples.filter((i) => i.docType === k).length]);
+      const anyCount = examples.filter((i) => !i.docType || i.docType === 'any').length;
+      const coverage = h('div', { class: 'lib-coverage', role: 'list', 'aria-label': 'Examples by document type' },
+        h('span', { class: 'lib-cov-title small' }, 'Examples Draft with AI can use:'),
+        ...cover.map(([k, label, n]) => h('span', { role: 'listitem', class: `lib-cov${n ? '' : ' none'}`, title: n ? `${n} example${n === 1 ? '' : 's'} of ${label}` : `No ${label} example yet: Draft with AI writes ${label} without one${anyCount ? ' (it uses the Any Document examples)' : ''}` }, label, h('strong', {}, String(n)))));
+      box.replaceChildren(coverage, ...L().CATEGORIES.map((cat) => {
         const rows = list.filter((i) => i.category === cat.key);
         return h('div', { class: 'lib-group' },
           h('h4', { title: cat.hint }, cat.label, h('span', { class: 'muted small' }, ` ${rows.length}`)),
@@ -196,5 +276,5 @@
 
   function init(kit) { ui = kit; }
 
-  root.CVLibraryUI = { init, items, texts, librarySection, behaviorSection };
+  root.CVLibraryUI = { init, items, texts, librarySection, behaviorSection, addFromReport, scrubScan };
 })(this);

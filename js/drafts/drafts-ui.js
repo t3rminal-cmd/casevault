@@ -502,7 +502,12 @@
       h('div', { class: 'menu-items' },
         h('button', { type: 'button', title: 'Saves it as a Word document in this case\'s Files', onclick: () => exportDocx('case') }, ui.icon('folder-plus'), ' Save to Case Files'),
         h('button', { 'data-ro-ok': 'true', type: 'button', title: 'Saves it as a Word document where you choose on this computer', onclick: () => exportDocx('download') }, ui.icon('pc-display'), ' Save to PC'),
-        h('button', { type: 'button', title: 'Keeps this report\'s text as a template in Vault → Templates', onclick: saveAsTemplate }, ui.icon('bookmark-plus'), ' Save Template')));
+        h('button', { type: 'button', title: 'Keeps this report\'s text as a template in Vault → Templates', onclick: saveAsTemplate }, ui.icon('bookmark-plus'), ' Save Template'),
+        // v1.149: a good report teaches Draft with AI: names and numbers swapped for placeholders first.
+        h('button', { 'data-ro-ok': 'true', type: 'button', class: 'use-example', title: 'Copies this report into Settings → Library as an example for Draft with AI, with names, numbers and addresses swapped for placeholders', onclick: async () => {
+          await Save.flushAll();
+          await root.CVLibraryUI.addFromReport(c, titleInput.value || meta.title, ta.value, typeSelect.value || meta.type);
+        } }, ui.icon('journal-bookmark'), ' Use as AI Example')));
     // Drafts save by themselves; Save (or Ctrl+S) writes now and says so.
     const saveBtn = h('button', { class: 'btn small primary', type: 'button', icon: 'floppy', title: 'Save now (Ctrl+S). Drafts also save by themselves.', onclick: async () => {
       save(0);

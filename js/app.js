@@ -1717,6 +1717,7 @@
     $('#main').replaceChildren(h('section', { class: 'dashboard' },
       // v1.61: a smaller banner with the status counts in it, then quick actions and what needs you.
       welcomeHero(cases, deadlines, count),
+      todayPanel(cases),
       backupBar(),
       quickActions(),
       needsAttention(deadlines, cases),
@@ -1750,6 +1751,82 @@
         : h('p', { class: 'muted' }, cases.length ? 'Nothing changed since you cleared this list.' : 'Create your first case with "New case".')),
     ));
     // v1.63: Quick Links in the footer bar under the page, from the case list to the right edge.
+  }
+
+  /** v1.149: TODAY: everything dated today and tomorrow on the Timelines of the open cases, soonest
+   * first; a deadline can be ticked done right here. Hidden when there is nothing. */
+  const todayMemo = new Map();
+  function todayPanel(cases) {
+    const box = h('div', { class: 'dash-section ov-panel today-section', hidden: true });
+    const now = today();
+    const t = new Date(`${now}T12:00:00`); t.setDate(t.getDate() + 1);
+    const tom = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+    (async () => {
+      const items = [];
+      for (const c of cases.filter((x) => !isArchivedEntry(x) && x.status !== 'Closed')) {
+        const key = `${c.updated || ''}|${(c.nextDeadline && c.nextDeadline.date) || ''}`;
+        let tl = todayMemo.get(c.id);
+        if (!tl || tl.key !== key) {
+          try { tl = { key, data: await Vault.getTimeline(c.id) }; todayMemo.set(c.id, tl); } catch { continue; }
+        }
+        for (const ev of (tl.data && tl.data.events) || []) if ((ev.date === now || ev.date === tom) && !ev.done) items.push({ c, ev, data: tl.data });
+      }
+      if (!items.length || !box.isConnected) return;
+      items.sort((a, b) => (a.ev.date + (a.ev.time || '99')).localeCompare(b.ev.date + (b.ev.time || '99')));
+      const list = h('ul', { class: 'today-list' }, items.map(({ c, ev, data }) => {
+        const done = ev.kind === 'deadline' ? h('input', { type: 'checkbox', 'aria-label': `Mark "${ev.title}" done`, title: 'Mark done' }) : null;
+        const li = h('li', { class: `today-row today-${ev.kind}${ev.date === now ? ' is-today' : ''}` },
+          done || h('span', { class: 'today-dot' }),
+          h('span', { class: 'today-when' }, ev.date === now ? 'Today' : 'Tomorrow', ev.time ? ` ${ev.time}` : ''),
+          h('span', { class: `badge ${ev.kind}` }, ev.kind === 'deadline' ? 'Deadline' : ev.kind === 'buy' ? 'Buy' : ev.kind === 'arrest' ? 'Arrest' : 'Event'),
+          h('a', { class: 'today-title', href: caseLink(c, 'timeline') }, ev.title || 'Untitled'),
+          h('a', { class: 'today-case', href: caseLink(c), title: subj(c) }, c.number || 'No case number'));
+        if (done) done.addEventListener('change', async () => {
+          ev.done = true;
+          try { await Save.track(`timeline:${c.id}`, () => Vault.saveTimeline(c.id, data)); li.remove(); toast(`"${ev.title}" marked done.`, 'success', 2500); if (!list.children.length) box.hidden = true; } catch { ev.done = false; done.checked = false; }
+        });
+        return li;
+      }));
+      box.replaceChildren(panelHead('Today', `${plural(items.length, 'item')} due today and tomorrow on the Timelines of your open cases.`), list);
+      box.hidden = false;
+    })().catch(() => {});
+    return box;
+  }
+
+  /** v1.149: Quick Note (Alt+N, or ⋮ → Quick Note, from anywhere): a dated note into a case's Case History, or
+   * into each case of a Case Group. */
+  async function quickNoteDialog() {
+    const open = (Vault.data.cases || []).filter((c) => !isArchivedEntry(c)).sort(byNumber);
+    if (!open.length) { toast('Make a case first.', 'info'); return; }
+    const groups = Vault.suspectGroups();
+    const res = await openDialog((close) => {
+      const pick = h('select', { 'aria-label': 'Case or Case Group' },
+        h('optgroup', { label: 'Cases' }, open.map((c) => h('option', { value: `c:${c.id}`, selected: c.id === state.caseId }, `${c.number || 'No case number'}${subj(c) ? ` · ${subj(c)}` : ''}`))),
+        groups.length ? h('optgroup', { label: 'Case Groups (the note goes to each case)' }, groups.map((g) => h('option', { value: `g:${g}` }, g))) : null);
+      const text = h('textarea', { rows: 4, maxlength: 2000, placeholder: 'What happened', 'aria-label': 'Note', autofocus: 'true' });
+      text.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); text.form.requestSubmit(); } });
+      return h('form', { class: 'quick-note-form', onsubmit: (e) => { e.preventDefault(); if (text.value.trim()) close({ to: pick.value, what: text.value.trim() }); } },
+        h('h2', { icon: 'pencil-square' }, 'Quick Note'),
+        h('p', { class: 'muted small' }, 'Goes into the Case History with today\'s date and the time. Ctrl+Enter saves.'),
+        field('Case', pick), field('Note', text),
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit', icon: 'floppy' }, 'Save Note')));
+    });
+    if (!res) return;
+    const ids = res.to.startsWith('g:') ? open.filter((c) => c.suspectGroup === res.to.slice(2) && !opOf(c)).map((c) => c.id) : [res.to.slice(2)];
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    await Save.flushAll();
+    let n = 0;
+    for (const id of ids) {
+      try {
+        const live = state.caseObj && state.caseObj.id === id;
+        const c = live ? state.caseObj : await Vault.getCase(id);
+        c.activity = [...(Array.isArray(c.activity) ? c.activity : []), { day: today(), what: `${time} · ${res.what}`, note: true, added: new Date().toISOString() }];
+        await Save.track(`case:${id}`, () => Vault.saveCase(c));
+        n += 1;
+      } catch { /* reported */ }
+    }
+    if (n) toast(`Note saved in the Case History of ${plural(n, 'case')}.`, 'success', 3000);
+    if (state.caseId && ids.includes(state.caseId)) route();
   }
 
   /** v1.148: pinned cases (kept in vault.json): they stay at the top of Recently Updated. */
@@ -3478,9 +3555,10 @@
 
   /* ---------- Restore cases from a full backup (v1.106) ---------- */
 
-  async function restoreFromBackupDialog() {
-    // The browser reads the picked folder (it asks "upload N files?": nothing leaves the PC).
-    const files = await new Promise((resolve) => {
+  /** v1.149: Test Restore: a picked backup folder is read in the browser; 20 random files (and
+   * vault.json) are read in full and compared with the SSD. Nothing is written. */
+  async function pickFolderFiles() {
+    return new Promise((resolve) => {
       const input = h('input', { type: 'file', multiple: true, hidden: true });
       input.webkitdirectory = true;
       input.addEventListener('change', () => { resolve([...input.files].map((file) => ({ path: file.webkitRelativePath || file.name, file }))); input.remove(); });
@@ -3488,6 +3566,60 @@
       document.body.append(input);
       input.click();
     });
+  }
+  async function ssdFileAt(rel) {
+    const parts = rel.split('/');
+    let dir = Vault.root;
+    for (const p of parts.slice(0, -1)) { dir = await FS.getDir(dir, p); if (!dir) return null; }
+    return FS.getFile(dir, parts[parts.length - 1]);
+  }
+  async function sameFileBytes(a, b) {
+    if (a.size !== b.size) return false;
+    const [x, y] = await Promise.all([a.arrayBuffer(), b.arrayBuffer()]);
+    const p = new Uint8Array(x); const q = new Uint8Array(y);
+    for (let i = 0; i < p.length; i++) if (p[i] !== q[i]) return false;
+    return true;
+  }
+  async function testRestoreDialog() {
+    const files = await pickFolderFiles();
+    if (!files) return;
+    const pick = CVBackupRestore.testPick(files, 20);
+    if (!pick) { toast('No backup found in that folder. Pick a CaseVault-Backup-<date> folder on the backup drive.', 'error', 9000); return; }
+    const progress = toast('Testing the backup…', 'info', 24 * 3600000);
+    const t = { read: 0, unreadable: 0, badJson: 0, same: 0, changed: 0, gone: 0, count: pick.files.length, expected: null };
+    const rows = [];
+    try {
+      if (pick.info) { try { const info = JSON.parse(await pick.info.text()); if (Number.isFinite(info.files)) t.expected = info.files; } catch { /* no count to check */ } }
+      for (const x of pick.sample) {
+        let state2 = '';
+        try {
+          await x.file.arrayBuffer();
+          t.read += 1;
+          if (/\.json$/i.test(x.rel)) { try { JSON.parse(await x.file.text()); } catch { t.badJson += 1; state2 = 'Damaged'; } }
+          if (!state2) {
+            const live = await ssdFileAt(x.rel).catch(() => null);
+            if (!live) { t.gone += 1; state2 = 'Not on the SSD now'; }
+            else if (await sameFileBytes(x.file, live)) { t.same += 1; state2 = 'Same'; }
+            else { t.changed += 1; state2 = 'Changed since'; }
+          }
+        } catch { t.unreadable += 1; state2 = 'Unreadable'; }
+        rows.push({ rel: x.rel, state: state2 });
+      }
+    } finally { progress.remove(); }
+    const verdict = CVBackupRestore.testVerdict(t);
+    await openDialog((close) => h('div', { class: 'test-restore' },
+      h('h2', { icon: verdict.ok ? 'check-circle-fill' : 'exclamation-triangle-fill' }, verdict.ok ? 'Backup Reads Back Fine' : 'Backup Has Problems'),
+      h('p', { class: 'muted small' }, `${pick.backup} · ${CVBackupRestore.backupWhen(pick.backup)}. Nothing was changed.`),
+      h('ul', { class: 'test-restore-lines' }, verdict.lines.map((l) => h('li', {}, l))),
+      h('details', { class: 'backup-list' }, h('summary', {}, `The ${plural(rows.length, 'file')} read`),
+        h('ul', { class: 'test-restore-files' }, rows.map((r) => h('li', { class: `tr-${r.state === 'Same' ? 'same' : r.state === 'Changed since' ? 'changed' : 'bad'}` }, h('span', { class: 'mono small' }, r.rel), h('span', { class: 'small nowrap' }, r.state))))),
+      verdict.ok ? null : h('p', { class: 'small warn-text' }, 'Make a new full backup to another drive (Back Up Everything), then test that one.'),
+      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
+  }
+
+  async function restoreFromBackupDialog() {
+    // The browser reads the picked folder (it asks "upload N files?": nothing leaves the PC).
+    const files = await pickFolderFiles();
     if (!files) return;
     const found = CVBackupRestore.group(files);
     const cases = [];
@@ -3696,6 +3828,23 @@
           h('button', { class: 'btn', type: 'button', icon: 'save', onclick: async () => {
             try { const name = await Save.track('backup', () => Vault.backupNow()); toast(`Backup saved: ${name}`, 'success'); close(); } catch { /* reported */ }
           } }, 'Back up now')),
+        // v1.149: the last 10 full backups.
+        (v.settings.backupHistory || []).length ? h('details', { class: 'backup-list backup-history' },
+          h('summary', {}, `Full backup history (last ${v.settings.backupHistory.length})`),
+          h('table', { class: 'data-table backup-hist-table' },
+            h('thead', {}, h('tr', {}, ['Date', 'Drive or Folder', 'Size', 'Checked'].map((t) => h('th', {}, t)))),
+            h('tbody', {}, v.settings.backupHistory.map((b) => h('tr', {},
+              h('td', { class: 'nowrap' }, fmtDateTime(Date.parse(b.at))),
+              h('td', { class: 'backup-hist-where', title: b.folder || null }, b.manual ? 'Copied by hand' : [b.where, b.folder].filter(Boolean).join(' · ') || '—'),
+              h('td', { class: 'nowrap' }, b.bytes ? `${fmtSize(b.bytes)} · ${plural(b.files, 'file')}` : '—'),
+              h('td', { class: 'nowrap' }, b.verified ? 'Yes' : 'No')))))) : null,
+        // v1.149: read a sample of a backup back, without changing anything.
+        h('div', { class: 'backup-full backup-test' },
+          h('span', { class: 'fact-icon' }, I('clipboard2-pulse')),
+          h('div', {}, h('strong', { class: 'block' }, 'Test a backup'),
+            h('span', { class: 'muted small block' }, 'Reads 20 random files of a CaseVault-Backup folder and compares them with the SSD. Nothing is changed or copied.')),
+          h('div', { class: 'spacer' }),
+          h('button', { class: 'btn', type: 'button', icon: 'clipboard2-pulse', onclick: async () => { close(); await testRestoreDialog(); } }, 'Test Restore')),
         // v1.106: bring cases back from a full backup on another drive.
         h('div', { class: 'backup-full backup-restore' },
           h('span', { class: 'fact-icon' }, I('arrow-counterclockwise')),
@@ -3997,7 +4146,7 @@
   }
 
   /* v1.85: keyboard shortcuts. */
-  const SHORTCUTS = [['Ctrl+K', 'Find a case, Mission, person or page'], ['N', 'New case (when not typing)'], ['Ctrl+S', 'Save every change now'], ['Ctrl+\\', 'Show or hide the case list'], ['Esc', 'Close the popup'], ['?', 'This list']];
+  const SHORTCUTS = [['Ctrl+K', 'Find a case, Mission, person or page'], ['Alt+N', 'Quick Note into a case\'s Case History'], ['N', 'New case (when not typing)'], ['Ctrl+S', 'Save every change now'], ['Ctrl+\\', 'Show or hide the case list'], ['Esc', 'Close the popup'], ['?', 'This list']];
   /* v1.131: Find (Ctrl+K). One box for cases (number, subject, notes, status: the same match as the
    * sidebar search), Missions, CaseVault's pages and actions, and two searches for the words typed:
    * every case a person is on (the person view) and inside every case's notes, reports and files.
@@ -4009,6 +4158,7 @@
       ['Quick Links', 'link-45deg', () => quickLinksPanel(true)], ['Settings', 'gear', () => showVaultPanel()],
       ['Back Up the Vault', 'hdd-fill', () => showVaultPanel('backups')], ['New Case', 'plus-lg', () => newCase()],
       ['New Mission', 'folder-plus', async () => { const op = await operationDialog(); if (op) { renderCaseList(); location.hash = `#/operation/${encodeURIComponent(op.id)}`; } }],
+      ['Quick Note', 'pencil-square', () => quickNoteDialog()], // v1.149
       ['Keyboard Shortcuts', 'lightning-charge', () => shortcutsDialog()],
       ['Year Summary', 'bar-chart-line-fill', () => yearSummary()],
       ['Training Record', 'file-earmark-pdf', () => trainingRecord()], ['Training', 'patch-check-fill', () => openTraining()],
@@ -4128,6 +4278,13 @@
       e.preventDefault();
       // v1.131: Find, for cases, Missions, people and pages (the sidebar's own search stays on its magnifier).
       findDialog();
+      return;
+    }
+    // v1.149: Alt+N: a Quick Note into a case's Case History, from anywhere (Ctrl+Shift+N is the
+    // browser's private window, so the page never sees it).
+    if (state.connected && !popup && e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && (e.key.toLowerCase() === 'n' || e.code === 'KeyN')) {
+      e.preventDefault();
+      quickNoteDialog();
       return;
     }
     if (state.connected && !popup && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {

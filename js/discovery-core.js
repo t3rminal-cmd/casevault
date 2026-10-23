@@ -281,7 +281,26 @@
     ].join('\n');
   }
 
+  /**
+   * v1.149: the checks shown before a production is copied. Automatic ones come from the case's
+   * files: { arrest (arrest.json or null), needsArrest, evidence (Report Fields exhibits) }.
+   * -> [{ key, label, auto, ok, note }]. Manual ones (auto: false) start unticked.
+   */
+  function checklist({ arrest, needsArrest, evidence } = {}) {
+    const named = ((arrest && arrest.arrestees) || []).filter((a) => [a.firstName, a.lastName].some((x) => String(x || '').trim())).length;
+    const ex = Array.isArray(evidence) ? evidence : [];
+    const noPhoto = ex.filter((e) => !(e.photos || []).length).length;
+    const out = [];
+    if (needsArrest || named) out.push({ key: 'arrest', label: 'Arrest Report filled in', auto: true, ok: named > 0, note: named ? `${named} arrestee${named === 1 ? '' : 's'} entered` : 'No arrestee entered on the Arrest Details tab' });
+    if (ex.length) out.push({ key: 'photos', label: 'Evidence photos added', auto: true, ok: noPhoto === 0, note: noPhoto ? `${noPhoto} of ${ex.length} exhibit${ex.length === 1 ? ' has' : 's have'} no photo` : `All ${ex.length} exhibit${ex.length === 1 ? ' has' : 's have'} a photo` });
+    out.push({ key: 'signed', label: 'Reports signed', auto: false, ok: false, note: 'The reports going out are the signed copies' });
+    out.push({ key: 'bates', label: 'Bates start number right', auto: false, ok: false, note: 'It follows the last production to this office' });
+    out.push({ key: 'password', label: 'Password given separately', auto: false, ok: false, note: 'By phone or in person, never with the drive' });
+    return out;
+  }
+
   const api = {
+    checklist,
     FORMAT, VERSION, CHUNK, TAG, PART_CHUNKS, KDF_ITERATIONS,
     b64, unb64, cleanPrefix, bates, batesRange, allocate, extOf, kindOf, KIND_LABEL, mimeOf, Sha256,
     deriveKey, encryptChunk, decryptChunk, sealJSON, openJSON, chunkCount, partCount, partName, chunkPlace,
