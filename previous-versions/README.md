@@ -4,6 +4,14 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.149)
+
+- **Library:** Use as AI Example from a report, examples per type, real names warning
+- **Home:** Today panel; Quick Note from anywhere (Alt+N)
+- **Discovery:** checklist before the copy
+- **Secure Locker:** password strength; Lock After 2, 5 or 15 minutes
+- **Backups:** history of the last 10 full backups; Test Restore
+
 ## Features (v1.148)
 
 - **Case Groups:** combined Timeline, Summary PDF, Make Operation

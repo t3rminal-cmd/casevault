@@ -15,13 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.149
+## What's New in v1.150
 
-- **Library:** Use as AI Example from a report, examples per type, real names warning
-- **Home:** Today panel; Quick Note from anywhere (Alt+N)
-- **Discovery:** checklist before the copy
-- **Secure Locker:** password strength; Lock After 2, 5 or 15 minutes
-- **Backups:** history of the last 10 full backups; Test Restore
+- **Fixes:** Today panel shows on every visit to the home page; faster home page with many cases
+- **Privacy:** Case Group names are no longer saved in the browser on the PC
 
 ## What CaseVault Does
 

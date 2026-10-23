@@ -213,6 +213,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.150
+
+- **Today panel fixed:** it now shows every time you come back to the home page, not only the first time
+- **Faster home page:** the Today panel reads the Timelines 8 at a time instead of one by one (about twice as fast with many cases)
+- **Privacy:** whether a Case Group folder is open or folded is no longer saved in the browser on the PC (its name is often a suspect's). It is remembered until CaseVault is closed. Group names saved there by v1.146 to v1.149 are removed the first time 1.150 opens
+
 ### What's new in v1.149
 
 - **Use as AI Example:** in a report's Export menu, **Use as AI Example** puts an anonymized copy in Settings → Library (names, phone numbers and addresses replaced) and asks which document type it is an example of. You see the copy before it is saved
@@ -237,13 +243,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Operation folders in order:** By Number, Newest First, or Most Alerts First, in the Operation Cases header (kept on this PC)
 - **Pin a case:** the pin by a case in Recently Updated (or **Pin** on the case's Details) keeps it at the top of Recently Updated, even after Clear
 - **Updater (1.3.2):** when an update fails, **Save Problem Report** writes a text file (what the updater did, the error, the versions; no case data) in `updater\problem-reports` to send to the developer
-
-### What's new in v1.147
-
-- **Home page folders:** the names under the folders (Operation Cases, General Files, Closed Files, Archived, Other Files) start at the left, under the left edge of each folder
-- **Case list alerts:** an Operation inside OPERATION that has a case due is highlighted red (red edge and shading, its number in red), so you can see which one has the alert. The bell stays on the main folder
-- **Status columns:** in General Files, Missions and every other list, the status word (Open, Closed, Archived) is on the left of its box and its icon on the right, every box the same width
-- **Case list:** the main folders are now just **OPERATION** and **INDEPENDENT**
 
 ### Earlier versions
 
