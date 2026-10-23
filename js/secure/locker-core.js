@@ -147,6 +147,7 @@
     aliases: { title: 'Covert Aliases', item: 'Alias', icon: 'person-badge', fields: [['alias', 'Alias Name', 'text'], ['dob', 'Date of Birth Used', 'date'], ['address', 'Address Used', 'text'], ['idNumber', 'ID / License Number', 'text'], ['phone', 'Phone Number', 'text'], ['email', 'Email', 'text'], ['backstory', 'Backstory / Notes', 'wide']] },
     accounts: { title: 'Covert Accounts', item: 'Account', icon: 'globe2', fields: [['platform', 'Platform / App', 'text'], ['handle', 'Username / Handle', 'text'], ['password', 'Password', 'secret'], ['alias', 'Alias It Belongs To', 'text'], ['phone', 'Phone Number', 'text'], ['email', 'Email', 'text'], ['notes', 'Notes', 'wide']] },
   };
+  const AUTO_LOCK = [2, 5, 15];
   const emptyData = () => ({ v: 1, passwords: [], aliases: [], accounts: [], files: [] });
   function normalizeData(d) {
     const x = { ...emptyData(), ...(d && typeof d === 'object' ? d : {}) };
@@ -164,6 +165,7 @@
     x.files = (Array.isArray(x.files) ? x.files : []).filter((f) => f && /^[a-z0-9]{8,40}$/.test(String(f.id || ''))).map((f) => ({ id: String(f.id), name: String(f.name || 'file'), type: String(f.type || ''), size: Number(f.size) || 0, added: String(f.added || ''), label: String(f.label || ''), notes: String(f.notes || ''), status: f.status === 'inactive' ? 'inactive' : 'active', // v1.146: Active / Inactive
       lastContact: /^\d{4}-\d{2}-\d{2}$/.test(String(f.lastContact || '')) ? String(f.lastContact) : '' })); // v1.148: last contact (informant files)
     x.pwRemind = [90, 180, 365].includes(Number(x.pwRemind)) ? Number(x.pwRemind) : 0; // v1.148: change-password reminder (days, 0 = off)
+    x.autoLock = AUTO_LOCK.includes(Number(x.autoLock)) ? Number(x.autoLock) : 5; // v1.149: minutes without use before it locks
     return x;
   }
   /* v1.145: old passwords. When a password is changed, the one it had goes on top of its history
@@ -214,6 +216,24 @@
     const keys = TABLES[table].fields.filter(([, , k]) => k !== 'secret').map(([k]) => k);
     return rows.filter((r) => { const t = keys.map((k) => r[k]).join(' ').toLowerCase(); return words.every((w) => t.includes(w)); });
   }
+  /**
+   * v1.149: how hard a saved password is to guess -> { level: 'weak' | 'ok' | 'strong', why }.
+   * Length counts most; a short one, one kind of character or a well-known pattern is Weak.
+   */
+  const COMMON = /^(password|passw0rd|letmein|welcome|qwerty|admin|abc123|iloveyou|monkey|dragon|football|baseball|summer|winter|spring|autumn|changeme)/i;
+  function strength(pw) {
+    const s = String(pw || '');
+    if (!s) return null;
+    const kinds = [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/].filter((r) => r.test(s)).length;
+    const core = s.replace(/[\d!@#$%^&*?._-]+$/, '');
+    if (s.length < 10) return { level: 'weak', why: 'Shorter than 10 characters' };
+    if (COMMON.test(s) || COMMON.test(core) || /^(.)\1+$/.test(s) || /^(0123456789|1234567890|abcdefghij)/i.test(s)) return { level: 'weak', why: 'A well-known password or pattern' };
+    if (kinds < 2) return { level: 'weak', why: 'Only one kind of character' };
+    if (s.length >= 16 && kinds >= 3) return { level: 'strong', why: '16 or more characters, mixed' };
+    if (s.length >= 14 && kinds === 4) return { level: 'strong', why: 'Long, with every kind of character' };
+    return { level: 'ok', why: s.length < 14 ? 'Fine, longer is better' : 'Fine, more kinds of character is better' };
+  }
+
   /** A strong random password for the Password Manager: 20 characters, no look-alikes. */
   function generatePassword(n = 20) {
     const set = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!#$%&*+-=?@';
@@ -223,6 +243,6 @@
   }
 
   return { ITER, RK_ITER, MIN_PASSWORD, passwordProblem, newRecoveryKey, cleanRecovery, groupRecovery, recoveryLooksRight, create, open, changePassword, newRecovery,
-    encrypt, decrypt, encryptJSON, decryptJSON, TABLES, emptyData, normalizeData, newId, filterRows, generatePassword,
+    encrypt, decrypt, encryptJSON, decryptJSON, TABLES, emptyData, normalizeData, newId, filterRows, generatePassword, strength, AUTO_LOCK,
     HISTORY_MAX, cleanHistory, withHistory, moveRow, sortRows, daysBetween, isStale };
 });

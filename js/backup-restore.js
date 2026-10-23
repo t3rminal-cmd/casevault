@@ -52,5 +52,49 @@
     return m ? `${m[1]}${m[2] ? ` ${m[2]}:${m[3]}` : ''}` : String(name || '');
   }
 
-  return { group, backupWhen };
+  /**
+   * v1.149: Test Restore. From the files of a picked folder, the newest full backup in it and a
+   * random sample of its files to read back. Nothing is written anywhere.
+   * -> { backup, files: [{ rel, file }], info: File|null, sample: [{ rel, file }] } or null.
+   * rel is the path inside the backup (the same as inside CaseVault-Data on the SSD).
+   */
+  function testPick(files, n = 20, rand = Math.random) {
+    const byBackup = new Map();
+    for (const f of files || []) {
+      const parts = String(f.path || '').split(/[\\/]+/).filter(Boolean);
+      let at = -1;
+      for (let i = parts.length - 2; i >= 0; i--) if (/^CaseVault-Backup-/i.test(parts[i])) { at = i; break; }
+      // A picked CaseVault-Data copy (no dated folder): its own name is the first part.
+      const name = at >= 0 ? parts[at] : parts[0] || '';
+      const rel = parts.slice(at >= 0 ? at + 1 : 1);
+      if (!rel.length || rel.some((x) => x === '..' || x === '.')) continue;
+      if (!byBackup.has(name)) byBackup.set(name, []);
+      byBackup.get(name).push({ rel: rel.join('/'), file: f.file });
+    }
+    const named = [...byBackup.keys()].filter((k) => /^CaseVault-Backup-/i.test(k)).sort();
+    const backup = named.length ? named[named.length - 1] : [...byBackup.keys()][0];
+    if (!backup) return null;
+    const all = byBackup.get(backup);
+    const infoRow = all.find((x) => x.rel === 'backup-info.json');
+    const files2 = all.filter((x) => x.rel !== 'backup-info.json');
+    if (!files2.length) return null;
+    // vault.json (the case list) is always read, then random others.
+    const pool = files2.filter((x) => x.rel !== 'vault.json');
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    const first = files2.find((x) => x.rel === 'vault.json');
+    const sample = [...(first ? [first] : []), ...pool].slice(0, Math.max(1, n));
+    return { backup, files: files2, info: infoRow ? infoRow.file : null, sample };
+  }
+
+  /** v1.149: what a Test Restore found -> { ok, lines: [text] } (ok: every file read and the count right). */
+  function testVerdict({ read = 0, unreadable = 0, badJson = 0, same = 0, changed = 0, gone = 0, count = 0, expected = null } = {}) {
+    const lines = [];
+    lines.push(`${read} of ${read + unreadable} sample file${read + unreadable === 1 ? '' : 's'} read back in full${unreadable ? `; ${unreadable} could not be read` : ''}.`);
+    if (badJson) lines.push(`${badJson} data file${badJson === 1 ? ' is' : 's are'} damaged (not readable as data).`);
+    lines.push(`${same} the same as on the SSD${changed ? `, ${changed} changed on the SSD since the backup (normal for files you worked on)` : ''}${gone ? `, ${gone} no longer on the SSD` : ''}.`);
+    if (expected != null) lines.push(count === expected ? `All ${count} files the backup made are there.` : `The backup made ${expected} files, the folder has ${count}: some are missing or extra.`);
+    return { ok: !unreadable && !badJson && (expected == null || count === expected), lines };
+  }
+
+  return { group, backupWhen, testPick, testVerdict };
 });

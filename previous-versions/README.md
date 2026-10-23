@@ -4,6 +4,14 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.148)
+
+- **Case Groups:** combined Timeline, Summary PDF, Make Operation
+- **Alerts:** count of due cases on red folders; Snooze / Wake on deadlines
+- **Secure Locker:** password age with a change reminder; Copy Username; Last Contact on Confidential Files
+- **Home:** Operation folder order; pinned cases in Recently Updated
+- **Updater 1.3.2:** Save Problem Report after a failed update
+
 ## Features (v1.147)
 
 - **Home:** folder names left-aligned under the folders; Status columns word left / icon right

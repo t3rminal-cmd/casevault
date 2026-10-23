@@ -23,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.148.0';
+  const APP_VERSION = '1.149.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -215,13 +215,26 @@ const Vault = (() => {
     const info = { app: 'CaseVault', kind: 'full-backup', appVersion: APP_VERSION, vaultId: vault.vaultId || '', at: nowISO(), files: tally.files, bytes: tally.bytes, verified: true };
     await FS.writeJSON(dst, 'backup-info.json', info);
     vault.settings.lastFullBackup = { at: info.at, files: tally.files, bytes: tally.bytes, folder, where: destParent.name || '', verified: true };
+    addBackupHistory(vault.settings.lastFullBackup);
     await saveVault();
     return { folder, ...tally };
   }
 
+  /* v1.149: the last 10 full backups (Settings → Backups): when, which drive or folder, how big. */
+  const BACKUP_HISTORY_MAX = 10;
+  function backupHistoryWith(list, entry) {
+    const keep = (Array.isArray(list) ? list : []).filter((x) => x && typeof x === 'object' && x.at);
+    const row = { at: String(entry.at || ''), files: Number(entry.files) || 0, bytes: Number(entry.bytes) || 0, folder: String(entry.folder || ''), where: String(entry.where || ''), verified: !!entry.verified };
+    if (entry.by) row.by = String(entry.by);
+    if (entry.manual) row.manual = true;
+    return [row, ...keep.filter((x) => x.at !== row.at)].sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, BACKUP_HISTORY_MAX);
+  }
+  function addBackupHistory(entry) { vault.settings.backupHistory = backupHistoryWith(vault.settings.backupHistory, entry); }
+
   /** v1.87: a backup the helper made and checked (Firefox). */
   async function recordHelperBackup({ folder = '', files = 0, bytes = 0, at = '', drive = '' } = {}) {
     vault.settings.lastFullBackup = { at: at || nowISO(), files, bytes, folder: String(folder).split(/[\\/]/).pop(), where: drive, verified: true, by: 'helper' };
+    addBackupHistory(vault.settings.lastFullBackup);
     await saveVault();
     return vault.settings.lastFullBackup;
   }
@@ -229,6 +242,7 @@ const Vault = (() => {
   /** v1.85: helper mode cannot reach another drive; the user copies the folder and says so here. */
   async function recordManualBackup() {
     vault.settings.lastFullBackup = { at: nowISO(), manual: true, verified: false };
+    addBackupHistory(vault.settings.lastFullBackup);
     await saveVault();
     return vault.settings.lastFullBackup;
   }
@@ -1961,7 +1975,7 @@ const Vault = (() => {
     get lastCleanup() { return lastCleanup; },
     newId, localDay, logActivity,
     resolve, create, load, close, ping,
-    backupNow, listBackups, rebuildIndex, updateSettings, fullBackup, recordManualBackup, recordHelperBackup, restoreBackup, readLetterheadLogo, saveLetterheadLogo, deleteLetterheadLogo,
+    backupNow, listBackups, rebuildIndex, updateSettings, fullBackup, recordManualBackup, recordHelperBackup, backupHistoryWith, restoreBackup, readLetterheadLogo, saveLetterheadLogo, deleteLetterheadLogo,
     createCase, getCase, saveCase, deleteCase, restoreCaseFromBackup, listDeleted, restoreDeleted, purgeDeleted, BIN_DAYS,
     listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
     archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS, archiveFolderName, setSuspectGroup, suspectGroups,

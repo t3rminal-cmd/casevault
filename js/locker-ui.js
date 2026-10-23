@@ -7,7 +7,7 @@
  * Everything is encrypted on the SSD (js/secure/locker-core.js); a recovery key, shown once when
  * the locker is made, opens it if the password is forgotten.
  *
- * The locker locks itself: on leaving its page, after 5 minutes without use, when the privacy
+ * The locker locks itself: on leaving its page, after 2, 5 or 15 minutes without use (v1.149), when the privacy
  * screen comes on, and when the vault closes. A password copied with Copy is cleared from the
  * clipboard after 30 seconds.
  */
@@ -16,7 +16,6 @@
 (function (root) {
   let ui = null;
   const L = () => root.CVLockerCore;
-  const IDLE_MS = 5 * 60 * 1000;
   const CLIP_MS = 30 * 1000;
   const MAX_FILE = 200 * 1024 * 1024;
   const mem = { key: null, header: null, data: null, idle: null, tab: 'passwords', fails: 0, wait: 0, query: {}, openHist: new Set() };
@@ -34,7 +33,9 @@
   const isOpenPage = () => /^#\/locker\b/.test(location.hash);
   function touch() {
     clearTimeout(mem.idle);
-    if (mem.key) mem.idle = setTimeout(() => lock('5 minutes without use'), IDLE_MS);
+    // v1.149: after 2, 5 or 15 minutes without use (Lock After, kept in the locker).
+    const min = (mem.data && mem.data.autoLock) || 5;
+    if (mem.key) mem.idle = setTimeout(() => lock(`${min} minutes without use`), min * 60 * 1000);
   }
   const unlocked = () => !!mem.key;
 
@@ -237,11 +238,12 @@
     const tools = h('div', { class: 'locker-row' },
       h('button', { class: 'btn small', type: 'button', icon: 'key', title: 'Choose a new locker password', onclick: () => changeDialog() }, 'Change Password'),
       h('button', { class: 'btn small', type: 'button', icon: 'arrow-repeat', title: 'Make a new recovery key; the old one stops working', onclick: () => newRecoveryDialog() }, 'New Recovery Key'),
-      h('button', { class: 'btn primary small', type: 'button', icon: 'lock-fill', title: 'Lock now. It also locks by itself after 5 minutes without use and when you leave this page.', onclick: () => lock() }, 'Lock'));
+      lockAfterPick(),
+      h('button', { class: 'btn primary small', type: 'button', icon: 'lock-fill', title: `Lock now. It also locks by itself after ${mem.data.autoLock} minutes without use and when you leave this page.`, onclick: () => lock() }, 'Lock'));
     const page = h('div', { class: 'locker-open' }, tabs, body);
     page.addEventListener('input', touch);
     page.addEventListener('click', touch);
-    return [pageHead(tools), h('p', { class: 'muted small locker-note' }, ui.icon('unlock'), ' Open. Locks after 5 minutes without use, when you leave this page, or with Lock.'), page];
+    return [pageHead(tools), h('p', { class: 'muted small locker-note' }, ui.icon('unlock'), ` Open. Locks after ${mem.data.autoLock} minutes without use, when you leave this page, or with Lock.`), page];
   }
 
   /* A table you add to: Password Manager, Covert Aliases, Covert Accounts. */
@@ -274,7 +276,7 @@
         const row = h('tr', { 'data-id': r.id, class: `${histOpen ? 'hist-open' : ''}${stale ? ' pw-stale' : ''}` },
           // v1.146: long text is cut with … (the whole of it in the hover box), so the buttons always show.
           ...cols.map(([k, label, kind]) => h('td', { class: kind === 'secret' ? 'secret-cell' : `text-cell${COPYABLE.includes(k) && r[k] ? ' copy-cell' : ''}`, title: kind === 'secret' ? null : r[k] || null },
-            kind === 'secret' ? [secretCell(r[k], `${label} for ${name}`), k === 'password' ? ageTag(r) : null]
+            kind === 'secret' ? [secretCell(r[k], `${label} for ${name}`), k === 'password' && r[k] ? h('span', { class: 'pw-tags' }, strengthTag(r[k], () => editRow(t, r)), ageTag(r)) : null]
               // v1.148: the username has its own Copy button.
               : COPYABLE.includes(k) && r[k] ? h('div', { class: 'copy-wrap' }, h('span', { class: 'copy-text' }, r[k]), h('button', { type: 'button', class: 'icon-btn copy-user', title: `Copy the ${label.toLowerCase()}`, onclick: () => copySecret(r[k], label) }, I('copy'), h('span', { class: 'sr-only' }, `Copy ${label}`)))
               : (r[k] || h('span', { class: 'muted' }, '—')))),
@@ -316,6 +318,24 @@
   }
 
   const COPYABLE = ['username', 'handle']; // v1.148
+  /** v1.149: Lock After 2 / 5 / 15 minutes without use. */
+  function lockAfterPick() {
+    const { h } = ui;
+    const sel = h('select', { class: 'lock-after', 'aria-label': 'Lock after minutes without use', title: 'How long the locker stays open without use' },
+      L().AUTO_LOCK.map((n) => h('option', { value: String(n), selected: n === mem.data.autoLock }, `Lock After ${n} Minutes`)));
+    sel.addEventListener('change', async () => { mem.data.autoLock = Number(sel.value); await saveSafe(); touch(); render(); });
+    return sel;
+  }
+  /** v1.149: Weak / OK / Strong next to a saved password; Weak opens Edit, to Generate a new one. */
+  const STRENGTH_LABEL = { weak: 'Weak', ok: 'OK', strong: 'Strong' };
+  function strengthTag(value, onWeak) {
+    const { h } = ui;
+    const st = L().strength(value);
+    if (!st) return null;
+    const attrs = { class: `pw-strength ${st.level}`, title: st.level === 'weak' ? `${st.why}. Click to change it: Edit, then Generate makes a strong one.` : st.why };
+    if (st.level === 'weak' && onWeak) return h('button', { ...attrs, type: 'button', onclick: onWeak }, STRENGTH_LABEL[st.level]);
+    return h('span', attrs, STRENGTH_LABEL[st.level]);
+  }
   /** v1.148: Remind: Off / 90 / 180 / 365 days (kept in the locker, for every password). */
   function remindPick() {
     const { h } = ui;
@@ -352,6 +372,13 @@
           const eye = h('button', { type: 'button', class: 'icon-btn', title: 'Show', onclick: () => { el.type = el.type === 'password' ? 'text' : 'password'; eye.replaceChildren(ui.icon(el.type === 'password' ? 'eye' : 'eye-slash')); } }, ui.icon('eye'));
           const gen = h('button', { type: 'button', class: 'btn small', title: 'Make a strong random password (20 characters)', onclick: () => { el.value = L().generatePassword(); draft[k] = el.value; el.type = 'text'; } }, 'Generate');
           box = h('span', { class: 'secret-edit' }, el, eye, gen);
+          // v1.149: Weak / OK / Strong as it is typed.
+          if (k === 'password') {
+            const meter = h('span', { class: 'pw-meter' });
+            const show = () => meter.replaceChildren(strengthTag(el.value) || '');
+            el.addEventListener('input', show); gen.addEventListener('click', show); show();
+            box = h('span', { class: 'secret-edit-wrap' }, box, meter);
+          }
         }
         return ui.field(label, box, kind === 'wide' ? 'span-2' : '');
       });

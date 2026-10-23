@@ -213,6 +213,19 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.149
+
+- **Use as AI Example:** in a report's Export menu, **Use as AI Example** puts an anonymized copy in Settings → Library (names, phone numbers and addresses replaced) and asks which document type it is an example of. You see the copy before it is saved
+- **Library check:** Settings → Library shows how many examples each document type has; a type with none is in red, so you know where Draft with AI has nothing to copy the style from
+- **Real names warning:** when you drop a file into the Library, CaseVault looks for names, phone numbers and other identifying details first. If it finds any, you choose **Save Anonymized Copies**, **Keep As They Are** or Cancel
+- **Today:** a panel on the home page lists everything dated today and tomorrow on the Timelines of your open cases, soonest first. Tick a deadline there to mark it done
+- **Quick Note:** **Alt+N** (or ⋮ → Quick Note) from any page writes a note into a case's Case History with today's date and the time, or into each case of a Case Group. Ctrl+Enter saves
+- **Discovery checklist:** before a production is copied, a short checklist: Arrest Report filled in and evidence photos added (checked by CaseVault), then reports signed, Bates start number right and password given separately (you tick them). **Skip Checklist** goes straight on
+- **Password strength:** each saved password shows **Weak**, **OK** or **Strong**. Click **Weak** to open Edit, where **Generate** makes a strong one. The strength also shows as you type
+- **Lock After:** the Secure Locker locks after **2, 5 or 15 minutes** without use (5 unless you change it, in the locker's header)
+- **Backup history:** Settings → Backups → **Full backup history** lists the last 10 full backups: date, drive or folder, size and whether it was checked
+- **Test Restore:** Settings → Backups → **Test Restore**. Pick a CaseVault-Backup folder on the backup drive; CaseVault reads 20 random files of it (and the case list) and compares them with the SSD. Nothing is changed or copied
+
 ### What's new in v1.148
 
 - **Case Group page:** **Timeline** shows the events of every case in the group on one Timeline (each case's Timeline tab does the same, like an Operation's). **Summary PDF** lists each case (number, subject, status, opened, next deadline, charges from the Arrest Report) with your letterhead. **Make Operation** turns the group into an Operation with the same cases when the investigation grows
@@ -231,15 +244,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Case list alerts:** an Operation inside OPERATION that has a case due is highlighted red (red edge and shading, its number in red), so you can see which one has the alert. The bell stays on the main folder
 - **Status columns:** in General Files, Missions and every other list, the status word (Open, Closed, Archived) is on the left of its box and its icon on the right, every box the same width
 - **Case list:** the main folders are now just **OPERATION** and **INDEPENDENT**
-
-### What's new in v1.146
-
-- **Case Groups for independent cases:** keep related independent cases together under a name you give (a suspect, a family, a crew), like an Operation but not one. **New Case Group** (General Files) or **Case Group** (on an independent case's Details) asks for the name and lets you tick the cases that belong. The group shows in INDEPENDENT CASES with its cases under it; its name opens the group's own page (its cases as cards, **Edit Group** to rename it or change its cases, **Ungroup** to take it apart). The same name written another way ("doe, john") joins the group already there. (This replaces v1.145's Suspect Folder; groups made then are kept.)
-- **Case list:** OPERATION CASES and INDEPENDENT CASES are written the same size. The red bell is only on those two main folders; inside them, a case that is due is shown in red (no bell on a Mission's own folder)
-- **Password Manager:** Edit and the arrows were pushed out of sight by a long site name or web address (they only showed while searching). Long text is now cut with … (hold the mouse over it for all of it), and the buttons always show
-- **Confidential Files:** each file is marked **Active** (green) or **Inactive** (red); click it to switch. New files start Active
-- **Updater (1.3.1):** a small, plain window again: the banner, the version line, one line of status, the progress bar and the buttons. **What's New** opens the notes (and Show Files) only when you ask
-- **Tidy up:** unused folder icons removed; the README brought up to date with a map of the repository's folders
 
 ### Earlier versions
 

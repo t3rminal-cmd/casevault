@@ -429,6 +429,39 @@
         shownCases = want;
         draw();
       });
+      // v1.149: a short checklist before the production: the automatic checks come from the case,
+      // the rest are ticked by hand. Continue is open once every manual one is ticked.
+      const checkList = async () => {
+        const arrest = await Vault.readCaseJSON(c.id, 'arrest.json').catch(() => null);
+        const fields = await Vault.readCaseJSON(c.id, 'report-fields.json').catch(() => null);
+        const needsArrest = !!(c.arrest || (c.closure && c.closure.disposition === 'arrest' && !c.arrestRemoved));
+        const items = D.checklist({ arrest, needsArrest, evidence: fields && fields.evidence });
+        return new Promise((resolve) => {
+          const box = h('dialog', { class: 'dialog disc-confirm disc-check', 'aria-label': 'Discovery checklist' });
+          const done = (v) => { box.close(); box.remove(); resolve(v); };
+          box.addEventListener('cancel', (e) => { e.preventDefault(); done(false); });
+          const go2 = h('button', { class: 'btn primary', type: 'button', onclick: () => done(true) }, 'Continue');
+          const ticks = [];
+          const sync = () => { go2.disabled = ticks.some((t) => !t.checked); };
+          box.append(head('list-check', 'Discovery Checklist', 'A last look before the files are copied.'),
+            h('ul', { class: 'disc-checklist' }, items.map((it) => {
+              if (it.auto) return h('li', { class: `disc-check-row ${it.ok ? 'ok' : 'warn'}`, 'data-key': it.key },
+                h('span', { class: 'disc-check-text' }, h('strong', {}, it.label), h('span', { class: 'muted small' }, it.note)),
+                icon(it.ok ? 'check-circle-fill' : 'exclamation-triangle-fill'));
+              const cb = h('input', { type: 'checkbox', onchange: sync });
+              ticks.push(cb);
+              return h('li', { class: 'disc-check-row manual', 'data-key': it.key },
+                h('label', { class: 'disc-check-text' }, cb, h('span', {}, h('strong', {}, it.label), h('span', { class: 'muted small' }, it.note))));
+            })),
+            h('div', { class: 'dialog-actions' },
+              h('button', { class: 'btn', type: 'button', onclick: () => done(false) }, 'Back'),
+              h('button', { class: 'btn ghost', type: 'button', onclick: () => done(true) }, 'Skip Checklist'),
+              go2));
+          sync();
+          form.append(box);
+          box.showModal();
+        });
+      };
       // v1.50: before anything is written, a box lists every file going in and the total size.
       const confirmList = (destText) => new Promise((resolve) => {
         const bytes = pickedBytes();
@@ -477,6 +510,7 @@
         if (!picked.length) { err.textContent = 'Add at least one file to the list on the right.'; return; }
         if (pw.value.length < 8) { err.textContent = 'Use a password of at least 8 characters.'; pw.focus(); return; }
         if (pw.value !== pw2.value) { err.textContent = 'The two passwords are not the same.'; pw2.focus(); return; }
+        if (!(await checkList())) return;
         if (!(await confirmList(dest.value === 'pick' ? 'the USB drive or folder you pick next' : dest.value === 'disc' ? 'the CD or DVD drive you pick next' : 'CaseVault-Data\\exports on the SSD'))) return;
         let dir = null; let destLabel = '';
         try {
