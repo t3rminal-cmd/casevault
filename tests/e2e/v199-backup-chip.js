@@ -2,6 +2,8 @@
 const boot = require('./boot');
 const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
 (async () => { const { b, p, errs } = await boot(1366, 900);
+  // v1.151: with the backup bar showing, the banner leaves its backup chip out; hide the bar for today to see the chip.
+  await p.evaluate(() => { localStorage.setItem('cv-backup-bar', Vault.localDay()); location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(800);
   const row = () => p.evaluate(() => {
     const chips = [...document.querySelectorAll('.hero-counts > .hero-count')];
     const r = (el) => el.getBoundingClientRect();
@@ -17,7 +19,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   ok(!r.clipped, 'no chip is cut off');
   ok(!r.oldLine, 'the separate backup line under the counts is gone');
   await p.locator('.hero').screenshot({ path: process.env.SP + '/v199/hero-none.png' });
-  await p.click('.hc-backup'); await p.waitForSelector('.backup-full');
+  await p.click('.hc-backup, .backup-bar .btn'); await p.waitForSelector('.backup-full');
   ok(true, 'clicking it opens Vault → Backups');
   await p.keyboard.press('Escape'); await p.waitForTimeout(300);
   await p.evaluate(async () => { Vault.data.settings.lastFullBackup = { at: new Date().toISOString(), files: 3, bytes: 10, verified: true }; location.hash = '#/x'; location.hash = '#/'; });

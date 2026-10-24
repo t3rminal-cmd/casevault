@@ -365,7 +365,7 @@
       }
       for (const a of document.querySelectorAll('.tabs a.tab')) {
         const m = /#\/case\/([^/]+)\/([^/?]+)/.exec(a.getAttribute('href') || '');
-        const on = !!m && waiting.has(`${decodeURIComponent(m[1])}/${m[2]}`);
+        const on = !!m && waiting.has(`${CVRoute.dec(m[1])}/${m[2]}`);
         a.classList.toggle('unsaved', on);
         if (on) a.setAttribute('data-unsaved', 'Changes not saved to the SSD yet'); else a.removeAttribute('data-unsaved');
       }
@@ -567,6 +567,9 @@
     }
     if (MODE === 'direct') await HandleStore.save(dir);
     const sameVault = previousId === data.vaultId;
+    // v1.151: the key that scrambles case IDs and names in the address (js/route-key.js).
+    if (!/^[0-9a-f]{32,128}$/.test(String((Vault.data.settings || {}).routeKey || ''))) await Vault.updateSettings({ routeKey: CVRoute.newSecret() }).catch(() => {});
+    CVRoute.setSecret((Vault.data.settings || {}).routeKey);
     state.connected = true;
     // v1.119: the Memory icon shows with the others at once, not five seconds later (no jump).
     if (memBox) memBox.tick();
@@ -632,177 +635,10 @@
     if (warn.length) toast(h('span', {}, ...warn.flatMap((w, i) => [i ? h('br') : null, w])), 'error', 12000);
   }
 
-  // v1.87: in Firefox the helper (1.11 or later) copies and checks the vault on another drive.
-  async function helperBackup() {
-    let drives;
-    try { drives = await HelperFS.backupDrives(); } catch (err) { toast(`The helper did not answer: ${err.message}`, 'error'); return false; }
-    if (!drives) return null; // an older helper: copy by hand
-    const pick = await openDialog((close) => {
-      const list = h('div', { class: 'arch-pick backup-drives', role: 'radiogroup', 'aria-label': 'Backup drive' });
-      const go = h('button', { class: 'btn primary', type: 'submit', icon: 'hdd-fill', disabled: true }, 'Back Up to This Drive');
-      const refresh = async () => { try { draw(drives = (await HelperFS.backupDrives()) || []); } catch (err) { toast(err.message, 'error'); } };
-      const draw = (items) => {
-        list.replaceChildren(...(items.length ? items.map((d) => {
-          const net = d.bitlocker === 'network';
-          // Added with Add Backup Folder (not a drive Windows found): it can be taken off the list again.
-          const listed = d.saved === true || /^Network folder/.test(d.kind || '');
-          const remove = listed ? h('button', { class: 'btn small backup-net-remove', type: 'button', title: 'Take this folder off the list (the backups already in it stay there)', onclick: async (e) => {
-            e.preventDefault(); e.stopPropagation();
-            try { await HelperFS.removeNetworkFolder(d.path); await refresh(); } catch (err) { toast(err.message, 'error'); }
-          } }, 'Remove') : null;
-          return h('label', { class: `arch-opt${d.reachable === false ? ' backup-off' : ''}` },
-            h('input', { type: 'radio', name: 'backup-drive', value: d.path, disabled: d.reachable === false }), I(net ? 'globe2' : listed ? 'folder-fill' : 'hdd-fill'),
-            h('span', {}, h('strong', {}, listed ? d.path : `${d.label || 'Drive'} (${d.path.replace(/[\\/]+$/, '')})`),
-              h('span', { class: 'muted small block' }, d.total ? `${fmtSize(d.free)} free of ${fmtSize(d.total)}${d.kind === 'Removable' ? ' · removable' : ''}${d.kind === 'Network' ? ' · network drive' : ''}` : d.kind),
-              d.bitlocker ? h('span', { class: `small block enc-${d.bitlocker}` }, I(d.bitlocker === 'on' ? 'shield-lock-fill' : net ? 'globe2' : 'unlock'), ` ${encryptionText(d.bitlocker)}`) : null),
-            remove);
-        }) : [h('p', { class: 'muted' }, 'No other drive found. Plug in the backup drive and unlock it, or add a backup folder, then click Look Again.')]));
-        go.disabled = true;
-        // v1.103: until a backup folder is added, the box to add one (C:\CaseVault-Backups) is open.
-        netRow.hidden = items.some((d) => d.saved === true || /^Network folder/.test(d.kind || ''));
-      };
-      // v1.102: Add a backup folder: a shared folder on another PC at home (\\BEELINK\CaseVault-Backups),
-      // or v1.103 a folder on this PC's drive, filled in as C:\CaseVault-Backups.
-      const netIn = h('input', { type: 'text', autocomplete: 'off', spellcheck: 'false', value: 'C:\\CaseVault-Backups', placeholder: 'C:\\CaseVault-Backups', 'aria-label': 'Backup folder' });
-      const netAdd = h('button', { class: 'btn', type: 'button', onclick: async () => {
-        const path = netIn.value.trim();
-        if (!path) { netIn.focus(); return; }
-        netAdd.disabled = true;
-        try { await HelperFS.addNetworkFolder(path); await refresh(); toast(`Added ${path}.`, 'success', 2500); } catch (err) { toast(err.message, 'error', 9000); }
-        netAdd.disabled = false;
-      } }, 'Add');
-      netIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); netAdd.click(); } });
-      const netRow = h('div', { class: 'backup-net-row', hidden: true },
-        h('label', { class: 'field' }, h('span', {}, 'Backup folder'), netIn), netAdd,
-        h('p', { class: 'muted small' }, 'A folder on this PC, like C:\\CaseVault-Backups (made if it isn\'t there), or a shared folder on another PC, like \\\\BEELINK\\CaseVault-Backups. Never a folder on the SSD. See docs/BACKUP-TO-ANOTHER-PC.md.'));
-      list.addEventListener('change', () => { go.disabled = !list.querySelector('input:checked'); });
-      draw(drives);
-      return h('form', { class: 'backup-form', onsubmit: (e) => { e.preventDefault(); const c = list.querySelector('input:checked'); if (c) close(drives.find((d) => d.path === c.value) || { path: c.value }); } },
-        h('h2', { icon: 'hdd-fill' }, 'Back Up the Whole Vault'),
-        h('p', {}, 'Every case, file, report, template and setting in CaseVault-Data is copied to the drive or folder you pick, then read back and checked file by file. You can keep working while it runs.'),
-        h('p', { class: 'muted small' }, 'Pick an encrypted drive that is not part of this SSD, or add a backup folder: C:\\CaseVault-Backups on this PC, or a shared folder on another PC at home. The SSD\'s own partitions are never offered.'),
-        list,
-        h('div', { class: 'backup-net-open' }, h('button', { class: 'btn small', type: 'button', icon: 'folder-plus', onclick: () => { netRow.hidden = !netRow.hidden; if (!netRow.hidden) netIn.focus(); } }, 'Add Backup Folder')),
-        netRow,
-        h('div', { class: 'dialog-actions' },
-          h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
-          h('button', { class: 'btn', type: 'button', icon: 'arrow-repeat', onclick: refresh }, 'Look Again'),
-          go));
-    });
-    if (!pick) return false;
-    // v1.102: to another PC: CaseVault can't see that PC's disk, so the first time it asks you to say
-    // it is encrypted and the shared folder is only yours. The answer is kept for that folder.
-    if (pick.bitlocker === 'network') {
-      const okList = (Vault.data.settings.networkBackupOk || []);
-      if (!okList.some((p) => p.toLowerCase() === pick.path.toLowerCase())) {
-        const sure = await openDialog((close) => {
-          const tick = h('input', { type: 'checkbox' });
-          const yes = h('button', { class: 'btn primary', type: 'button', disabled: true, onclick: () => close(true) }, 'Back Up to This Folder');
-          tick.addEventListener('change', () => { yes.disabled = !tick.checked; });
-          return h('div', { class: 'confirm backup-form' },
-            h('h2', { icon: 'globe2' }, 'Backing Up to Another PC'),
-            h('p', {}, `The backup is a full copy of every case. It goes over your home network to ${pick.path}. CaseVault can\'t see whether that PC\'s drive is encrypted.`),
-            h('ul', { class: 'backup-steps' },
-              h('li', {}, 'That PC\'s drive has BitLocker on (or Device encryption on Windows Home).'),
-              h('li', {}, 'The shared folder is shared with your account only, not Everyone.'),
-              h('li', {}, 'The share encrypts its traffic (docs/BACKUP-TO-ANOTHER-PC.md shows how).')),
-            h('label', { class: 'check-row' }, tick, h('span', {}, 'I checked: that PC is encrypted and the shared folder is only mine.')),
-            h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), yes));
-        });
-        if (!sure) return false;
-        await Save.track('settings', () => Vault.updateSettings({ networkBackupOk: [...okList, pick.path] })).catch(() => {});
-      }
-    }
-    // v1.98: a backup is a full copy of every case: on a drive without BitLocker, anyone can read it.
-    if (pick.bitlocker === 'off' || pick.bitlocker === 'suspended') {
-      const go = await openDialog((close) => h('div', { class: 'confirm backup-form' },
-        h('h2', { icon: 'unlock' }, 'This Drive Is Not Encrypted'),
-        h('p', {}, `${pick.label || 'This drive'} (${pick.path.replace(/[\\/]+$/, '')}) ${pick.bitlocker === 'suspended' ? 'has BitLocker paused' : 'has no BitLocker'}. The backup is a full copy of every case: anyone who gets the drive can read all of it.`),
-        h('p', { class: 'muted small' }, pick.bitlocker === 'suspended' ? 'In File Explorer, right-click the drive → Manage BitLocker → Resume protection, then back up.' : ENCRYPTION_STEPS),
-        h('div', { class: 'dialog-actions' },
-          h('button', { class: 'btn primary', type: 'button', onclick: () => close(false) }, 'Cancel'),
-          h('button', { class: 'btn danger', type: 'button', onclick: () => close(true) }, 'Back Up Anyway'))));
-      if (!go) return false;
-    }
-    await Save.flushAll();
-    if (Save.failed.size) { toast('Some changes are not saved yet. Reconnect the SSD, then back up.', 'error', 8000); return false; }
-    const progress = toast('Backing up: starting…', 'info', 24 * 3600000);
-    try {
-      let st = await HelperFS.backupStart(pick.path);
-      while (st.state === 'running') {
-        await new Promise((r) => setTimeout(r, 800));
-        st = await HelperFS.backupStatus();
-        progress.textContent = st.total ? `Backing up: ${st.files} of ${st.total} files copied and checked (${fmtSize(st.bytes)} of ${fmtSize(st.totalBytes)})` : 'Backing up: counting the files…';
-      }
-      progress.remove();
-      if (st.state !== 'done') { toast(`The backup did not finish: ${st.message || 'unknown error'}`, 'error', 15000); return false; }
-      await Save.track('settings', () => Vault.recordHelperBackup(st));
-      await openDialog((close) => h('div', { class: 'backup-form' },
-        h('h2', { icon: 'check-circle-fill' }, 'Full Backup Done'),
-        h('p', {}, `${st.files} file${st.files === 1 ? '' : 's'} (${fmtSize(st.bytes)}) copied to ${CVFormat.pathText(st.folder)} and checked file by file.`),
-        h('p', { class: 'muted small' }, 'Keep the backup drive somewhere other than where the SSD is kept. To restore, copy the backup folder\'s contents into an empty CaseVault-Data folder and open it.'),
-        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
-      if (location.hash === '#/' || location.hash === '') route();
-      return true;
-    } catch (err) {
-      progress.remove();
-      toast(`The backup did not finish: ${err.message}`, 'error', 15000);
-      return false;
-    }
-  }
-
-  async function fullBackupDialog() {
-    if (MODE !== 'direct') {
-      const done = await helperBackup();
-      if (done !== null) return done;
-      const ok = await openDialog((close) => h('div', { class: 'backup-form' },
-        h('h2', { icon: 'hdd-fill' }, 'Back Up the Whole Vault'),
-        h('p', {}, 'This helper is older than 1.11, so CaseVault cannot reach a second drive itself. Update W:\\casevault-helper to back up with one click, or copy the folder with File Explorer:'),
-        h('ol', { class: 'backup-steps' },
-          h('li', {}, 'Close CaseVault (⋮ → Power Off) so nothing is being saved.'),
-          h('li', {}, 'Plug in the backup drive (an encrypted drive, not this PC).'),
-          h('li', {}, h('span', {}, 'Copy the whole ', h('strong', {}, 'CaseVault-Data'), ' folder from the SSD to the backup drive.')),
-          h('li', {}, 'Open the copy\'s vault.json to check it is there, then come back here.')),
-        h('p', { class: 'muted small' }, 'With helper 1.11 or later, or in Chrome or Edge, CaseVault copies and checks every file for you.'),
-        h('div', { class: 'dialog-actions' },
-          h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'),
-          h('button', { class: 'btn primary', type: 'button', icon: 'check-circle-fill', onclick: () => close(true) }, 'I Copied It Today'))));
-      if (!ok) return false;
-      await Save.track('settings', () => Vault.recordManualBackup());
-      toast('Full backup recorded for today.', 'success');
-      if (location.hash === '#/' || location.hash === '') route();
-      return true;
-    }
-    const go = await confirmDialog({
-      title: 'Back Up the Whole Vault',
-      message: h('div', {},
-        h('p', {}, 'Every case, file, report, template and setting in CaseVault-Data is copied to a new folder on the drive you pick next, then read back and checked byte for byte.'),
-        h('p', { class: 'muted small' }, 'Pick a folder on a different encrypted drive, not on this SSD and not on this PC. The copy is named CaseVault-Backup-<date>.')),
-      confirmText: 'Pick the Backup Drive',
-    });
-    if (!go) return false;
-    let dir;
-    try { dir = await window.showDirectoryPicker({ id: 'cv-full-backup', mode: 'readwrite' }); } catch (err) { if (err && err.name !== 'AbortError') toast(err.message, 'error'); return false; }
-    await Save.flushAll();
-    if (Save.failed.size) { toast('Some changes are not saved yet. Reconnect the SSD, then back up.', 'error', 8000); return false; }
-    const progress = toast('Backing up: starting…', 'info', 3600000);
-    try {
-      const r = await Save.track('fullbackup', () => Vault.fullBackup(dir, (n, name, bytes) => { progress.textContent = `Backing up: ${n} file${n === 1 ? '' : 's'} copied and checked (${fmtSize(bytes)}), ${name}`; }));
-      progress.remove();
-      await openDialog((close) => h('div', { class: 'backup-form' },
-        h('h2', { icon: 'check-circle-fill' }, 'Full Backup Done'),
-        h('p', {}, `${r.files} file${r.files === 1 ? '' : 's'} (${fmtSize(r.bytes)}) copied to "${dir.name}\\${r.folder}" and checked byte for byte.`),
-        h('p', { class: 'muted small' }, 'Keep the backup drive somewhere other than where the SSD is kept. To restore, copy the backup folder\'s contents into an empty CaseVault-Data folder and open it.'),
-        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
-      if (location.hash === '#/' || location.hash === '') route();
-      return true;
-    } catch (err) {
-      progress.remove();
-      if (FS.isDisconnectError(err) && !(await Vault.ping().catch(() => false))) { onDriveLost(); return false; }
-      toast(`The backup did not finish: ${err.message}`, 'error', 12000);
-      return false;
-    }
-  }
+  // v1.151: the backup screens are in js/backup-ui.js.
+  function fullBackupDialog(...a) { return PARTS.backup.fullBackupDialog(...a); }
+  function restoreFromBackupDialog(...a) { return PARTS.backup.restoreFromBackupDialog(...a); }
+  function testRestoreDialog(...a) { return PARTS.backup.testRestoreDialog(...a); }
 
   function onDriveLost() {
     if (!state.connected) return;
@@ -881,7 +717,7 @@
     ].filter(Boolean).join('\n');
     const li = h('li', {},
       h('a', {
-        href: `#/case/${encodeURIComponent(c.id)}`,
+        href: `#/case/${CVRoute.enc(c.id)}`,
         // v1.60: a case with a reminder (a deadline overdue or within a week) has a thin red border.
         class: `case-item st-${String(c.status).toLowerCase()} ${c.id === state.caseId ? 'active' : ''}${due ? ` has-reminder reminder-${due.cls}` : ''}${dim ? ' case-dim' : ''}`,
         'aria-current': c.id === state.caseId ? 'page' : null,
@@ -996,9 +832,9 @@
     const folders = [...byGroup.keys()].sort((a, b) => a.localeCompare(b)).map((g) => {
       const list = byGroup.get(g);
       const key = `sg:${g}`;
-      const open = sideFold.has(key) ? sideFold.get(key) : !!$('#case-search').value.trim() || list.some((c) => c.id === state.caseId) || location.hash === `#/group/${encodeURIComponent(g)}`;
+      const open = sideFold.has(key) ? sideFold.get(key) : !!$('#case-search').value.trim() || list.some((c) => c.id === state.caseId) || location.hash === `#/group/${CVRoute.enc(g)}`;
       const det = h('details', { class: 'suspect-group', open },
-        h('summary', { class: `sg-head${location.hash === `#/group/${encodeURIComponent(g)}` ? ' active' : ''}`, title: `${g}: a Case Group of ${plural(list.length, 'case')}, kept together (not an Operation). Click to open it; the arrow folds it.` },
+        h('summary', { class: `sg-head${location.hash === `#/group/${CVRoute.enc(g)}` ? ' active' : ''}`, title: `${g}: a Case Group of ${plural(list.length, 'case')}, kept together (not an Operation). Click to open it; the arrow folds it.` },
           h('span', { class: 'sg-name' }, g), h('span', { class: 'sg-icon' }, I('person-badge')),
           list.some((c) => caseDue(c)) ? h('span', { class: 'alert-count', title: alertList(list.filter((c) => caseDue(c))) }, String(list.filter((c) => caseDue(c)).length)) : null,
           h('span', { class: 'sg-count' }, String(list.length)), h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
@@ -1007,7 +843,7 @@
       det.querySelector('summary').addEventListener('click', (e) => {
         e.preventDefault();
         if (e.target.closest('.op-chev')) { det.open = !det.open; sideFold.set(key, det.open); return; }
-        location.hash = `#/group/${encodeURIComponent(g)}`;
+        location.hash = `#/group/${CVRoute.enc(g)}`;
       });
       return h('li', { class: 'sg-item' }, det);
     });
@@ -1076,10 +912,9 @@
   async function groupSummary(name, list) {
     const arrests = new Map();
     const full = [];
-    for (const c of list) {
-      arrests.set(c.id, await Vault.readCaseJSON(c.id, 'arrest.json').catch(() => null));
-      full.push(c);
-    }
+    // v1.151: read together, not one after another.
+    await Promise.all(list.map(async (c) => { arrests.set(c.id, await Vault.readCaseJSON(c.id, 'arrest.json').catch(() => null)); }));
+    full.push(...list);
     const bytes = CVGroupSummary.build(name, CVGroupSummary.rows(full, arrests), { letterhead: await CVLetterhead.forPdf().catch(() => null), printed: fmtDate(today()) });
     await openDialog((done) => h('div', { class: 'pdf-view' }, h('h2', { 'data-keep-case': 'true' }, `Case Group Summary: ${name}`), CVPdfViewer.create(bytes, { h, icon: I, title: `Case Group Summary ${name}`, fileName: `Case Group Summary ${name.replace(/[\\/:*?"<>|]+/g, ' ')}.pdf` }),
       h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => done() }, 'Close'))));
@@ -1088,7 +923,7 @@
   function showCaseGroup(name) {
     pageStart(name);
     const list = (Vault.data.cases || []).filter((c) => !isArchivedEntry(c) && !opOf(c) && c.suspectGroup === name).sort(byNumber);
-    const edit = async () => { const n = await caseGroupDialog({ original: name }); if (n !== null) location.hash = n ? `#/group/${encodeURIComponent(n)}` : '#/general'; };
+    const edit = async () => { const n = await caseGroupDialog({ original: name }); if (n !== null) location.hash = n ? `#/group/${CVRoute.enc(n)}` : '#/general'; };
     // v1.148: the group's PDF summary, and making it an Operation when the investigation grows.
     const summary = () => groupSummary(name, list);
     const makeOp = async () => {
@@ -1104,7 +939,7 @@
         h('span', { class: 'page-icon cg-icon' }, I('person-badge')),
         h('div', { class: 'page-title' }, h('h1', { 'data-keep-case': 'true' }, name), h('div', { class: 'muted small' }, `Case Group · ${plural(list.length, 'independent case')} kept together (not an Operation)`)),
         h('div', { class: 'spacer' }),
-        list.length ? h('a', { class: 'btn', href: `#/case/${encodeURIComponent(list[0].id)}/timeline`, icon: 'calendar-event', title: 'The events of every case in this group on one Timeline' }, 'Timeline') : null,
+        list.length ? h('a', { class: 'btn', href: `#/case/${CVRoute.enc(list[0].id)}/timeline`, icon: 'calendar-event', title: 'The events of every case in this group on one Timeline' }, 'Timeline') : null,
         list.length ? h('button', { class: 'btn', type: 'button', icon: 'file-earmark-pdf', title: 'Every case of the group on one page, as a PDF with your letterhead', onclick: summary }, 'Summary PDF') : null,
         list.length ? h('button', { class: 'btn', type: 'button', icon: 'op-folder', title: 'Make this group an Operation (Mission) with the same cases', onclick: makeOp }, 'Make Operation') : null,
         h('button', { class: 'btn primary', type: 'button', icon: 'pencil-square', title: 'Rename the group, or pick its cases', onclick: edit }, 'Edit Group')),
@@ -1210,7 +1045,7 @@
     for (const c of Vault.data.cases) {
       if (now.subjects.get(c.id) === sideSig.subjects.get(c.id)) continue;
       for (const a of document.querySelectorAll('#case-list a.case-item')) {
-        if (a.getAttribute('href') !== `#/case/${encodeURIComponent(c.id)}`) continue;
+        if (a.getAttribute('href') !== `#/case/${CVRoute.enc(c.id)}`) continue;
         const li = a.closest('li');
         if (li && li._cvArgs) li.replaceWith(caseItem(c, ...li._cvArgs));
       }
@@ -1252,7 +1087,7 @@
    * ===================================================================== */
 
   function go(caseId, tab, sub) {
-    location.hash = caseId ? `#/case/${encodeURIComponent(caseId)}/${tab || 'details'}${sub ? `/${encodeURIComponent(sub)}` : ''}` : '#/';
+    location.hash = caseId ? `#/case/${CVRoute.enc(caseId)}/${tab || 'details'}${sub ? `/${CVRoute.enc(sub)}` : ''}` : '#/';
   }
 
   function route() {
@@ -1270,11 +1105,24 @@
     if (/^#\/general\b/.test(location.hash)) return showGeneralFiles();
     // v1.146: a Case Group of independent cases.
     const grp = location.hash.match(/^#\/group\/([^/]+)/);
-    if (grp) return showCaseGroup(decodeURIComponent(grp[1]));
+    if (grp) {
+      const name = CVRoute.dec(grp[1]);
+      if (name !== null && !CVRoute.isScrambled(grp[1]) && CVRoute.active) { history.replaceState(null, '', `#/group/${CVRoute.enc(name)}`); }
+      return showCaseGroup(name || '');
+    }
     // v1.111: Other Files → Secure Locker.
     if (/^#\/locker\b/.test(location.hash)) { pageStart('Secure Locker'); return CVLockerUI.show($('#main')); }
     const m = location.hash.match(/^#\/case\/([^/]+)(?:\/(\w+))?(?:\/([^/]+))?/);
-    if (m) showCase(decodeURIComponent(m[1]), m[2] || 'details', m[3] || null);
+    if (m) {
+      // v1.151: scrambled parts are read back; an old plain address is rewritten in place (no new history entry).
+      const id = CVRoute.dec(m[1]);
+      const subText = m[3] ? CVRoute.dec(m[3]) : null;
+      if (id === null) { history.replaceState(null, '', '#/'); return route(); }
+      if (CVRoute.active && (!CVRoute.isScrambled(m[1]) || (m[3] && !CVRoute.isScrambled(m[3]) && m[3] !== '.notes'))) {
+        history.replaceState(null, '', `#/case/${CVRoute.enc(id)}/${m[2] || 'details'}${m[3] ? `/${m[3] === '.notes' ? m[3] : CVRoute.enc(subText)}` : ''}`);
+      }
+      showCase(id, m[2] || 'details', subText === null ? null : (m[3] === '.notes' ? '.notes' : encodeURIComponent(subText)));
+    }
     else showDashboard();
   }
 
@@ -1468,7 +1316,7 @@
       field('Course', f.course), field('Given By', f.provider),
       h('div', { class: 'cert-form-row' }, field('Date Completed', f.date), field('Hours', f.hours), field('Expires', f.expires)),
       h('p', { class: 'muted small' }, 'Leave Expires empty when the certificate does not expire. Needs Attention reminds you 90 and 30 days before.'),
-      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Save'))));
+      CVKit.cancelRow(h, () => close(false), h('button', { class: 'btn primary', type: 'submit' }, 'Save'))));
     if (!ok) return;
     const next = CVTraining.normalize({ course: f.course.value, provider: f.provider.value, date: f.date.value, hours: f.hours.value, expires: f.expires.value });
     try {
@@ -1489,7 +1337,7 @@
       h('h2', { icon: 'file-earmark-pdf' }, 'Training Record'),
       h('p', {}, `${rows.length} certificate${rows.length === 1 ? '' : 's'}${CVTraining.totalHours(rows) ? `, ${CVTraining.totalHours(rows)} hours in total` : ''}.`),
       h('label', { class: 'check' }, attach, ' Add the certificates after the list'),
-      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit', icon: 'printer' }, 'Make PDF'))));
+      CVKit.cancelRow(h, () => close(false), h('button', { class: 'btn primary', type: 'submit', icon: 'printer' }, 'Make PDF'))));
     if (!go) return;
     const attachments = [];
     if (attach.checked) {
@@ -1585,7 +1433,7 @@
       const name = await openDialog((close) => h('form', { class: 'dialog-form', onsubmit: (e) => { e.preventDefault(); close(inp.value.trim()); } },
         h('h2', { icon: 'folder-plus' }, 'New Folder in Other Files'),
         field('Folder Name', inp),
-        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Create Folder'))));
+        CVKit.cancelRow(h, () => close(null), h('button', { class: 'btn primary', type: 'submit' }, 'Create Folder'))));
       if (!name) return;
       try { folder = await Vault.addOtherFolder(name); sharedOpen[key] = folder; toast(`Folder ${folder} made.`, 'success'); } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); toast(err.message, 'error'); }
       draw();
@@ -1748,7 +1596,7 @@
       recent.length
         ? h('div', { class: 'recent-grid', role: 'table' },
           h('div', { class: 'recent-row recent-headrow', role: 'row' }, ...['Subject', 'Case Number', 'File Number', 'Status', 'Updated'].map((t) => h('span', { role: 'columnheader' }, t))),
-          ...recent.map((c) => h('a', { href: `#/case/${encodeURIComponent(c.id)}`, class: `recent-row${pins.includes(c.id) ? ' pinned' : ''}`, role: 'row' },
+          ...recent.map((c) => h('a', { href: `#/case/${CVRoute.enc(c.id)}`, class: `recent-row${pins.includes(c.id) ? ' pinned' : ''}`, role: 'row' },
             h('span', { class: 'recent-cell recent-subject' }, pinBtn(c), h('span', { class: 'recent-subject-text' }, (c.title && c.title !== c.subject ? c.title : subj(c) || c.title) || 'Untitled case')),
             h('span', { class: 'recent-cell' }, c.number || '—'),
             h('span', { class: 'recent-cell' }, c.fileNumber || '—'),
@@ -1765,8 +1613,7 @@
   function todayPanel(cases) {
     const box = h('div', { class: 'dash-section ov-panel today-section', hidden: true });
     const now = today();
-    const t = new Date(`${now}T12:00:00`); t.setDate(t.getDate() + 1);
-    const tom = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+    const tom = CVFormat.addDays(now, 1);
     (async () => {
       const items = [];
       const open = cases.filter((x) => !isArchivedEntry(x) && x.status !== 'Closed');
@@ -1821,7 +1668,7 @@
         h('h2', { icon: 'pencil-square' }, 'Quick Note'),
         h('p', { class: 'muted small' }, 'Goes into the Case History with today\'s date and the time. Ctrl+Enter saves.'),
         field('Case', pick), field('Note', text),
-        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit', icon: 'floppy' }, 'Save Note')));
+        CVKit.cancelRow(h, () => close(null), h('button', { class: 'btn primary', type: 'submit', icon: 'floppy' }, 'Save Note')));
     });
     if (!res) return;
     const ids = res.to.startsWith('g:') ? open.filter((c) => c.suspectGroup === res.to.slice(2) && !opOf(c)).map((c) => c.id) : [res.to.slice(2)];
@@ -1894,7 +1741,7 @@
     state.caseObj = null;
     renderCaseList();
   }
-  const caseLink = (c, tab = 'details') => `#/case/${encodeURIComponent(c.id)}/${tab}`;
+  const caseLink = (c, tab = 'details') => `#/case/${CVRoute.enc(c.id)}/${tab}`;
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
   /** New or edit Operation. Resolves to the saved Operation, or null. */
@@ -1989,7 +1836,7 @@
       draw();
       return h('form', { class: 'add-existing', onsubmit: (e) => { e.preventDefault(); close([...picked]); } },
         h('h2', { 'data-keep-case': 'true' }, `Add existing case to ${opLabel(op)}`), q, rows,
-        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), ok));
+        CVKit.cancelRow(h, () => close(null), ok));
     });
     if (!ids || !ids.length) return 0;
     let n = 0;
@@ -2045,11 +1892,12 @@
     (async () => {
       const tk = state.renderToken;
       const arrests = new Map(); const full = [];
-      for (const m of members) {
-        arrests.set(m.id, await Vault.readCaseJSON(m.id, 'arrest.json').catch(() => null));
-        const x = await Vault.getCase(m.id).catch(() => m);
-        full.push({ ...x, archived: isArchivedEntry(m) });
-      }
+      // v1.151: every case number read at once (in the Mission's order).
+      full.push(...await Promise.all(members.map(async (m) => {
+        const [a, x] = await Promise.all([Vault.readCaseJSON(m.id, 'arrest.json').catch(() => null), Vault.getCase(m.id).catch(() => m)]);
+        arrests.set(m.id, a);
+        return { ...x, archived: isArchivedEntry(m) };
+      })));
       // v1.131: filled while this page is on screen (another part of the app redrawing, which bumps
       // the render token, used to leave the Closing column at "…").
       if (tk !== state.renderToken && !progressBox.isConnected) return;
@@ -2200,7 +2048,7 @@
           ...nameCells(c.subject),
           // v1.118: the Mission's number on one line; its name in the hover box.
           h('td', { class: 'gen-mission' }, op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, title: opLabel(op) }, op.number || op.name || 'Mission')
-            : c.suspectGroup ? h('a', { class: 'gen-sg', href: `#/group/${encodeURIComponent(c.suspectGroup)}`, title: `Case Group ${c.suspectGroup} (not an Operation)` }, c.suspectGroup, I('person-badge')) : h('span', { class: 'muted' }, '—')),
+            : c.suspectGroup ? h('a', { class: 'gen-sg', href: `#/group/${CVRoute.enc(c.suspectGroup)}`, title: `Case Group ${c.suspectGroup} (not an Operation)` }, c.suspectGroup, I('person-badge')) : h('span', { class: 'muted' }, '—')),
           h('td', {}, statusPill(arch ? 'Archived' : c.status)),
           h('td', { class: 'nowrap date-cell' }, dateCols(c.opened)),
           h('td', { class: 'nowrap age-cell' }, (() => { const o = openedAge(c.opened); return o ? (o.future ? h('span', { class: 'age-future', title: `${o.ageLong}: the Opened date is in the future. Check it on the Details tab.` }, I('exclamation-triangle-fill'), o.age) : h('span', { title: `${o.days} day${o.days === 1 ? '' : 's'} since it was opened` }, o.ageLong)) : '—'; })()),
@@ -2217,7 +2065,7 @@
         h('div', { class: 'spacer' }),
         h('a', { class: 'btn', href: '#/operations', icon: 'op-folder' }, 'Missions'),
         // v1.146: group related independent cases under a name (not an Operation).
-        h('button', { class: 'btn', type: 'button', icon: 'person-badge', title: 'Group related independent cases under a name you give it', onclick: async () => { const n = await caseGroupDialog(); if (n) location.hash = `#/group/${encodeURIComponent(n)}`; } }, 'New Case Group'),
+        h('button', { class: 'btn', type: 'button', icon: 'person-badge', title: 'Group related independent cases under a name you give it', onclick: async () => { const n = await caseGroupDialog(); if (n) location.hash = `#/group/${CVRoute.enc(n)}`; } }, 'New Case Group'),
         h('button', { class: 'btn primary', type: 'button', icon: 'plus-lg', onclick: () => newCase() }, 'New Case')),
       dups.size ? h('p', { class: 'warn-note small', role: 'note' }, I('exclamation-triangle-fill'), ` ${plural(dups.size, 'Case Number')} ${dups.size === 1 ? 'is' : 'are'} used by more than one case (made before numbers had to be unique). They are flagged below; nothing was changed.`) : null,
       h('div', { class: 'general-tools' }, q, show, countEl),
@@ -2260,7 +2108,7 @@
   });
   /** A case as a card on the Overview: its number, subject (and Operation), status and tabs. */
   function overviewCard(c, withOp = false) {
-    const to = (tab, sub) => `#/case/${encodeURIComponent(c.id)}/${tab}${sub ? `/${sub}` : ''}`;
+    const to = (tab, sub) => `#/case/${CVRoute.enc(c.id)}/${tab}${sub ? `/${sub}` : ''}`;
     const op = withOp ? opOf(c) : null;
     return h('div', { class: 'op-case-card' },
       h('a', { class: 'op-case-top', href: to('details') }, h('span', { class: 'op-case-id' }, h('span', { class: 'op-case-num' }, c.number || 'No case number yet'),
@@ -2414,7 +2262,7 @@
         h('h2', { icon: 'pencil-square' }, 'Rename Archive Folders'),
         h('p', { class: 'muted small' }, 'Type a new name for any folder. Leave a box empty to keep the standard name. The cases stay in their folders; only the names change.'),
         h('div', { class: 'form-grid' }, inputs.map(([, , f]) => f)),
-        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Save')));
+        CVKit.cancelRow(h, () => close(null), h('button', { class: 'btn primary', type: 'submit' }, 'Save')));
     });
     if (!names) return;
     try { await Save.track('settings', () => Vault.updateSettings({ archiveFolderNames: names })); toast('Archive folders renamed.', 'success', 2500); showDashboard(); } catch { /* reported */ }
@@ -2534,12 +2382,15 @@
    * today, and one-click actions. */
   /* v1.128: when the full backup is due, one slim line under the banner (it used to float over the
    * page): what is due, Back Up Now, and × to hide it for today. */
-  function backupBar() {
+  function backupBarDue() {
     const n = fullBackupAge();
-    if (n != null && n <= FULL_BACKUP_DAYS) return null;
+    if (n != null && n <= FULL_BACKUP_DAYS) return false;
     let hidden = '';
     try { hidden = localStorage.getItem('cv-backup-bar') || ''; } catch { /* not kept: show it */ }
-    if (hidden === Vault.localDay()) return null;
+    return hidden !== Vault.localDay();
+  }
+  function backupBar() {
+    if (!backupBarDue()) return null;
     const bar = h('div', { class: 'backup-bar', role: 'status' },
       I('exclamation-triangle-fill'),
       h('span', { title: 'A copy on a second drive is what saves your cases if this SSD is lost or fails.' }, `${fullBackupText()}: copy the vault to a second drive.`),
@@ -2574,7 +2425,8 @@
     const chip = (key, label, n, icon) => h('button', { type: 'button', class: `hero-count hc-${key}${key === 'overdue' && n ? ' hc-alert' : ''}`, title: `${n} ${label.toLowerCase()} case${n === 1 ? '' : 's'}: click to see them in General Files`,
       onclick: () => showGeneralWith(key) }, I(icon), h('strong', {}, String(n)), h('span', {}, label));
     // v1.99: the backup reminder (and an unencrypted SSD) sit in the same row, after Overdue.
-    const backupChip = (() => {
+    // v1.151: while the backup bar under the banner says the same thing, the chip is left out.
+    const backupChip = backupBarDue() ? null : (() => {
       const n = fullBackupAge(); const due = n == null || n > FULL_BACKUP_DAYS;
       // v1.107: short words, so the chip never clips (the full sentence is in its tooltip).
       const text = n == null ? 'No Backup' : n === 0 ? 'Backed Up' : `Backup: ${n}d`;
@@ -2613,7 +2465,7 @@
       const c = await pickCase('Discovery: Which Case?', 'shield-lock-fill');
       if (!c) return;
       location.hash = caseLink(c, 'files');
-      try { await CVDiscoveryUI.open(await Vault.getCase(c.id)); } catch (err) { if (FS.isDisconnectError(err)) onDriveLost(); else toast(`Could not open Discovery: ${err.message}`, 'error'); }
+      try { await (await CVLazy.discovery()).open(await Vault.getCase(c.id)); } catch (err) { if (FS.isDisconnectError(err)) onDriveLost(); else toast(`Could not open Discovery: ${err.message}`, 'error'); }
     };
     return h('div', { class: 'quick-actions', role: 'toolbar', 'aria-label': 'Quick actions' },
       tile('New Case', 'plus-lg', () => newCase(), 'Make a new case'),
@@ -2873,7 +2725,7 @@
   async function mergeIntoOperation(caseId) {
     const c = await Vault.getCase(caseId);
     const others = [];
-    for (const o of operationCases(c.operationId).filter((x) => x.id !== caseId)) { try { others.push(await Vault.getCase(o.id)); } catch { /* moved */ } }
+    others.push(...(await Promise.all(operationCases(c.operationId).filter((x) => x.id !== caseId).map((o) => Vault.getCase(o.id).catch(() => null)))).filter(Boolean)); // v1.151: at once; a moved one is left out
     if (!others.length) return;
     const merged = CVOperation.mergeOverview([...others, c]);
     for (const x of [c, ...others]) {
@@ -3000,7 +2852,7 @@
           mission && subj(c) ? h('span', { class: 'muted small' }, subj(c)) : null,
           h('div', { class: 'spacer' }),
           !isArchivedEntry(c) && !mission && window.CVNotesFloat ? h('button', { class: 'btn small', type: 'button', icon: 'journal-text', title: 'Write in the floating Notes box, beside whatever page you are on', onclick: () => CVNotesFloat.toggle() }, 'Notes Box') : null,
-          h('a', { class: 'btn small', href: `#/case/${encodeURIComponent(c.id)}/reports/.notes`, icon: 'pencil', title: 'Open this case\'s Field Notes page to read or edit them' }, isArchivedEntry(c) ? 'Open' : 'Edit')),
+          h('a', { class: 'btn small', href: `#/case/${CVRoute.enc(c.id)}/reports/.notes`, icon: 'pencil', title: 'Open this case\'s Field Notes page to read or edit them' }, isArchivedEntry(c) ? 'Open' : 'Edit')),
         text ? h('div', { class: 'fn-text markdown-body', html: Markdown.render(text) }) : h('p', { class: 'muted small empty-note' }, I('journal-text'), h('span', {}, 'No Field Notes yet. Edit, or the Notes button at the bottom right, to write some.'))))
         : [h('p', { class: 'muted small empty-note' }, I('journal-text'), h('span', {}, 'None of this Mission\'s case numbers has Field Notes yet.'))]));
     })();
@@ -3106,14 +2958,14 @@
         h('div', { class: 'case-subject', id: 'case-subject' }, subj(c) || 'No subject yet'),
         h('div', { class: 'case-sub muted', id: 'case-sub' }, caseSubtitle(c))),
       h('nav', { class: 'tabs', role: 'tablist' }, tabs.map(([t, label]) =>
-        h('a', { href: `#/case/${encodeURIComponent(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab), icon: TAB_ICONS[t] }, label, t === 'checks' ? betaTag() : null))),
+        h('a', { href: `#/case/${CVRoute.enc(id)}/${t}`, role: 'tab', class: `tab ${t === tab ? 'active' : ''}`, 'aria-selected': String(t === tab), icon: TAB_ICONS[t] }, label, t === 'checks' ? betaTag() : null))),
       panel));
     Save.markTabs();
     // Read-only: everything in the tab that could change the case is switched off, now and as
     // the tab redraws. (vault.js refuses the writes too.)
     if (archived) new MutationObserver(() => applyReadOnly(panel)).observe(panel, { childList: true, subtree: true });
 
-    const renderers = { details: renderDetails, arrest: (...a) => CVClosingUI.renderArrest(...a), draft: (panel, cc, tk) => CVReportFieldsUI.render(panel, cc, tk), reports: (panel, cc, tk, s) => (s === NOTES_SUB ? renderNotes(panel, cc, tk) : CVDraftsUI.render(panel, cc, tk, s)), timeline: renderTimeline, files: renderFiles, linkchart: (panel, cc, tk) => CVLinkChartUI.render(panel, cc, tk), mail: (...a) => CVMailUI.render(...a), checks: (...a) => CVChecks.render(...a) };
+    const renderers = { details: renderDetails, arrest: (...a) => CVClosingUI.renderArrest(...a), draft: (panel, cc, tk) => CVReportFieldsUI.render(panel, cc, tk), reports: (panel, cc, tk, s) => (s === NOTES_SUB ? renderNotes(panel, cc, tk) : CVDraftsUI.render(panel, cc, tk, s)), timeline: renderTimeline, files: renderFiles, linkchart: async (panel, cc, tk) => (await CVLazy.linkChart()).render(panel, cc, tk), mail: (...a) => CVMailUI.render(...a), checks: (...a) => CVChecks.render(...a) };
     try {
       await renderers[tab](panel, c, token, sub);
     } catch (err) {
@@ -3224,10 +3076,9 @@
       // ---- the operation, the same on every one of its case numbers: name, status, dates
       h('section', { class: 'op-card' },
         h('div', { class: 'case-op-bar', 'data-ro-ok': archived ? null : 'true' },
-          // v1.119: the Mission's name and link are in the header above; here, only where the case is filed.
-          h('span', { class: `case-op-label${op ? '' : ' gf-link'}` }, I(op ? 'op-folder' : 'folder-fill'), op ? `Filed in Mission ${op.number || ''}`.trim() : 'General Files: not in a Mission'),
+          // v1.151: where the case is filed is in the header above (it was said twice); the bar keeps its buttons.
           // v1.146: an independent case can be in a Case Group (a name you give it) with related cases.
-          !op && c.suspectGroup ? h('a', { class: 'case-sg-label', href: `#/group/${encodeURIComponent(c.suspectGroup)}`, title: 'Case Group: open it' }, c.suspectGroup, I('person-badge')) : null,
+          !op && c.suspectGroup ? h('a', { class: 'case-sg-label', href: `#/group/${CVRoute.enc(c.suspectGroup)}`, title: 'Case Group: open it' }, c.suspectGroup, I('person-badge')) : null,
           h('div', { class: 'spacer' }),
           !op && !archived ? h('button', { class: 'btn small sg-btn', type: 'button', icon: 'person-badge', title: 'Group this case with related independent cases under a name you give it (not an Operation)', onclick: async () => {
             const n = await caseGroupDialog({ original: c.suspectGroup || '', preset: [c.id], suggest: String(c.subject || '').trim() });
@@ -3305,7 +3156,7 @@
     // deconfliction: join them into the one Case Overview (then it's the same on all of them).
     if (members.length > 1) (async () => {
       const sibs = [];
-      for (const o of members.slice(1)) { try { sibs.push(await Vault.getCase(o.id)); } catch { /* moved or missing */ } }
+      sibs.push(...(await Promise.all(members.slice(1).map((o) => Vault.getCase(o.id).catch(() => null)))).filter(Boolean)); // v1.151: at once; moved or missing ones left out
       const merged = CVOperation.mergeOverview([c, ...sibs]);
       if (CVOperation.sameOverview(c, { ...c, ...merged }) || state.caseId !== c.id || !panel.isConnected) return;
       Object.assign(c, merged);
@@ -3567,119 +3418,6 @@
 
   /* ---------- Restore cases from a full backup (v1.106) ---------- */
 
-  /** v1.149: Test Restore: a picked backup folder is read in the browser; 20 random files (and
-   * vault.json) are read in full and compared with the SSD. Nothing is written. */
-  async function pickFolderFiles() {
-    return new Promise((resolve) => {
-      const input = h('input', { type: 'file', multiple: true, hidden: true });
-      input.webkitdirectory = true;
-      input.addEventListener('change', () => { resolve([...input.files].map((file) => ({ path: file.webkitRelativePath || file.name, file }))); input.remove(); });
-      input.addEventListener('cancel', () => { resolve(null); input.remove(); });
-      document.body.append(input);
-      input.click();
-    });
-  }
-  async function ssdFileAt(rel) {
-    const parts = rel.split('/');
-    let dir = Vault.root;
-    for (const p of parts.slice(0, -1)) { dir = await FS.getDir(dir, p); if (!dir) return null; }
-    return FS.getFile(dir, parts[parts.length - 1]);
-  }
-  async function sameFileBytes(a, b) {
-    if (a.size !== b.size) return false;
-    const [x, y] = await Promise.all([a.arrayBuffer(), b.arrayBuffer()]);
-    const p = new Uint8Array(x); const q = new Uint8Array(y);
-    for (let i = 0; i < p.length; i++) if (p[i] !== q[i]) return false;
-    return true;
-  }
-  async function testRestoreDialog() {
-    const files = await pickFolderFiles();
-    if (!files) return;
-    const pick = CVBackupRestore.testPick(files, 20);
-    if (!pick) { toast('No backup found in that folder. Pick a CaseVault-Backup-<date> folder on the backup drive.', 'error', 9000); return; }
-    const progress = toast('Testing the backup…', 'info', 24 * 3600000);
-    const t = { read: 0, unreadable: 0, badJson: 0, same: 0, changed: 0, gone: 0, count: pick.files.length, expected: null };
-    const rows = [];
-    try {
-      if (pick.info) { try { const info = JSON.parse(await pick.info.text()); if (Number.isFinite(info.files)) t.expected = info.files; } catch { /* no count to check */ } }
-      for (const x of pick.sample) {
-        let state2 = '';
-        try {
-          await x.file.arrayBuffer();
-          t.read += 1;
-          if (/\.json$/i.test(x.rel)) { try { JSON.parse(await x.file.text()); } catch { t.badJson += 1; state2 = 'Damaged'; } }
-          if (!state2) {
-            const live = await ssdFileAt(x.rel).catch(() => null);
-            if (!live) { t.gone += 1; state2 = 'Not on the SSD now'; }
-            else if (await sameFileBytes(x.file, live)) { t.same += 1; state2 = 'Same'; }
-            else { t.changed += 1; state2 = 'Changed since'; }
-          }
-        } catch { t.unreadable += 1; state2 = 'Unreadable'; }
-        rows.push({ rel: x.rel, state: state2 });
-      }
-    } finally { progress.remove(); }
-    const verdict = CVBackupRestore.testVerdict(t);
-    await openDialog((close) => h('div', { class: 'test-restore' },
-      h('h2', { icon: verdict.ok ? 'check-circle-fill' : 'exclamation-triangle-fill' }, verdict.ok ? 'Backup Reads Back Fine' : 'Backup Has Problems'),
-      h('p', { class: 'muted small' }, `${pick.backup} · ${CVBackupRestore.backupWhen(pick.backup)}. Nothing was changed.`),
-      h('ul', { class: 'test-restore-lines' }, verdict.lines.map((l) => h('li', {}, l))),
-      h('details', { class: 'backup-list' }, h('summary', {}, `The ${plural(rows.length, 'file')} read`),
-        h('ul', { class: 'test-restore-files' }, rows.map((r) => h('li', { class: `tr-${r.state === 'Same' ? 'same' : r.state === 'Changed since' ? 'changed' : 'bad'}` }, h('span', { class: 'mono small' }, r.rel), h('span', { class: 'small nowrap' }, r.state))))),
-      verdict.ok ? null : h('p', { class: 'small warn-text' }, 'Make a new full backup to another drive (Back Up Everything), then test that one.'),
-      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
-  }
-
-  async function restoreFromBackupDialog() {
-    // The browser reads the picked folder (it asks "upload N files?": nothing leaves the PC).
-    const files = await pickFolderFiles();
-    if (!files) return;
-    const found = CVBackupRestore.group(files);
-    const cases = [];
-    for (const g of found) {
-      const cj = g.files.find((x) => x.path === 'case.json');
-      let c = null;
-      try { c = JSON.parse(await cj.file.text()); } catch { /* unreadable: left out */ }
-      if (c) cases.push({ ...g, c, inVault: Vault.data.cases.some((e) => e.id === g.id) });
-    }
-    if (!cases.length) { toast('No cases found in that folder. Pick a CaseVault-Backup-<date> folder (or the CaseVault-Data folder inside it).', 'error', 9000); return; }
-    const picked = await openDialog((close) => {
-      const boxes = cases.map((x) => {
-        const tick = h('input', { type: 'checkbox', checked: !x.inVault, value: x.id });
-        return { x, tick, row: h('label', { class: `restore-row${x.inVault ? ' restore-exists' : ''}` }, tick,
-          h('span', { class: 'restore-what' }, h('strong', {}, x.c.number || x.c.title || x.id), x.c.subject ? h('span', { class: 'muted small block' }, x.c.subject) : null),
-          h('span', { class: 'small restore-meta' }, `${x.c.status || ''}${x.location === 'archive' ? ' · archived' : ''} · ${plural(x.files.length, 'file')} · backup ${CVBackupRestore.backupWhen(x.backup)}`),
-          x.inVault ? h('span', { class: 'small warn-text block restore-note' }, 'In the vault now: restoring replaces it (the current copy goes to Recently Deleted).') : null) };
-      });
-      const go = h('button', { class: 'btn primary', type: 'submit', icon: 'arrow-counterclockwise' }, 'Restore');
-      const count = () => { const n = boxes.filter((b) => b.tick.checked).length; go.disabled = !n; go.textContent = n ? `Restore ${plural(n, 'case')}` : 'Restore'; };
-      boxes.forEach((b) => b.tick.addEventListener('change', count));
-      count();
-      return h('form', { class: 'restore-form', onsubmit: (e) => { e.preventDefault(); close(boxes.filter((b) => b.tick.checked).map((b) => b.x)); } },
-        h('h2', { icon: 'arrow-counterclockwise' }, 'Restore Cases from a Backup'),
-        h('p', { class: 'muted small' }, `${plural(cases.length, 'case')} in this backup. Tick the ones to bring back; each comes back with its notes, timeline, reports and files.`),
-        h('div', { class: 'restore-list' }, boxes.map((b) => b.row)),
-        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), go));
-    });
-    if (!picked || !picked.length) return;
-    await Save.flushAll();
-    const progress = toast('Restoring…', 'info', 24 * 3600000);
-    let done = 0;
-    try {
-      for (const x of picked) {
-        progress.textContent = `Restoring ${x.c.number || x.id}…`;
-        await Save.track(`restore:${x.id}`, () => Vault.restoreCaseFromBackup(x.id, x.location, x.files.map((f) => ({ path: f.path, data: f.file }))));
-        done += 1;
-      }
-      toast(`${plural(done, 'case')} restored.`, 'success', 6000);
-    } catch (err) {
-      if (FS.isDisconnectError(err)) return onDriveLost();
-      toast(`${done ? `${plural(done, 'case')} restored, then: ` : ''}${err.message}`, 'error', 12000);
-    } finally {
-      progress.remove();
-      renderCaseList();
-    }
-  }
-
   /* ---------- Search Inside Cases (v1.106) ---------- */
 
   async function searchInsideCases(query) {
@@ -3703,7 +3441,7 @@
           status.textContent = results.length ? `${hits} match${hits === 1 ? '' : 'es'} in ${plural(results.length, 'case')}.` : '';
           list.replaceChildren(...(results.length ? results.map((r) => h('section', { class: 'deep-case' },
             h('h3', {}, h('span', { class: 'deep-num' }, r.number || r.title || 'No case number'), r.subject ? h('span', { class: 'muted small' }, r.subject) : null, r.archived ? h('span', { class: 'pill status-archived' }, 'Archived') : null),
-            h('ul', {}, r.hits.slice(0, 12).map((x) => h('li', {}, h('a', { href: `#/case/${encodeURIComponent(r.id)}/${x.tab}`, onclick: () => { stopped = true; close(null); } }, h('strong', {}, x.where), h('span', { class: 'deep-snippet' }, x.snippet)))),
+            h('ul', {}, r.hits.slice(0, 12).map((x) => h('li', {}, h('a', { href: `#/case/${CVRoute.enc(r.id)}/${x.tab}`, onclick: () => { stopped = true; close(null); } }, h('strong', {}, x.where), h('span', { class: 'deep-snippet' }, x.snippet)))),
               r.hits.length > 12 ? h('li', { class: 'muted small' }, `and ${r.hits.length - 12} more`) : null)))
             : [h('div', { class: 'empty-state' }, I('search'), h('p', {}, `Nothing found for "${q}".`), h('p', { class: 'muted small' }, 'Check the spelling, or try fewer words.'))]));
         })
@@ -3719,7 +3457,7 @@
     const text = await Vault.getNotes(c.id);
     if (token !== state.renderToken) return;
     // The case notes are opened from Reports (v1.17).
-    const back = h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports`, class: 'back-link' }, '← All reports');
+    const back = h('a', { href: `#/case/${CVRoute.enc(c.id)}/reports`, class: 'back-link' }, '← All reports');
     const ta = h('textarea', { class: 'notes-editor', spellcheck: 'true', 'aria-label': 'Field Notes', placeholder: 'Write notes here. Markdown works: # Heading, **bold**, - list items.' });
     ta.value = text;
     const counter = h('span', { class: 'muted small' });
@@ -4118,7 +3856,7 @@
       `Mode: ${MODE === 'direct' ? 'Direct (Chrome/Edge)' : 'Helper'}`,
       `Browser: ${navigator.userAgent}`,
       `Screen: ${innerWidth}x${innerHeight} at ${devicePixelRatio}x, zoom ${CVOptions.getZoom ? CVOptions.getZoom() : 100}%`,
-      `Page: ${location.hash.replace(/\/case\/[^/]+/, '/case/[case]').replace(/\/operation\/[^/]+/, '/operation/[mission]') || '#/'}`,
+      `Page: ${location.hash.replace(/\/case\/[^/]+/, '/case/[case]').replace(/\/operation\/[^/]+/, '/operation/[mission]').replace(/\/group\/[^/]+/, '/group/[group]') || '#/'}`,
       `Cases: ${Vault.data ? Vault.data.cases.length : 0}, Missions: ${Vault.data ? (Vault.data.operations || []).length : 0}`,
       si && si.diskTotal ? `SSD free: ${fmtSize(si.diskFree)} of ${fmtSize(si.diskTotal)}` : null,
       `Unsaved changes: ${Save.timers.size}, failed saves: ${Save.failed.size}`,
@@ -4515,14 +4253,16 @@
   };
   PARTS.timeline = CVCaseTimeline.init({ operationCases: timelineCases, state, h, today, Save, field, dueLabel, fmtDate, confirmDialog, openDialog, icon: I, toast, opOf });
   PARTS.overview = CVCaseOverview.init({ h, field, dnaCombo, I, today, fmtDate, dueLabel, opOf, Save, newCase, openDialog, fmtDateTime });
+  PARTS.backup = CVBackupUI.init({ h, I, MODE, Save, confirmDialog, encryptionText, ENCRYPTION_STEPS, field, fmtSize, onDriveLost, openDialog, plural, renderCaseList, route, state, toast, today });
 
   // Small toolkit shared with the consistency checker screen (js/checker/checks-ui.js).
   window.CaseVaultUI = { h, icon: I, betaTag, $, toast, openDialog, confirmDialog, field, fmtDate, fmtDateTime, fmtSize, Save, state, go, refresh: () => route(), previewFile, onDriveLost, showVaultPanel, makeFoldable };
   CVChecks.init(window.CaseVaultUI);
   CVOutbound.init(window.CaseVaultUI);
   CVMailUI.init(window.CaseVaultUI);
-  CVDiscoveryUI.init(window.CaseVaultUI);
-  CVLinkChartUI.init(window.CaseVaultUI);
+  // v1.151: Discovery and Link Chart load the first time they are opened (start-up reads less).
+  const lazyPart = (files, name) => { let ready = null; return () => (ready = ready || CVKit.loadScripts(files).then(() => { window[name].init(window.CaseVaultUI); return window[name]; }).catch((err) => { ready = null; throw err; })); };
+  window.CVLazy = { discovery: lazyPart(['js/discovery-receipt.js', 'js/discovery-ui.js'], 'CVDiscoveryUI'), linkChart: lazyPart(['js/linkchart.js', 'js/linkchart-ui.js'], 'CVLinkChartUI') };
   CVSecureSettings.init(window.CaseVaultUI);
   memBox = CVMemory.mount($('#mem-status'), {
     isHelper: () => MODE === 'helper',

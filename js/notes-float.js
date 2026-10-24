@@ -26,7 +26,7 @@
     const status = h('span', { class: 'note-save-status small muted', role: 'status', 'aria-live': 'polite' });
     const counter = h('span', { class: 'muted small' });
     const iconBtn = (name, label, onclick) => h('button', { class: 'icon-btn', type: 'button', title: label, onclick }, I(name), h('span', { class: 'sr-only' }, label));
-    const openPage = iconBtn('box-arrow-up-right', 'Open the Field Notes page of this case', () => { if (mem.caseId) { ui.Save.flushAll(); location.hash = `#/case/${encodeURIComponent(mem.caseId)}/reports/.notes`; } });
+    const openPage = iconBtn('box-arrow-up-right', 'Open the Field Notes page of this case', () => { if (mem.caseId) { ui.Save.flushAll(); location.hash = `#/case/${CVRoute.enc(mem.caseId)}/reports/.notes`; } });
     const sizeBtn = iconBtn('arrows-angle-expand', 'Bigger', () => setSize(mem.size === 'big' ? 'normal' : 'big'));
     const minBtn = iconBtn('dash-lg', 'Minimize: keep the notes, out of the way', () => setSize(mem.size === 'min' ? 'normal' : 'min'));
     const closeBtn = iconBtn('x-lg', 'Close. Everything typed is saved.', () => toggle(false));
@@ -196,7 +196,12 @@
     const top = ui.h('button', { id: 'btn-top-fab', class: 'fab top-fab', type: 'button', title: 'Back to top', 'data-tip-side': 'left' }, ui.icon('chevron-up'), ui.h('span', { class: 'sr-only' }, 'Back to top'));
     const scroller = () => document.getElementById('main');
     top.addEventListener('click', () => { const m = scroller(); if (m) m.scrollTo({ top: 0, behavior: 'smooth' }); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-    const sync = () => { const m = scroller(); top.classList.toggle('on', ((m && m.scrollTop) || 0) > 300 || window.scrollY > 300); };
+    // v1.151: while the page scrolls, the buttons fade, so the text passing under them can be read.
+    let quiet = 0;
+    const sync = () => {
+      const m = scroller(); top.classList.toggle('on', ((m && m.scrollTop) || 0) > 300 || window.scrollY > 300);
+      dock.classList.add('fab-quiet'); clearTimeout(quiet); quiet = setTimeout(() => dock.classList.remove('fab-quiet'), 900);
+    };
     document.addEventListener('scroll', sync, { capture: true, passive: true });
     window.addEventListener('hashchange', () => setTimeout(sync, 50));
     dock.prepend(top);

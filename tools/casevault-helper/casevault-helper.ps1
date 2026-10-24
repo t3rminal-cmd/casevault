@@ -12,12 +12,20 @@
       by its label, so drive letter changes do not matter.
     * Only same-origin requests from the CaseVault page are accepted. Other websites
       open in the browser cannot read or write anything through it.
+    * (1.16) Each start makes a new random key. The browser window the helper opens gets it, and
+      every request must carry it, so other programs on this PC that just try the address are
+      refused. A program running as the same Windows user could still find it: the real
+      protection for the data stays BitLocker and the PIN.
+    * (1.16) CaseVault opens in its own browser profile on the CASEVAULT drive (an app window
+      in Edge/Chrome), so the PC's normal browser history never holds case numbers.
 
   Usage: started by Start-CaseVault.bat. Advanced options:
     -Port 8517           port to listen on
     -DataPath <folder>   use this CaseVault-Data folder instead of searching the drives
     -AppPath <folder>    serve the app from this folder
     -NoBrowser           do not open the browser
+    -PlainBrowser        open CaseVault in the PC's normal browser profile (not the one on the SSD)
+    -SessionKey <hex>    use this key instead of a random one (for testing)
     -NoAI                do not start Ollama
     -BackupTargets <a;b> offer these folders as backup drives (for testing; normally every other drive)
     -BitLockerStates <x> pretend drive states, e.g. "V:\=on;E:\=off" (for testing; normally asked of Windows)
@@ -29,6 +37,8 @@ param(
   [string]$DataPath = '',
   [string]$AppPath = '',
   [switch]$NoBrowser,
+  [switch]$PlainBrowser,
+  [string]$SessionKey = '',
   [switch]$NoAI,
   [string]$BackupTargets = '',
   [string]$BitLockerStates = '',
@@ -38,7 +48,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 
-$HelperVersion = '1.15.0'
+$HelperVersion = '1.16.0'
 $VolumeLabel   = 'CASEVAULT'
 $DataDirName   = 'CaseVault-Data'
 $AppDirName    = 'CaseVault-App'
@@ -50,6 +60,12 @@ $AIRoot   = Split-Path -Parent $PSScriptRoot      # e.g. W:\  (the folder holdin
 $Origins  = @("http://127.0.0.1:$Port", "http://localhost:$Port")
 $Hosts    = @("127.0.0.1:$Port", "localhost:$Port")
 $Utf8     = New-Object System.Text.UTF8Encoding($false)
+# 1.16: the key every API request must carry (a new one each start).
+if ($SessionKey -notmatch '^[0-9a-f]{32,64}$') {
+  $keyBytes = New-Object byte[] 24
+  [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($keyBytes)
+  $SessionKey = -join ($keyBytes | ForEach-Object { $_.ToString('x2') })
+}
 
 function Write-Info([string]$msg)  { Write-Host "  $msg" }
 function Write-Warn([string]$msg)  { Write-Host "  ! $msg" -ForegroundColor Yellow }
@@ -119,6 +135,8 @@ function Resolve-SafePath([string]$root, [string]$rel) {
       if ($seg -eq '' -or $seg -eq '.' -or $seg -eq '..') { return $null }
       if ($seg -match '[\\:*?"<>|\x00-\x1f]') { return $null }
       if ($seg -match '[. ]$') { return $null }
+      # 1.16: Windows device names (CON, NUL, COM1...) are not files, with or without an extension.
+      if ($seg -match '^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$') { return $null }
       $full = Join-Path $full $seg
     }
   }
@@ -274,6 +292,66 @@ function Test-SameOrigin($req) {
   if ($h.ContainsKey('origin') -and ($Origins -notcontains $h['origin'])) { return $false }
   if ($h.ContainsKey('sec-fetch-site') -and $h['sec-fetch-site'] -ne 'same-origin') { return $false }
   return $true
+}
+
+# 1.16: the request carries this start's key (compared in constant time).
+function Test-SessionKey($req) {
+  $h = $req.Headers
+  if (-not $h.ContainsKey('x-casevault-key')) { return $false }
+  $a = [string]$h['x-casevault-key']; $b = $SessionKey
+  if ($a.Length -ne $b.Length) { return $false }
+  $diff = 0
+  for ($i = 0; $i -lt $a.Length; $i++) { $diff = $diff -bor ([int][char]$a[$i] -bxor [int][char]$b[$i]) }
+  return $diff -eq 0
+}
+
+# 1.16: open CaseVault in its own browser profile on the CASEVAULT drive, next to CaseVault-Data,
+# so the browser history, cache and saved permissions stay on the (BitLocker) SSD and never on the
+# PC. Edge, Chrome and Brave open it as an app window; Firefox as a normal window of that profile.
+# The PC's default browser is used when it is one of these, else Edge. Falls back to the normal
+# browser when none is found or the vault drive isn't there yet.
+function Get-BrowserKind {
+  try {
+    $id = (Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\http\UserChoice' -ErrorAction Stop).ProgId
+    if ($id -match '^MSEdge') { return 'edge' }
+    if ($id -match '^ChromeHTML') { return 'chrome' }
+    if ($id -match '^Firefox') { return 'firefox' }
+    if ($id -match '^Brave') { return 'brave' }
+  } catch { }
+  return 'edge'
+}
+function Find-BrowserExe([string]$kind) {
+  $pf = $env:ProgramFiles; $pf86 = ${env:ProgramFiles(x86)}; $local = $env:LOCALAPPDATA
+  $rel = @{
+    edge    = 'Microsoft\Edge\Application\msedge.exe'
+    chrome  = 'Google\Chrome\Application\chrome.exe'
+    brave   = 'BraveSoftware\Brave-Browser\Application\brave.exe'
+    firefox = 'Mozilla Firefox\firefox.exe'
+  }[$kind]
+  foreach ($base in @($pf, $pf86, $local)) {
+    if (-not $base) { continue }
+    $full = Join-Path $base $rel
+    if (Test-Path -LiteralPath $full -PathType Leaf) { return $full }
+  }
+  return $null
+}
+function Open-CaseVault([string]$url, $dataRoot) {
+  if ($PlainBrowser -or -not $dataRoot) { Start-Process $url; return }
+  try {
+    $kind = Get-BrowserKind
+    $exe = Find-BrowserExe $kind
+    if (-not $exe -and $kind -ne 'edge') { $kind = 'edge'; $exe = Find-BrowserExe 'edge' }
+    if (-not $exe) { Start-Process $url; return }
+    $profile = Join-Path (Join-Path (Split-Path -Parent $dataRoot) 'CaseVault-Browser') $kind
+    [void][System.IO.Directory]::CreateDirectory($profile)
+    if ($kind -eq 'firefox') { $argList = @('-profile', ('"' + $profile + '"'), $url) }
+    else { $argList = @(('--user-data-dir="' + $profile + '"'), ('--app=' + $url), '--no-first-run', '--no-default-browser-check') }
+    Start-Process -FilePath $exe -ArgumentList $argList | Out-Null
+    Write-Info "Browser   : $kind, its own profile in $profile"
+  } catch {
+    Write-Warn "Could not open the CaseVault browser profile ($($_.Exception.Message)); opening the normal browser."
+    Start-Process $url
+  }
 }
 
 # The clean-up run by Power Off (written to %TEMP% and started hidden; see /api/shutdown).
@@ -717,6 +795,7 @@ function Invoke-Client($client) {
     }
     if ($req.Path.StartsWith('/api/')) {
       if ($req.Method -eq 'OPTIONS' -or -not (Test-SameOrigin $req)) { Send-Error $stream 403 'SecurityError' 'Only the CaseVault page may use this.'; return }
+      if (-not (Test-SessionKey $req)) { Send-Error $stream 403 'KeyError' 'This window was not opened by the CaseVault helper. Close it and start CaseVault with Start-CaseVault.bat.'; return }
       try { Invoke-Api $stream $req }
       catch {
         $name = 'UnknownError'
@@ -773,7 +852,8 @@ $listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Lo
 try { $listener.Start() }
 catch {
   Write-Warn "Port $Port is already in use. Is the CaseVault helper already running in another window?"
-  if (-not $NoBrowser) { Start-Process "http://127.0.0.1:$Port/" }
+  # Without a key: the CaseVault window of that helper's browser profile still has its own.
+  if (-not $NoBrowser) { Open-CaseVault "http://127.0.0.1:$Port/" (Get-DataRoot) }
   exit 1
 }
 
@@ -787,7 +867,7 @@ Write-Host ''
 Write-Host '  Leave this window open while you use CaseVault. Close it to stop.' -ForegroundColor Green
 Write-Host ''
 
-if (-not $NoBrowser) { Start-Process "http://127.0.0.1:$Port/" }
+if (-not $NoBrowser) { Open-CaseVault "http://127.0.0.1:$Port/?k=$SessionKey" $root }
 
 try {
   while (-not $script:StopRequested) {

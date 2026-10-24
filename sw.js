@@ -8,7 +8,7 @@
 
 // VERSION is bumped with each release; BUILD is replaced with the commit SHA by the GitHub Pages
 // workflow. Either change gives a new cache, so the installed app picks up the update.
-const VERSION = '1.150.0';
+const VERSION = '1.151.0';
 const BUILD = 'dev';
 const CACHE = `casevault-${VERSION}-${BUILD}`;
 
@@ -31,6 +31,7 @@ const APP_FILES = [
   './js/timefield.js',
   './js/fs.js',
   './js/helper-fs.js',
+  './js/ui-kit.js',
   './js/casefiles.js',
   './js/limitations.js',
   './js/vault.js',
@@ -69,6 +70,7 @@ const APP_FILES = [
   './js/report-fields.js',
   './js/pdf-viewer.js',
   './js/discovery-core.js',
+  './js/route-key.js',
   './js/discovery-receipt.js',
   './js/discovery-ui.js',
   './js/linkchart.js',
@@ -99,6 +101,7 @@ const APP_FILES = [
   './js/case-overview.js',
   './js/case-search.js',
   './js/backup-restore.js',
+  './js/backup-ui.js',
   './js/case-timeline.js',
   './js/files-tab.js',
   './js/app.js',

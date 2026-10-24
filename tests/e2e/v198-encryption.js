@@ -8,6 +8,7 @@ const os = require('os');
 const path = require('path');
 const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
 const PWSH = process.env.PWSH || 'pwsh';
+const HELPER_KEY = '0123456789abcdef0123456789abcdef'; // v1.151: helper 1.16 wants its key on every API request
 const HELPER = path.resolve(__dirname, '..', '..', 'tools', 'casevault-helper', 'casevault-helper.ps1');
 const APP = path.resolve(__dirname, '..', '..');
 const PORT = 8598;
@@ -19,7 +20,7 @@ async function startHelper(vaultState) {
   const data = path.join(dir, 'ssd', 'CaseVault-Data'); const bk1 = path.join(dir, 'bk1'); const bk2 = path.join(dir, 'bk2');
   for (const d of [data, bk1, bk2]) fs.mkdirSync(d, { recursive: true });
   const root = path.parse(data).root;
-  const proc = spawn(PWSH, ['-NoProfile', '-File', HELPER, '-Port', String(PORT), '-DataPath', data, '-AppPath', APP, '-NoBrowser', '-NoAI',
+  const proc = spawn(PWSH, ['-NoProfile', '-File', HELPER, '-Port', String(PORT), '-DataPath', data, '-AppPath', APP, '-NoBrowser', '-NoAI', '-SessionKey', HELPER_KEY,
     '-BackupTargets', `${bk1};${bk2}`, '-BitLockerStates', `${bk1}=on;${bk2}=off;${root}=${vaultState}`], { stdio: 'ignore' });
   for (let i = 0; i < 100; i += 1) {
     try { if ((await fetch(`http://127.0.0.1:${PORT}/`)).ok) break; } catch { /* starting */ }
@@ -33,7 +34,7 @@ async function open(b) {
   const p = await (await b.newContext({ viewport: { width: 1366, height: 900 } })).newPage(); const errs = [];
   p.on('pageerror', (e) => errs.push(e.message));
   await p.addInitScript(() => { delete Window.prototype.showDirectoryPicker; delete window.showDirectoryPicker; });
-  await p.goto(`http://127.0.0.1:${PORT}/`); await p.waitForTimeout(2500);
+  await p.goto(`http://127.0.0.1:${PORT}/?k=${HELPER_KEY}`); await p.waitForTimeout(2500);
   const create = p.locator('button:has-text("Create")').first();
   if (await create.count()) { await create.click(); await p.waitForTimeout(2000); }
   await p.waitForSelector('#gate', { state: 'hidden', timeout: 15000 });
@@ -60,7 +61,7 @@ const toastText = (p) => p.evaluate(() => [...document.querySelectorAll('.toast'
   ok(true, 'an unencrypted backup drive asks first');
   await p.click('#dialog[open] button:has-text("Cancel")'); await p.waitForTimeout(800);
   ok(!fs.readdirSync(h.bk2).length, 'Cancel: nothing is written to the unencrypted drive');
-  await p.click('.hc-backup'); await p.waitForSelector('.backup-full');
+  await p.click('.hc-backup, .backup-bar .btn'); await p.waitForSelector('.backup-full');
   await p.click('.backup-full:not(.backup-enc) button'); await p.waitForSelector('.backup-drives');
   await p.locator('.backup-drives .arch-opt').nth(0).click(); await p.click('#dialog[open] button:has-text("Back Up to This Drive")');
   await p.waitForSelector('#dialog[open] h2:has-text("Full Backup Done")', { timeout: 30000 });
@@ -72,7 +73,7 @@ const toastText = (p) => p.evaluate(() => [...document.querySelectorAll('.toast'
   ok(!/is not encrypted/.test(await toastText(p)), 'BitLocker on: no warning');
   await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(800);
   ok(await p.locator('.hc-encrypt').count() === 0, 'BitLocker on: no red chip');
-  await p.click('.hc-backup'); await p.waitForSelector('.backup-enc');
+  await p.click('.hc-backup, .backup-bar .btn'); await p.waitForSelector('.backup-enc');
   ok(/Encrypted \(BitLocker on\)/.test(await p.textContent('.backup-enc')), 'Vault panel: Encrypted (BitLocker on)');
   console.log('errors', errs); await b.close(); await stop(h);
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

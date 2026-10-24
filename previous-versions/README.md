@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.150)
+
+- **Fixes:** Today panel shows on every visit to the home page; faster home page with many cases
+- **Privacy:** Case Group names are no longer saved in the browser on the PC
+
 ## Features (v1.149)
 
 - **Library:** Use as AI Example from a report, examples per type, real names warning

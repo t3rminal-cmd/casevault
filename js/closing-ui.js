@@ -9,7 +9,7 @@
 (function (root) {
   let ui = null;
   const K = () => root.CVClosing;
-  const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const today = () => root.CVFormat.isoDay();
 
   /** Does this case show the Arrest details tab? */
   // A case closed by arrest has the tab too, unless its arrest details were deleted (v1.29).
@@ -31,7 +31,7 @@
       await Save.track(`case:${c.id}`, () => Vault.saveCase(fresh));
       Object.assign(c, fresh);
       toast('Arrest details deleted.', 'success', 2500);
-      location.hash = `#/case/${encodeURIComponent(c.id)}/details`;
+      location.hash = `#/case/${CVRoute.enc(c.id)}/details`;
       ui.refresh();
       return true;
     } catch { return false; /* reported by Save */ }
@@ -607,7 +607,7 @@
       h('div', { class: 'form-grid' }, ui.field('Closed on', date), ui.field('Closed by', by)),
       RF ? h('div', {}, h('label', { class: 'check-row' }, upd, h('span', {}, h('strong', {}, 'Update the Draft tab'), h('span', { class: 'muted small' }, ': Status, How Cleared and the Update Information boxes of each case number closed'))), draftBox) : '',
       ui.field('Closing note', note),
-      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), ok));
+      CVKit.cancelRow(h, () => close(null), ok));
     });
     if (!result) return false;
     if (result.fillArrest) {
@@ -767,7 +767,7 @@
 
   /* ---------------- Follow-up (v1.106) ---------------- */
 
-  const plusDays = (n) => { const d = new Date(Date.now() + n * 86400000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const plusDays = (n) => root.CVFormat.addDays(root.CVFormat.isoDay(), n);
 
   /** Waiting on a lab, the DA, another agency: a deadline on the Timeline brings the case back. */
   async function followUpDialog(c) {
@@ -780,7 +780,7 @@
         h('h2', { icon: 'calendar-check' }, 'Add Follow-up'),
         h('p', { class: 'muted small explain' }, 'Waiting on someone else? Put the date to check back on the Timeline. It shows as a deadline on the Overview and rings the bell when it is close.'),
         h('div', { class: 'form-grid' }, ui.field('Waiting on', reason), ui.field('Details', detail), ui.field('Follow up by', follow), h('div')),
-        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit', icon: 'calendar-check' }, 'Add to Timeline')));
+        CVKit.cancelRow(h, () => close(null), h('button', { class: 'btn primary', type: 'submit', icon: 'calendar-check' }, 'Add to Timeline')));
     });
     if (!result) return false;
     try {

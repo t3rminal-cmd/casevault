@@ -571,7 +571,7 @@
           h('label', { class: 'check-row', title: kit ? `From CaseVault-Data\\discovery-kit\\VLC: ${kit.files} files, ${D.fmtSize(kit.bytes)}` : 'Put a portable VLC in CaseVault-Data\\discovery-kit\\VLC first' }, vlc, h('span', {}, kit ? 'Copy the VLC player along' : 'Copy VLC along (none on the SSD)')))),
       err, bar,
       history,
-      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), go));
+      CVKit.cancelRow(h, () => close(false), go));
       return form;
     });
   }

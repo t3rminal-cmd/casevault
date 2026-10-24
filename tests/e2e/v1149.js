@@ -98,7 +98,7 @@ const SP = process.env.SP + '/v1149';
   for (const [rel, text] of dump) { const f = path.join(tmp, ...rel.split('/')); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, text); }
   const backupDir = path.join(tmp, dump[0][0].split('/')[0]);
   await home();
-  await p.click('.hc-backup'); await p.waitForSelector('.backup-history');
+  await p.click('.hc-backup, .backup-bar .btn'); await p.waitForSelector('.backup-history');
   await p.click('.backup-history summary');
   const hist = await p.$$eval('.backup-hist-table tbody tr', (x) => x.map((e) => e.textContent));
   ok(hist.length === 2 && /E:/.test(hist.join('|')), `backup history: ${JSON.stringify(hist)}`);

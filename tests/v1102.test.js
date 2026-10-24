@@ -7,7 +7,7 @@ const path = require('path');
 
 const read = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
 const ps = read('tools/casevault-helper/casevault-helper.ps1');
-const app = read('js/app.js');
+const app = read('js/app.js') + read('js/backup-ui.js'); // v1.151: the backup screens moved to backup-ui.js
 
 test('v1.102: helper 1.14 keeps a list of network folders in the vault and only writes to listed ones', () => {
   assert.match(ps, /\$HelperVersion = '1\.(1[4-9]|[2-9]\d)\.\d+'/);
@@ -28,7 +28,7 @@ test('v1.102: the app asks once per folder that the other PC is encrypted', () =
 });
 
 test('v1.103: helper 1.15 also takes a folder on this PC (C:\\CaseVault-Backups), never one on the SSD', () => {
-  assert.match(ps, /\$HelperVersion = '1\.15\.0'/);
+  const [, hmin] = (/\$HelperVersion = '1\.(\d+)/.exec(ps) || []).map(Number); assert.ok(hmin >= 15, 'helper 1.15 or later');
   assert.match(ps, /function Get-BackupFolderProblem/, 'refuses a folder inside the vault or on the CASEVAULT drive');
   assert.match(ps, /CreateDirectory\(\$p\)/, 'a folder on this PC is made when it is added');
   assert.match(ps, /\$leaf -ieq 'CaseVault-Backups'/, 'a folder named CaseVault-Backups holds the backups itself');

@@ -100,10 +100,11 @@
       const box = h('section', { class: 'mini-tl', 'aria-label': 'Timeline' });
       (async () => {
         const tls = [];
-        for (const m of members) { try { tls.push({ caseId: m.id, number: m.number || '', events: ((await Vault.getTimeline(m.id)) || {}).events || [] }); } catch { /* moved */ } }
+        // v1.151: read at once (a moved case number is left out).
+        tls.push(...(await Promise.all(members.map((m) => Vault.getTimeline(m.id).then((t) => ({ caseId: m.id, number: m.number || '', events: (t || {}).events || [] }), () => null)))).filter(Boolean));
         const rows = CVOperation.mergeEvents(tls).filter((r) => r.ev && r.ev.date);
         const colors = CVOperation.suspectColors(rows); // v1.117: each suspect's colour
-        if (!rows.length) { box.replaceChildren(h('div', { class: 'mini-tl-head' }, h('span', { class: 'mini-tl-title' }, 'Timeline'), h('a', { class: 'muted small', href: `#/case/${encodeURIComponent(c.id)}/timeline` }, 'No events yet. Add them on the Timeline tab.'))); return; }
+        if (!rows.length) { box.replaceChildren(h('div', { class: 'mini-tl-head' }, h('span', { class: 'mini-tl-title' }, 'Timeline'), h('a', { class: 'muted small', href: `#/case/${CVRoute.enc(c.id)}/timeline` }, 'No events yet. Add them on the Timeline tab.'))); return; }
         const t = (d) => new Date(`${d}T12:00:00`).getTime();
         const todayIso = today();
         const first = Math.min(t(rows[0].ev.date), t(todayIso));
@@ -127,7 +128,7 @@
             : tip(evs[0], group.items[0].number);
           // v1.107: on a case's Details tab, the circles of that case number's own events glow green.
           const own = mine && group.items.some((r) => r.caseId === c.id);
-          const dot = h('a', { class: `mini-tl-dot${own ? ' mini-tl-mine' : ''}${many ? ' mini-tl-group' : ''}${deadline ? ' deadline' : ''}${done ? ' done' : ''}${due ? ` ${due.cls}` : ''}`, href: `#/case/${encodeURIComponent(group.items[0].caseId)}/timeline`, 'data-tip': text, 'aria-label': text.replace(/\n/g, ', ') }, many ? String(evs.length) : null);
+          const dot = h('a', { class: `mini-tl-dot${own ? ' mini-tl-mine' : ''}${many ? ' mini-tl-group' : ''}${deadline ? ' deadline' : ''}${done ? ' done' : ''}${due ? ` ${due.cls}` : ''}`, href: `#/case/${CVRoute.enc(group.items[0].caseId)}/timeline`, 'data-tip': text, 'aria-label': text.replace(/\n/g, ', ') }, many ? String(evs.length) : null);
           dot.style.setProperty('left', `${group.x.toFixed(2)}%`);
           // v1.117: in the events' colour (the suspect's) when they share one.
           const cols = [...new Set(evs.map((ev) => CVOperation.eventColor(ev, colors)))];
@@ -178,7 +179,7 @@
         sorted.map((x) => {
           const cur = x.id === c.id;
           // v1.37: every case number's folder opens that case's Reports tab (this one's too).
-          return h('a', { class: `case-tile${cur ? ' current' : ''} status-${String(x.status).toLowerCase()}`, role: 'listitem', href: `#/case/${encodeURIComponent(x.id)}/reports`, title: `${x.number || 'No case number'} · ${x.status}${cur ? ' (this one)' : ''}: open its Reports` },
+          return h('a', { class: `case-tile${cur ? ' current' : ''} status-${String(x.status).toLowerCase()}`, role: 'listitem', href: `#/case/${CVRoute.enc(x.id)}/reports`, title: `${x.number || 'No case number'} · ${x.status}${cur ? ' (this one)' : ''}: open its Reports` },
             I(cur ? 'folder2-open' : 'folder-fill'), h('span', { class: 'case-tile-num' }, x.number || 'No number'), h('span', { class: 'case-tile-status' }, x.status));
         }),
         archived ? null : h('button', { class: 'case-tile add', type: 'button', title: 'Add a case number to this Mission: a new case in General Files, linked to it, with the same file number, federal jacket number and client', onclick: () => { Save.flushAll(); newCase({ operationId: c.operationId }); } },
@@ -196,7 +197,7 @@
           h('h2', { icon: 'building' }, DEPT_QUESTION[agency]),
           h('p', { class: 'muted small' }, 'More than one? Separate them with a semicolon (;).'),
           field(agency, inp),
-          h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'OK')));
+          CVKit.cancelRow(h, () => close(null), h('button', { class: 'btn primary', type: 'submit' }, 'OK')));
       });
     }
     /* LEO Partners as badges (v1.33; v1.51: CaseVault's own colour badge for each agency, not a seal),

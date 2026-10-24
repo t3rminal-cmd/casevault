@@ -237,9 +237,13 @@
   /** A strong random password for the Password Manager: 20 characters, no look-alikes. */
   function generatePassword(n = 20) {
     const set = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!#$%&*+-=?@';
-    const out = [];
-    while (out.length < n) { const b = rand(1)[0]; if (b < 256 - (256 % set.length)) out.push(set[b % set.length]); }
-    return out.join('');
+    // v1.151: drawn again until it has every kind of character (capital, small, digit, sign).
+    for (;;) {
+      const out = [];
+      while (out.length < n) { const b = rand(1)[0]; if (b < 256 - (256 % set.length)) out.push(set[b % set.length]); }
+      const pw = out.join('');
+      if ([/[A-Z]/, /[a-z]/, /\d/, /[^A-Za-z0-9]/].every((r) => r.test(pw))) return pw;
+    }
   }
 
   return { ITER, RK_ITER, MIN_PASSWORD, passwordProblem, newRecoveryKey, cleanRecovery, groupRecovery, recoveryLooksRight, create, open, changePassword, newRecovery,

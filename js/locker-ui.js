@@ -20,7 +20,7 @@
   const MAX_FILE = 200 * 1024 * 1024;
   const mem = { key: null, header: null, data: null, idle: null, tab: 'passwords', fails: 0, wait: 0, query: {}, openHist: new Set() };
   // v1.145: today's date (this PC's), for the day an old password stopped being used.
-  const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const todayISO = () => root.CVFormat.isoDay();
 
   /* ---------- lock state ---------- */
   function lock(why = '') {
@@ -216,7 +216,7 @@
       h('h2', { icon: 'key' }, 'Forgot the locker password'),
       h('p', { class: 'small' }, 'Type the recovery key you printed or wrote down when the locker was made, and choose a new password. The recovery key keeps working.'),
       ui.field('Recovery key', rk), h('div', { class: 'form-grid' }, ui.field('New password', pw), ui.field('New password again', again)), msg,
-      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), ok));
+      CVKit.cancelRow(h, () => close(false), ok));
     });
     if (!done) return;
     await loadData();
@@ -397,7 +397,7 @@
         h('h2', { icon: T.icon }, row ? `Edit ${T.item}` : `Add ${T.item}`),
         h('div', { class: 'form-grid' }, inputs),
         T.fields.some(([k]) => k === 'password') ? histBox : null,
-        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Save')));
+        CVKit.cancelRow(h, () => close(false), h('button', { class: 'btn primary', type: 'submit' }, 'Save')));
     });
     if (!saved || !mem.key) return;
     let clean = L().normalizeData({ [t]: [{ ...draft, id: draft.id || L().newId() }] })[t][0];
@@ -522,7 +522,7 @@
       const contactValue = () => String(contact.value || '');
       return h('form', { class: 'locker-form', onsubmit: (e) => { e.preventDefault(); close({ label: label.value.trim(), notes: notes.value, lastContact: /^\d{4}-\d{2}-\d{2}$/.test(contactValue()) ? contactValue() : '' }); } },
         h('h2', { icon: 'pencil' }, f.name), ui.field('Informant / Label', label), ui.field('Last Contact', contact), ui.field('Notes', notes),
-        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Save')));
+        CVKit.cancelRow(h, () => close(null), h('button', { class: 'btn primary', type: 'submit' }, 'Save')));
     });
     if (!vals || !mem.key) return;
     Object.assign(f, vals);
@@ -559,7 +559,7 @@
       } },
       h('h2', { icon: 'key' }, 'Change the locker password'),
       ui.field('Current password', cur), h('div', { class: 'form-grid' }, ui.field('New password', pw), ui.field('New password again', again)), msg,
-      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), ok));
+      CVKit.cancelRow(h, () => close(false), ok));
     });
     if (done) ui.toast('Locker password changed. The recovery key is the same.', 'success');
   }
@@ -578,7 +578,7 @@
       h('h2', { icon: 'arrow-repeat' }, 'New recovery key'),
       h('p', { class: 'small' }, 'Lost the recovery key, or worried someone saw it? Make a new one: the old one stops working.'),
       ui.field('Locker password', cur), msg,
-      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), ok));
+      CVKit.cancelRow(h, () => close(null), ok));
     });
     if (!res) return;
     if (!(await recoveryDialog(res.recoveryKey, false))) { ui.toast('Not changed: the new recovery key was not confirmed. The old one still works.', 'info', 6000); return; }

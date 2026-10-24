@@ -36,9 +36,13 @@
       const archivedCase = Vault.isArchived(c.id);
       const members = archivedCase ? [c] : [c, ...operationCases(c).filter((x) => x.id !== c.id)];
       const tls = new Map();
-      for (const m of members) {
-        try { tls.set(m.id, await Vault.getTimeline(m.id)); } catch (err) { if (m.id === c.id) throw err; }
-      }
+      // v1.151: the case numbers' Timelines, suspects and Arrest Reports are read at once.
+      const read = await Promise.all(members.map((m) => Promise.all([
+        Vault.getTimeline(m.id).then((t) => ({ t }), (err) => ({ err })),
+        m.id === c.id ? Promise.resolve(c) : Vault.getCase(m.id).catch(() => null),
+        Vault.readCaseJSON(m.id, 'arrest.json').catch(() => null),
+      ])));
+      members.forEach((m, i) => { const r = read[i][0]; if (r.err) { if (m.id === c.id) throw r.err; } else tls.set(m.id, r.t); });
       if (token !== state.renderToken) return;
       const many = tls.size > 1;
       const numberOf = (id) => (members.find((m) => m.id === id) || {}).number || 'No number';
@@ -46,18 +50,14 @@
       // v1.117: the suspects of every case number, to tag events with (and colour them by).
       const O = root.CVOperation;
       const suspectNames = [];
-      for (const m of members) {
-        let full = m.id === c.id ? c : null;
-        if (!full) { try { full = await Vault.getCase(m.id); } catch { /* moved */ } }
+      for (const [i] of members.entries()) {
+        const full = read[i][1];
         for (const sx of (full && full.suspects) || []) if (sx && !sx.notIdentified && String(sx.name || '').trim()) suspectNames.push(String(sx.name).trim());
       }
       // v1.142: each case number's Arrest Report: every arrestee with a name and an arrest date shows
       // on the Timeline by itself (an Arrest event, read from the report; edited there, not here).
       const arrests = new Map();
-      for (const m of members) {
-        const a = await Vault.readCaseJSON(m.id, 'arrest.json').catch(() => null);
-        if (a && Array.isArray(a.arrestees)) arrests.set(m.id, a);
-      }
+      members.forEach((m, i) => { const a = read[i][2]; if (a && Array.isArray(a.arrestees)) arrests.set(m.id, a); });
       if (token !== state.renderToken) return;
       const K = root.CVClosing;
       const sameSuspect = (name) => {
@@ -361,7 +361,7 @@
               ev.note && h('div', { class: 'tl-note' }, ev.note)),
               // v1.138: the suspect on the right of the box, every name the same width so they line up.
               ev.suspect ? h('div', { class: 'tl-who' }, h('span', { class: 'tl-suspect', title: 'Suspect' }, ev.suspect)) : null),
-            ev.auto ? h('div', { class: 'tl-actions' }, h('a', { class: 'btn small ghost', href: `#/case/${encodeURIComponent(caseId)}/arrest`, title: 'From the Arrest Report: change it there' }, 'Arrest Report')) : h('div', { class: 'tl-actions' },
+            ev.auto ? h('div', { class: 'tl-actions' }, h('a', { class: 'btn small ghost', href: `#/case/${CVRoute.enc(caseId)}/arrest`, title: 'From the Arrest Report: change it there' }, 'Arrest Report')) : h('div', { class: 'tl-actions' },
               h('button', { class: 'btn small ghost', type: 'button', onclick: () => {
                 editing = { id: ev.id, caseId };
                 f.date.value = ev.date; f.time.value = ev.time || ''; f.kind.value = ev.kind;
@@ -375,7 +375,7 @@
               isDeadline && !ev.done && (due || snoozed) ? h('button', { class: 'btn small ghost tl-snooze', type: 'button', title: snoozed ? 'Ring for this deadline again now' : 'No alert for this deadline for a few days', onclick: async () => {
                 const days = snoozed ? 0 : await snoozeDialog(ev);
                 if (days === null) return;
-                if (days) { const d = new Date(`${now}T12:00:00`); d.setDate(d.getDate() + days); ev.snooze = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; } else delete ev.snooze;
+                if (days) ev.snooze = CVFormat.addDays(now, days); else delete ev.snooze;
                 draw();
                 persist(caseId);
               } }, snoozed ? 'Wake' : 'Snooze') : null,

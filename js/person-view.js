@@ -64,7 +64,7 @@
         h('tbody', {}, ...rows.map((r) => {
           const op = ops.get(r.c.operationId);
           return h('tr', { class: r.match === 'similar' ? 'similar-row' : '' },
-            h('td', {}, h('a', { href: `#/case/${encodeURIComponent(r.c.id)}`, onclick: () => done() }, r.c.number || 'No case number')),
+            h('td', {}, h('a', { href: `#/case/${CVRoute.enc(r.c.id)}`, onclick: () => done() }, r.c.number || 'No case number')),
             h('td', {}, op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, onclick: () => done() }, op.number || op.name) : h('span', { class: 'muted' }, 'General Files')),
             h('td', { class: 'nowrap' }, r.c.archivedEntry ? 'Archived' : r.c.status || 'Open'),
             h('td', {}, r.roles.join(', ')),

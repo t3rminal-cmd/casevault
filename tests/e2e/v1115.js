@@ -49,7 +49,7 @@ const SP = process.env.SP + '/v1115';
   ok(/arrest report for this case is on RD EX-203/.test(card), `the Arrest tab says where the report is: ${card.trim().slice(0, 80)}`);
   await p.locator('.arrest-ref-card').screenshot({ path: `${SP}/ref.png` }).catch(() => {});
   await p.click('.arrest-ref-card button'); await p.waitForTimeout(600);
-  ok((await p.evaluate(() => location.hash)).includes(more[2]), 'Open RD EX-203 goes to its Arrest Details');
+  ok((await p.evaluate((id) => location.hash.includes(CVRoute.enc(id)), more[2])), 'Open RD EX-203 goes to its Arrest Details');
   const sl = await p.evaluate(async (id) => CVClosingUI.statusLine(await Vault.getCase(id)), more[0]);
   ok(/Arrest report on RD EX-203/.test(sl), `status line: ${sl}`);
   console.log('errors', errs); await b.close();

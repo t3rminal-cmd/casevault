@@ -47,7 +47,7 @@ const SP = process.env.SP + '/v1146';
   await p.locator('#dialog[open]').screenshot({ path: `${SP}/new-group.png` }).catch(() => {});
   await p.click('#dialog[open] button[type=submit]'); await p.waitForSelector('.group-page'); await p.waitForTimeout(300);
   const page = await p.evaluate(() => ({ hash: location.hash, h1: document.querySelector('.group-page h1').textContent, cards: [...document.querySelectorAll('.group-page .op-case-num')].map((e) => e.textContent) }));
-  ok(page.hash === '#/group/Doe%20Family' && page.h1 === 'Doe Family' && page.cards.join() === 'EX-100,EX-400', `the group has its own page with its cases: ${JSON.stringify(page)}`);
+  ok(page.hash === `#/group/${await p.evaluate(() => CVRoute.enc('Doe Family'))}` && page.h1 === 'Doe Family' && page.cards.join() === 'EX-100,EX-400', `the group has its own page with its cases: ${JSON.stringify(page)}`);
   await p.screenshot({ path: `${SP}/group-page.png` });
   const side = await p.$$eval('#sidebar .suspect-group', (x) => x.map((d) => [d.querySelector('.sg-name').textContent, d.querySelectorAll('.case-item').length, d.querySelector('.sg-head').classList.contains('active')]));
   ok(side.length === 1 && side[0][0] === 'Doe Family' && side[0][1] === 2 && side[0][2], `INDEPENDENT CASES shows the group, marked as open: ${JSON.stringify(side)}`);

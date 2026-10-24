@@ -21,6 +21,20 @@ and the settings only you can turn on.
 The default for removable drives is AES-CBC 128. Keep the recovery key somewhere other than the PC
 and the SSD. If your cases are CJIS data, ask your department's IT which settings they require.
 
+**What the browser keeps on the PC (v1.151).** Addresses inside CaseVault no longer show case
+numbers, Case Group names or report names: they are scrambled with a key kept in `vault.json` on the
+SSD (`#/case/~aXHa…` instead of `#/case/2026-EX-100`), so the browser's history on the PC means
+nothing without the drive. When `Start-CaseVault.bat` opens CaseVault, it uses its own browser
+profile in `CaseVault-Browser` on the CASEVAULT drive (an app window in Edge or Chrome), so history,
+cache and saved permissions stay on the encrypted SSD too. Folder open/closed states and similar
+screen settings saved on the PC never hold names.
+
+**The helper (1.16)** answers only `127.0.0.1`, only the CaseVault page, and only requests that
+carry the key it made when it started (given to the window it opens). Other programs that just try
+the address are refused. A program running as your own Windows user could still read that key, so
+it is not a replacement for BitLocker and a locked PC. File names Windows treats as devices (CON,
+NUL, COM1…) are refused.
+
 **Files that leave CaseVault land on the PC.** A PDF saved through the browser's Print → Save as PDF,
 an attachment opened in Outlook, or anything in Downloads is outside the vault. Delete them when
 you are done.
