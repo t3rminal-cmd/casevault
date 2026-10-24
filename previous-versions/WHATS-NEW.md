@@ -4,6 +4,13 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.147
+
+- **Home page folders:** the names under the folders (Operation Cases, General Files, Closed Files, Archived, Other Files) start at the left, under the left edge of each folder
+- **Case list alerts:** an Operation inside OPERATION that has a case due is highlighted red (red edge and shading, its number in red), so you can see which one has the alert. The bell stays on the main folder
+- **Status columns:** in General Files, Missions and every other list, the status word (Open, Closed, Archived) is on the left of its box and its icon on the right, every box the same width
+- **Case list:** the main folders are now just **OPERATION** and **INDEPENDENT**
+
 ## What's new in v1.146
 
 - **Case Groups for independent cases:** keep related independent cases together under a name you give (a suspect, a family, a crew), like an Operation but not one. **New Case Group** (General Files) or **Case Group** (on an independent case's Details) asks for the name and lets you tick the cases that belong. The group shows in INDEPENDENT CASES with its cases under it; its name opens the group's own page (its cases as cards, **Edit Group** to rename it or change its cases, **Ungroup** to take it apart). The same name written another way ("doe, john") joins the group already there. (This replaces v1.145's Suspect Folder; groups made then are kept.)

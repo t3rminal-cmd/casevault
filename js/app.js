@@ -927,7 +927,13 @@
   const SIDE_FOLD_KEY = 'cv-side-fold';
   const sideFold = new Map((() => { try { return Object.entries(JSON.parse(localStorage.getItem(SIDE_FOLD_KEY) || '{}')); } catch { return []; } })());
   const sideFoldSet = sideFold.set.bind(sideFold);
-  sideFold.set = (k, v) => { sideFoldSet(k, v); try { localStorage.setItem(SIDE_FOLD_KEY, JSON.stringify(Object.fromEntries(sideFold))); } catch { /* this session only */ } return sideFold; };
+  // v1.150: a Case Group's key is its name (often a suspect's), so it is kept for this session only:
+  // nothing about a case is written to the browser on the PC. Names saved by older versions are dropped.
+  const keepOnPc = (k) => !String(k).startsWith('sg:');
+  for (const k of [...sideFold.keys()]) if (!keepOnPc(k)) sideFold.delete(k);
+  const saveFold = () => { try { localStorage.setItem(SIDE_FOLD_KEY, JSON.stringify(Object.fromEntries([...sideFold].filter(([k]) => keepOnPc(k))))); } catch { /* this session only */ } };
+  saveFold();
+  sideFold.set = (k, v) => { sideFoldSet(k, v); saveFold(); return sideFold; };
   let sideFoldHash = '';
   function folderOpen(group) {
     if (sideFold.has(group.key)) return sideFold.get(group.key);
@@ -1763,15 +1769,21 @@
     const tom = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
     (async () => {
       const items = [];
-      for (const c of cases.filter((x) => !isArchivedEntry(x) && x.status !== 'Closed')) {
-        const key = `${c.updated || ''}|${(c.nextDeadline && c.nextDeadline.date) || ''}`;
-        let tl = todayMemo.get(c.id);
-        if (!tl || tl.key !== key) {
-          try { tl = { key, data: await Vault.getTimeline(c.id) }; todayMemo.set(c.id, tl); } catch { continue; }
-        }
+      const open = cases.filter((x) => !isArchivedEntry(x) && x.status !== 'Closed');
+      const keyOf = (c) => `${c.updated || ''}|${(c.nextDeadline && c.nextDeadline.date) || ''}`;
+      // The Timelines that changed are read 8 at a time (one after another was slow with many cases).
+      const stale = open.filter((c) => { const tl = todayMemo.get(c.id); return !tl || tl.key !== keyOf(c); });
+      for (let i = 0; i < stale.length; i += 8) {
+        await Promise.all(stale.slice(i, i + 8).map(async (c) => {
+          try { todayMemo.set(c.id, { key: keyOf(c), data: await Vault.getTimeline(c.id) }); } catch { todayMemo.delete(c.id); }
+        }));
+      }
+      for (const c of open) {
+        const tl = todayMemo.get(c.id);
+        if (!tl) continue;
         for (const ev of (tl.data && tl.data.events) || []) if ((ev.date === now || ev.date === tom) && !ev.done) items.push({ c, ev, data: tl.data });
       }
-      if (!items.length || !box.isConnected) return;
+      if (!items.length) return; // filled even before it is on the page: with nothing re-read this runs at once
       items.sort((a, b) => (a.ev.date + (a.ev.time || '99')).localeCompare(b.ev.date + (b.ev.time || '99')));
       const list = h('ul', { class: 'today-list' }, items.map(({ c, ev, data }) => {
         const done = ev.kind === 'deadline' ? h('input', { type: 'checkbox', 'aria-label': `Mark "${ev.title}" done`, title: 'Mark done' }) : null;
