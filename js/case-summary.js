@@ -118,7 +118,7 @@
     if (!events.length) para('No timeline events.', { size: 10.5 });
     for (const ev of events) {
       const when = `${ev.date ? fmt(ev.date) : 'No date'}${ev.time ? ` ${ev.time}` : ''}`;
-      const tag = ev.kind === 'deadline' ? (ev.done ? ' [deadline, done]' : ' [deadline]') : '';
+      const tag = ev.kind === 'deadline' ? (ev.done ? ' [deadline, done]' : ' [deadline]') : ev.kind === 'court' ? ' [court]' : '';
       const lines = R.wrap(`${clean(ev.title) || 'Event'}${tag}`, 10, INNER - 150, false);
       ensure(lines.length * 13 + 2);
       text(M + 4, y - 9, when, 10, true);
@@ -150,7 +150,36 @@
     return R.assemble(pages, { photos, title: `Case Summary ${clean(c.number)}`.trim(), face: 'helvetica' });
   }
 
-  const api = { build };
+  /** v1.153: Copy Case Details: the case number, subject, charges, next court date and next deadline
+   * as plain lines, to paste into an email or a message. data: { c, subject, mission, arrest,
+   * timeline, today, fmtDate }. */
+  function detailsText(data) {
+    const { c = {}, arrest = null, timeline = null } = data;
+    const fmt = data.fmtDate || ((d) => d);
+    const today = data.today || new Date().toISOString().slice(0, 10);
+    const events = (timeline && timeline.events) || [];
+    const when = (e) => `${fmt(e.date)}${e.time ? ` ${e.time}` : ''}${clean(e.title) ? ` · ${clean(e.title)}` : ''}`;
+    const soonest = (keep) => events.filter((e) => e && e.date && keep(e)).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))[0];
+    const court = soonest((e) => e.kind === 'court' && e.date >= today);
+    const deadline = soonest((e) => e.kind === 'deadline' && !e.done);
+    const people = ((arrest && arrest.arrestees) || []).filter((a) => K().arresteeName(a));
+    const charges = people.map((a) => {
+      const list = K().chargesText(a.charges).split('\n').map(clean).filter(Boolean).join('; ');
+      return list ? `${people.length > 1 ? `${K().arresteeName(a)}: ` : ''}${list}` : '';
+    }).filter(Boolean);
+    const lines = [
+      `Case Number: ${clean(c.number) || 'None'}${clean(c.fileNumber) ? ` (File Number ${clean(c.fileNumber)})` : ''}`,
+      `Subject: ${clean(data.subject) || 'Not entered'}`,
+      clean(data.mission) ? `Mission: ${clean(data.mission)}` : '',
+      `Status: ${clean(c.status) || 'Open'}`,
+      `Charges: ${charges.length ? charges.join(' | ') : 'None entered'}`,
+      `Next Court Date: ${court ? when(court) : 'None on the Timeline'}`,
+      `Next Deadline: ${deadline ? when(deadline) : 'None open'}`,
+    ];
+    return lines.filter(Boolean).join('\n');
+  }
+
+  const api = { build, detailsText };
   if (isNode) module.exports = api;
   else root.CVCaseSummary = api;
 })(this);

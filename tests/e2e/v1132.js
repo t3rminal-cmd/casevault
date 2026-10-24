@@ -32,7 +32,7 @@ const SP = process.env.SP + '/v1132';
 
   // 2. Options → Display → Saving While You Type.
   await p.evaluate(() => { CVOptions.open(window.CaseVaultUI); }); await p.waitForSelector('#dialog[open] .opt-choices');
-  const choices = await p.$$eval('.opt-choice', (xs) => xs.map((x) => [x.textContent.trim(), x.classList.contains('active')]));
+  const choices = await p.$$eval('.opt-choice[data-key]', (xs) => xs.map((x) => [x.textContent.trim(), x.classList.contains('active')]));
   ok(choices.map((c) => c[0]).join('|') === 'After a Pause|Every 5 Minutes|Every 30 Minutes' && choices[0][1], `three choices, After a pause chosen: ${JSON.stringify(choices)}`);
   const fit = await p.$$eval('.opt-choice', (xs) => xs.every((x) => x.scrollWidth <= x.clientWidth + 1));
   ok(fit, 'no choice is cut off');

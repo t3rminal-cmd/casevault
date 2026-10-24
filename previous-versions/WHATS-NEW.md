@@ -4,6 +4,12 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.150
+
+- **Today panel fixed:** it now shows every time you come back to the home page, not only the first time
+- **Faster home page:** the Today panel reads the Timelines 8 at a time instead of one by one (about twice as fast with many cases)
+- **Privacy:** whether a Case Group folder is open or folded is no longer saved in the browser on the PC (its name is often a suspect's). It is remembered until CaseVault is closed. Group names saved there by v1.146 to v1.149 are removed the first time 1.150 opens
+
 ## What's new in v1.149
 
 - **Use as AI Example:** in a report's Export menu, **Use as AI Example** puts an anonymized copy in Settings → Library (names, phone numbers and addresses replaced) and asks which document type it is an example of. You see the copy before it is saved

@@ -106,8 +106,11 @@
               if (!f || f.folder === key) return;
               try {
                 const to = await Save.track(`file-move:${c.id}:${f.name}`, () => Vault.moveFile(c.id, f.name, key, {}));
-                toast(`Moved to ${key.replace('/', ' › ')}: ${CF.splitPath(to).base}`, 'success', 5000);
                 showCase(c.id, 'files', current || null);
+                CVKit.undoToast(toast, h, `Moved to ${key.replace('/', ' › ')}: ${CF.splitPath(to).base}.`, async () => {
+                  await Save.track(`file-move:${c.id}:${to}`, () => Vault.moveFile(c.id, to, f.folder, { name: f.base }));
+                  if (state.caseId === c.id && state.tab === 'files') showCase(c.id, 'files', current || null);
+                });
               } catch { /* reported by Save */ }
             } else if (folder && top && folder !== top) {
               const order = ordered.filter((x) => x !== folder);
@@ -270,10 +273,15 @@
                 f.folder === 'Link Charts' && /\.pdf$/i.test(f.base) ? h('button', { class: 'icon-btn', type: 'button', title: 'Open in Link Chart: send this chart back to the Link Chart tab to change it', onclick: async () => { if (await (await CVLazy.linkChart()).openFromFile(c, f.name)) showCase(c.id, 'linkchart'); } }, I('diagram-3-fill'), h('span', { class: 'sr-only' }, `Open ${f.base} in Link Chart`)) : null,
                 h('button', { class: 'icon-btn', type: 'button', title: f.folder ? 'Rename or move to another folder' : 'File it in a folder', onclick: () => moveFileDialog(c, f, current) }, I('pencil-square'), h('span', { class: 'sr-only' }, `Rename or move ${f.base}`)),
                 h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Delete from the SSD', onclick: async () => {
-                  if (!(await confirmDialog({ title: 'Delete this file?', message: `"${f.base}" will be permanently deleted from the SSD.`, confirmText: 'Delete', danger: true }))) return;
+                  if (!(await confirmDialog({ title: 'Delete this file?', message: `"${f.base}" will be deleted from the SSD. Undo brings it back for a few seconds.`, confirmText: 'Delete', danger: true }))) return;
                   try {
-                    await Save.track(`file-del:${c.id}:${f.name}`, () => Vault.deleteFile(c.id, f.name));
+                    // v1.153: set aside first, so Undo can bring it back; removed for good after that.
+                    const token = await Save.track(`file-del:${c.id}:${f.name}`, () => Vault.trashFile(c.id, f.name));
                     showCase(c.id, 'files', current || null);
+                    CVKit.undoToast(toast, h, `Deleted ${f.base}.`, async () => {
+                      await Save.track(`file-undel:${c.id}:${f.name}`, () => Vault.untrashFile(c.id, token));
+                      if (state.caseId === c.id && state.tab === 'files') showCase(c.id, 'files', current || null);
+                    }, { onDone: () => Vault.emptyFileTrash(c.id) });
                   } catch { /* reported by Save */ }
                 } }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${f.base}`))));
             if (!archived) {
@@ -459,8 +467,14 @@
             if (changed) await Vault.writeCaseJSON(c.id, 'file-order.json', order);
           } catch (err) { if (FS.isDisconnectError(err)) throw err; }
         }
-        toast(`Saved as ${CVFormat.pathText(to)}`, 'success', 6000);
         showCase(c.id, 'files', current || null);
+        // v1.153: Undo puts it back where it was, with its old name.
+        if (to !== f.name) {
+          CVKit.undoToast(toast, h, `Saved as ${CVFormat.pathText(to)}.`, async () => {
+            await Save.track(`file-move:${c.id}:${to}`, () => Vault.moveFile(c.id, to, f.folder, { name: f.base }));
+            if (state.caseId === c.id && state.tab === 'files') showCase(c.id, 'files', current || null);
+          });
+        }
       } catch (err) { if (!FS.isDisconnectError(err)) { /* reported by Save */ } }
     }
 

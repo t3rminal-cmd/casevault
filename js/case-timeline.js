@@ -90,7 +90,7 @@
       const f = {
         date: h('input', { type: 'date', required: true, value: today() }),
         time: CVTimeField.create({ label: 'Time' }),
-        kind: h('select', {}, h('option', { value: 'event' }, 'Event'), h('option', { value: 'buy' }, 'Buy'), h('option', { value: 'arrest' }, 'Arrest'), h('option', { value: 'deadline' }, 'Deadline')),
+        kind: h('select', {}, h('option', { value: 'event' }, 'Event'), h('option', { value: 'buy' }, 'Buy'), h('option', { value: 'arrest' }, 'Arrest'), h('option', { value: 'deadline' }, 'Deadline'), h('option', { value: 'court' }, 'Court')),
         title: h('input', { required: true, maxlength: 200, 'aria-label': 'Title', class: 'tl-title-input' }),
         note: h('textarea', { rows: 2, maxlength: 4000, 'aria-label': 'Note' }),
         caseSel: h('select', { 'aria-label': 'Case number' }, [...tls.keys()].map((id) => h('option', { value: id, selected: id === c.id }, numberOf(id)))),
@@ -107,6 +107,22 @@
         field('Amount', h('div', { class: 'tl-qty' }, f.qty, f.unit)),
         field('Paid', f.paid));
       const showBuy = () => { buyRow.hidden = f.kind.value !== 'buy'; };
+      // v1.153: Quick Add: a template fills the form and can add the deadline that follows it.
+      const tplSel = h('select', { 'aria-label': 'Quick Add', class: 'tl-template' }, h('option', { value: '' }, 'Pick a Template'), O.TL_TEMPLATES.map((t) => h('option', { value: t.id }, t.label)));
+      const followOn = h('input', { type: 'checkbox', checked: true, 'aria-label': 'Also add the deadline' });
+      const followDays = h('input', { type: 'number', min: 1, max: 365, class: 'tl-follow-days', 'aria-label': 'Days after' });
+      const followTitle = h('span', { class: 'tl-follow-title' });
+      const followRow = h('label', { class: 'tl-follow full', hidden: true }, followOn, h('span', {}, 'Also add the deadline'), followTitle, h('span', {}, 'in'), followDays, h('span', {}, 'days'));
+      const tplNow = () => O.TL_TEMPLATES.find((t) => t.id === tplSel.value) || null;
+      tplSel.addEventListener('change', () => {
+        const t = tplNow();
+        followRow.hidden = !(t && t.follow) || !!editing;
+        if (!t) return;
+        f.kind.value = t.kind; f.kind.dispatchEvent(new Event('change', { bubbles: true }));
+        f.title.value = t.title;
+        if (t.follow) { followTitle.textContent = `"${t.follow.title}"`; followDays.value = String(t.follow.days); followOn.checked = true; }
+        f.title.focus();
+      });
       f.kind.addEventListener('change', showBuy);
       // v1.117: the event's colour: a swatch to pick, or None. Picking a suspect sets their colour.
       let pickedColor = '';
@@ -156,6 +172,7 @@
         f.drug.value = ''; f.qty.value = ''; f.paid.value = ''; f.unit.value = 'g';
         submit.textContent = 'Add to timeline';
         cancel.hidden = true;
+        tplSel.value = ''; followRow.hidden = true;
       };
       cancel.addEventListener('click', resetForm);
       // v1.40: Clear empties the form (back to today, an Event) without leaving an edit in progress.
@@ -189,6 +206,8 @@
           } else if (ev) Object.assign(ev, data, { updated: new Date().toISOString() });
         } else {
           tls.get(target).events.push({ id: Vault.newId('e'), ...data, done: false, created: new Date().toISOString() });
+          const follow = followOn.checked && !followRow.hidden ? O.templateFollowUp(tplNow(), data.date, followDays.value) : null;
+          if (follow) tls.get(target).events.push({ id: Vault.newId('e'), ...follow, note: '', suspect: data.suspect, color: data.color, done: false, created: new Date().toISOString() });
         }
         for (const id of touched) Vault.sortEvents(tls.get(id).events);
         resetForm();
@@ -197,11 +216,14 @@
         f.title.focus();
       } },
       field('Date', f.date), field('Time', f.time), field('Type', f.kind),
+      // v1.153: shown first (css order), after Type in the page so Type stays the form's first list.
+      field('Quick Add', tplSel, 'full tl-template-field', 'Fills in a common entry, and can add the deadline that follows it'),
       many ? field('Case Number', f.caseSel, '', 'Which case number of the mission this belongs to') : null,
       field('Title', f.title, 'grow'),
       field('Suspect', suspectBox, 'tl-suspect-field', 'Who the event is about, such as the target of a buy. Events of the same suspect share a colour.'),
       field('Colour', swatches, 'tl-color-field', 'A colour to tell the events apart at a glance. Picking a suspect sets theirs.'),
       buyRow,
+      followRow,
       field('Note', f.note, 'full'),
       h('div', { class: 'full form-actions' }, cancel, clear, submit));
 
@@ -342,6 +364,7 @@
           // v1.148: a snoozed deadline ("remind me in 3 days") is quiet until its snooze runs out.
           const snoozed = isDeadline && !ev.done && ev.snooze && ev.snooze > now;
           const due = isDeadline && !ev.done && !snoozed ? dueLabel(ev.date) : null;
+          const court = O.courtReminder(ev, now); // v1.153: a week of reminders before a court date
           const done = isDeadline ? h('input', { type: 'checkbox', checked: !!ev.done, 'aria-label': 'Done', title: 'Mark done' }) : null;
           if (done) done.addEventListener('change', () => { ev.done = done.checked; draw(); persist(caseId); });
           const [, , dd] = ev.date.split('-');
@@ -352,10 +375,11 @@
             h('div', { class: 'tl-body' }, h('div', { class: 'tl-main' },
               h('div', { class: 'tl-title' },
                 done,
-                ev.kind === 'arrest' ? h('span', { class: 'badge arrest' }, cuffs(), 'Arrest') : h('span', { class: `badge ${ev.kind}` }, isDeadline ? 'Deadline' : ev.kind === 'buy' ? 'Buy' : 'Event'),
+                ev.kind === 'arrest' ? h('span', { class: 'badge arrest' }, cuffs(), 'Arrest') : h('span', { class: `badge ${ev.kind}` }, O.kindLabel(ev.kind)),
                 many ? h('span', { class: `tl-case${caseId === c.id ? ' current' : ''}`, title: caseId === c.id ? 'This case number' : 'Another case number of this mission' }, numberOf(caseId)) : null,
                 h('strong', {}, ev.title),
                 due && h('span', { class: `due ${due.cls}` }, due.text),
+                court && h('span', { class: `due court-due${court.days <= 1 ? ' soon' : ''}` }, court.text),
                 snoozed ? h('span', { class: 'due snoozed', title: 'Snoozed: no alert until then' }, `Snoozed until ${fmtDate(ev.snooze)}`) : null),
               ev.kind === 'buy' && O.buyLine(ev) ? h('div', { class: 'tl-buy' }, O.buyLine(ev)) : null,
               ev.note && h('div', { class: 'tl-note' }, ev.note)),
@@ -364,6 +388,7 @@
             ev.auto ? h('div', { class: 'tl-actions' }, h('a', { class: 'btn small ghost', href: `#/case/${CVRoute.enc(caseId)}/arrest`, title: 'From the Arrest Report: change it there' }, 'Arrest Report')) : h('div', { class: 'tl-actions' },
               h('button', { class: 'btn small ghost', type: 'button', onclick: () => {
                 editing = { id: ev.id, caseId };
+                tplSel.value = ''; followRow.hidden = true;
                 f.date.value = ev.date; f.time.value = ev.time || ''; f.kind.value = ev.kind;
                 f.title.value = ev.title; f.note.value = ev.note || '';
                 f.caseSel.value = caseId;
@@ -382,10 +407,19 @@
               h('button', { class: 'btn small ghost', type: 'button', onclick: async () => {
                 if (!(await confirmDialog({ title: 'Delete this entry?', message: `"${ev.title}" on ${fmtDate(ev.date)}${many ? ` (${numberOf(caseId)})` : ''}`, confirmText: 'Delete', danger: true }))) return;
                 const t = tls.get(caseId);
+                const at = t.events.indexOf(ev);
                 t.events = t.events.filter((x) => x.id !== ev.id);
                 if (editing && editing.id === ev.id) resetForm();
                 draw();
                 persist(caseId);
+                // v1.153: Undo puts it back.
+                CVKit.undoToast(toast, h, `Deleted "${ev.title}".`, async () => {
+                  const tl = tls.get(caseId);
+                  if (!tl.events.some((x) => x.id === ev.id)) tl.events.splice(Math.max(0, at), 0, ev);
+                  Vault.sortEvents(tl.events);
+                  draw();
+                  await persist(caseId);
+                });
               } }, 'Delete')));
           if (col) li.style.setProperty('--tl-color', col);
           items.push(li);

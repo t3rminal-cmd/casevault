@@ -15,10 +15,13 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.152
+## What's New in v1.153
 
-- **Fix:** CaseVault opens in your normal Firefox again, with your own settings and look
-- **Fix:** an open tab reconnects by itself after Start-CaseVault.bat, instead of a Reconnect that did nothing
+- **New:** Undo for deleted Timeline entries, files and reports, and for file moves; the last 10 versions of each report
+- **New:** Timeline Quick Add with the deadline that follows; Court dates counting down a week ahead, also on Today
+- **New:** Copy Case Details, a same-person note on suspects, a checklist before Send Draft to Reports, a printable Discovery Log
+- **New:** Export Encrypted / Import Case, Bigger Text, Alt+1…9 for tabs, pinned cases in the case list
+- **Safer:** the screen clears and locks when the SSD is pulled; backup reminder after 50 changes; faster start-up
 
 ## What CaseVault Does
 

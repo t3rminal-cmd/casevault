@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.152)
+
+- **Fix:** CaseVault opens in your normal Firefox again, with your own settings and look
+- **Fix:** an open tab reconnects by itself after Start-CaseVault.bat, instead of a Reconnect that did nothing
+
 ## Features (v1.151)
 
 - **PDF viewer** opens at Fit Width

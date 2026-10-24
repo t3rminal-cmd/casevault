@@ -773,7 +773,67 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  const api = { chargeDescriptions, syncOffense, OFFENDER_VEHICLE, VEHICLE_DISPOSITIONS, blankVehicle, vehicleLine, CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, STATE_RELATION, FEDERAL_VICTIM, govRelation, isStateVictim, SEE_DEA6, dea6Narrative, seeDea6, isSeeDea6, narcoticChoices, updateOldUcr, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, dateOrderPlan, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
+  /* v1.153: the checklist before Send Draft to Reports: the exhibits the narrative mentions against the
+   * evidence list, and the narrative's dates in order (and none in the future). -> { items: [{ ok,
+   * text }], problems } */
+  const MONTHS_LC = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+  function narrativeExhibits(text) {
+    const out = new Set();
+    const re = /(additional\s+)?\b(?:exhibits?|exh\.?|ex\.)\s*#?\s*(\d{1,4}(?:\s*(?:,|and|&|-|–|through|to)\s*#?\d{1,4})*)/gi;
+    let m;
+    while ((m = re.exec(String(text || '')))) {
+      if (m[1]) continue; // "Additional Exhibit 2" is an additional exhibit, numbered on its own
+      const parts = m[2].split(/\s*(,|and|&)\s*/i).filter((x) => /\d/.test(x));
+      for (const p of parts) {
+        const r = p.match(/(\d+)\s*(?:-|–|through|to)\s*#?(\d+)/i);
+        if (r && Number(r[2]) >= Number(r[1]) && Number(r[2]) - Number(r[1]) < 200) for (let n = Number(r[1]); n <= Number(r[2]); n += 1) out.add(n);
+        else for (const d of p.match(/\d+/g) || []) out.add(Number(d));
+      }
+    }
+    return [...out].sort((a, b) => a - b);
+  }
+  function narrativeDates(text) {
+    const s = String(text || '');
+    const out = [];
+    const pad = (n) => String(n).padStart(2, '0');
+    const push = (at, y, mo, d, raw) => {
+      if (y < 100) y += 2000;
+      if (mo < 1 || mo > 12 || d < 1 || d > 31) return;
+      if (/\b(dob|born|d\.o\.b\.?|date of birth)\W{0,4}$/i.test(s.slice(Math.max(0, at - 18), at))) return;
+      out.push({ at, iso: `${y}-${pad(mo)}-${pad(d)}`, raw });
+    };
+    let m;
+    const num = /\b(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})\b/g;
+    while ((m = num.exec(s))) push(m.index, Number(m[3]), Number(m[1]), Number(m[2]), m[0]);
+    const iso = /\b(\d{4})-(\d{2})-(\d{2})\b/g;
+    while ((m = iso.exec(s))) push(m.index, Number(m[1]), Number(m[2]), Number(m[3]), m[0]);
+    const long = new RegExp(`\\b(${MONTHS_LC.join('|')}|${MONTHS_LC.map((x) => x.slice(0, 3)).join('|')})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?,?\\s+(\\d{4})\\b`, 'gi');
+    while ((m = long.exec(s))) push(m.index, Number(m[3]), MONTHS_LC.findIndex((x) => x.startsWith(m[1].toLowerCase().slice(0, 3))) + 1, Number(m[2]), m[0]);
+    return out.sort((a, b) => a.at - b.at);
+  }
+  function sendChecklist(d, today) {
+    const items = [];
+    const text = String((d && d.narrative) || '');
+    const listed = new Set(((d && d.evidence) || []).map((e) => parseInt(String(e.number).replace(/\D+/g, ''), 10)).filter(Number.isFinite));
+    const said = narrativeExhibits(text);
+    const missing = said.filter((n) => !listed.has(n));
+    const unsaid = isHidden(d, 'evidence') || !text.trim() ? [] : [...listed].sort((a, b) => a - b).filter((n) => !said.includes(n));
+    const ex = (ns) => `Exhibit${ns.length > 1 ? 's' : ''} ${ns.length > 1 ? `${ns.slice(0, -1).join(', ')} and ${ns[ns.length - 1]}` : ns[0]}`;
+    if (missing.length) items.push({ ok: false, text: `The narrative mentions ${ex(missing)}, which ${missing.length === 1 ? 'is' : 'are'} not in the evidence list.` });
+    if (unsaid.length) items.push({ ok: false, text: `${ex(unsaid)} ${unsaid.length === 1 ? 'is' : 'are'} in the evidence list but not mentioned in the narrative.` });
+    if (!missing.length && !unsaid.length && (said.length || listed.size)) items.push({ ok: true, text: 'The exhibits in the narrative match the evidence list.' });
+    const dates = narrativeDates(text);
+    let back = null;
+    for (let i = 1; i < dates.length && !back; i += 1) if (dates[i].iso < dates[i - 1].iso) back = [dates[i - 1], dates[i]];
+    if (back) items.push({ ok: false, text: `The dates are out of order: ${back[1].raw} comes after ${back[0].raw}.` });
+    const future = today ? dates.filter((x) => x.iso > today) : [];
+    if (future.length) items.push({ ok: false, text: `${future.map((x) => x.raw).join(', ')} ${future.length === 1 ? 'is' : 'are'} in the future.` });
+    if (dates.length > 1 && !back && !future.length) items.push({ ok: true, text: 'The dates in the narrative are in order.' });
+    if (!text.trim() && !isHidden(d, 'summary')) items.push({ ok: false, text: 'The Summary of Investigation is empty.' });
+    return { items, problems: items.filter((x) => !x.ok).length };
+  }
+
+  const api = { narrativeExhibits, narrativeDates, sendChecklist, chargeDescriptions, syncOffense, OFFENDER_VEHICLE, VEHICLE_DISPOSITIONS, blankVehicle, vehicleLine, CUSTODY, SWITCH, activeOf, lineLabel, fundsLines, DENOMINATIONS, RECOVERED, SPELLED, shortCode, MULTI, SOCIAL_APPS, STATE_VICTIM, STATE_RELATION, FEDERAL_VICTIM, govRelation, isStateVictim, SEE_DEA6, dea6Narrative, seeDea6, isSeeDea6, narcoticChoices, updateOldUcr, fieldsFor, SECTIONS, FIELDS, LISTS, PICKS, ROLES, OPTIONAL_LINES, OPTIONAL_LISTS, courtLine, titleFor, uniqueTitle, militaryTime, NARCOTIC_UNITS, UNKNOWN, SUSPECT_INFO, suspectToOffender, parseHeight, heightOf, heightParts, numParts, withLbs, valueText, labelFor, ageOn, photoLabel, EXTRA_PARTS, EVIDENCE_TYPES, DRUG_TYPES, PLACEHOLDERS, empty, blankItem, filled, normalize, isHidden, nextExhibit, nextFrom, dateOrderPlan, exhibitLine, nextExtra, EXTRA_KINDS, extraCaption, extraLine, itemLine, shown, context, asText, toMarkdown };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVReportFields = api;
 })(this);

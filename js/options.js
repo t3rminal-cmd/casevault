@@ -49,6 +49,10 @@
   const write = (k, v, d) => { try { if (v === d) root.localStorage.removeItem(k); else root.localStorage.setItem(k, String(v)); } catch { /* private window: this session only */ } };
 
   const getZoom = () => read(ZOOM_KEY, ZOOM, 100);
+  // v1.153: Bigger Text: only the words grow (110% or 125%), not the boxes and pictures as with Zoom.
+  const TEXT_KEY = 'casevault-text';
+  const TEXT_SIZES = [100, 110, 125];
+  const getTextSize = () => { const v = read(TEXT_KEY, { min: 100, max: 125 }, 100); return TEXT_SIZES.includes(v) ? v : 100; };
   const getBrightness = () => read(BRIGHT_KEY, BRIGHT, 100);
 
   // Zoom scales the whole page; brightness darkens or lightens it. Dialogs sit above the page in
@@ -63,6 +67,8 @@
     // boxes sized to the window (the PDF viewer, the Vault, the chat) are divided back by this (v1.24).
     const zoomWorks = !!(root.CSS && CSS.supports && CSS.supports('zoom', '1.25'));
     if (z === 100 || !zoomWorks) html.style.removeProperty('--z'); else html.style.setProperty('--z', String(z / 100));
+    const t = getTextSize();
+    if (t === 100) html.removeAttribute('data-text'); else html.setAttribute('data-text', String(t));
     const b = getBrightness();
     html.style.setProperty('--cv-brightness', String(b / 100));
     html.classList.toggle('bright-adjusted', b !== 100);
@@ -77,6 +83,7 @@
   }
   const setZoom = (v) => { write(ZOOM_KEY, clampTo(v, ZOOM, 100), 100); applyDisplay(); };
   const setBrightness = (v) => { write(BRIGHT_KEY, clampTo(v, BRIGHT, 100), 100); applyDisplay(); };
+  const setTextSize = (v) => { write(TEXT_KEY, TEXT_SIZES.includes(Number(v)) ? Number(v) : 100, 100); applyDisplay(); };
 
   /* ---------- Dev Tools: make a document fictitious ---------- */
 
@@ -232,10 +239,24 @@
     return h('section', { class: 'opt-panel' },
       card('zoom-in', 'Zoom', 'Everything in CaseVault bigger or smaller. Ctrl + and Ctrl − in the browser do the same.',
         slider('Zoom', ZOOM, getZoom(), (v) => `${v}%`, setZoom, 'Makes everything in CaseVault bigger or smaller.')),
+      textCard(),
       card('sun-fill', 'Brightness', 'Darker or lighter, for example in a dark room at night.',
         slider('Brightness', BRIGHT, getBrightness(), (v) => `${v}%`, setBrightness, 'Darkens or lightens CaseVault.')),
       saveCard(),
       h('p', { class: 'muted small explain' }, 'Kept in this browser on this PC, like the theme. Each PC has its own. Nothing about your cases is stored here.'));
+  }
+
+  /** v1.153: Bigger Text: Normal, 110% or 125% (this PC). */
+  function textCard() {
+    const { h } = ui;
+    const btns = TEXT_SIZES.map((n) => h('button', { class: 'btn small opt-choice', type: 'button', role: 'radio', 'data-size': String(n), onclick: () => pick(n) }, n === 100 ? 'Normal' : `${n}%`));
+    function pick(n) {
+      setTextSize(n);
+      for (const b of btns) { const on = Number(b.dataset.size) === getTextSize(); b.classList.toggle('active', on); b.setAttribute('aria-checked', String(on)); }
+    }
+    pick(getTextSize());
+    return card('type-bold', 'Bigger Text', 'Only the words get bigger; the layout stays as it is. Zoom makes everything bigger.',
+      h('div', { class: 'opt-row opt-choices', role: 'radiogroup', 'aria-label': 'Text size' }, ...btns));
   }
 
   /** v1.132: when typed changes are written to the SSD (this PC). */
@@ -484,7 +505,7 @@
         } }, 'Email it'))));
   }
 
-  const api = { fictitious, AI_PROMPT, getZoom, getBrightness, setZoom, setBrightness, applyDisplay, open, contactDev, ZOOM, BRIGHT, getSaveEvery, setSaveEvery, saveEveryMs, SAVE_CHOICES };
+  const api = { fictitious, AI_PROMPT, getZoom, getBrightness, setZoom, setBrightness, getTextSize, setTextSize, TEXT_SIZES, applyDisplay, open, contactDev, ZOOM, BRIGHT, getSaveEvery, setSaveEvery, saveEveryMs, SAVE_CHOICES };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else {
     root.CVOptions = api;

@@ -33,7 +33,7 @@ const SP = process.env.SP;
   await p.locator('.partners').screenshot({ path: `${SP}/v136-partners.png` });
   console.log('placeholders:', await p.$$eval('.suspect-demo input', (x) => x.map((e) => e.placeholder).filter(Boolean)));
   // draft offenders race
-  await p.evaluate(async (id) => { const d = await CVReportFieldsUI.load({ id }); d.offendersList = [{ name: 'X Example', race: 'American Indian / Alaska Native', complexion: 'Medium Brown', gender: 'Male' }]; d.victimsList = [{ name: 'State of Illinois' }]; await Vault.writeCaseJSON(id, 'report-fields.json', d); }, id);
+  await p.evaluate(async (id) => { await CVLazy.reports(); const d = await CVReportFieldsUI.load({ id }); d.offendersList = [{ name: 'X Example', race: 'American Indian / Alaska Native', complexion: 'Medium Brown', gender: 'Male' }]; d.victimsList = [{ name: 'State of Illinois' }]; await Vault.writeCaseJSON(id, 'report-fields.json', d); }, id);
   await p.evaluate((id) => { location.hash = `#/case/${id}/draft`; }, id); await p.waitForSelector('.rf-actions'); await p.waitForTimeout(700);
   const clip2 = await p.evaluate(() => { const out = []; const cv = document.createElement('canvas').getContext('2d');
     for (const el of document.querySelectorAll('.rf-section select')) { const cs = getComputedStyle(el); cv.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`; const t = el.selectedOptions[0]?.text || ''; const avail = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight); if (el.offsetParent && cv.measureText(t).width > avail + 1) out.push([el.getAttribute('aria-label') || el.closest('.field')?.firstChild?.textContent, t, Math.round(cv.measureText(t).width), Math.round(avail)]); } return out; });

@@ -61,6 +61,19 @@
           const notId = h('input', { type: 'checkbox', checked: !!s.notIdentified, 'aria-label': `${who} not identified` });
           const showNotId = () => { nameIn.disabled = notId.checked; nameIn.placeholder = notId.checked ? 'Not Identified' : ''; card.classList.toggle('not-identified', notId.checked); };
           notId.addEventListener('change', () => { s.notIdentified = notId.checked; showNotId(); save(); });
+          // v1.153: the same person (name, and date of birth when given) on another case: say so, with a link.
+          const dup = h('p', { class: 'suspect-dup', hidden: true, role: 'status' });
+          const checkDup = async () => {
+            if (s.notIdentified || !String(s.name || '').trim() || !root.CVPersonView.findDuplicates) { dup.hidden = true; return; }
+            const hits = await root.CVPersonView.findDuplicates({ name: s.name, dob: s.dob }, c).catch(() => []);
+            if (!hits.length) { dup.hidden = true; return; }
+            dup.replaceChildren(I('person-exclamation'), h('span', {}, `${hits[0].sameDob ? 'The same person (name and date of birth)' : 'Someone with this name'} is on ${hits.length === 1 ? 'another case' : `${hits.length} other cases`}: `),
+              ...hits.slice(0, 4).flatMap((x, n) => [n ? ', ' : '', h('a', { href: `#/case/${CVRoute.enc(x.c.id)}`, title: `${x.name}${x.dob ? `, DOB ${x.dob}` : ''}` }, x.c.number || 'No case number')]),
+              hits.length > 4 ? ` and ${hits.length - 4} more` : '');
+            dup.hidden = false;
+          };
+          nameIn.addEventListener('change', checkDup);
+          dob.addEventListener('change', checkDup);
           const card = h('div', { class: 'suspect-card' }, h('div', { class: 'suspect-row' },
             h('div', { class: 'field suspect-name-field' }, h('span', { class: 'suspect-name-label' }, 'Name', h('label', { class: 'suspect-notid', title: 'The suspect has not been identified yet. Templates and the Draft show "Not Identified".' }, notId, h('span', {}, 'Not Identified'))), nameIn),
             field('DOB', dob),
@@ -70,6 +83,7 @@
             // v1.119: every case and Mission this person is on.
             h('button', { 'data-ro-ok': 'true', class: 'icon-btn person-btn', type: 'button', title: 'Every case this person is on', onclick: () => { if (!String(s.name || '').trim()) return; root.CVPersonView.open(s.name, root.CaseVaultUI); } }, I('person-lines-fill'), h('span', { class: 'sr-only' }, `Cases with ${who}`)),
             h('button', { class: 'icon-btn danger-icon contact-remove', type: 'button', title: 'Remove this suspect', onclick: () => { c.suspects.splice(i, 1); draw(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Remove ${who}`))),
+            dup,
             demo);
           showNotId();
           return card;

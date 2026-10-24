@@ -23,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.152.0';
+  const APP_VERSION = '1.153.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -229,7 +229,7 @@ const Vault = (() => {
     if (entry.manual) row.manual = true;
     return [row, ...keep.filter((x) => x.at !== row.at)].sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, BACKUP_HISTORY_MAX);
   }
-  function addBackupHistory(entry) { vault.settings.backupHistory = backupHistoryWith(vault.settings.backupHistory, entry); }
+  function addBackupHistory(entry) { vault.settings.backupHistory = backupHistoryWith(vault.settings.backupHistory, entry); vault.settings.changesSinceBackup = 0; }
 
   /** v1.87: a backup the helper made and checked (Firefox). */
   async function recordHelperBackup({ folder = '', files = 0, bytes = 0, at = '', drive = '' } = {}) {
@@ -387,9 +387,12 @@ const Vault = (() => {
     else vault.cases.push(entry);
   }
 
+  // v1.153: changes since the last full backup (each case save), for the reminder after 50.
+  function countChange() { if (vault && vault.settings) vault.settings.changesSinceBackup = (Number(vault.settings.changesSinceBackup) || 0) + 1; }
   function touchIndex(id, patch = {}) {
     const entry = vault.cases.find((c) => c.id === id);
     if (entry) Object.assign(entry, patch, { updated: nowISO() });
+    countChange();
     return saveVault();
   }
 
@@ -505,6 +508,7 @@ const Vault = (() => {
       await FS.writeJSON(dir, 'case.json', c);
       const prev = vault.cases.find((e) => e.id === c.id);
       upsertIndex({ ...indexEntry(c, null, prev, locationOf(c.id)), nextDeadline: prev ? prev.nextDeadline : null });
+      countChange();
       await saveVault();
     });
   }
@@ -535,13 +539,28 @@ const Vault = (() => {
     await saveVault();
   }
 
+  /** v1.153: every file in a case folder, for Export Encrypted: [{ path, blob }] (paths inside the folder). */
+  async function caseFolderFiles(id) {
+    const dir = await caseDir(id);
+    if (!dir) throw Object.assign(new Error('This case folder is not on the SSD.'), { name: 'NotFoundError' });
+    const out = [];
+    const walk = async (d, path) => {
+      for (const e of await FS.list(d)) {
+        if (e.kind === 'directory') { if (e.name !== TRASH) await walk(e.handle, `${path}${e.name}/`); continue; }
+        out.push({ path: `${path}${e.name}`, blob: await e.handle.getFile() });
+      }
+    };
+    await walk(dir, '');
+    return out;
+  }
+
   /**
    * v1.106: put one case back from a full backup. files: [{ path, data }] with paths relative to
    * the case folder ("case.json", "files/Photos/x.jpg"). They are written to restore-tmp/<id>
    * first and moved in only when all are there. A case with the same id in the vault goes to
    * Recently Deleted first, so nothing is lost. -> the restored case.
    */
-  function restoreCaseFromBackup(id, location, files, onFile = () => {}) {
+  function restoreCaseFromBackup(id, location, files, onFile = () => {}, note = 'Restored from a full backup') {
     return serial(`case:${id}`, async () => {
       if (!/^[A-Za-z0-9][\w.-]*$/.test(id)) throw Object.assign(new Error(`"${id}" is not a case folder name.`), { name: 'SyntaxError' });
       const to = location === 'archive' ? 'archive' : 'active';
@@ -561,7 +580,7 @@ const Vault = (() => {
         if (!c) throw Object.assign(new Error('The backup has no readable case.json for this case.'), { name: 'NotReadableError' });
         c.id = id;
         delete c.deleted;
-        logActivity(c, 'Restored from a full backup');
+        logActivity(c, note);
         await FS.writeJSON(tmp, 'case.json', c);
         // The copy in the vault now (if any) waits in Recently Deleted; an older one there makes way.
         if (vault.cases.some((e) => e.id === id)) {
@@ -1435,6 +1454,45 @@ const Vault = (() => {
     await touchIndex(id);
   }
 
+  /* v1.153: Undo for a deleted file. The file is moved (copied, checked, removed) into the case's
+   * hidden .trash folder instead of being removed at once; untrashFile puts it back, emptyFileTrash
+   * removes it for good (a few seconds later, when Undo is gone). -> { trash, path } */
+  const TRASH = '.trash';
+  async function trashFile(id, path) {
+    assertWritable(id);
+    const { folder, base } = CVCaseFiles.splitPath(path);
+    const src = await folderDir(id, folder);
+    const file = await FS.getFile(src, base);
+    if (!file) throw Object.assign(new Error(`${base} is no longer in this case.`), { name: 'NotFoundError' });
+    const bin = await FS.getDir(await caseDir(id), TRASH, true);
+    // Left over from a CaseVault closed while Undo was still showing: gone after an hour.
+    for (const e of await FS.list(bin)) { const t = Number(e.name.split('-')[0]); if (t && Date.now() - t > 3600000) await FS.remove(bin, e.name).catch(() => {}); }
+    const name = await FS.uniqueName(bin, `${Date.now()}-${base}`);
+    await FS.writeData(bin, name, file);
+    if (!(await sameBytes(file, await FS.getFile(bin, name)))) { await FS.remove(bin, name).catch(() => {}); throw new Error(`${base} could not be set aside, so it was not deleted.`); }
+    await FS.remove(src, base);
+    await touchIndex(id);
+    return { trash: name, path };
+  }
+  async function untrashFile(id, token) {
+    assertWritable(id);
+    const bin = await FS.getDir(await caseDir(id), TRASH);
+    const file = bin && (await FS.getFile(bin, token.trash));
+    if (!file) throw Object.assign(new Error('That file can no longer be brought back.'), { name: 'NotFoundError' });
+    const { folder, base } = CVCaseFiles.splitPath(token.path);
+    const dst = await folderDir(id, folder, true);
+    const name = await FS.uniqueName(dst, base);
+    await FS.writeData(dst, name, file);
+    await FS.remove(bin, token.trash).catch(() => {});
+    await touchIndex(id);
+    return CVCaseFiles.joinPath(folder, name);
+  }
+  async function emptyFileTrash(id) {
+    if (isArchived(id)) return;
+    const dir = await caseDir(id);
+    if (await FS.exists(dir, TRASH)) await FS.remove(dir, TRASH, true);
+  }
+
   /**
    * Move a file to another document folder (or rename it in place), naming it by the convention.
    * The copy is verified byte for byte before the original is removed. Returns the new path.
@@ -1447,7 +1505,8 @@ const Vault = (() => {
     if (!file) throw Object.assign(new Error(`${base} is no longer in this case.`), { name: 'NotFoundError' });
     const dst = await folderDir(id, toFolder, true);
     const c = await getCase(id);
-    const wanted = opts.keepName ? base : CVCaseFiles.fileName(c, toFolder, base, opts.description || '');
+    // v1.153: opts.name puts it back under a given name (Undo of a move or rename).
+    const wanted = opts.name ? FS.safeName(opts.name) : opts.keepName ? base : CVCaseFiles.fileName(c, toFolder, base, opts.description || '');
     if (folder === toFolder && wanted === base) return path;
     const name = await FS.uniqueName(dst, wanted);
     await FS.writeData(dst, name, file);
@@ -1765,11 +1824,57 @@ const Vault = (() => {
     }
   }
 
-  function saveDraft(id, slug, meta, body) {
+  /* v1.153: earlier versions of a report: drafts/.versions/<slug>/<time>.md, the last 10, at most
+   * one every 10 minutes while it is being edited (and always one when it is deleted). */
+  const VERSIONS = '.versions';
+  const VERSION_KEEP = 10;
+  const VERSION_EVERY_MS = 10 * 60 * 1000;
+  const versionStamp = () => new Date().toISOString().replace(/[:.]/g, '-');
+  const stampTime = (name) => { const m = /^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z/.exec(name); return m ? Date.parse(`${m[1]}T${m[2]}:${m[3]}:${m[4]}.${m[5]}Z`) : 0; };
+  async function keepVersion(id, slug, text, force) {
+    const vdir = await FS.getDir(await FS.getDir(await draftsDir(id), VERSIONS, true), slug, true);
+    const names = (await FS.list(vdir)).filter((e) => e.kind === 'file' && /\.md$/.test(e.name)).map((e) => e.name).sort();
+    const last = names[names.length - 1];
+    if (!force && last && Date.now() - stampTime(last) < VERSION_EVERY_MS) return;
+    if (last && (await FS.readText(vdir, last)) === text) return;
+    await FS.writeText(vdir, `${versionStamp()}.md`, text);
+    for (const old of names.slice(0, Math.max(0, names.length + 1 - VERSION_KEEP))) await FS.remove(vdir, old).catch(() => {});
+  }
+  /** Newest first: [{ name, at, size }] */
+  async function listDraftVersions(id, slug) {
+    const v = await FS.getDir(await draftsDir(id), VERSIONS);
+    const vdir = v && (await FS.getDir(v, slug));
+    if (!vdir) return [];
+    const out = [];
+    for (const e of await FS.list(vdir)) if (e.kind === 'file' && /\.md$/.test(e.name)) out.push({ name: e.name, at: new Date(stampTime(e.name)).toISOString(), size: (await e.handle.getFile()).size });
+    return out.sort((a, b) => b.name.localeCompare(a.name));
+  }
+  async function readDraftVersion(id, slug, name) {
+    const v = await FS.getDir(await draftsDir(id), VERSIONS);
+    const vdir = v && (await FS.getDir(v, slug));
+    const text = vdir && (await FS.readText(vdir, name));
+    if (text == null) return null;
+    const { meta, body } = CVDraft.parseDraft(text);
+    return { meta: { title: slug, type: 'other', ...meta }, body };
+  }
+  /** Put a version back (the current text is kept as a version first). */
+  async function restoreDraftVersion(id, slug, name) {
+    const v = await readDraftVersion(id, slug, name);
+    if (!v) throw Object.assign(new Error('That version is no longer there.'), { name: 'NotFoundError' });
+    const cur = await FS.readText(await draftsDir(id), `${slug}.md`);
+    if (cur != null) await keepVersion(id, slug, cur, true);
+    return saveDraft(id, slug, v.meta, v.body, { noVersion: true });
+  }
+
+  function saveDraft(id, slug, meta, body, opts = {}) {
     return serial(`draft:${id}:${slug}`, async () => {
       assertWritable(id);
       const m = { ...meta, updated: nowISO() };
       if (!m.created) m.created = m.updated;
+      if (!opts.noVersion) {
+        const before = await FS.readText(await draftsDir(id), `${slug}.md`).catch(() => null);
+        if (before != null) await keepVersion(id, slug, before, false).catch(() => {});
+      }
       await FS.writeText(await draftsDir(id), `${slug}.md`, CVDraft.serializeDraft(m, body));
       await touchIndex(id);
       return m;
@@ -1778,8 +1883,18 @@ const Vault = (() => {
 
   async function deleteDraft(id, slug) {
     assertWritable(id);
+    // v1.153: kept as a version first, so Undo (and Versions) can bring it back.
+    const text = await FS.readText(await draftsDir(id), `${slug}.md`).catch(() => null);
+    if (text != null) await keepVersion(id, slug, text, true).catch(() => {});
     await FS.remove(await draftsDir(id), `${slug}.md`);
     await touchIndex(id);
+  }
+  /** v1.153: Undo of Delete: the report back as it was. */
+  async function undeleteDraft(id, slug) {
+    const [last] = await listDraftVersions(id, slug);
+    if (!last) throw Object.assign(new Error('That report can no longer be brought back.'), { name: 'NotFoundError' });
+    const v = await readDraftVersion(id, slug, last.name);
+    return saveDraft(id, slug, v.meta, v.body, { noVersion: true });
   }
 
   /* ---------- templates (CaseVault-Data/templates/*.md) ---------- */
@@ -1976,17 +2091,17 @@ const Vault = (() => {
     newId, localDay, logActivity,
     resolve, create, load, close, ping,
     backupNow, listBackups, rebuildIndex, updateSettings, fullBackup, recordManualBackup, recordHelperBackup, backupHistoryWith, restoreBackup, readLetterheadLogo, saveLetterheadLogo, deleteLetterheadLogo,
-    createCase, getCase, saveCase, deleteCase, restoreCaseFromBackup, listDeleted, restoreDeleted, purgeDeleted, BIN_DAYS,
+    createCase, getCase, saveCase, deleteCase, restoreCaseFromBackup, caseFolderFiles, listDeleted, restoreDeleted, purgeDeleted, BIN_DAYS,
     listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
     archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS, archiveFolderName, setSuspectGroup, suspectGroups,
     OP_FOLDERS, OTHER_FOLDERS, readOpVehicles, saveOpVehicles, readOpList, saveOpList, otherCustomFolders, addOtherFolder, removeOtherFolder, listShared, addShared, readShared, deleteShared, readTraining, saveTraining, trainingRows, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
     lockerHeader, lockerRead, lockerWrite, lockerRemove,
     getNotes, saveNotes, listChats, readChat, saveChat, deleteChat,
     getTimeline, saveTimeline, sortEvents,
-    listFiles, addFile, readFile, deleteFile, moveFile, ensureFolders, renameCaseFolder, conventionalId, RENAME_MARKER,
+    listFiles, addFile, readFile, deleteFile, trashFile, untrashFile, emptyFileTrash, moveFile, ensureFolders, renameCaseFolder, conventionalId, RENAME_MARKER,
     readCaseJSON, writeCaseJSON, saveDiscoveryFile, readDiscoveryFile, appendLog, readLogs, logFiles, deleteLogs,
     listChecks, newCheckName, readCheck, saveCheck, deleteCheck, readTextCache, writeTextCache,
-    listDrafts, readDraft, newDraftSlug, saveDraft, deleteDraft,
+    listDrafts, readDraft, newDraftSlug, saveDraft, deleteDraft, undeleteDraft, listDraftVersions, readDraftVersion, restoreDraftVersion,
     listTemplates, readTemplate, saveTemplate, deleteTemplate, addStarterTemplates, purgeAll,
     listLibrary, readLibraryFile, saveLibraryFile, deleteLibraryFile, moveLibraryFile, readLibraryMeta, writeLibraryMeta, readLibraryText, writeLibraryText,
   };

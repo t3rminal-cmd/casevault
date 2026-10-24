@@ -76,7 +76,7 @@
     // The RD number is the case number unless you type another.
     for (const a of arrest.arrestees) if (!a.rdNumber && c.number) a.rdNumber = c.number;
     const images = archived ? [] : (await Vault.listFiles(c.id).catch(() => [])).filter((f) => IMAGE_RE.test(f.name));
-    const draftForm = root.CVReportFieldsUI ? await CVReportFieldsUI.load(c).catch(() => null) : null;
+    const draftForm = await root.CVLazy.reports().then((r) => r.fields.load(c)).catch(() => null); // v1.153: loads on first use
     const isSee = (x) => root.CVReportFields && RFsee(x);
     const reportCharges = ((draftForm && draftForm.charges) || []).filter((x) => (x.statute || x.description) && !isSee(x));
     // v1.114: the reports' victims (Draft and sent), offered on each charge by the arrestee's RD number.

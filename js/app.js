@@ -612,8 +612,13 @@
     if (!last || !last.at) return null;
     return Math.max(0, Math.floor((Date.now() - Date.parse(last.at)) / 86400000));
   }
+  // v1.153: also due after this many changes (case saves) since the last full backup.
+  const FULL_BACKUP_CHANGES = 50;
+  const changesSinceBackup = () => Number(Vault.data && Vault.data.settings && Vault.data.settings.changesSinceBackup) || 0;
+  const backupByCount = () => fullBackupAge() != null && changesSinceBackup() >= FULL_BACKUP_CHANGES;
   function fullBackupText() {
     const n = fullBackupAge();
+    if (backupByCount() && n <= FULL_BACKUP_DAYS) return `${changesSinceBackup()} changes since the last full backup`;
     if (n == null) return 'No full backup yet';
     return `Last full backup: ${n === 0 ? 'today' : n === 1 ? 'yesterday' : `${n} days ago`}`;
   }
@@ -659,6 +664,12 @@
     CVChatUI.reset();
     CVNotesFloat.reset();
     if (window.CVLockerUI) CVLockerUI.lock();
+    // v1.153: the SSD was pulled: nothing of a case stays on the screen (open popups, the page, the
+    // messages), and with a PIN set the privacy screen locks at once (the PIN opens it again).
+    for (const d of document.querySelectorAll('dialog[open]')) if (d.id !== 'privacy-screen') { try { d.close(); } catch { /* already closed */ } }
+    $('#main').replaceChildren();
+    const toasts = $('#toasts'); if (toasts) toasts.replaceChildren();
+    if (Vault.data && Vault.data.settings && Vault.data.settings.privacyPin && window.CVPrivacy) CVPrivacy.lock();
     renderNetStatus();
     Save.render();
     gateLost();
@@ -1043,7 +1054,7 @@
     const q = $('#case-search').value.trim().toLowerCase();
     const row = (c, withSubject) => [c.id, c.location, c.number, withSubject ? c.subject : '', c.operationId, c.status, c.opened, c.nextDeadline, c.sol,
       q ? [c.title, c.fileNumber, c.agencyNumber, c.client, c.tags, c.notes] : null];
-    const ctx = [q, state.caseId, location.hash, sideOrder, today(), [...sideFold], Vault.listOperations().map((o) => [o.id, o.number, o.name, o.status])];
+    const ctx = [q, state.caseId, location.hash, sideOrder, today(), [...sideFold], Vault.listOperations().map((o) => [o.id, o.number, o.name, o.status]), pinnedIds()];
     const cases = Vault.data.cases;
     return { all: JSON.stringify([ctx, cases.map((c) => row(c, true))]), shape: JSON.stringify([ctx, cases.map((c) => row(c, false))]),
       subjects: new Map(cases.map((c) => [c.id, c.subject])) };
@@ -1081,7 +1092,12 @@
     // v1.78: the Missions sit inside one MISSION FILES folder, like GENERAL FILES, with New Mission.
     const missionGroups = openGroups.filter((g) => g.op);
     const otherGroups = openGroups.filter((g) => !g.op);
-    list.replaceChildren(missionFolder(missionGroups), ...(otherGroups.length ? otherGroups.map((g) => operationGroup(g)) : missionGroups.length ? [] : [h('li', { class: 'empty muted' },
+    // v1.153: pinned cases (the pin on the home page) at the top, besides their place below.
+    const pinned = searching ? [] : pinnedIds().map((id) => Vault.data.cases.find((c) => c.id === id)).filter((c) => c && !isArchivedEntry(c));
+    const pinBox = pinned.length ? h('li', { class: 'side-pinned' },
+      h('div', { class: 'side-found-head muted small side-pinned-head' }, 'Pinned', I('pin-angle')),
+      h('ul', { class: 'side-pinned-list' }, pinned.map((c) => caseItem(c)))) : null;
+    list.replaceChildren(...(pinBox ? [pinBox] : []), missionFolder(missionGroups), ...(otherGroups.length ? otherGroups.map((g) => operationGroup(g)) : missionGroups.length ? [] : [h('li', { class: 'empty muted' },
       closedGroups.length ? 'Every Mission is closed.' : activeCount ? 'No cases match.' : Vault.data.cases.length ? 'No active cases.' : 'No cases yet. Click "New case".')]));
     // v1.121: no Closed / Archived area in the sidebar (they are on the home page: CLOSED FILES and
     // ARCHIVED). A search still finds closed and archived cases: they are listed under the open ones.
@@ -1640,7 +1656,8 @@
       for (const c of open) {
         const tl = todayMemo.get(c.id);
         if (!tl) continue;
-        for (const ev of (tl.data && tl.data.events) || []) if ((ev.date === now || ev.date === tom) && !ev.done) items.push({ c, ev, data: tl.data });
+        // v1.153: a court date shows for the week before it (7 days and 1 day reminders).
+        for (const ev of (tl.data && tl.data.events) || []) if (((ev.date === now || ev.date === tom) || CVOperation.courtReminder(ev, now)) && !ev.done) items.push({ c, ev, data: tl.data });
       }
       if (!items.length) return; // filled even before it is on the page: with nothing re-read this runs at once
       items.sort((a, b) => (a.ev.date + (a.ev.time || '99')).localeCompare(b.ev.date + (b.ev.time || '99')));
@@ -1648,8 +1665,8 @@
         const done = ev.kind === 'deadline' ? h('input', { type: 'checkbox', 'aria-label': `Mark "${ev.title}" done`, title: 'Mark done' }) : null;
         const li = h('li', { class: `today-row today-${ev.kind}${ev.date === now ? ' is-today' : ''}` },
           done || h('span', { class: 'today-dot' }),
-          h('span', { class: 'today-when' }, ev.date === now ? 'Today' : 'Tomorrow', ev.time ? ` ${ev.time}` : ''),
-          h('span', { class: `badge ${ev.kind}` }, ev.kind === 'deadline' ? 'Deadline' : ev.kind === 'buy' ? 'Buy' : ev.kind === 'arrest' ? 'Arrest' : 'Event'),
+          h('span', { class: 'today-when' }, ev.date === now ? 'Today' : ev.date === tom ? 'Tomorrow' : `In ${CVOperation.daysBetween(now, ev.date)} days`, ev.time ? ` ${ev.time}` : ''),
+          h('span', { class: `badge ${ev.kind}` }, CVOperation.kindLabel(ev.kind)),
           h('a', { class: 'today-title', href: caseLink(c, 'timeline') }, ev.title || 'Untitled'),
           h('a', { class: 'today-case', href: caseLink(c), title: subj(c) }, c.number || 'No case number'));
         if (done) done.addEventListener('change', async () => {
@@ -1658,7 +1675,7 @@
         });
         return li;
       }));
-      box.replaceChildren(panelHead('Today', `${plural(items.length, 'item')} due today and tomorrow on the Timelines of your open cases.`), list);
+      box.replaceChildren(panelHead('Today', `${plural(items.length, 'item')} due today and tomorrow on the Timelines of your open cases, and court dates this week.`), list);
       box.hidden = false;
     })().catch(() => {});
     return box;
@@ -1706,7 +1723,8 @@
     const ids = pinnedIds();
     const next = ids.includes(c.id) ? ids.filter((x) => x !== c.id) : [...ids, c.id].slice(-12);
     try { await Save.track('settings', () => Vault.updateSettings({ pinnedCases: next })); } catch { return; }
-    toast(next.includes(c.id) ? `Case ${c.number || ''} pinned to the top of Recently Updated.` : `Case ${c.number || ''} unpinned.`, 'success', 2500);
+    toast(next.includes(c.id) ? `Case ${c.number || ''} pinned to the top of Recently Updated and the case list.` : `Case ${c.number || ''} unpinned.`, 'success', 2500);
+    renderCaseList();
   }
   const pinBtn = (c, after = () => showDashboard()) => {
     const on = pinnedIds().includes(c.id);
@@ -2396,7 +2414,7 @@
    * page): what is due, Back Up Now, and × to hide it for today. */
   function backupBarDue() {
     const n = fullBackupAge();
-    if (n != null && n <= FULL_BACKUP_DAYS) return false;
+    if (n != null && n <= FULL_BACKUP_DAYS && !backupByCount()) return false;
     let hidden = '';
     try { hidden = localStorage.getItem('cv-backup-bar') || ''; } catch { /* not kept: show it */ }
     return hidden !== Vault.localDay();
@@ -2439,7 +2457,7 @@
     // v1.99: the backup reminder (and an unencrypted SSD) sit in the same row, after Overdue.
     // v1.151: while the backup bar under the banner says the same thing, the chip is left out.
     const backupChip = backupBarDue() ? null : (() => {
-      const n = fullBackupAge(); const due = n == null || n > FULL_BACKUP_DAYS;
+      const n = fullBackupAge(); const due = n == null || n > FULL_BACKUP_DAYS || backupByCount();
       // v1.107: short words, so the chip never clips (the full sentence is in its tooltip).
       const text = n == null ? 'No Backup' : n === 0 ? 'Backed Up' : `Backup: ${n}d`;
       return h('button', { type: 'button', class: `hero-count hc-backup${due ? ' hc-alert' : ''}`, title: `${fullBackupText()}. Click to back up the whole vault to another drive.`, onclick: () => showVaultPanel('backups') },
@@ -2977,7 +2995,7 @@
     // the tab redraws. (vault.js refuses the writes too.)
     if (archived) new MutationObserver(() => applyReadOnly(panel)).observe(panel, { childList: true, subtree: true });
 
-    const renderers = { details: renderDetails, arrest: (...a) => CVClosingUI.renderArrest(...a), draft: (panel, cc, tk) => CVReportFieldsUI.render(panel, cc, tk), reports: (panel, cc, tk, s) => (s === NOTES_SUB ? renderNotes(panel, cc, tk) : CVDraftsUI.render(panel, cc, tk, s)), timeline: renderTimeline, files: renderFiles, linkchart: async (panel, cc, tk) => (await CVLazy.linkChart()).render(panel, cc, tk), mail: (...a) => CVMailUI.render(...a), checks: (...a) => CVChecks.render(...a) };
+    const renderers = { details: renderDetails, arrest: (...a) => CVClosingUI.renderArrest(...a), draft: async (panel, cc, tk) => (await CVLazy.reports()).fields.render(panel, cc, tk), reports: async (panel, cc, tk, s) => (s === NOTES_SUB ? renderNotes(panel, cc, tk) : (await CVLazy.reports()).drafts.render(panel, cc, tk, s)), timeline: renderTimeline, files: renderFiles, linkchart: async (panel, cc, tk) => (await CVLazy.linkChart()).render(panel, cc, tk), mail: (...a) => CVMailUI.render(...a), checks: (...a) => CVChecks.render(...a) };
     try {
       await renderers[tab](panel, c, token, sub);
     } catch (err) {
@@ -3162,6 +3180,8 @@
           !archived && Vault.conventionalId(c) ? h('button', { class: 'btn action-btn', type: 'button', icon: 'folder', title: `Renames this case's folder on the SSD to the <year>-<case no.> convention (${Vault.conventionalId(c)}). Every file is copied and checked first.`, onclick: () => renameCaseFolder(c) }, 'Rename folder') : null,
           !archived ? h('button', { class: 'btn action-btn', type: 'button', icon: 'archive', title: 'Keeps everything, read-only, in CaseVault-Data\\archive. It leaves the case list but can still be opened, searched and restored.', onclick: () => archiveCase(c) }, 'Archive Case') : null,
           h('button', { class: 'btn action-btn', type: 'button', icon: 'file-earmark-pdf', title: 'One page for a supervisor: status, disposition, arrestees and charges, exhibits and the timeline.', onclick: () => caseSummary(c) }, 'Case Summary'),
+          h('button', { 'data-ro-ok': 'true', class: 'btn action-btn', type: 'button', icon: 'lock-fill', title: 'The whole case in one file locked with a password (like Discovery), to hand to another officer or keep somewhere safe. Settings → Backups → Import Case opens it.', onclick: async () => { try { (await CVLazy.caseExport()).exportDialog(c); } catch (err) { toast(`Could not open Export Encrypted: ${err.message}`, 'error'); } } }, 'Export Encrypted'),
+          h('button', { 'data-ro-ok': 'true', class: 'btn action-btn', type: 'button', icon: 'copy', title: 'Copies the case number, subject, charges, next court date and next deadline, to paste into an email or a message.', onclick: () => copyCaseDetails(c) }, 'Copy Case Details'),
           h('button', { class: 'btn danger action-btn', type: 'button', icon: 'trash3', title: 'Moves the case to Recently Deleted (⋮ → Vault) for 30 days, then deletes it for good.', onclick: () => deleteCase(c) }, 'Delete case…'))));
 
     // Cases of the operation made before v1.27 each had their own suspects, contacts and
@@ -3246,6 +3266,22 @@
           } }, 'Print / PDF')),
         body);
     });
+  }
+
+  /* v1.153: Copy Case Details: a few lines to paste into an email (cleared from the clipboard after 2 minutes). */
+  let detailsClip = null;
+  async function copyCaseDetails(c) {
+    const [arrest, tl] = await Promise.all([
+      Vault.readCaseJSON(c.id, 'arrest.json').catch(() => null),
+      Vault.getTimeline(c.id).catch(() => ({ events: [] })),
+    ]);
+    const text = CVCaseSummary.detailsText({ c, subject: subj(c), mission: CVOperation.opLabel(opOf(c)), arrest, timeline: tl, today: today(), fmtDate });
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Case details copied. They are cleared from the clipboard in 2 minutes.', 'success', 4000);
+      clearTimeout(detailsClip);
+      detailsClip = setTimeout(() => { navigator.clipboard.writeText(' ').catch(() => {}); }, 120000);
+    } catch { toast('Could not copy: click in the CaseVault window first, then try again.', 'error'); }
   }
 
   /* v1.85: Case Summary: one page for a supervisor, as a PDF (the letterhead on top). */
@@ -3534,7 +3570,10 @@
   async function showVaultPanel(section = null) {
     if (!state.connected) return;
     let backups = [];
-    try { backups = await Vault.listBackups(); } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
+    // v1.153: Templates is part of Reports, which loads on first use.
+    const [, list] = await Promise.all([CVLazy.reports().catch(() => null), Vault.listBackups().then((x) => x, (err) => { if (FS.isDisconnectError(err)) throw err; return []; })]).catch(() => [null, null]);
+    if (!list) return onDriveLost();
+    backups = list;
     const v = Vault.data;
     await openDialog((close) => {
       const keep = h('input', { type: 'number', min: 1, max: 365, value: v.settings.backupsToKeep, class: 'narrow' });
@@ -3573,7 +3612,7 @@
           h('span', { class: 'fact-icon' }, I('hdd-fill')),
           h('div', {}, h('strong', { class: 'block' }, 'Whole vault to another drive'),
             h('span', { class: 'small' }, last && last.at ? `${fullBackupText()} (${fmtDateTime(Date.parse(last.at))})${last.files ? `, ${last.files} files, ${fmtSize(last.bytes)}, checked` : last.manual ? ', copied by hand' : ''}.` : 'No full backup yet. If the SSD is lost or fails, everything on it is gone.'),
-            h('span', { class: 'muted small block' }, `Do this at least every ${FULL_BACKUP_DAYS} days. The banner reminds you.`)),
+            h('span', { class: 'muted small block' }, `Do this at least every ${FULL_BACKUP_DAYS} days, or after ${FULL_BACKUP_CHANGES} changes (${changesSinceBackup()} so far). The banner reminds you.`)),
           h('div', { class: 'spacer' }),
           h('button', { class: 'btn primary', type: 'button', icon: 'hdd-fill', onclick: async () => { close(); await fullBackupDialog(); } }, 'Back Up Everything')),
         h('div', { class: `backup-full backup-enc${driveEncryptionWarning() ? ' backup-due' : ''}` },
@@ -3607,6 +3646,13 @@
             h('span', { class: 'muted small block' }, 'Reads 20 random files of a CaseVault-Backup folder and compares them with the SSD. Nothing is changed or copied.')),
           h('div', { class: 'spacer' }),
           h('button', { class: 'btn', type: 'button', icon: 'clipboard2-pulse', onclick: async () => { close(); await testRestoreDialog(); } }, 'Test Restore')),
+        // v1.153: a case from Export Encrypted (a .cvcase file).
+        h('div', { class: 'backup-full backup-import' },
+          h('span', { class: 'fact-icon' }, I('unlock')),
+          h('div', {}, h('strong', { class: 'block' }, 'Import an encrypted case'),
+            h('span', { class: 'muted small block' }, 'A .cvcase file made with Export Encrypted on a case page, and its password.')),
+          h('div', { class: 'spacer' }),
+          h('button', { class: 'btn', type: 'button', icon: 'unlock', onclick: async () => { close(); try { (await CVLazy.caseExport()).importDialog(); } catch (err) { toast(`Could not open Import Case: ${err.message}`, 'error'); } } }, 'Import Case…')),
         // v1.106: bring cases back from a full backup on another drive.
         h('div', { class: 'backup-full backup-restore' },
           h('span', { class: 'fact-icon' }, I('arrow-counterclockwise')),
@@ -3658,7 +3704,7 @@
 
       // Each section is a card; the list on the left jumps to it and follows the scrolling.
       const SECTION_ICONS = { vault: 'safe2', backups: 'save', deleted: 'trash3', privacy: 'eye-slash', affiant: 'person-badge', templates: 'file-earmark-ruled', library: 'bookshelf', behavior: 'robot', links: 'link-45deg', pii: 'fingerprint', mail: 'envelope-at', log: 'list-check', maintenance: 'tools' };
-      const sections = [info, backupsSec, deletedSec, privacySettings(v), affiantSettings(v), CVDraftsUI.templateSettings(), CVLibraryUI.librarySection(), CVLibraryUI.behaviorSection(), CVReferenceUI.linksSection(),
+      const sections = [info, backupsSec, deletedSec, privacySettings(v), affiantSettings(v), ...(window.CVDraftsUI ? [CVDraftsUI.templateSettings()] : []), CVLibraryUI.librarySection(), CVLibraryUI.behaviorSection(), CVReferenceUI.linksSection(),
         CVSecureSettings.watchSection(), CVSecureSettings.mailSection(), CVSecureSettings.logSection(), maintenance];
       const scroller = h('div', { class: 'vault-content' });
       // Scroll only the sections' own box. scrollIntoView would also scroll the panel itself,
@@ -3908,7 +3954,7 @@
   }
 
   /* v1.85: keyboard shortcuts. */
-  const SHORTCUTS = [['Ctrl+K', 'Find a case, Mission, person or page'], ['Alt+N', 'Quick Note into a case\'s Case History'], ['N', 'New case (when not typing)'], ['Ctrl+S', 'Save every change now'], ['Ctrl+\\', 'Show or hide the case list'], ['Esc', 'Close the popup'], ['?', 'This list']];
+  const SHORTCUTS = [['Ctrl+K', 'Find a case, Mission, person or page'], ['Alt+N', 'Quick Note into a case\'s Case History'], ['Alt+1 … Alt+9', 'The tabs of the open case, in order'], ['N', 'New case (when not typing)'], ['Ctrl+S', 'Save every change now'], ['Ctrl+\\', 'Show or hide the case list'], ['Esc', 'Close the popup'], ['?', 'This list']];
   /* v1.131: Find (Ctrl+K). One box for cases (number, subject, notes, status: the same match as the
    * sidebar search), Missions, CaseVault's pages and actions, and two searches for the words typed:
    * every case a person is on (the person view) and inside every case's notes, reports and files.
@@ -4049,6 +4095,13 @@
       quickNoteDialog();
       return;
     }
+    // v1.153: Alt+1 … Alt+9: the tabs of the case open now, in their order (Details, Timeline …).
+    if (state.connected && !popup && e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && /^Digit[1-9]$/.test(e.code || '') && state.caseId) {
+      const tabs = [...document.querySelectorAll('#main nav.tabs a.tab')];
+      const t = tabs[Number(e.code.slice(5)) - 1];
+      if (t) { e.preventDefault(); location.hash = t.getAttribute('href'); }
+      return;
+    }
     if (state.connected && !popup && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
       if (e.key === 'n' || e.key === 'N') { e.preventDefault(); newCase(); return; }
       if (e.key === '?') { e.preventDefault(); shortcutsDialog(); return; }
@@ -4115,7 +4168,7 @@
   $('#btn-power').addEventListener('click', async () => {
     // v1.90: no full backup for over a week: offer one before the SSD goes in the drawer.
     const age = fullBackupAge();
-    if (age == null || age > FULL_BACKUP_DAYS) {
+    if (age == null || age > FULL_BACKUP_DAYS || backupByCount()) {
       const pick = await openDialog((close) => h('form', { class: 'power-backup-form', onsubmit: (e) => { e.preventDefault(); close('backup'); } },
         h('h2', { icon: 'exclamation-triangle-fill' }, 'Back Up Before Powering Off?'),
         h('p', {}, `${fullBackupText()}. A copy on a second drive is what saves your cases if this SSD is lost or fails.`),
@@ -4274,17 +4327,20 @@
   CVMailUI.init(window.CaseVaultUI);
   // v1.151: Discovery and Link Chart load the first time they are opened (start-up reads less).
   const lazyPart = (files, name) => { let ready = null; return () => (ready = ready || CVKit.loadScripts(files).then(() => { window[name].init(window.CaseVaultUI); return window[name]; }).catch((err) => { ready = null; throw err; })); };
-  window.CVLazy = { discovery: lazyPart(['js/discovery-receipt.js', 'js/discovery-ui.js'], 'CVDiscoveryUI'), linkChart: lazyPart(['js/linkchart.js', 'js/linkchart-ui.js'], 'CVLinkChartUI') };
+  window.CVLazy = { discovery: lazyPart(['js/discovery-receipt.js', 'js/discovery-ui.js'], 'CVDiscoveryUI'), linkChart: lazyPart(['js/linkchart.js', 'js/linkchart-ui.js'], 'CVLinkChartUI'), caseExport: lazyPart(['js/case-export.js', 'js/case-export-ui.js'], 'CVCaseExportUI') };
+  // v1.153: Reports and the Draft tab too (they need each other, so they come together).
+  let reportsReady = null;
+  CVLazy.reports = () => (reportsReady = reportsReady || CVKit.loadScripts(['js/drafts/ghost.js', 'js/drafts/review.js', 'js/drafts/drafts-ui.js', 'js/report-fields-ui.js'])
+    .then(() => { CVDraftsUI.init(window.CaseVaultUI); CVReportFieldsUI.init(window.CaseVaultUI); return { drafts: CVDraftsUI, fields: CVReportFieldsUI }; })
+    .catch((err) => { reportsReady = null; throw err; }));
   CVSecureSettings.init(window.CaseVaultUI);
   memBox = CVMemory.mount($('#mem-status'), {
     isHelper: () => MODE === 'helper',
     engineConnected: () => CVChecks.Engine.status() === 'connected',
   });
   CVActivityLib.mount(CVActivity, $('#ai-activity'));
-  CVDraftsUI.init(window.CaseVaultUI);
   CVClosingUI.init(window.CaseVaultUI);
   CVLetterhead.init(window.CaseVaultUI);
-  CVReportFieldsUI.init(window.CaseVaultUI);
   CVReferenceUI.init(window.CaseVaultUI);
   CVLibraryUI.init(window.CaseVaultUI);
   CVChatUI.init(window.CaseVaultUI);

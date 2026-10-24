@@ -79,7 +79,43 @@
       h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => done() }, 'Done'))));
   }
 
-  const api = { appearances, open };
+  /** v1.153: when a suspect is added: the other cases with the same person (the same name, and the
+   * same date of birth when both have one). person: { name, dob }; cases: full case objects; self:
+   * the case being edited (it and the cases of its Mission are left out, they share suspects).
+   * -> [{ c, name, dob, sameDob }] */
+  function duplicates(person, cases, self = {}) {
+    const Op = O();
+    const name = clean(person && person.name);
+    if (!name || Op.normName(name).length < 3) return [];
+    const dob = clean(person.dob);
+    const out = [];
+    for (const c of cases || []) {
+      if (!c || c.id === self.id || (self.operationId && c.operationId === self.operationId)) continue;
+      const hit = [...(c.suspects || []).filter((sx) => sx && !sx.notIdentified).map((sx) => ({ name: sx.name, dob: sx.dob })), { name: c.subject, dob: '' }]
+        .find((x) => clean(x.name) && Op.nameMatch(name, x.name) === 'same' && !(dob && clean(x.dob) && clean(x.dob) !== dob));
+      if (hit) out.push({ c, name: clean(hit.name), dob: clean(hit.dob), sameDob: !!(dob && clean(hit.dob) === dob) });
+    }
+    return out.sort((a, b) => Number(b.sameDob) - Number(a.sameDob) || String(a.c.number || '').localeCompare(String(b.c.number || '')));
+  }
+
+  // The cases read for duplicates(), kept while each case's "updated" stays the same.
+  const caseMemo = new Map();
+  async function allCases() {
+    const entries = (Vault.data.cases || []).slice();
+    const out = [];
+    for (let i = 0; i < entries.length; i += 8) {
+      await Promise.all(entries.slice(i, i + 8).map(async (e) => {
+        const m = caseMemo.get(e.id);
+        if (m && m.updated === (e.updated || '')) { out.push(m.c); return; }
+        try { const c = await Vault.getCase(e.id); caseMemo.set(e.id, { updated: e.updated || '', c }); out.push(c); } catch { /* moved or unreadable */ }
+      }));
+    }
+    return out;
+  }
+  /** Browser: duplicates() over every case on the SSD. */
+  async function findDuplicates(person, self) { return duplicates(person, await allCases(), self); }
+
+  const api = { appearances, duplicates, findDuplicates, open };
   if (isNode) module.exports = api;
   else root.CVPersonView = api;
 })(this);
