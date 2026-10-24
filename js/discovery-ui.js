@@ -488,8 +488,19 @@
       search.addEventListener('input', draw);
       draw();
 
+      // v1.153: the log by recipient, on one page to print.
+      const logBtn = h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button', icon: 'printer', title: 'One page: each recipient, what was produced to them, when, and the Bates range', onclick: async () => {
+        close(false);
+        const profile = (Vault.data.settings && Vault.data.settings.affiant) || {};
+        const bytes = CVDiscoveryReceipt.logPdf(log.productions, { caseLabel: c.number ? `Case ${c.number}` : '', agency: profile.agency || '', printed: new Date().toLocaleDateString() });
+        const viewer = CVPdfViewer.create(bytes, { h, icon, title: 'Discovery Log', fileName: `Discovery Log ${c.number || ''}.pdf`.replace(/[\\/:*?"<>|]/g, '') });
+        await openDialog((done) => h('div', { class: 'pdf-view' }, h('h2', {}, 'Discovery Log'), viewer,
+          h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => done() }, 'Done'))));
+        viewer.destroy();
+      } }, 'Print Discovery Log');
       const history = log.productions.length ? h('details', { class: 'disc-history' },
         h('summary', {}, `Earlier productions (${log.productions.length})`),
+        h('div', { class: 'disc-log-bar' }, logBtn),
         h('ul', { class: 'plain-list' }, [...log.productions].reverse().map((p) => h('li', { class: 'disc-hist-row' },
           h('span', {}, `${p.produced} · ${D.batesRange(p.prefix, p.batesFirst, p.batesLast)}${p.producedTo ? ` · to ${p.producedTo}` : ''} · ${p.items.length} file${p.items.length === 1 ? '' : 's'}`),
           h('span', { class: 'disc-btns' },

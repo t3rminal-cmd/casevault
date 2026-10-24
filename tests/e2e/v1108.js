@@ -52,7 +52,7 @@ const SP = process.env.SP + '/v1108';
   // The Offense Classification is not turned into the DEA 6 words.
   ok(saved.offense !== SEE, 'the Offense Classification is left as it was');
   // Its PDF says it too.
-  const pdf = await p.evaluate(async (i) => { const c = Vault.data.cases.find((x) => x.id === i); const d = await CVReportFieldsUI.load(c); const bytes = await CVReportFieldsUI.pdfFor(c, d); return [...bytes].map((x) => String.fromCharCode(x)).join(''); }, id);
+  const pdf = await p.evaluate(async (i) => { const c = Vault.data.cases.find((x) => x.id === i); await CVLazy.reports(); const d = await CVReportFieldsUI.load(c); const bytes = await CVReportFieldsUI.pdfFor(c, d); return [...bytes].map((x) => String.fromCharCode(x)).join(''); }, id);
   ok(pdf.includes('(See DEA 6 for further information)') && pdf.includes('CLEAR/CLOSED'), 'the PDF prints See DEA 6 and the summary');
   console.log('errors', errs); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

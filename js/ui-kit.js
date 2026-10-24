@@ -26,5 +26,19 @@
     return loading.get(src);
   }
   async function loadScripts(list) { for (const src of list) await loadScript(src); }
-  root.CVKit = { cancelRow, loadScripts };
+  /** v1.153: a message with an Undo button for a few seconds. onUndo runs on a click; onDone when
+   * the time is up without one (to clean up for good). */
+  function undoToast(toast, h, message, onUndo, { ms = 10000, onDone } = {}) {
+    let settled = false;
+    const btn = h('button', { class: 'toast-undo', type: 'button' }, 'Undo');
+    const el = toast(h('span', { class: 'undo-msg' }, message, ' ', btn), 'success', ms);
+    btn.addEventListener('click', async () => {
+      if (settled) return;
+      settled = true; el.remove();
+      try { await onUndo(); } catch (err) { toast(`Could not undo: ${err.message}`, 'error', 8000); }
+    });
+    setTimeout(() => { if (!settled) { settled = true; if (onDone) Promise.resolve(onDone()).catch(() => {}); } }, ms);
+    return el;
+  }
+  root.CVKit = { cancelRow, loadScripts, undoToast };
 })(this);

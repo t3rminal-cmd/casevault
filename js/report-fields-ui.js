@@ -1215,6 +1215,13 @@
     const sendBtn = h('button', { class: 'btn primary', type: 'button', icon: 'send', title: 'Puts this report under Reports and its PDF under Files (Supplementary Report). Sending again updates both.', onclick: async () => {
       save(0);
       await Save.flushAll();
+      // v1.153: a checklist first: the exhibits the narrative mentions against the evidence list, and its dates in order.
+      const check = F().sendChecklist(data, Vault.localDay());
+      if (check.problems && !(await ui.openDialog((close) => h('div', { class: 'send-check' },
+        h('h2', { icon: 'card-checklist' }, 'Before You Send'),
+        h('ul', { class: 'send-check-list' }, check.items.map((x) => h('li', { class: x.ok ? 'ok' : 'warn' }, ui.icon(x.ok ? 'check-circle-fill' : 'exclamation-triangle-fill'), h('span', {}, x.text)))),
+        h('p', { class: 'muted small' }, 'These are reminders only. Go back to fix them, or send the report as it is.'),
+        CVKit.cancelRow(h, () => close(false), h('button', { class: 'btn primary', type: 'button', icon: 'send', onclick: () => close(true) }, 'Send Anyway')))))) return;
       try {
         let slug = await sentSlugOf(c, data);
         if (slug && !(await Vault.readDraft(c.id, slug).catch(() => null))) slug = ''; // that report was deleted

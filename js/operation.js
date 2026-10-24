@@ -337,7 +337,54 @@
     return [...named, ...[...out.values()].filter((g) => !g.key)];
   }
 
+
+  /* v1.153: the kinds of Timeline entry (Court is new), and Quick Add templates: each fills the form
+   * and can add the deadline that usually follows it (a warrant return 10 days after the warrant is
+   * served). */
+  const KIND_LABELS = { event: 'Event', buy: 'Buy', arrest: 'Arrest', deadline: 'Deadline', court: 'Court' };
+  const kindLabel = (k) => KIND_LABELS[k] || 'Event';
+  const TL_TEMPLATES = [
+    { id: 'warrant', label: 'Search Warrant Served', kind: 'event', title: 'Search warrant served', follow: { days: 10, title: 'Search warrant return due' } },
+    { id: 'buy', label: 'Controlled Buy', kind: 'buy', title: 'Controlled buy', follow: { days: 3, title: 'Submit buy evidence to the lab' } },
+    { id: 'arrest', label: 'Arrest', kind: 'arrest', title: 'Arrest', follow: { days: 1, title: 'Arrest report due' } },
+    { id: 'court', label: 'Court Date', kind: 'court', title: 'Court date', follow: null },
+    { id: 'subpoena', label: 'Grand Jury Subpoena Served', kind: 'event', title: 'Grand jury subpoena served', follow: { days: 14, title: 'Subpoena records due' } },
+    { id: 'phone', label: 'Phone Extraction Requested', kind: 'event', title: 'Phone extraction requested', follow: { days: 14, title: 'Follow up on the phone extraction' } },
+    { id: 'lab', label: 'Evidence Sent to the Lab', kind: 'event', title: 'Evidence sent to the lab', follow: { days: 30, title: 'Follow up on the lab results' } },
+  ];
+  /** "2026-03-01" + n days (local calendar, no time zone slips). */
+  function plusDays(iso, n) {
+    const [y, m, d] = String(iso).split('-').map(Number);
+    const t = new Date(Date.UTC(y, m - 1, d + Number(n || 0)));
+    return t.toISOString().slice(0, 10);
+  }
+  /** Whole days from `from` to `to` (both "YYYY-MM-DD"). */
+  function daysBetween(from, to) {
+    const ms = (iso) => { const [y, m, d] = String(iso).split('-').map(Number); return Date.UTC(y, m - 1, d); };
+    return Math.round((ms(to) - ms(from)) / 86400000);
+  }
+  /** The deadline a template adds after an entry on `date` (days may be changed), or null. */
+  function templateFollowUp(tpl, date, days) {
+    if (!tpl || !tpl.follow || !date) return null;
+    const n = Math.max(1, Math.min(365, Math.round(Number(days == null || days === '' ? tpl.follow.days : days)) || tpl.follow.days));
+    return { kind: 'deadline', date: plusDays(date, n), time: '', title: tpl.follow.title };
+  }
+  /** A court date's reminder: from 7 days before to the day itself ({ days, text }), else null. */
+  function courtReminder(ev, today) {
+    if (!ev || ev.kind !== 'court' || !ev.date || !today) return null;
+    const n = daysBetween(today, ev.date);
+    if (n < 0 || n > 7) return null;
+    return { days: n, text: n === 0 ? 'Court today' : n === 1 ? 'Court tomorrow' : `Court in ${n} days` };
+  }
+  /** The next court date on a timeline from today on: { date, time, title } or null. */
+  function nextCourt(events, today) {
+    const next = (events || []).filter((e) => e && e.kind === 'court' && e.date && e.date >= today)
+      .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))[0];
+    return next ? { date: next.date, time: next.time || '', title: next.title || '' } : null;
+  }
+
   const api = {
+    KIND_LABELS, kindLabel, TL_TEMPLATES, plusDays, daysBetween, templateFollowUp, courtReminder, nextCourt,
     BUY_UNITS, buyLine, buySummary, money, suspectGroups,
     subjectLabel, nameParts, TL_COLORS, isColor, suspectKey, suspectColors, eventColor,
     opKey, mergeOverview, sameOverview, mergeEvents,

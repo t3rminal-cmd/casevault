@@ -135,7 +135,11 @@
               : h('a', { class: 'icon-btn', href: `#/case/${CVRoute.enc(c.id)}/reports/${CVRoute.enc(d.slug)}`, title: 'Edit (a report made with New Report)' }, I('pencil-square'), h('span', { class: 'sr-only' }, `Edit ${d.title}`)),
             archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: `Delete ${d.title}`, onclick: async () => {
               if (!(await confirmDialog({ title: `Delete "${d.title}"?`, message: 'The report is permanently deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
-              try { await Save.track(`draft-del:${c.id}:${d.slug}`, () => Vault.deleteDraft(c.id, d.slug)); ui.refresh(); } catch { /* reported */ }
+              try {
+                await Save.track(`draft-del:${c.id}:${d.slug}`, () => Vault.deleteDraft(c.id, d.slug)); ui.refresh();
+                // v1.153: Undo brings the report back as it was.
+                CVKit.undoToast(toast, h, `Deleted "${d.title}".`, async () => { await Save.track(`draft-undel:${c.id}:${d.slug}`, () => Vault.undeleteDraft(c.id, d.slug)); ui.refresh(); });
+              } catch { /* reported */ }
             } }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${d.title}`))));
         if (!archived) {
           grip.addEventListener('keydown', (e) => {
@@ -514,11 +518,44 @@
       await Save.flushAll();
       if (!Save.failed.has(saveKey)) toast(`Saved to the SSD (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}).`, 'success', 2500);
     } }, 'Save');
+    // v1.153: the last 10 saved versions of this report (one every 10 minutes while it is edited):
+    // view one, or put it back (the text now is kept as a version first).
+    const versionsBtn = h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button', icon: 'clock-history', title: 'Earlier versions of this report: view one or put it back', onclick: async () => {
+      await Save.flushAll();
+      const list = await Vault.listDraftVersions(c.id, slug).catch(() => []);
+      const pick = await ui.openDialog((close) => {
+        const view = h('pre', { class: 'ver-view muted' }, list.length ? 'Pick a version on the left to see it here.' : '');
+        let chosen = null;
+        const put = h('button', { class: 'btn primary', type: 'button', icon: 'arrow-counterclockwise', disabled: true, onclick: () => close(chosen) }, 'Put This Version Back');
+        const rows = list.map((v) => h('button', { type: 'button', class: 'ver-row', onclick: async (e) => {
+          chosen = v.name;
+          for (const b of rows) b.classList.toggle('on', b === e.currentTarget);
+          const r = await Vault.readDraftVersion(c.id, slug, v.name).catch(() => null);
+          view.textContent = r ? r.body : 'This version could not be read.';
+          put.disabled = Vault.isArchived(c.id) || fromDraft || !r;
+        } }, h('strong', {}, new Date(Date.parse(v.at)).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })), h('span', { class: 'muted small' }, `${Math.max(1, Math.round(v.size / 1024))} KB`)));
+        return h('div', { class: 'ver-dialog' },
+          h('h2', { icon: 'clock-history' }, 'Earlier Versions'),
+          h('p', { class: 'muted small' }, list.length ? 'CaseVault keeps the last 10 versions of a report: one every 10 minutes while you write, and one when it is deleted.' : 'No earlier versions yet. One is kept every 10 minutes while you write.'),
+          list.length ? h('div', { class: 'ver-grid' }, h('div', { class: 'ver-list' }, rows), view) : null,
+          CVKit.cancelRow(h, () => close(null), put));
+      });
+      if (!pick) return;
+      try {
+        await Save.track(`draft:${c.id}:${slug}`, () => Vault.restoreDraftVersion(c.id, slug, pick));
+        toast('That version is back. The text from before is kept under Versions.', 'success', 5000);
+        go(c.id, 'reports', slug);
+        ui.refresh();
+      } catch (err) { toast(`Not put back: ${err.message}`, 'error'); }
+    } }, 'Versions');
     const delBtn = h('button', { class: 'btn small danger-ghost', type: 'button', icon: 'trash3', title: 'Delete this report from the SSD', onclick: async () => {
       if (!(await confirmDialog({ title: `Delete "${meta.title}"?`, message: 'The draft is permanently deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
       const t = Save.timers.get(saveKey);
       if (t) { clearTimeout(t.timer); Save.timers.delete(saveKey); }
-      try { await Save.track(`draft-del:${c.id}:${slug}`, () => Vault.deleteDraft(c.id, slug)); go(c.id, 'reports'); } catch { /* reported */ }
+      try {
+        await Save.track(`draft-del:${c.id}:${slug}`, () => Vault.deleteDraft(c.id, slug)); go(c.id, 'reports');
+        CVKit.undoToast(toast, h, `Deleted "${meta.title}".`, async () => { await Save.track(`draft-undel:${c.id}:${slug}`, () => Vault.undeleteDraft(c.id, slug)); go(c.id, 'reports', slug); });
+      } catch { /* reported */ }
     } }, 'Delete');
 
     const genStatus = h('div', { class: 'gen-status', hidden: true });
@@ -539,7 +576,7 @@
       banner,
       fromDraft ? h('p', { class: 'view-only-note' }, ui.icon('lock-fill'), ' View only: this report was sent from the Draft tab. To revise it, click Send Back to Draft.') : '',
       h('div', { class: 'draft-head' }, titleInput, typeSelect),
-      h('div', { class: 'draft-actions-bar' }, wordViewBtn, pdfViewBtn, ...(fromDraft ? [] : [genBtn, rephraseBtn, reviewBtn]), checkBtn, exportMenu, h('div', { class: 'spacer' }), fromDraft ? sendBackBtn || '' : saveBtn, delBtn),
+      h('div', { class: 'draft-actions-bar' }, wordViewBtn, pdfViewBtn, ...(fromDraft ? [] : [genBtn, rephraseBtn, reviewBtn]), checkBtn, exportMenu, h('div', { class: 'spacer' }), fromDraft ? sendBackBtn || '' : saveBtn, versionsBtn, delBtn),
       h('div', { class: 'toolbar draft-toolbar', hidden: fromDraft },
         fmtBar,
         suggestLabel),

@@ -42,6 +42,7 @@ function makePdf(n) {
   // The report PDF: one attachment page image per PDF page, captioned with the page.
   const pdf = await p.evaluate(async (i) => {
     const c = Vault.data.cases.find((x) => x.id === i) || { id: i };
+    await CVLazy.reports();
     const bytes = await CVReportFieldsUI.pdfFor(c);
     const txt = new TextDecoder('latin1').decode(bytes);
     return { images: (txt.match(/\/Subtype\s*\/Image/g) || []).length, page2: /page 2 of 3/.test(txt), doc: /Document: Lab report/.test(txt) };

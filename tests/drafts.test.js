@@ -66,7 +66,8 @@ test('drafts round-trip: direct mode (Chrome/Edge File System Access handles)', 
   // On "disk": a plain Markdown file whose first line holds the details.
   const data = await ssd.getDirectoryHandle('CaseVault-Data');
   const draftsDir = await (await (await data.getDirectoryHandle('cases')).getDirectoryHandle(c.id)).getDirectoryHandle('drafts');
-  assert.deepStrictEqual([...draftsDir.children.keys()], []);
+  // v1.153: a deleted report leaves only its kept versions (drafts/.versions), for Undo.
+  assert.deepStrictEqual([...draftsDir.children.keys()], ['.versions']);
   assert.ok(!(await data.getDirectoryHandle('templates')).children.has('generic-supplemental-report.md'), 'v1.48: no built-in template');
   Vault.close();
 });
@@ -90,7 +91,7 @@ test('drafts round-trip: helper mode (Firefox, through the helper HTTP API)', as
   if (dir) {
     // Same files and format as direct mode.
     const draftsDir = path.join(dir, 'CaseVault-Data', 'cases', c.id, 'drafts');
-    assert.deepStrictEqual(fs.readdirSync(draftsDir), []);
+    assert.deepStrictEqual(fs.readdirSync(draftsDir), ['.versions']); // v1.153: kept for Undo
     assert.ok(!fs.existsSync(path.join(dir, 'CaseVault-Data', 'templates', 'generic-supplemental-report.md')));
   }
   Vault.close();

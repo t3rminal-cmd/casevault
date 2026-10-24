@@ -21,7 +21,7 @@ const SP = process.env.SP;
   const send = async (offense, extra) => {
     // Leave the Draft page first, so its last save has finished before the file is read again.
     await p.evaluate(() => { location.hash = '#/'; }); await p.waitForTimeout(400);
-    await p.evaluate(async ([id, offense, extra]) => { const d = await CVReportFieldsUI.load({ id }); await Vault.writeCaseJSON(id, 'report-fields.json', { ...d, offense, ...extra }); }, [id, offense, extra]);
+    await p.evaluate(async ([id, offense, extra]) => { await CVLazy.reports(); const d = await CVReportFieldsUI.load({ id }); await Vault.writeCaseJSON(id, 'report-fields.json', { ...d, offense, narrative: 'Synthetic summary.', ...extra }); }, [id, offense, extra]);
     await p.evaluate((id) => { location.hash = `#/case/${id}/draft`; }, id); await p.waitForSelector('.rf-actions');
     await p.click('.rf-actions button:has-text("Send Draft to Reports")'); await p.waitForTimeout(2200);
   };
@@ -30,7 +30,7 @@ const SP = process.env.SP;
   await p.evaluate((id) => { location.hash = `#/case/${id}/reports`; }, id); await p.waitForSelector('.reports-table');
   const rowsOf = () => p.$$eval('.reports-table tbody tr', (x) => x.map((e) => e.dataset.slug + ':' + [...e.querySelectorAll('td.actions [title]')].map((b) => b.getAttribute('title').split(' ')[0]).join('/')));
   console.log('3 rows:', await rowsOf());
-  console.log('  sentPdf non-null:', await p.evaluate(async (id) => Promise.all(['supplementary-report', 'supplementary-report-2'].map(async (s) => { const b = await CVReportFieldsUI.sentPdf({ id, title: 'Alpha Op', number: 'JH1' }, s); return b && b.length; })), id));
+  console.log('  sentPdf non-null:', await p.evaluate(async (id) => CVLazy.reports().then(() => Promise.all(['supplementary-report', 'supplementary-report-2'].map(async (s) => { const b = await CVReportFieldsUI.sentPdf({ id, title: 'Alpha Op', number: 'JH1' }, s); return b && b.length; }))), id));
   await p.screenshot({ path: `${SP}/v140-reports.png` });
   // view
   await p.click('.reports-table tr[data-slug="supplementary-report"] .report-open'); await p.waitForSelector('.report-preview iframe'); await p.waitForTimeout(1200);
@@ -50,7 +50,7 @@ const SP = process.env.SP;
   await p.click('.reports-table tr[data-slug="supplementary-report"] button[title^="Send Back"]'); await p.waitForTimeout(400);
   const ok = await p.$('.dialog button:has-text("Send Back")'); if (ok) await ok.click();
   await p.waitForTimeout(1200);
-  console.log('6 send back ->', await p.evaluate(() => location.hash), '| offense:', (await p.evaluate((id) => CVReportFieldsUI.load({ id }), id)).offense);
+  console.log('6 send back ->', await p.evaluate(() => location.hash), '| offense:', (await p.evaluate(async (id) => { await CVLazy.reports(); return CVReportFieldsUI.load({ id }); }, id)).offense);
   console.log('errors:', errs);
   await b.close();
 })();

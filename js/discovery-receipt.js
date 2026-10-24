@@ -141,7 +141,70 @@
     return bytes;
   }
 
-  const api = { ACK, layout, build };
+  /** v1.153: the discovery log by recipient: [{ to, rows: [{ produced, range, files, pages }], files, pages }],
+   * recipients by name, each one's productions in date order. */
+  function byRecipient(productions) {
+    const out = new Map();
+    for (const p of productions || []) {
+      const to = String(p.producedTo || '').trim() || 'No recipient named';
+      const key = to.toLowerCase();
+      const g = out.get(key) || { to, rows: [], files: 0, pages: 0 };
+      const files = (p.items || []).length;
+      const pages = (p.items || []).reduce((n, it) => n + (Number(it.pages) || 0), 0);
+      g.rows.push({ produced: p.produced || '', range: p.batesFirst === p.batesLast ? bates(p.prefix, p.batesFirst) : `${bates(p.prefix, p.batesFirst)} to ${bates(p.prefix, p.batesLast)}`, files, pages, medium: p.destination || '' });
+      g.files += files; g.pages += pages;
+      out.set(key, g);
+    }
+    for (const g of out.values()) g.rows.sort((a, b) => a.produced.localeCompare(b.produced));
+    return [...out.values()].sort((a, b) => (a.to === 'No recipient named') - (b.to === 'No recipient named') || a.to.localeCompare(b.to));
+  }
+  /** v1.153: the discovery log as a PDF (one page for most cases): each recipient, what was produced,
+   * when, and the Bates range. opts: { caseLabel, agency, printed } */
+  function logPdf(productions, opts = {}) {
+    const P = R();
+    const W = P.PAGE_W; const H = P.PAGE_H; const M = 54; const IN = W - 2 * M;
+    const pages = []; let ops; let y;
+    const esc = P.pdfString;
+    const tw = (s, size, bold) => P.width(s, size, bold, 'helvetica');
+    const text = (x, yy, s, size = 10, bold = false) => { if (s) ops.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${x.toFixed(2)} ${yy.toFixed(2)} Td ${esc(String(s))} Tj ET`); };
+    const fill = (x, yy, w, h, g = 0.9) => ops.push(`${g} g ${x.toFixed(2)} ${yy.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re f 0 g`);
+    const rule = (yy) => ops.push(`0.5 w ${M.toFixed(2)} ${yy.toFixed(2)} m ${(M + IN).toFixed(2)} ${yy.toFixed(2)} l S`);
+    const newPage = () => { ops = []; pages.push({ ops, sigs: [], imgs: [], signed: true }); y = H - M; };
+    const ensure = (h) => { if (y - h < M + 30) { newPage(); text(M, y - 10, `Discovery Log (continued) · ${opts.caseLabel || ''}`, 9, true); y -= 24; } };
+    const COLS = [[0, 'DATE PRODUCED'], [0.22, 'BATES RANGE'], [0.62, 'FILES'], [0.74, 'PAGES'], [0.86, 'MEDIUM']];
+    newPage();
+    R().navy(ops, () => text(M, y - 18, 'DISCOVERY LOG', 18, true));
+    if (opts.agency) text(M, y - 32, String(opts.agency).toUpperCase(), 8.5, true);
+    if (opts.caseLabel) text(W - M - tw(opts.caseLabel, 10, true), y - 18, opts.caseLabel, 10, true);
+    y -= 50;
+    const groups = byRecipient(productions);
+    if (!groups.length) text(M, y - 10, 'No productions yet.', 10);
+    for (const g of groups) {
+      ensure(48);
+      fill(M, y - 16, IN, 16, 0.86);
+      text(M + 4, y - 11.5, g.to, 10.5, true);
+      const tot = `${g.rows.length} production${g.rows.length === 1 ? '' : 's'} · ${g.files} file${g.files === 1 ? '' : 's'}${g.pages ? ` · ${g.pages} page${g.pages === 1 ? '' : 's'}` : ''}`;
+      text(M + IN - 4 - tw(tot, 8.5), y - 11.5, tot, 8.5);
+      y -= 28;
+      for (const [x, label] of COLS) text(M + 4 + IN * x, y, label, 7, true);
+      y -= 4; rule(y); y -= 12;
+      for (const r of g.rows) {
+        ensure(14);
+        const vals = [r.produced, r.range, String(r.files), r.pages ? String(r.pages) : '—', r.medium];
+        COLS.forEach(([x], i) => text(M + 4 + IN * x, y, P.wrap(vals[i] || '', 9.5, IN * ((COLS[i + 1] || [1])[0] - x) - 8, false, 'helvetica')[0] || '', 9.5));
+        y -= 14;
+      }
+      y -= 10;
+    }
+    pages.forEach((p, i) => {
+      const pg = `Page ${i + 1} of ${pages.length}`;
+      p.ops.push(`BT /F1 8 Tf ${(W / 2 - tw(pg, 8) / 2).toFixed(2)} ${(M - 26).toFixed(2)} Td ${esc(pg)} Tj ET`);
+      if (opts.printed) { const pr = `Printed ${opts.printed}`; p.ops.push(`BT /F1 7.5 Tf ${(W - M - tw(pr, 7.5)).toFixed(2)} ${(M - 26).toFixed(2)} Td ${esc(pr)} Tj ET`); }
+    });
+    return P.assemble(pages, { title: 'Discovery Log', face: 'helvetica' });
+  }
+
+  const api = { ACK, layout, build, byRecipient, logPdf };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVDiscoveryReceipt = api;
 })(this);

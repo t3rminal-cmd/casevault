@@ -75,7 +75,7 @@
       const evW = hasSuspect ? EV_W : INNER - EV_X;
       const eventRow = ({ ev, number }) => {
         const when = `${ev.date ? fmt(ev.date) : 'No date'}${ev.time ? ` ${ev.time}` : ''}`;
-        const kind = ev.kind === 'deadline' ? (ev.done ? 'Deadline, done' : 'Deadline') : ev.kind === 'buy' ? 'Buy' : ev.kind === 'arrest' ? 'ARREST' : '';
+        const kind = ev.kind === 'deadline' ? (ev.done ? 'Deadline, done' : 'Deadline') : ev.kind === 'buy' ? 'Buy' : ev.kind === 'arrest' ? 'ARREST' : ev.kind === 'court' ? 'Court' : '';
         const head = [clean(ev.title) || 'Event', kind ? `[${kind}]` : ''].filter(Boolean).join(' ');
         const sub = [number && data.many ? `Case ${number}` : '', ev.kind === 'buy' ? Op.buyLine(ev) : '', clean(ev.note)].filter(Boolean).join(' · ');
         const lines = R.wrap(head, 10, evW, true);
