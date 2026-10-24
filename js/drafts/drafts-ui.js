@@ -129,10 +129,10 @@
               try { const path = await saveReportToFiles(c, d); toast(`Saved to Files: ${path.split('/').pop()}`, 'success', 5000); } catch (err) { if (!FS.isDisconnectError(err) && err.name === 'NotFoundError') toast(`Could not save ${d.title}: ${err.message}`, 'error'); }
             } }, I('folder-plus'), h('span', { class: 'sr-only' }, `Send ${d.title} to Files`)),
             archived ? null : d.fromLinkChart ? h('button', { class: 'icon-btn', type: 'button', title: 'Send Back to Link Chart to change it', onclick: async () => {
-              if (await root.CVLinkChartUI.openFromFile(c, d.chartPath)) go(c.id, 'linkchart');
+              if (await (await root.CVLazy.linkChart()).openFromFile(c, d.chartPath)) go(c.id, 'linkchart');
             } }, I('diagram-3-fill'), h('span', { class: 'sr-only' }, `Send ${d.title} back to the Link Chart tab`))
               : fromDraft(d) ? sendBackBtn(d)
-              : h('a', { class: 'icon-btn', href: `#/case/${encodeURIComponent(c.id)}/reports/${encodeURIComponent(d.slug)}`, title: 'Edit (a report made with New Report)' }, I('pencil-square'), h('span', { class: 'sr-only' }, `Edit ${d.title}`)),
+              : h('a', { class: 'icon-btn', href: `#/case/${CVRoute.enc(c.id)}/reports/${CVRoute.enc(d.slug)}`, title: 'Edit (a report made with New Report)' }, I('pencil-square'), h('span', { class: 'sr-only' }, `Edit ${d.title}`)),
             archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: `Delete ${d.title}`, onclick: async () => {
               if (!(await confirmDialog({ title: `Delete "${d.title}"?`, message: 'The report is permanently deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
               try { await Save.track(`draft-del:${c.id}:${d.slug}`, () => Vault.deleteDraft(c.id, d.slug)); ui.refresh(); } catch { /* reported */ }
@@ -180,7 +180,7 @@
     // (here or in the Notes box) shows here.
     const notesPlain = String(notesText || '').replace(/\*\*|\+\+|__|[#>*_`]/g, '').replace(/\n{3,}/g, '\n\n').trim();
     const words = (notesPlain.match(/\S+/g) || []).length;
-    const notesUrl = `#/case/${encodeURIComponent(c.id)}/reports/.notes`;
+    const notesUrl = `#/case/${CVRoute.enc(c.id)}/reports/.notes`;
     // v1.34: Field Notes and Reports are two cards, each with an icon in its heading.
     const notesSection = h('section', { class: 'rpt-card notes-section' },
       h('div', { class: 'reports-head' }, h('span', { class: 'rpt-icon', 'aria-hidden': 'true' }, I('journal-text')), h('h2', { class: 'section-title' }, 'Field Notes'), h('div', { class: 'spacer' }),
@@ -261,7 +261,7 @@
         h('span', { class: 'muted small', title: 'Reports are view only' }, I('lock-fill'), ' View only'),
         h('div', { class: 'spacer' }),
         archived ? null : d.fromLinkChart ? h('button', { class: 'btn primary', type: 'button', icon: 'diagram-3-fill', title: 'Put this chart back on the Link Chart tab to change it. Save PDF to Case there updates it here and in Files.', onclick: async () => {
-          if (await root.CVLinkChartUI.openFromFile(c, d.chartPath)) { close(); go(c.id, 'linkchart'); }
+          if (await (await root.CVLazy.linkChart()).openFromFile(c, d.chartPath)) { close(); go(c.id, 'linkchart'); }
         } }, 'Send Back to Link Chart')
           : d.fromFields && RFU
           ? h('button', { class: 'btn primary', type: 'button', icon: 'arrow-counterclockwise', title: 'Put this report back on the Draft tab to correct it. Send Draft to Reports then updates it.', onclick: async () => {
@@ -285,7 +285,7 @@
     const { h, state, toast, go, Save, confirmDialog } = ui;
     const draft = await Vault.readDraft(c.id, slug);
     if (token !== state.renderToken) return;
-    const back = h('a', { href: `#/case/${encodeURIComponent(c.id)}/reports`, class: 'back-link' }, '← All reports');
+    const back = h('a', { href: `#/case/${CVRoute.enc(c.id)}/reports`, class: 'back-link' }, '← All reports');
     if (!draft) { panel.replaceChildren(back, h('p', { class: 'error-text' }, 'This draft no longer exists.')); return; }
     const meta = draft.meta;
     const saveKey = `draft:${c.id}:${slug}`;
@@ -622,7 +622,7 @@
           h('h2', {}, 'Save as a template'),
           h('p', { class: 'muted small' }, 'Replace this case\'s details with {{placeholders}} afterwards in Vault → Templates (for example {{case.number}}), or use Options → Dev Tools to make it fictitious first.'),
           ui.field('Template name', inp),
-          h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Save template')));
+          CVKit.cancelRow(h, () => close(null), h('button', { class: 'btn primary', type: 'submit' }, 'Save template')));
       });
       if (!name) return;
       const file = `${name.replace(/\.md$/i, '')}.md`;

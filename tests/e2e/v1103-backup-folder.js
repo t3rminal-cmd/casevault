@@ -9,6 +9,7 @@ const os = require('os');
 const path = require('path');
 const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
 const PWSH = process.env.PWSH || 'pwsh';
+const HELPER_KEY = '0123456789abcdef0123456789abcdef'; // v1.151: helper 1.16 wants its key on every API request
 const HELPER = path.resolve(__dirname, '..', '..', 'tools', 'casevault-helper', 'casevault-helper.ps1');
 const APP = path.resolve(__dirname, '..', '..');
 const PORT = 8599;
@@ -20,7 +21,7 @@ if (spawnSync(PWSH, ['-NoProfile', '-Command', 'exit 0']).status !== 0) { consol
   const data = path.join(dir, 'ssd', 'CaseVault-Data'); const bk1 = path.join(dir, 'bk1'); const net = path.join(dir, 'net'); const share = path.join(net, 'beelink-share');
   const local = path.join(dir, 'pc-c', 'CaseVault-Backups'); // stands in for C:\CaseVault-Backups; not made yet
   for (const d of [data, bk1, share]) fs.mkdirSync(d, { recursive: true });
-  const proc = spawn(PWSH, ['-NoProfile', '-File', HELPER, '-Port', String(PORT), '-DataPath', data, '-AppPath', APP, '-NoBrowser', '-NoAI',
+  const proc = spawn(PWSH, ['-NoProfile', '-File', HELPER, '-Port', String(PORT), '-DataPath', data, '-AppPath', APP, '-NoBrowser', '-NoAI', '-SessionKey', HELPER_KEY,
     '-BackupTargets', bk1, '-BitLockerStates', `${bk1}=on;${local}=on;${path.parse(data).root}=on`, '-SimulatedNetworkRoot', net], { stdio: 'ignore' });
   for (let i = 0; i < 100; i += 1) {
     try { if ((await fetch(`http://127.0.0.1:${PORT}/`)).ok) break; } catch { /* starting */ }
@@ -30,7 +31,7 @@ if (spawnSync(PWSH, ['-NoProfile', '-Command', 'exit 0']).status !== 0) { consol
   const p = await (await b.newContext({ viewport: { width: 1366, height: 900 } })).newPage(); const errs = [];
   p.on('pageerror', (e) => errs.push(e.message));
   await p.addInitScript(() => { delete Window.prototype.showDirectoryPicker; delete window.showDirectoryPicker; });
-  await p.goto(`http://127.0.0.1:${PORT}/`); await p.waitForTimeout(2500);
+  await p.goto(`http://127.0.0.1:${PORT}/?k=${HELPER_KEY}`); await p.waitForTimeout(2500);
   const create = p.locator('button:has-text("Create")').first();
   if (await create.count()) { await create.click(); await p.waitForTimeout(2000); }
   await p.waitForSelector('#gate', { state: 'hidden', timeout: 15000 });
@@ -39,15 +40,15 @@ if (spawnSync(PWSH, ['-NoProfile', '-Command', 'exit 0']).status !== 0) { consol
   const clearToasts = () => p.evaluate(() => document.querySelectorAll('.toast').forEach((t) => t.remove()));
 
   // The API refuses what isn't a shared folder, or can't be reached.
-  const api = (m, q) => p.evaluate(async ([m2, q2]) => (await fetch(`/api/backup-network?p=${q2}`, { method: m2, headers: { 'X-CaseVault': '1' } })).status, [m, q]);
+  const api = (m, q) => p.evaluate(async ([m2, q2]) => (await fetch(`/api/backup-network?p=${q2}`, { method: m2, headers: { 'X-CaseVault': '1', 'X-CaseVault-Key': localStorage.getItem('cv-helper-key') } })).status, [m, q]);
   ok(await api('POST', `&path=${encodeURIComponent('relative\\folder')}`) === 400, 'a path that is not a whole folder is refused (400)');
   ok(await api('POST', `&path=${encodeURIComponent(path.join(net, 'missing'))}`) === 404, 'a shared folder that cannot be reached is refused (404)');
   ok(await api('POST', `&path=${encodeURIComponent(path.join(data, 'cases'))}`) === 400, 'a folder inside the vault is refused');
-  ok(await p.evaluate(async () => (await fetch('/api/backup-start?p=&drive=' + encodeURIComponent('C:\\Windows'), { method: 'POST', headers: { 'X-CaseVault': '1' } })).status) === 400, 'backup-start still only writes to a listed drive');
+  ok(await p.evaluate(async () => (await fetch('/api/backup-start?p=&drive=' + encodeURIComponent('C:\\Windows'), { method: 'POST', headers: { 'X-CaseVault': '1', 'X-CaseVault-Key': localStorage.getItem('cv-helper-key') } })).status) === 400, 'backup-start still only writes to a listed drive');
 
   await clearToasts();
   await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(800);
-  await p.click('.hc-backup'); await p.waitForSelector('.backup-full');
+  await p.click('.hc-backup, .backup-bar .btn'); await p.waitForSelector('.backup-full');
   await p.click('.backup-full:not(.backup-enc) button'); await p.waitForSelector('.backup-drives');
   ok(await p.locator('.backup-net-row').isVisible() && await p.inputValue('.backup-net-row input') === 'C:\\CaseVault-Backups', 'until a folder is added, the box is open with C:\\CaseVault-Backups filled in');
   await p.screenshot({ path: process.env.SP + '/v1103/add.png' });
@@ -76,13 +77,13 @@ if (spawnSync(PWSH, ['-NoProfile', '-Command', 'exit 0']).status !== 0) { consol
 
   // Second time: no question. Then the folder can be taken off the list.
   await p.evaluate(() => document.querySelector('#dialog[open]') && document.querySelector('#dialog').close());
-  await p.click('.hc-backup'); await p.waitForSelector('.backup-full');
+  await p.click('.hc-backup, .backup-bar .btn'); await p.waitForSelector('.backup-full');
   await p.click('.backup-full:not(.backup-enc) button'); await p.waitForSelector('.backup-drives');
   await p.locator('.backup-drives .arch-opt').nth(0).click(); await p.click('#dialog[open] button:has-text("Back Up to This Drive")');
   await p.waitForSelector('#dialog[open] h2:has-text("Full Backup Done")', { timeout: 30000 });
   ok(true, 'the second backup to the same folder does not ask again');
   await p.evaluate(() => document.querySelector('#dialog').close());
-  await p.click('.hc-backup'); await p.waitForSelector('.backup-full');
+  await p.click('.hc-backup, .backup-bar .btn'); await p.waitForSelector('.backup-full');
   await p.click('.backup-full:not(.backup-enc) button'); await p.waitForSelector('.backup-drives');
   await p.click('.backup-net-remove'); await p.waitForTimeout(1000);
   const after = await p.evaluate(() => [...document.querySelectorAll('.backup-drives .arch-opt')].map((x) => x.textContent));

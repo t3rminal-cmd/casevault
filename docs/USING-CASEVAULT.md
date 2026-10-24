@@ -41,7 +41,7 @@ The installed app and the SSD copy each ask you to pick the vault folder once. T
 
 1. Plug in the SSD and unlock V:.
 2. Double-click **`W:\Start-CaseVault.bat`** and leave its window open.
-3. Firefox opens CaseVault at **http://127.0.0.1:8517/** (make Firefox your default browser, or paste that address into it). Bookmark it.
+3. CaseVault opens by itself in its own window, with its own browser profile on the SSD (`CaseVault-Browser`, next to `CaseVault-Data`), in your default browser when it is Edge, Chrome, Brave or Firefox (else Edge). Edge, Chrome and Brave open it as an app window; there CaseVault reaches the SSD directly, so the first time click **Choose folder…** and pick `CaseVault-Data` once. Since v1.151 always open CaseVault this way, not from a bookmark: the window the helper opens carries a key the helper asks for, and a plain `http://127.0.0.1:8517/` tab says to use `Start-CaseVault.bat`.
 4. There is no folder to pick. The helper finds the **CASEVAULT** partition by itself, whatever its drive letter. The first time, click **Create vault here**.
 
 When you're done, close CaseVault, then close the helper window, then eject the SSD.
@@ -213,6 +213,19 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.151
+
+- **PDF viewer:** PDFs now open at **Fit Width**, as wide as the window. The zoom buttons, 100% and Fit Width are still there
+- **Addresses without case data:** the address of a page in CaseVault no longer shows the case number, a Case Group's name or a report's name (`#/case/~aXHa…` instead of `#/case/2026-EX-100`). They are scrambled with a key kept in vault.json on the SSD, so the browser history on the PC means nothing without the drive. Old bookmarks still open and are rewritten
+- **Own browser window and profile (Start-CaseVault.bat, helper 1.16):** CaseVault opens in its own browser profile on the CASEVAULT drive (`CaseVault-Browser`): an app window in Edge or Chrome, a separate window in Firefox. History, cache and saved permissions stay on the encrypted SSD. In Edge or Chrome, pick `CaseVault-Data` once the first time (**Choose folder…**)
+- **Helper key (helper 1.16):** the helper now answers only the CaseVault window it opened. Each start makes a new random key that this window carries; other programs and plain tabs are refused. Always open CaseVault with `Start-CaseVault.bat`, not a bookmark. File names Windows treats as devices (CON, NUL, COM1…) are refused
+- **Backup said once:** while the backup bar under the banner shows, the banner leaves out its own red backup chip. Hide the bar for today with × and the chip is back
+- **Details tab:** where the case is filed is shown once, in the header; the grey bar keeps only its buttons (Case Group, Pin, Move File)
+- **Floating buttons:** they fade while the page scrolls, so the text passing under them can be read. They come back when scrolling stops, or on hover
+- **Files tab:** empty folders are greyed, so the ones holding files stand out. **All Documents** and **Choose Files** in Title Case
+- **Faster:** Discovery and Link Chart load the first time they are opened instead of at start-up. Mission and Case Group pages, the Mission Timeline and the Group Summary read their cases together instead of one by one
+- **Tidier code:** the backup screens moved out of app.js into their own file; one shared date helper and one shared dialog Cancel row replace copies spread over many files; 24 unused style rules from removed features are gone
+
 ### What's new in v1.150
 
 - **Today panel fixed:** it now shows every time you come back to the home page, not only the first time
@@ -231,18 +244,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Lock After:** the Secure Locker locks after **2, 5 or 15 minutes** without use (5 unless you change it, in the locker's header)
 - **Backup history:** Settings → Backups → **Full backup history** lists the last 10 full backups: date, drive or folder, size and whether it was checked
 - **Test Restore:** Settings → Backups → **Test Restore**. Pick a CaseVault-Backup folder on the backup drive; CaseVault reads 20 random files of it (and the case list) and compares them with the SSD. Nothing is changed or copied
-
-### What's new in v1.148
-
-- **Case Group page:** **Timeline** shows the events of every case in the group on one Timeline (each case's Timeline tab does the same, like an Operation's). **Summary PDF** lists each case (number, subject, status, opened, next deadline, charges from the Arrest Report) with your letterhead. **Make Operation** turns the group into an Operation with the same cases when the investigation grows
-- **How many are due:** a red Operation in OPERATION, or a red Case Group in INDEPENDENT, shows a small red number: how many of its cases have something due. Hold the mouse over it for the list (case, what, when)
-- **Snooze a deadline:** on the Timeline, **Snooze** on a deadline that is due quiets its alert for a day, 3 days or a week ("Snoozed until …"); the bell and the red case come back by themselves after that, or at once with **Wake**. Another deadline of the same case still rings
-- **Password age:** each password shows when it was set ("Changed 400 days ago"). **Remind After 90 / 180 Days / 1 Year** (in the Password Manager's header) marks older ones in red. Passwords saved before this version show their age once they are changed
-- **Copy Username:** the username has its own Copy button, like the password
-- **Last Contact (Confidential Files):** the pencil on a file now has **Last Contact**; it shows in its own column, and a click on the column heading sorts the longest-ago first
-- **Operation folders in order:** By Number, Newest First, or Most Alerts First, in the Operation Cases header (kept on this PC)
-- **Pin a case:** the pin by a case in Recently Updated (or **Pin** on the case's Details) keeps it at the top of Recently Updated, even after Clear
-- **Updater (1.3.2):** when an update fails, **Save Problem Report** writes a text file (what the updater did, the error, the versions; no case data) in `updater\problem-reports` to send to the developer
 
 ### Earlier versions
 
@@ -853,6 +854,7 @@ To make a PC forget the vault folder, open **Vault → Disconnect**.
 |---|---|
 | *In this browser, CaseVault runs through the CaseVault helper* | You're in Firefox. Start `W:\Start-CaseVault.bat`, which opens `http://127.0.0.1:8517/`. |
 | *The CaseVault helper is not running* | Start `W:\Start-CaseVault.bat` and click **Reconnect**. |
+| *This window was not opened by the CaseVault helper* | Close that tab (a bookmark or a typed address) and start `W:\Start-CaseVault.bat`; it opens CaseVault with the key the helper asks for (v1.151). |
 | Checks are very slow on the laptop | The laptop runs AI on its processor. Click **AI:** and choose **Light** for this PC (or keep **Auto**: it switches to Light by itself after the first request). The choice is kept per PC. |
 | *AI: Offline* in the header | Start `W:\Start-CaseVault.bat`, then click the pill → **Check again**. Checks still run with rules only. |
 | *Reading PDFs needs the installed app or the helper* | You opened `index.html` straight from the SSD. Use the installed app or the launcher address instead. |

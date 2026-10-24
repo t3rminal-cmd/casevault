@@ -4,7 +4,7 @@
  * rules, and on some screens and zoom levels the bottom of the last page (the signatures) couldn't
  * be reached. This one draws the pages with the bundled pdf.js into our own scrolling area, so the
  * whole report can always be scrolled to, with zoom buttons and the zoom in percent (starts at
- * 100%), Fit Width, Print and Download.
+ * Fit Width since v1.151), Fit Width, Print and Download.
  *
  * Where pdf.js can't load (the file:// copy on the SSD), the browser's viewer is used as before.
  */
@@ -30,11 +30,16 @@
     const out = iconBtn('dash-lg', 'Zoom out', () => zoomTo([...STEPS].reverse().find((s) => s < zoom) || STEPS[0]));
     const inn = iconBtn('plus-lg', 'Zoom in', () => zoomTo(STEPS.find((s) => s > zoom) || STEPS[STEPS.length - 1]));
     const reset = h('button', { class: 'btn small ghost', type: 'button', title: 'Actual size', onclick: () => zoomTo(100) }, '100%');
-    const fit = h('button', { class: 'btn small ghost', type: 'button', title: 'Make the page as wide as the window', onclick: async () => {
-      if (!doc) return;
+    // The zoom that makes page 1 as wide as the viewer (null while the viewer has no width yet).
+    const fitZoom = async () => {
+      if (!doc || !pages.clientWidth) return null;
       const p = await doc.getPage(1);
       const w = p.getViewport({ scale: 1 }).width * PT;
-      zoomTo(((pages.clientWidth - 40) / w) * 100);
+      return Math.max(STEPS[0], Math.min(STEPS[STEPS.length - 1], Math.round(((pages.clientWidth - 40) / w) * 100)));
+    };
+    const fit = h('button', { class: 'btn small ghost', type: 'button', title: 'Make the page as wide as the window', onclick: async () => {
+      const z = await fitZoom();
+      if (z) zoomTo(z);
     } }, 'Fit Width');
     const printBtn = h('button', { class: 'btn small', type: 'button', icon: 'printer', title: 'Print the report', onclick: () => print() }, 'Print');
     const dl = h('a', { class: 'btn small', href: url, download: opts.fileName || 'report.pdf', title: 'Save the PDF to this computer' }, 'Download');
@@ -102,6 +107,10 @@
         task = root.CVExtract.openPdf(lib, new Uint8Array(bytes));
         doc = await task.promise;
         pageInfo.textContent = `${doc.numPages} page${doc.numPages === 1 ? '' : 's'}`;
+        // v1.151: opens at Fit Width (once the viewer is on screen and has its width).
+        for (let i = 0; i < 30 && !pages.clientWidth; i++) await new Promise((r) => root.requestAnimationFrame(r));
+        const z = await fitZoom();
+        if (z) { zoom = z; pct.textContent = `${zoom}%`; }
         await draw();
         // v1.89: opts.page starts on that page (a Files preview from a check result).
         const start = Number(opts.page) || 0;

@@ -15,10 +15,13 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.150
+## What's New in v1.151
 
-- **Fixes:** Today panel shows on every visit to the home page; faster home page with many cases
-- **Privacy:** Case Group names are no longer saved in the browser on the PC
+- **PDF viewer** opens at Fit Width
+- **Privacy:** addresses no longer show case numbers or names; CaseVault opens in its own browser profile on the SSD (helper 1.16)
+- **Security:** the helper answers only the window it opened (a new key each start); Windows device names refused
+- **Look:** backup warning once, Details tab without the repeated location, floating buttons fade while scrolling, empty Files folders greyed
+- **Speed:** Discovery and Link Chart load on first use; Mission and Case Group pages read their cases together
 
 ## What CaseVault Does
 

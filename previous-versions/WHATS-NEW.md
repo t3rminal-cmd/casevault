@@ -4,6 +4,18 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.148
+
+- **Case Group page:** **Timeline** shows the events of every case in the group on one Timeline (each case's Timeline tab does the same, like an Operation's). **Summary PDF** lists each case (number, subject, status, opened, next deadline, charges from the Arrest Report) with your letterhead. **Make Operation** turns the group into an Operation with the same cases when the investigation grows
+- **How many are due:** a red Operation in OPERATION, or a red Case Group in INDEPENDENT, shows a small red number: how many of its cases have something due. Hold the mouse over it for the list (case, what, when)
+- **Snooze a deadline:** on the Timeline, **Snooze** on a deadline that is due quiets its alert for a day, 3 days or a week ("Snoozed until …"); the bell and the red case come back by themselves after that, or at once with **Wake**. Another deadline of the same case still rings
+- **Password age:** each password shows when it was set ("Changed 400 days ago"). **Remind After 90 / 180 Days / 1 Year** (in the Password Manager's header) marks older ones in red. Passwords saved before this version show their age once they are changed
+- **Copy Username:** the username has its own Copy button, like the password
+- **Last Contact (Confidential Files):** the pencil on a file now has **Last Contact**; it shows in its own column, and a click on the column heading sorts the longest-ago first
+- **Operation folders in order:** By Number, Newest First, or Most Alerts First, in the Operation Cases header (kept on this PC)
+- **Pin a case:** the pin by a case in Recently Updated (or **Pin** on the case's Details) keeps it at the top of Recently Updated, even after Clear
+- **Updater (1.3.2):** when an update fails, **Save Problem Report** writes a text file (what the updater did, the error, the versions; no case data) in `updater\problem-reports` to send to the developer
+
 ## What's new in v1.147
 
 - **Home page folders:** the names under the folders (Operation Cases, General Files, Closed Files, Archived, Other Files) start at the left, under the left edge of each folder

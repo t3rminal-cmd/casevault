@@ -320,7 +320,12 @@
   /** A folder path as shown on screen (v1.22): "cases\\2026-B1\\files" -> "cases | 2026-B1 | files". */
   const pathText = (p) => String(p || '').split(/[\\/]+/).filter(Boolean).join(' | ');
 
-  const api = { phone, ssn, dateText, parseDate, predictMonth, monthOf, dateField, monthGrid, calendar, install, titleCase, pathText };
+  /** v1.151: one place for "YYYY-MM-DD" in this PC's time zone (was copied in six files). */
+  const isoDay = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  /** That day plus n days ("2026-10-24", 1 -> "2026-10-25"); noon keeps clock changes out of it. */
+  const addDays = (iso, n) => { const d = new Date(`${iso}T12:00:00`); d.setDate(d.getDate() + n); return isoDay(d); };
+
+  const api = { phone, ssn, dateText, parseDate, predictMonth, monthOf, dateField, monthGrid, calendar, install, titleCase, pathText, isoDay, addDays };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else {
     root.CVFormat = api;

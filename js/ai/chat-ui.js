@@ -350,7 +350,7 @@
     const sel = h('select', { 'aria-label': 'Case' }, cases.map((c) => h('option', { value: c.id }, caseLabel(c))));
     return ui.openDialog((close) => h('form', { onsubmit: (e) => { e.preventDefault(); close(sel.value); } },
       h('h2', { icon: 'folder2-open' }, 'Save the chat to a case'), ui.field('Case', sel),
-      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Save'))));
+      CVKit.cancelRow(h, () => close(null), h('button', { class: 'btn primary', type: 'submit' }, 'Save'))));
   }
 
   /** Open (true), close (false) or switch the floating chat. */

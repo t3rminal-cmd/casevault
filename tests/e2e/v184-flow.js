@@ -1,6 +1,8 @@
 const boot = require('./boot');
 const ok = (cond, msg) => console.log(cond ? 'PASS' : 'FAIL', msg);
 (async () => { const { b, p, ids, errs } = await boot(1366, 900);
+  // v1.151: with the backup bar showing, the banner leaves its backup chip out; hide the bar for today to see the chip.
+  await p.evaluate(() => { localStorage.setItem('cv-backup-bar', Vault.localDay()); location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(800);
   // Hero chips
   const chips = await p.$$eval('.hero-count', (els) => els.map((e) => [e.className, e.textContent.trim(), getComputedStyle(e).backgroundColor, getComputedStyle(e).borderLeftWidth]));
   console.log(chips);

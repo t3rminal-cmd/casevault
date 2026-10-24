@@ -59,7 +59,7 @@
       h('p', { class: 'muted small' }, replaced ? `${replaced} name${replaced === 1 ? '' : 's'}, number${replaced === 1 ? '' : 's'} or address${replaced === 1 ? '' : 'es'} were swapped for placeholders like [NAME_1], so the AI learns the wording, not the people. Read it before saving: unusual names can slip through.` : 'Nothing that looks like a name, number or address was found. Read it before saving: unusual names can slip through.'),
       replaced ? findingsList(findings) : null,
       ui.field('Example Of', docSel), pre,
-      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit', icon: 'journal-bookmark' }, 'Save Example'))));
+      CVKit.cancelRow(h, () => close(false), h('button', { class: 'btn primary', type: 'submit', icon: 'journal-bookmark' }, 'Save Example'))));
     if (!ok) return false;
     const cat = L().category(folderFor(docSel.value));
     const name = `${FS.safeName(title || 'Report')} (example).md`;

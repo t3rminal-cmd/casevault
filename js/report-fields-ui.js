@@ -836,7 +836,7 @@
         h('div', { class: 'rf-fund-grid' }, ui.field('Denomination', den), ui.field('Quantity', qty), ui.field(serLabel, ser, 'span-2')),
         h('p', { class: 'muted small' }, 'The quantity counts the serial numbers you enter; type another number when not every bill was recorded.'),
         err,
-        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, g.denomination ? 'Save' : 'Add')));
+        CVKit.cancelRow(h, () => close(), h('button', { class: 'btn primary', type: 'submit' }, g.denomination ? 'Save' : 'Add')));
       });
       const draw = () => {
         box.replaceChildren(...(data.funds.length ? data.funds.map((g, i) => h('div', { class: 'rf-fund' },
@@ -1022,7 +1022,7 @@
               h('td', {}, ch.length ? ch.map(([a, b2]) => (a === b2 ? `${b2}` : `${a} → ${b2}`)).join(', ') : 'none')); }))),
         h('p', { class: 'muted small' }, 'Exhibit photos and PDFs are renamed to their new numbers. Reports already sent keep the numbers they were sent with, and an exhibit number typed into a narrative is not changed: check those.'),
         skipped.length ? h('p', { class: 'muted small' }, `Archived (read-only, left as they are): ${skipped.join(', ')}.`) : null,
-        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), h('button', { class: 'btn primary', type: 'button', icon: 'list-ol', onclick: () => close(true) }, 'Renumber'))));
+        CVKit.cancelRow(h, () => close(false), h('button', { class: 'btn primary', type: 'button', icon: 'list-ol', onclick: () => close(true) }, 'Renumber'))));
       if (!ok) return;
       try {
         for (const id of plan.order) {

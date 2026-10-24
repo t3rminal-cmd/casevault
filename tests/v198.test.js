@@ -7,7 +7,7 @@ const path = require('path');
 
 const read = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
 const ps = read('tools/casevault-helper/casevault-helper.ps1');
-const app = read('js/app.js');
+const app = read('js/app.js') + read('js/backup-ui.js'); // v1.151: the backup screens moved to backup-ui.js
 const wf = read('.github/workflows/pages.yml');
 
 test('v1.98: helper 1.13+ says whether the vault drive and each backup drive have BitLocker', () => {

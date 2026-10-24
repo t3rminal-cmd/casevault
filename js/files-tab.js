@@ -48,7 +48,7 @@
         : 'You pick the document type for each file next. They are copied to the SSD and named by the case number; the originals are not changed.';
       const drop = h('div', { class: 'dropzone', tabindex: '0', role: 'button', 'aria-label': 'Add files', title: dropTip },
         I('upload', { cls: 'drop-icon' }),
-        h('strong', {}, target ? `Drop files into ${target.replace('/', ' › ')}` : 'Drop files here'), ' or ', h('span', { class: 'link' }, 'choose files'));
+        h('strong', {}, target ? `Drop files into ${target.replace('/', ' › ')}` : 'Drop files here'), ' or ', h('span', { class: 'link' }, 'Choose Files'));
       drop.addEventListener('click', () => input.click());
       drop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
       drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
@@ -86,8 +86,9 @@
 
       const folderBtn = (key, label, n, { child = false, top = null } = {}) => {
         const a = h('a', {
-          href: `#/case/${encodeURIComponent(c.id)}/files${key ? `/${encodeURIComponent(key)}` : ''}`,
-          class: `folder-item ${current === key ? 'active' : ''} ${child ? 'child' : ''}`, 'data-ro-ok': 'true', 'aria-current': current === key ? 'page' : null,
+          href: `#/case/${CVRoute.enc(c.id)}/files${key ? `/${CVRoute.enc(key)}` : ''}`,
+          // v1.151: a folder with nothing in it is greyed, so the ones that hold files stand out.
+          class: `folder-item ${current === key ? 'active' : ''} ${child ? 'child' : ''}${key && !n ? ' empty' : ''}`, 'data-ro-ok': 'true', 'aria-current': current === key ? 'page' : null,
           title: top ? `${label}. Drag to reorder the folders (or Alt+↑/↓). Drop a file here to move it into this folder.` : null,
           draggable: top && !archived ? 'true' : null,
         }, h('span', { class: 'folder-name' }, label), h('span', { class: 'folder-count muted' }, n ? String(n) : ''), h('span', { class: 'folder-icon' }, I(FOLDER_ICONS[key] || 'folder')));
@@ -137,7 +138,7 @@
       };
 
       const nav = h('nav', { class: 'folder-nav', 'aria-label': 'Document folders' },
-        folderBtn('', 'All documents', files.length),
+        folderBtn('', 'All Documents', files.length),
         folderBtn('photos', 'Photos', files.filter(isPhoto).length),
         ordered.filter(visible).map((f) => {
           const kids = CF.childrenOf(f);
@@ -169,7 +170,7 @@
           showCase(c.id, 'files', current || null);
         } }, 'Arrange'),
         // v1.49: a password-protected, view-and-print-only package of chosen files, for discovery.
-        archived ? null : h('button', { class: 'btn small folder-reset disc-open', type: 'button', icon: 'shield-lock-fill', title: 'Make a password-protected discovery package of chosen files, with Bates numbers, for a USB drive or a DVD.', onclick: () => CVDiscoveryUI.open(c).catch((err) => { if (FS.isDisconnectError(err)) onDriveLost(); else toast(`Could not open Discovery: ${err.message}`, 'error'); }) }, 'Discovery'));
+        archived ? null : h('button', { class: 'btn small folder-reset disc-open', type: 'button', icon: 'shield-lock-fill', title: 'Make a password-protected discovery package of chosen files, with Bates numbers, for a USB drive or a DVD.', onclick: () => CVLazy.discovery().then((D) => D.open(c)).catch((err) => { if (FS.isDisconnectError(err)) onDriveLost(); else toast(`Could not open Discovery: ${err.message}`, 'error'); }) }, 'Discovery'));
 
       // A folder from an older version (Warrants Signed…): offer to move its files into the folder
       // that replaced it.
@@ -183,7 +184,7 @@
               try { await Save.track(`file-move:${c.id}:${f.name}`, () => Vault.moveFile(c.id, f.name, legacy.mergeInto, { keepName: !!legacy.keepName })); moved++; } catch { break; }
             }
             if (moved) toast(`Moved ${moved} file${moved === 1 ? '' : 's'} to ${legacy.mergeInto}.`, 'success', 5000);
-            location.hash = `#/case/${encodeURIComponent(c.id)}/files/${encodeURIComponent(legacy.mergeInto)}`;
+            location.hash = `#/case/${CVRoute.enc(c.id)}/files/${CVRoute.enc(legacy.mergeInto)}`;
           } }, `Move them to ${legacy.mergeInto}`))
         : null;
 
@@ -266,7 +267,7 @@
               h('td', { class: 'muted fadded date-cell', title: `Last updated ${fmtDateTime(f.modified)}` }, h('span', { class: 'fadded-day' }, addedText(f.modified)), f.modified ? h('span', { class: 'fadded-time' }, fmtTime(f.modified)) : null),
               h('td', { class: 'actions' },
                 // v1.56: a Link Chart PDF goes back to the Link Chart tab.
-                f.folder === 'Link Charts' && /\.pdf$/i.test(f.base) ? h('button', { class: 'icon-btn', type: 'button', title: 'Open in Link Chart: send this chart back to the Link Chart tab to change it', onclick: async () => { if (await CVLinkChartUI.openFromFile(c, f.name)) showCase(c.id, 'linkchart'); } }, I('diagram-3-fill'), h('span', { class: 'sr-only' }, `Open ${f.base} in Link Chart`)) : null,
+                f.folder === 'Link Charts' && /\.pdf$/i.test(f.base) ? h('button', { class: 'icon-btn', type: 'button', title: 'Open in Link Chart: send this chart back to the Link Chart tab to change it', onclick: async () => { if (await (await CVLazy.linkChart()).openFromFile(c, f.name)) showCase(c.id, 'linkchart'); } }, I('diagram-3-fill'), h('span', { class: 'sr-only' }, `Open ${f.base} in Link Chart`)) : null,
                 h('button', { class: 'icon-btn', type: 'button', title: f.folder ? 'Rename or move to another folder' : 'File it in a folder', onclick: () => moveFileDialog(c, f, current) }, I('pencil-square'), h('span', { class: 'sr-only' }, `Rename or move ${f.base}`)),
                 h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Delete from the SSD', onclick: async () => {
                   if (!(await confirmDialog({ title: 'Delete this file?', message: `"${f.base}" will be permanently deleted from the SSD.`, confirmText: 'Delete', danger: true }))) return;

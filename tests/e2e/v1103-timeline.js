@@ -25,7 +25,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   ok(/Example City/.test(tip || '') && /EX-400/.test(tip || ''), 'pointing at a circle shows the date, title, note and case number');
   const dot = p.locator('.op-timeline-section .mini-tl-dot[data-tip*="Search warrant"]');
   await dot.click(); await p.waitForTimeout(900);
-  ok(await p.evaluate((id) => location.hash === `#/case/${encodeURIComponent(id)}/timeline`, c4), 'a click opens that case\'s Timeline tab');
+  ok(await p.evaluate((id) => location.hash === `#/case/${CVRoute.enc(id)}/timeline`, c4), 'a click opens that case\'s Timeline tab');
   // Links in general: the accent colour on hover, never an added underline.
   await p.evaluate(() => { location.hash = '#/operations'; }); await p.waitForTimeout(900);
   const link = p.locator('a[href]:not(.btn):not(.tab):not(.case-item):visible', { hasText: 'OP-1' }).first();

@@ -331,7 +331,7 @@
       ? h('table', { class: 'files checks-table' },
         h('thead', {}, h('tr', {}, h('th', {}, 'Run'), h('th', {}, 'Checked'), h('th', {}, 'Flags'), h('th', {}, 'Open'), h('th', {}, 'Engine'))),
         h('tbody', {}, checks.map((k) => h('tr', { class: 'clickable', onclick: () => ui.go(c.id, 'checks', k.name) },
-          h('td', {}, h('a', { href: `#/case/${encodeURIComponent(c.id)}/checks/${encodeURIComponent(k.name)}` }, k.created ? fmtDateTime(Date.parse(k.created)) : k.name)),
+          h('td', {}, h('a', { href: `#/case/${CVRoute.enc(c.id)}/checks/${CVRoute.enc(k.name)}` }, k.created ? fmtDateTime(Date.parse(k.created)) : k.name)),
           h('td', {}, k.damaged ? h('span', { class: 'error-text' }, 'Damaged file') : [k.affidavit || 'Reports only', h('span', { class: 'muted small block' }, `against ${k.reports.length} document${k.reports.length === 1 ? '' : 's'}`)]),
           h('td', {}, k.counts ? ['High', 'Medium', 'Low'].map((s) => h('span', { class: `sev-count sev-${s.toLowerCase()}`, title: s }, `${k.counts[s] || 0}`)) : ''),
           h('td', {}, k.open != null ? String(k.open) : ''),
@@ -548,7 +548,7 @@
       data = null;
     }
     if (token !== state.renderToken) return;
-    const back = h('a', { href: `#/case/${encodeURIComponent(c.id)}/checks`, class: 'back-link' }, '← All checks');
+    const back = h('a', { href: `#/case/${CVRoute.enc(c.id)}/checks`, class: 'back-link' }, '← All checks');
     if (!data) { panel.replaceChildren(back, h('p', { class: 'error-text' }, 'This check could not be read.')); return; }
 
     const save = () => {

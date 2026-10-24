@@ -10,7 +10,7 @@ const SP = process.env.SP + '/v1132';
   await p.evaluate((id) => { location.hash = `#/case/${id}/details`; }, ids.c);
   await p.waitForSelector('.tab-panel input[placeholder="No subject yet"]');
   // Mark the row of another case: a full redraw of the list would replace it.
-  const other = `#case-list a.case-item[href="#/case/${encodeURIComponent(ids.c2)}"]`;
+  const other = `#case-list a.case-item[href="#/case/${await p.evaluate((i) => CVRoute.enc(i), ids.c2)}"]`;
   await p.waitForSelector(other, { state: 'attached' });
   await p.$eval(other, (a) => { a.closest('li').dataset.mark = 'kept'; });
 
@@ -24,7 +24,7 @@ const SP = process.env.SP + '/v1132';
   await p.waitForFunction((id) => Vault.data.cases.find((c) => c.id === id).subject === 'DOE, Johnny', ids.c, { timeout: 5000 });
   await p.waitForTimeout(400);
   const side = await p.evaluate(({ id, sel }) => ({
-    mine: document.querySelector(`#case-list a.case-item[href="#/case/${encodeURIComponent(id)}"] .cim-subject`)?.textContent || '',
+    mine: document.querySelector(`#case-list a.case-item[href="#/case/${CVRoute.enc(id)}"] .cim-subject`)?.textContent || '',
     kept: document.querySelector(sel)?.closest('li').dataset.mark || '',
   }), { id: ids.c, sel: other });
   ok(/DOE, Johnny/.test(side.mine), `the case list shows the new subject: ${side.mine}`);

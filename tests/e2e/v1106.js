@@ -35,7 +35,7 @@ const SP = process.env.SP + '/v1106';
   ok(found.length === 1 && /EX-100/.test(found[0]) && /Field Notes/.test(found[0]) && /grey sedan/.test(found[0]), 'finds the case by its notes, with a snippet');
   await shot('search', '#dialog[open]');
   await p.click('#dialog[open] .deep-case a'); await p.waitForTimeout(900);
-  ok(await p.evaluate((i) => location.hash === `#/case/${encodeURIComponent(i)}/notes`, ids.c), 'a result opens the right tab');
+  ok(await p.evaluate((i) => location.hash === `#/case/${CVRoute.enc(i)}/notes`, ids.c), 'a result opens the right tab');
   await p.fill('#case-search', ''); await p.press('#case-search', 'Escape');
 
   // (4) Delete -> Recently Deleted -> Restore.
@@ -45,7 +45,7 @@ const SP = process.env.SP + '/v1106';
   await p.fill('#dialog[open] .delete-form input', 'EX-200'); await p.click('#dialog[open] .delete-form button[type=submit]');
   await p.waitForSelector('#dialog[open] .doom-form'); await p.click('#dialog[open] .doom-form button[type=submit]'); await p.waitForTimeout(1500);
   ok(!(await p.evaluate((i) => Vault.data.cases.some((x) => x.id === i), ids.c2)), 'deleted from the case list');
-  await p.click('.hc-backup'); await p.waitForSelector('[data-section="deleted"] .bin-row');
+  await p.click('.hc-backup, .backup-bar .btn'); await p.waitForSelector('[data-section="deleted"] .bin-row');
   ok(/EX-200/.test(await p.textContent('[data-section="deleted"]')), 'listed in Vault → Recently Deleted');
   await shot('bin', '[data-section="deleted"]');
   await p.click('[data-section="deleted"] .bin-row button:has-text("Restore")'); await p.waitForTimeout(1500);
@@ -62,7 +62,7 @@ const SP = process.env.SP + '/v1106';
   fs.writeFileSync(path.join(caseDir, 'case.json'), JSON.stringify({ id: '2026-EX-900', number: 'EX-900', subject: 'Mary Poe', title: 'Mary Poe', status: 'Open', operationId: '', operation: null, dates: { opened: '2026-09-01', updated: now }, activity: [] }));
   fs.writeFileSync(path.join(caseDir, 'notes.md'), 'Restored notes from Example City.');
   fs.writeFileSync(path.join(caseDir, 'files', 'Other Exhibits', 'receipt.txt'), 'synthetic');
-  await p.click('.hc-backup'); await p.waitForSelector('.backup-restore button');
+  await p.click('.hc-backup, .backup-bar .btn'); await p.waitForSelector('.backup-restore button');
   const [chooser] = await Promise.all([p.waitForEvent('filechooser'), p.click('.backup-restore button')]);
   await chooser.setFiles(bk); await p.waitForSelector('#dialog[open] .restore-form', { timeout: 15000 });
   ok(/EX-900/.test(await p.textContent('#dialog[open] .restore-form')) && /Mary Poe/.test(await p.textContent('#dialog[open] .restore-form')), 'the backup\'s cases are listed');
