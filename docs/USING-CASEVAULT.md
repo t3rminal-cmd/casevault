@@ -41,7 +41,7 @@ The installed app and the SSD copy each ask you to pick the vault folder once. T
 
 1. Plug in the SSD and unlock V:.
 2. Double-click **`W:\Start-CaseVault.bat`** and leave its window open.
-3. CaseVault opens by itself in its own window, with its own browser profile on the SSD (`CaseVault-Browser`, next to `CaseVault-Data`), in your default browser when it is Edge, Chrome, Brave or Firefox (else Edge). Edge, Chrome and Brave open it as an app window; there CaseVault reaches the SSD directly, so the first time click **Choose folder…** and pick `CaseVault-Data` once. Since v1.151 always open CaseVault this way, not from a bookmark: the window the helper opens carries a key the helper asks for, and a plain `http://127.0.0.1:8517/` tab says to use `Start-CaseVault.bat`.
+3. CaseVault opens in a new tab of your normal browser (Firefox), with your own settings and sign-in. Since v1.151 the helper makes a new key each time it starts and gives it to that tab; a tab or bookmark without it says **Start CaseVault Again to Reconnect**. Double-click `Start-CaseVault.bat` and every CaseVault tab in that browser reconnects by itself. (v1.151 opened a separate browser profile on the SSD instead; v1.152 went back to your normal browser because that profile had none of your settings. The `CaseVault-Browser` folder it made on the SSD can be deleted.)
 4. There is no folder to pick. The helper finds the **CASEVAULT** partition by itself, whatever its drive letter. The first time, click **Create vault here**.
 
 When you're done, close CaseVault, then close the helper window, then eject the SSD.
@@ -213,6 +213,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.152
+
+- **Back to your own Firefox:** `Start-CaseVault.bat` opens CaseVault in a new tab of your normal browser again, with your settings, sign-in and look (v1.151 opened a separate, empty browser profile on the SSD). The addresses still hide case numbers and names, so nothing about a case lands in the browser history. The `CaseVault-Browser` folder v1.151 made on the SSD can be deleted
+- **Reconnect fixed:** when the helper was restarted (an update, or Start-CaseVault.bat run again), an open CaseVault tab said "The CaseVault helper is not running" and Reconnect did nothing, because the tab had the helper's old key. It now says **Start CaseVault Again to Reconnect**; double-click `Start-CaseVault.bat` and every open CaseVault tab reconnects by itself
+- **Helper 1.16.1:** opens your normal browser by default; `-OwnProfile` (advanced) still opens the separate profile on the SSD
+
 ### What's new in v1.151
 
 - **PDF viewer:** PDFs now open at **Fit Width**, as wide as the window. The zoom buttons, 100% and Fit Width are still there
@@ -231,19 +237,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Today panel fixed:** it now shows every time you come back to the home page, not only the first time
 - **Faster home page:** the Today panel reads the Timelines 8 at a time instead of one by one (about twice as fast with many cases)
 - **Privacy:** whether a Case Group folder is open or folded is no longer saved in the browser on the PC (its name is often a suspect's). It is remembered until CaseVault is closed. Group names saved there by v1.146 to v1.149 are removed the first time 1.150 opens
-
-### What's new in v1.149
-
-- **Use as AI Example:** in a report's Export menu, **Use as AI Example** puts an anonymized copy in Settings → Library (names, phone numbers and addresses replaced) and asks which document type it is an example of. You see the copy before it is saved
-- **Library check:** Settings → Library shows how many examples each document type has; a type with none is in red, so you know where Draft with AI has nothing to copy the style from
-- **Real names warning:** when you drop a file into the Library, CaseVault looks for names, phone numbers and other identifying details first. If it finds any, you choose **Save Anonymized Copies**, **Keep As They Are** or Cancel
-- **Today:** a panel on the home page lists everything dated today and tomorrow on the Timelines of your open cases, soonest first. Tick a deadline there to mark it done
-- **Quick Note:** **Alt+N** (or ⋮ → Quick Note) from any page writes a note into a case's Case History with today's date and the time, or into each case of a Case Group. Ctrl+Enter saves
-- **Discovery checklist:** before a production is copied, a short checklist: Arrest Report filled in and evidence photos added (checked by CaseVault), then reports signed, Bates start number right and password given separately (you tick them). **Skip Checklist** goes straight on
-- **Password strength:** each saved password shows **Weak**, **OK** or **Strong**. Click **Weak** to open Edit, where **Generate** makes a strong one. The strength also shows as you type
-- **Lock After:** the Secure Locker locks after **2, 5 or 15 minutes** without use (5 unless you change it, in the locker's header)
-- **Backup history:** Settings → Backups → **Full backup history** lists the last 10 full backups: date, drive or folder, size and whether it was checked
-- **Test Restore:** Settings → Backups → **Test Restore**. Pick a CaseVault-Backup folder on the backup drive; CaseVault reads 20 random files of it (and the case list) and compares them with the SSD. Nothing is changed or copied
 
 ### Earlier versions
 

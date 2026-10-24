@@ -34,7 +34,7 @@ const HelperFS = (() => {
   // A helper that refused the key says why; the message is shown where "not running" would be.
   async function keyRefusal(res) {
     if (res.status !== 403) return null;
-    try { const j = await res.clone().json(); if (j.error === 'KeyError') return domError('NotReadableError', j.message); } catch { /* not JSON */ }
+    try { const j = await res.clone().json(); if (j.error === 'KeyError') return Object.assign(domError('NotReadableError', j.message), { keyRefused: true }); } catch { /* not JSON */ }
     return null;
   }
   const join = (a, b) => (a ? `${a}/${b}` : b);

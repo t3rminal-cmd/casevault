@@ -450,7 +450,16 @@
       acts(actReconnect, actPick));
   }
 
-  function gateHelperDown() {
+  function gateHelperDown(err) {
+    // v1.152: the helper runs but was restarted (an update, or Start-CaseVault.bat again), so this
+    // window has an old key: say so (not "not running"), and reconnect by itself once a new tab
+    // from Start-CaseVault.bat has brought the new key (see the storage listener below).
+    if (err && err.keyRefused) {
+      return showGate(
+        'Start CaseVault Again to Reconnect',
+        [unsavedNote(), 'The CaseVault helper was restarted, so this window needs its new key. Double-click Start-CaseVault.bat once: it opens CaseVault in a new tab, and this window reconnects by itself too.'].filter(Boolean).join(' '),
+        [actReconnect]);
+    }
     showGate(
       'The CaseVault helper is not running.',
       [unsavedNote(), 'Double-click Start-CaseVault.bat on the CV-AI drive (for example W:\\), keep its window open, then click Reconnect.'].filter(Boolean).join(' '),
@@ -501,9 +510,12 @@
     }
   }
 
+  // v1.152: a new tab from Start-CaseVault.bat stores the helper's new key; a window waiting on
+  // the old one reconnects at once.
+  window.addEventListener('storage', (e) => { if (e.key === 'cv-helper-key' && e.newValue && MODE === 'helper' && !state.connected) connectHelper(); });
   async function connectHelper() {
     let info;
-    try { info = await HelperFS.info(); } catch { return gateHelperDown(); }
+    try { info = await HelperFS.info(); } catch (err) { return gateHelperDown(err); }
     if (!info.ready) return gateMissing();
     state.drive = info.drive || '';
     state.bitlocker = info.bitlocker || 'unknown'; // v1.98 (helper 1.13)
