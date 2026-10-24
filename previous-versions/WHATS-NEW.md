@@ -4,6 +4,19 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.149
+
+- **Use as AI Example:** in a report's Export menu, **Use as AI Example** puts an anonymized copy in Settings → Library (names, phone numbers and addresses replaced) and asks which document type it is an example of. You see the copy before it is saved
+- **Library check:** Settings → Library shows how many examples each document type has; a type with none is in red, so you know where Draft with AI has nothing to copy the style from
+- **Real names warning:** when you drop a file into the Library, CaseVault looks for names, phone numbers and other identifying details first. If it finds any, you choose **Save Anonymized Copies**, **Keep As They Are** or Cancel
+- **Today:** a panel on the home page lists everything dated today and tomorrow on the Timelines of your open cases, soonest first. Tick a deadline there to mark it done
+- **Quick Note:** **Alt+N** (or ⋮ → Quick Note) from any page writes a note into a case's Case History with today's date and the time, or into each case of a Case Group. Ctrl+Enter saves
+- **Discovery checklist:** before a production is copied, a short checklist: Arrest Report filled in and evidence photos added (checked by CaseVault), then reports signed, Bates start number right and password given separately (you tick them). **Skip Checklist** goes straight on
+- **Password strength:** each saved password shows **Weak**, **OK** or **Strong**. Click **Weak** to open Edit, where **Generate** makes a strong one. The strength also shows as you type
+- **Lock After:** the Secure Locker locks after **2, 5 or 15 minutes** without use (5 unless you change it, in the locker's header)
+- **Backup history:** Settings → Backups → **Full backup history** lists the last 10 full backups: date, drive or folder, size and whether it was checked
+- **Test Restore:** Settings → Backups → **Test Restore**. Pick a CaseVault-Backup folder on the backup drive; CaseVault reads 20 random files of it (and the case list) and compares them with the SSD. Nothing is changed or copied
+
 ## What's new in v1.148
 
 - **Case Group page:** **Timeline** shows the events of every case in the group on one Timeline (each case's Timeline tab does the same, like an Operation's). **Summary PDF** lists each case (number, subject, status, opened, next deadline, charges from the Arrest Report) with your letterhead. **Make Operation** turns the group into an Operation with the same cases when the investigation grows

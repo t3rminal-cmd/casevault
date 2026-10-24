@@ -24,13 +24,14 @@ and the SSD. If your cases are CJIS data, ask your department's IT which setting
 **What the browser keeps on the PC (v1.151).** Addresses inside CaseVault no longer show case
 numbers, Case Group names or report names: they are scrambled with a key kept in `vault.json` on the
 SSD (`#/case/~aXHa…` instead of `#/case/2026-EX-100`), so the browser's history on the PC means
-nothing without the drive. When `Start-CaseVault.bat` opens CaseVault, it uses its own browser
-profile in `CaseVault-Browser` on the CASEVAULT drive (an app window in Edge or Chrome), so history,
-cache and saved permissions stay on the encrypted SSD too. Folder open/closed states and similar
-screen settings saved on the PC never hold names.
+nothing without the drive. `Start-CaseVault.bat` opens CaseVault in your normal browser; with
+`-OwnProfile` (advanced) it uses its own browser profile in `CaseVault-Browser` on the CASEVAULT drive
+instead, so even the browser's cache stays on the SSD. Folder open/closed states and similar screen
+settings saved on the PC never hold names.
 
 **The helper (1.16)** answers only `127.0.0.1`, only the CaseVault page, and only requests that
-carry the key it made when it started (given to the window it opens). Other programs that just try
+carry the key it made when it started (given to the tab it opens, and shared with the browser's other
+CaseVault tabs). Other programs that just try
 the address are refused. A program running as your own Windows user could still read that key, so
 it is not a replacement for BitLocker and a locked PC. File names Windows treats as devices (CON,
 NUL, COM1…) are refused.

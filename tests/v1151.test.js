@@ -50,6 +50,8 @@ test('helper 1.16: a key on every API request, device names refused, its own bro
   assert.match(ps, /\(con\|prn\|aux\|nul\|com\[0-9\]\|lpt\[0-9\]\)/);
   assert.match(ps, /--user-data-dir=/);
   assert.match(ps, /CaseVault-Browser/);
+  // v1.152 (helper 1.16.1): the normal browser by default (your own settings); the SSD profile only with -OwnProfile.
+  assert.match(ps, /if \(-not \$OwnProfile -or -not \$dataRoot\) \{ Start-Process \$url; return \}/);
   const hfs = fs.readFileSync(path.join(__dirname, '../js/helper-fs.js'), 'utf8');
   assert.match(hfs, /X-CaseVault-Key/);
   assert.ok(!/headers: \{ 'X-CaseVault': '1' \}/.test(hfs), 'every helper request sends the key');

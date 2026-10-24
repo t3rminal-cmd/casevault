@@ -16,15 +16,18 @@
       every request must carry it, so other programs on this PC that just try the address are
       refused. A program running as the same Windows user could still find it: the real
       protection for the data stays BitLocker and the PIN.
-    * (1.16) CaseVault opens in its own browser profile on the CASEVAULT drive (an app window
-      in Edge/Chrome), so the PC's normal browser history never holds case numbers.
+    * (1.16.1) CaseVault opens in your normal browser, with your own settings and sign-in. Its
+      addresses no longer show case numbers or names (1.151), so the history holds no case data.
+      -OwnProfile opens it in a separate browser profile on the CASEVAULT drive instead.
 
   Usage: started by Start-CaseVault.bat. Advanced options:
     -Port 8517           port to listen on
     -DataPath <folder>   use this CaseVault-Data folder instead of searching the drives
     -AppPath <folder>    serve the app from this folder
     -NoBrowser           do not open the browser
-    -PlainBrowser        open CaseVault in the PC's normal browser profile (not the one on the SSD)
+    -OwnProfile          open CaseVault in its own browser profile on the SSD (CaseVault-Browser) instead of
+                         your normal browser (off since 1.16.1: a new profile has none of your settings)
+    -PlainBrowser        (kept for older shortcuts; the normal browser is the default again)
     -SessionKey <hex>    use this key instead of a random one (for testing)
     -NoAI                do not start Ollama
     -BackupTargets <a;b> offer these folders as backup drives (for testing; normally every other drive)
@@ -38,6 +41,7 @@ param(
   [string]$AppPath = '',
   [switch]$NoBrowser,
   [switch]$PlainBrowser,
+  [switch]$OwnProfile,
   [string]$SessionKey = '',
   [switch]$NoAI,
   [string]$BackupTargets = '',
@@ -48,7 +52,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 
-$HelperVersion = '1.16.0'
+$HelperVersion = '1.16.1'
 $VolumeLabel   = 'CASEVAULT'
 $DataDirName   = 'CaseVault-Data'
 $AppDirName    = 'CaseVault-App'
@@ -336,7 +340,8 @@ function Find-BrowserExe([string]$kind) {
   return $null
 }
 function Open-CaseVault([string]$url, $dataRoot) {
-  if ($PlainBrowser -or -not $dataRoot) { Start-Process $url; return }
+  # 1.16.1: the normal browser (your settings, your sign-in) unless -OwnProfile is given.
+  if (-not $OwnProfile -or -not $dataRoot) { Start-Process $url; return }
   try {
     $kind = Get-BrowserKind
     $exe = Find-BrowserExe $kind
@@ -795,7 +800,7 @@ function Invoke-Client($client) {
     }
     if ($req.Path.StartsWith('/api/')) {
       if ($req.Method -eq 'OPTIONS' -or -not (Test-SameOrigin $req)) { Send-Error $stream 403 'SecurityError' 'Only the CaseVault page may use this.'; return }
-      if (-not (Test-SessionKey $req)) { Send-Error $stream 403 'KeyError' 'This window was not opened by the CaseVault helper. Close it and start CaseVault with Start-CaseVault.bat.'; return }
+      if (-not (Test-SessionKey $req)) { Send-Error $stream 403 'KeyError' 'The CaseVault helper was restarted, so this window needs its new key. Start Start-CaseVault.bat once (it opens a new tab with the key); this window then reconnects too.'; return }
       try { Invoke-Api $stream $req }
       catch {
         $name = 'UnknownError'

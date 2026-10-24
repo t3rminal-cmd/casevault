@@ -42,6 +42,18 @@ if (spawnSync(PWSH, ['-NoProfile', '-Command', 'exit 0']).status !== 0) { consol
     ok(!/k=/.test(st.url) && st.kept === KEY, `key kept for this profile and taken out of the address: ${st.url}`);
     const info = await p.evaluate(async (k) => (await fetch('/api/info', { headers: { 'X-CaseVault': '1', 'X-CaseVault-Key': k } })).status, KEY);
     ok(info === 200, `with the key the API answers (${info})`);
+    // v1.152: a tab waiting with an old key reconnects by itself when a new tab brings the key.
+    const p2 = await p.context().newPage();
+    await p.evaluate(() => localStorage.setItem('cv-helper-key', '0'.repeat(32)));
+    await p.reload(); await p.waitForTimeout(2500);
+    const waiting = await p.evaluate(() => document.body.innerText);
+    ok(/Start CaseVault Again to Reconnect/i.test(waiting) && !/is not running/.test(waiting), 'an old key: "Start CaseVault Again to Reconnect", not "not running"');
+    await p2.goto(`http://127.0.0.1:${PORT}/?k=${KEY}`); await p2.waitForTimeout(2500);
+    await p.waitForTimeout(2500);
+    // (This test vault is empty, so "reconnected" is the helper's next screen: create the vault.)
+    const after = await p.evaluate(() => document.body.innerText);
+    ok(!/Start CaseVault Again/i.test(after) && /Create/i.test(after), 'the waiting tab reconnected by itself');
+    await p2.close();
     // Windows device names are not files.
     const dev = await p.evaluate(async (k) => Promise.all(['CON', 'nul.txt', 'com1', 'LPT9.md'].map(async (n) => (await fetch(`/api/write?p=${encodeURIComponent(n)}`, { method: 'PUT', body: 'x', headers: { 'X-CaseVault': '1', 'X-CaseVault-Key': k } })).status)), KEY);
     ok(dev.every((s) => s >= 400), `CON, NUL, COM1, LPT9 refused as names: ${dev}`);

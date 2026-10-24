@@ -4,6 +4,14 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.151)
+
+- **PDF viewer** opens at Fit Width
+- **Privacy:** addresses no longer show case numbers or names; CaseVault opens in its own browser profile on the SSD (helper 1.16)
+- **Security:** the helper answers only the window it opened (a new key each start); Windows device names refused
+- **Look:** backup warning once, Details tab without the repeated location, floating buttons fade while scrolling, empty Files folders greyed
+- **Speed:** Discovery and Link Chart load on first use; Mission and Case Group pages read their cases together
+
 ## Features (v1.150)
 
 - **Fixes:** Today panel shows on every visit to the home page; faster home page with many cases
