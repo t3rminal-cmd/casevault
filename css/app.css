@@ -4325,3 +4325,7 @@ button.pw-strength:hover { background: var(--danger-soft); }
 .ver-row span, .ver-row strong { white-space: nowrap; }
 .timeline-form .tl-template-field select { max-width: 22rem; }
 .timeline-form .tl-template-field { order: -1; }
+/* v1.154: Export Encrypted: the folder on the SSD. */
+.export-folder { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s3, 12px); }
+.export-folder .field[hidden] { display: none; }
+@media (max-width: 640px) { .export-folder { grid-template-columns: 1fr; } }

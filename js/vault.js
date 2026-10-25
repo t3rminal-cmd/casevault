@@ -23,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.153.0';
+  const APP_VERSION = '1.154.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -537,6 +537,47 @@ const Vault = (() => {
     }
     vault.cases = vault.cases.filter((c) => c.id !== id);
     await saveVault();
+  }
+
+  /* v1.154: Export Encrypted saves on the SSD, never on the PC: in CaseVault-Data/exports/, in a
+   * folder you pick or make there. The file is read back and compared before it counts as saved. */
+  const EXPORTS = 'exports';
+  /** [{ name, files: [{ name, size, modified }] }], folders by name, newest file first. */
+  async function listExportFolders() {
+    const base = await FS.getDir(root, EXPORTS);
+    if (!base) return [];
+    const out = [];
+    for (const e of await FS.list(base)) {
+      if (e.kind !== 'directory') continue;
+      const files = [];
+      for (const f of await FS.list(e.handle)) {
+        if (f.kind !== 'file' || !/\.cvcase$/i.test(f.name)) continue;
+        const file = await f.handle.getFile();
+        files.push({ name: f.name, size: file.size, modified: file.lastModified });
+      }
+      out.push({ name: e.name, files: files.sort((x, y) => y.modified - x.modified) });
+    }
+    return out.sort((a, b) => a.name.localeCompare(b.name));
+  }
+  /** Saves an export into exports/<folder> (made if new). -> { folder, name, path } */
+  async function saveExport(folder, name, blob) {
+    const f = String(folder || '').trim() ? FS.safeName(String(folder).trim()) : '';
+    if (!f) throw Object.assign(new Error('Pick a folder or type a name for a new one.'), { name: 'SyntaxError' });
+    const dir = await FS.getDir(await FS.getDir(root, EXPORTS, true), f, true);
+    const file = await FS.uniqueName(dir, name);
+    await FS.writeData(dir, file, blob);
+    if (!(await sameBytes(blob, await FS.getFile(dir, file)))) {
+      await FS.remove(dir, file).catch(() => {});
+      throw new Error('The copy on the SSD does not match. Nothing was saved; try again.');
+    }
+    return { folder: f, name: file, path: `CaseVault-Data\\${EXPORTS}\\${f}\\${file}` };
+  }
+  /** An export saved on the SSD, as a File (for Import Case). */
+  async function readExport(folder, name) {
+    const dir = await FS.getDir(await FS.getDir(root, EXPORTS), FS.safeName(folder));
+    const file = dir && (await FS.getFile(dir, name));
+    if (!file) throw Object.assign(new Error(`${name} is no longer on the SSD.`), { name: 'NotFoundError' });
+    return file;
   }
 
   /** v1.153: every file in a case folder, for Export Encrypted: [{ path, blob }] (paths inside the folder). */
@@ -2091,7 +2132,7 @@ const Vault = (() => {
     newId, localDay, logActivity,
     resolve, create, load, close, ping,
     backupNow, listBackups, rebuildIndex, updateSettings, fullBackup, recordManualBackup, recordHelperBackup, backupHistoryWith, restoreBackup, readLetterheadLogo, saveLetterheadLogo, deleteLetterheadLogo,
-    createCase, getCase, saveCase, deleteCase, restoreCaseFromBackup, caseFolderFiles, listDeleted, restoreDeleted, purgeDeleted, BIN_DAYS,
+    createCase, getCase, saveCase, deleteCase, restoreCaseFromBackup, caseFolderFiles, listExportFolders, saveExport, readExport, listDeleted, restoreDeleted, purgeDeleted, BIN_DAYS,
     listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
     archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS, archiveFolderName, setSuspectGroup, suspectGroups,
     OP_FOLDERS, OTHER_FOLDERS, readOpVehicles, saveOpVehicles, readOpList, saveOpList, otherCustomFolders, addOtherFolder, removeOtherFolder, listShared, addShared, readShared, deleteShared, readTraining, saveTraining, trainingRows, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,

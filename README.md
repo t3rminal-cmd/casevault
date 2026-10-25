@@ -15,13 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.153
+## What's New in v1.154
 
-- **New:** Undo for deleted Timeline entries, files and reports, and for file moves; the last 10 versions of each report
-- **New:** Timeline Quick Add with the deadline that follows; Court dates counting down a week ahead, also on Today
-- **New:** Copy Case Details, a same-person note on suspects, a checklist before Send Draft to Reports, a printable Discovery Log
-- **New:** Export Encrypted / Import Case, Bigger Text, Alt+1…9 for tabs, pinned cases in the case list
-- **Safer:** the screen clears and locks when the SSD is pulled; backup reminder after 50 changes; faster start-up
+- **Change:** Export Encrypted saves in a folder you pick on the SSD (CaseVault-Data\exports), never on the PC
+- **Change:** Import Case lists the exports saved on the SSD
 
 ## What CaseVault Does
 
