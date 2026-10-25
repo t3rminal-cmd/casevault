@@ -4,6 +4,19 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.151
+
+- **PDF viewer:** PDFs now open at **Fit Width**, as wide as the window. The zoom buttons, 100% and Fit Width are still there
+- **Addresses without case data:** the address of a page in CaseVault no longer shows the case number, a Case Group's name or a report's name (`#/case/~aXHa…` instead of `#/case/2026-EX-100`). They are scrambled with a key kept in vault.json on the SSD, so the browser history on the PC means nothing without the drive. Old bookmarks still open and are rewritten
+- **Own browser window and profile (Start-CaseVault.bat, helper 1.16):** CaseVault opens in its own browser profile on the CASEVAULT drive (`CaseVault-Browser`): an app window in Edge or Chrome, a separate window in Firefox. History, cache and saved permissions stay on the encrypted SSD. In Edge or Chrome, pick `CaseVault-Data` once the first time (**Choose folder…**)
+- **Helper key (helper 1.16):** the helper now answers only the CaseVault window it opened. Each start makes a new random key that this window carries; other programs and plain tabs are refused. Always open CaseVault with `Start-CaseVault.bat`, not a bookmark. File names Windows treats as devices (CON, NUL, COM1…) are refused
+- **Backup said once:** while the backup bar under the banner shows, the banner leaves out its own red backup chip. Hide the bar for today with × and the chip is back
+- **Details tab:** where the case is filed is shown once, in the header; the grey bar keeps only its buttons (Case Group, Pin, Move File)
+- **Floating buttons:** they fade while the page scrolls, so the text passing under them can be read. They come back when scrolling stops, or on hover
+- **Files tab:** empty folders are greyed, so the ones holding files stand out. **All Documents** and **Choose Files** in Title Case
+- **Faster:** Discovery and Link Chart load the first time they are opened instead of at start-up. Mission and Case Group pages, the Mission Timeline and the Group Summary read their cases together instead of one by one
+- **Tidier code:** the backup screens moved out of app.js into their own file; one shared date helper and one shared dialog Cancel row replace copies spread over many files; 24 unused style rules from removed features are gone
+
 ## What's new in v1.150
 
 - **Today panel fixed:** it now shows every time you come back to the home page, not only the first time

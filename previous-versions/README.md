@@ -4,6 +4,14 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.153)
+
+- **New:** Undo for deleted Timeline entries, files and reports, and for file moves; the last 10 versions of each report
+- **New:** Timeline Quick Add with the deadline that follows; Court dates counting down a week ahead, also on Today
+- **New:** Copy Case Details, a same-person note on suspects, a checklist before Send Draft to Reports, a printable Discovery Log
+- **New:** Export Encrypted / Import Case, Bigger Text, Alt+1…9 for tabs, pinned cases in the case list
+- **Safer:** the screen clears and locks when the SSD is pulled; backup reminder after 50 changes; faster start-up
+
 ## Features (v1.152)
 
 - **Fix:** CaseVault opens in your normal Firefox again, with your own settings and look

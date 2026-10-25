@@ -3180,7 +3180,7 @@
           !archived && Vault.conventionalId(c) ? h('button', { class: 'btn action-btn', type: 'button', icon: 'folder', title: `Renames this case's folder on the SSD to the <year>-<case no.> convention (${Vault.conventionalId(c)}). Every file is copied and checked first.`, onclick: () => renameCaseFolder(c) }, 'Rename folder') : null,
           !archived ? h('button', { class: 'btn action-btn', type: 'button', icon: 'archive', title: 'Keeps everything, read-only, in CaseVault-Data\\archive. It leaves the case list but can still be opened, searched and restored.', onclick: () => archiveCase(c) }, 'Archive Case') : null,
           h('button', { class: 'btn action-btn', type: 'button', icon: 'file-earmark-pdf', title: 'One page for a supervisor: status, disposition, arrestees and charges, exhibits and the timeline.', onclick: () => caseSummary(c) }, 'Case Summary'),
-          h('button', { 'data-ro-ok': 'true', class: 'btn action-btn', type: 'button', icon: 'lock-fill', title: 'The whole case in one file locked with a password (like Discovery), to hand to another officer or keep somewhere safe. Settings → Backups → Import Case opens it.', onclick: async () => { try { (await CVLazy.caseExport()).exportDialog(c); } catch (err) { toast(`Could not open Export Encrypted: ${err.message}`, 'error'); } } }, 'Export Encrypted'),
+          h('button', { 'data-ro-ok': 'true', class: 'btn action-btn', type: 'button', icon: 'lock-fill', title: 'The whole case in one file locked with a password (like Discovery), saved on the SSD in a folder you pick (CaseVault-Data\\exports). Settings → Backups → Import Case opens it.', onclick: async () => { try { (await CVLazy.caseExport()).exportDialog(c); } catch (err) { toast(`Could not open Export Encrypted: ${err.message}`, 'error'); } } }, 'Export Encrypted'),
           h('button', { 'data-ro-ok': 'true', class: 'btn action-btn', type: 'button', icon: 'copy', title: 'Copies the case number, subject, charges, next court date and next deadline, to paste into an email or a message.', onclick: () => copyCaseDetails(c) }, 'Copy Case Details'),
           h('button', { class: 'btn danger action-btn', type: 'button', icon: 'trash3', title: 'Moves the case to Recently Deleted (⋮ → Vault) for 30 days, then deletes it for good.', onclick: () => deleteCase(c) }, 'Delete case…'))));
 
@@ -3650,7 +3650,7 @@
         h('div', { class: 'backup-full backup-import' },
           h('span', { class: 'fact-icon' }, I('unlock')),
           h('div', {}, h('strong', { class: 'block' }, 'Import an encrypted case'),
-            h('span', { class: 'muted small block' }, 'A .cvcase file made with Export Encrypted on a case page, and its password.')),
+            h('span', { class: 'muted small block' }, 'A .cvcase file made with Export Encrypted (saved on the SSD, or from another drive), and its password.')),
           h('div', { class: 'spacer' }),
           h('button', { class: 'btn', type: 'button', icon: 'unlock', onclick: async () => { close(); try { (await CVLazy.caseExport()).importDialog(); } catch (err) { toast(`Could not open Import Case: ${err.message}`, 'error'); } } }, 'Import Case…')),
         // v1.106: bring cases back from a full backup on another drive.
