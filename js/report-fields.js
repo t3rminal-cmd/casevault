@@ -290,7 +290,8 @@
   function normalize(data) {
     const src = data || {};
     const d = { ...empty(), ...src };
-    d.evidence = (Array.isArray(d.evidence) ? d.evidence : []).map((e) => ({ number: e.number, inventory: e.inventory || '', type: OLD_TYPES[e.type] || e.type || '', drug: e.drug || '', weight: e.weight || '', description: e.description || '', photos: Array.isArray(e.photos) ? e.photos.filter((x) => typeof x === 'string') : [], photoLabels: [] }));
+    d.evidence = (Array.isArray(d.evidence) ? d.evidence : []).map((e) => ({ number: e.number, inventory: e.inventory || '', type: OLD_TYPES[e.type] || e.type || '', drug: e.drug || '', weight: e.weight || '', description: e.description || '', photos: Array.isArray(e.photos) ? e.photos.filter((x) => typeof x === 'string') : [], photoLabels: [], ...(Array.isArray(e.custody) && e.custody.length ? { custody: e.custody.filter((x) => x && typeof x === 'object' && x.action).map((x) => Object.fromEntries(['date', 'time', 'action', 'from', 'to', 'purpose'].map((k) => [k, String(x[k] || '')]))) } : {}) }));
+    // v1.156: each exhibit's chain of custody (js/custody.js) is kept when there is one.
     // Each photo's label (v1.34), kept in step with the photos.
     d.evidence.forEach((e, i) => { const src0 = (Array.isArray(src.evidence) && src.evidence[i]) || {}; const ls = Array.isArray(src0.photoLabels) ? src0.photoLabels : []; e.photoLabels = e.photos.map((_, j) => String(ls[j] || '')); });
     // A v1.21 single Notifications line becomes the first notification.

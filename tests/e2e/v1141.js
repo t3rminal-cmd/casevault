@@ -89,7 +89,7 @@ const SP = process.env.SP + '/v1141';
   ok(/Example City Police Department/.test(withLh) && !/\(CaseVault\) Tj/.test(withLh), 'with a letterhead: the letterhead, no mark');
   // A look at each PDF's header without a letterhead.
   const shots = { timeline: pdfs.plain };
-  shots.year = await p.evaluate(() => [...CVYearSummary.build(CVYearSummary.compute('2026', [], new Map()), {})].map((c) => String.fromCharCode(c)).join(''));
+  shots.year = await p.evaluate(async () => { await CVKit.loadScripts(['js/year-summary.js']); return [...CVYearSummary.build(CVYearSummary.compute('2026', [], new Map()), {})].map((c) => String.fromCharCode(c)).join(''); });
   shots.training = await p.evaluate(async () => [...CVTraining.build(await Vault.trainingRows(), {})].map((c) => String.fromCharCode(c)).join(''));
   shots.arrest = await p.evaluate(() => [...CVArrestPdf.build({ arrestees: [{ firstName: 'John', lastName: 'Doe' }] }, { caseNumber: 'EX-100' })].map((c) => String.fromCharCode(c)).join(''));
   shots.report = await p.evaluate(() => [...CVReportPdf.build(CVReportFields.normalize ? CVReportFields.normalize({}) : {}, {})].map((c) => String.fromCharCode(c)).join(''));

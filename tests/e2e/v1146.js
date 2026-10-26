@@ -78,7 +78,7 @@ const SP = process.env.SP + '/v1146';
   for (const [s, u, w] of [['Example County Records Management System Portal', 'john.doe.investigator@example.gov', 'https://records.example-county.gov/login/portal/home?ref=detective'], ['Example Mail', 'jdoe', 'https://mail.example.gov']]) {
     await p.click('.locker-section button:has-text("Add Password")'); await p.waitForSelector('#dialog[open] .locker-form');
     const inp = p.locator('#dialog[open] .locker-form input');
-    await inp.nth(0).fill(s); await inp.nth(1).fill(u); await inp.nth(2).fill('Synthetic-1'); await inp.nth(3).fill(w);
+    await inp.nth(0).fill(s); await inp.nth(1).fill(u); await inp.nth(2).fill('Synthetic-1'); await p.fill('#dialog[open] .locker-form .field:has-text("Web Address") input', w);
     await p.click('#dialog[open] button[type=submit]'); await p.waitForTimeout(600);
   }
   const fit = await p.evaluate(() => {

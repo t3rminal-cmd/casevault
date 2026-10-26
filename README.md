@@ -15,9 +15,12 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.155
+## What's New in v1.156
 
-- **Fix:** with the case list hidden, every icon stays inside the thin rail (the padlock no longer sticks out)
+- **Password Manager:** full email, PIN and Department columns, Linked to Google, and a department filter (e.g. DEA or CPD)
+- **Covert aliases:** full profile with work history, family, mailbox, school, identification, and age and zodiac worked out
+- **Case list:** saved searches and quick filters, Select Cases (pin, group, Mission, archive at once), recent cases and right-side hover boxes on the hidden rail
+- **New:** chain of custody per exhibit (printable), a Calendar of deadlines across cases, a printable Weekly Summary, a duplicate file warning and a monthly Check the Vault
 
 ## What CaseVault Does
 

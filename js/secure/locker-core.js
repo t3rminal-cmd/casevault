@@ -141,12 +141,75 @@
   const decryptJSON = async (key, bytes, name) => JSON.parse(td.decode(await decrypt(key, bytes, name)));
 
   /* ---------- what the locker holds ---------- */
-  // [key, label, kind]; kind 'secret' is hidden until shown, and has Copy.
+  // [key, label, kind, extra]; kind 'secret' is hidden until shown, and has Copy. v1.156: kinds
+  // 'dept' (CPD, DEA, USPIS … or your own), 'check' (yes / no), 'select' (extra: the choices),
+  // 'list' (extra: the parts of each entry, e.g. a job), 'auto' (worked out: extra 'age' or
+  // 'zodiac', from the date of birth; never saved). cols: the columns of the table (the rest is in
+  // Edit); sections: how Edit groups the fields.
+  const DEPARTMENTS = ['CPD', 'DEA', 'USPIS', 'FBI', 'HSI', 'ATF', 'USMS', 'IRS-CI', 'ISP'];
   const TABLES = {
-    passwords: { title: 'Password Manager', item: 'Password', icon: 'key', fields: [['site', 'Site / System', 'text'], ['username', 'Username', 'text'], ['password', 'Password', 'secret'], ['url', 'Web Address', 'text'], ['notes', 'Notes', 'wide']] },
-    aliases: { title: 'Covert Aliases', item: 'Alias', icon: 'person-badge', fields: [['alias', 'Alias Name', 'text'], ['dob', 'Date of Birth Used', 'date'], ['address', 'Address Used', 'text'], ['idNumber', 'ID / License Number', 'text'], ['phone', 'Phone Number', 'text'], ['email', 'Email', 'text'], ['backstory', 'Backstory / Notes', 'wide']] },
-    accounts: { title: 'Covert Accounts', item: 'Account', icon: 'globe2', fields: [['platform', 'Platform / App', 'text'], ['handle', 'Username / Handle', 'text'], ['password', 'Password', 'secret'], ['alias', 'Alias It Belongs To', 'text'], ['phone', 'Phone Number', 'text'], ['email', 'Email', 'text'], ['notes', 'Notes', 'wide']] },
+    passwords: { title: 'Password Manager', item: 'Password', icon: 'key', fields: [['site', 'Site / System', 'text'], ['username', 'Username', 'text'], ['password', 'Password', 'secret'], ['pin', 'PIN', 'secret'], ['email', 'Email', 'text'], ['dept', 'Department', 'dept'], ['google', 'Linked to Google', 'check'], ['url', 'Web Address', 'text'], ['notes', 'Notes', 'wide']],
+      cols: ['site', 'dept', 'username', 'email', 'password', 'pin'] }, // 'Linked to Google' shows as a tag in the Email cell
+    aliases: { title: 'Covert Aliases', item: 'Alias', icon: 'person-badge', fields: [
+      ['alias', 'Alias Name', 'text'], ['dept', 'Department', 'dept'], ['gender', 'Gender', 'select', ['', 'Male', 'Female', 'Other']], ['dob', 'Date of Birth Used', 'date'], ['age', 'Age', 'auto', 'age'], ['zodiac', 'Zodiac', 'auto', 'zodiac'],
+      ['nationality', 'Nationality', 'text'], ['ethnicity', 'Ethnicity', 'text'], ['civilStatus', 'Civil Status', 'select', ['', 'Single', 'Married', 'Divorced', 'Separated', 'Widowed', 'In a Relationship']],
+      ['height', 'Height', 'text'], ['weight', 'Weight', 'text'], ['bodyType', 'Body Type', 'select', ['', 'Slim', 'Average', 'Athletic', 'Muscular', 'Heavy', 'Stocky']], ['bloodType', 'Blood Type', 'select', ['', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']],
+      ['language1', 'Language (Native)', 'text'], ['language2', 'Language (Second)', 'text'], ['hobby', 'Hobbies', 'text'],
+      ['ssn', 'Social Security Number', 'secret'], ['driversLicense', 'Driver\'s License', 'text'], ['stateLicense', 'State License / ID', 'text'], ['libraryCard', 'Library Card', 'text'], ['idNumber', 'Other ID / License Number', 'text'],
+      ['address', 'Address Used', 'text'], ['phone', 'Phone Number', 'text'], ['email', 'Email', 'text'], ['mailbox', 'Mailbox (Provider, Address, Box Number, Key / Code)', 'wide'],
+      ['highSchool', 'High School (Name, City, Years)', 'text'], ['college', 'College (Name, Degree, Years)', 'text'],
+      ['work', 'Work History', 'list', [['employer', 'Employer'], ['position', 'Position'], ['address', 'Address'], ['years', 'Years'], ['phone', 'Phone Number']]],
+      ['family', 'Family', 'list', [['name', 'Name'], ['relation', 'Relation'], ['dob', 'Date of Birth'], ['phone', 'Phone Number'], ['notes', 'Notes']]],
+      ['backstory', 'Backstory / Notes', 'wide']],
+      cols: ['alias', 'dept', 'dob', 'age', 'phone', 'email'],
+      sections: [['Identity', ['alias', 'dept', 'gender', 'dob', 'age', 'zodiac', 'nationality', 'ethnicity', 'civilStatus', 'height', 'weight', 'bodyType', 'bloodType', 'language1', 'language2', 'hobby']],
+        ['Identification', ['ssn', 'driversLicense', 'stateLicense', 'libraryCard', 'idNumber']],
+        ['Contact', ['address', 'phone', 'email', 'mailbox']],
+        ['School', ['highSchool', 'college']],
+        ['Work History', ['work']], ['Family', ['family']], ['Backstory', ['backstory']]] },
+    accounts: { title: 'Covert Accounts', item: 'Account', icon: 'globe2', fields: [['platform', 'Platform / App', 'text'], ['handle', 'Username / Handle', 'text'], ['password', 'Password', 'secret'], ['alias', 'Alias It Belongs To', 'text'], ['phone', 'Phone Number', 'text'], ['email', 'Email', 'text'], ['dept', 'Department', 'dept'], ['notes', 'Notes', 'wide']],
+      cols: ['platform', 'dept', 'handle', 'password', 'alias', 'phone', 'email'] },
   };
+  /** The value saved for a field of a row (auto fields are never saved). */
+  function cleanField([, , kind, extra], v) {
+    if (kind === 'check') return v === true || v === 'true';
+    if (kind === 'list') {
+      const parts = extra.map(([k]) => k);
+      return (Array.isArray(v) ? v : []).filter((x) => x && typeof x === 'object')
+        .map((x) => Object.fromEntries(parts.map((k) => [k, String(x[k] == null ? '' : x[k])])))
+        .filter((x) => parts.some((k) => x[k].trim()));
+    }
+    return String(v == null ? '' : v);
+  }
+  /** v1.156: age (whole years) and star sign from a date of birth; null / '' when there is none. */
+  function ageFrom(dob, today) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dob || '')); const t = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(today || ''));
+    if (!m || !t) return null;
+    let a = +t[1] - +m[1];
+    if (+t[2] < +m[2] || (+t[2] === +m[2] && +t[3] < +m[3])) a -= 1;
+    return a >= 0 && a < 130 ? a : null;
+  }
+  const SIGNS = [['Capricorn', 120], ['Aquarius', 219], ['Pisces', 320], ['Aries', 420], ['Taurus', 521], ['Gemini', 621], ['Cancer', 722], ['Leo', 823], ['Virgo', 923], ['Libra', 1023], ['Scorpio', 1122], ['Sagittarius', 1222], ['Capricorn', 1231]];
+  function zodiacOf(dob) {
+    const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(String(dob || ''));
+    if (!m) return '';
+    const md = +m[1] * 100 + +m[2];
+    return (SIGNS.find(([, end]) => md <= end) || SIGNS[0])[0];
+  }
+  /** What an auto field shows for a row. */
+  function autoValue(extra, row, today) {
+    if (extra === 'age') { const a = ageFrom(row && row.dob, today); return a == null ? '' : String(a); }
+    if (extra === 'zodiac') return zodiacOf(row && row.dob);
+    return '';
+  }
+  /** v1.156: the departments used in the locker, then the usual ones, without repeats. */
+  function departments(data) {
+    const seen = new Map();
+    for (const t of Object.keys(TABLES)) for (const r of (data && data[t]) || []) { const d = String(r.dept || '').trim(); if (d && !seen.has(d.toUpperCase())) seen.set(d.toUpperCase(), d); }
+    return [...seen.values()].sort((a, b) => a.localeCompare(b));
+  }
+  /** v1.156: the rows of one department ('' = all). */
+  const byDept = (rows, dept) => (!dept ? rows : rows.filter((r) => String(r.dept || '').trim().toUpperCase() === String(dept).trim().toUpperCase()));
   const AUTO_LOCK = [2, 5, 15];
   const emptyData = () => ({ v: 1, passwords: [], aliases: [], accounts: [], files: [] });
   function normalizeData(d) {
@@ -154,7 +217,7 @@
     for (const t of Object.keys(TABLES)) {
       const keepsOld = TABLES[t].fields.some(([k]) => k === 'password');
       x[t] = (Array.isArray(x[t]) ? x[t] : []).filter((r) => r && typeof r === 'object').map((r) => {
-        const row = { id: String(r.id || ''), ...Object.fromEntries(TABLES[t].fields.map(([k]) => [k, String(r[k] == null ? '' : r[k])])) };
+        const row = { id: String(r.id || ''), ...Object.fromEntries(TABLES[t].fields.filter((f) => f[2] !== 'auto').map((f) => [f[0], cleanField(f, r[f[0]])])) };
         if (keepsOld) {
           row.history = cleanHistory(r.history); // v1.145: the passwords it had before
           row.changed = /^\d{4}-\d{2}-\d{2}$/.test(String(r.changed || '')) ? String(r.changed) : ''; // v1.148: when the password was set
@@ -213,8 +276,9 @@
   function filterRows(table, rows, q) {
     const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
     if (!words.length) return rows;
-    const keys = TABLES[table].fields.filter(([, , k]) => k !== 'secret').map(([k]) => k);
-    return rows.filter((r) => { const t = keys.map((k) => r[k]).join(' ').toLowerCase(); return words.every((w) => t.includes(w)); });
+    const fields = TABLES[table].fields.filter(([, , k]) => k !== 'secret' && k !== 'auto');
+    const text = (r) => fields.map(([k, label, kind]) => (kind === 'list' ? (r[k] || []).map((x) => Object.values(x).join(' ')).join(' ') : kind === 'check' ? (r[k] ? label : '') : r[k])).join(' ').toLowerCase();
+    return rows.filter((r) => { const t = text(r); return words.every((w) => t.includes(w)); });
   }
   /**
    * v1.149: how hard a saved password is to guess -> { level: 'weak' | 'ok' | 'strong', why }.
@@ -247,6 +311,6 @@
   }
 
   return { ITER, RK_ITER, MIN_PASSWORD, passwordProblem, newRecoveryKey, cleanRecovery, groupRecovery, recoveryLooksRight, create, open, changePassword, newRecovery,
-    encrypt, decrypt, encryptJSON, decryptJSON, TABLES, emptyData, normalizeData, newId, filterRows, generatePassword, strength, AUTO_LOCK,
+    encrypt, decrypt, encryptJSON, decryptJSON, TABLES, DEPARTMENTS, departments, byDept, ageFrom, zodiacOf, autoValue, emptyData, normalizeData, newId, filterRows, generatePassword, strength, AUTO_LOCK,
     HISTORY_MAX, cleanHistory, withHistory, moveRow, sortRows, daysBetween, isStale };
 });

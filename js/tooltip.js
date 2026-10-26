@@ -48,6 +48,9 @@
     let left = Math.max(6, Math.min(r.left + r.width / 2 - w / 2, root.innerWidth - w - 6));
     // Buttons in a screen corner (the Ask AI and Notes buttons) show theirs right beside them (v1.26).
     if (el.dataset.tipSide === 'left' && r.left - w - gap > 4) { left = r.left - w - gap; top = r.top + r.height / 2 - hgt / 2; below = true; }
+    // v1.156: the icons of the hidden case list's rail show theirs to the right, beside the icon.
+    const right = el.dataset.tipSide === 'right' || !!(el.closest && el.closest('body.sidebar-collapsed .sidebar-head'));
+    if (right && r.right + w + gap < root.innerWidth - 4) { left = r.right + gap; top = r.top + r.height / 2 - hgt / 2; below = true; }
     b.style.left = `${Math.round(left)}px`;
     b.style.top = `${Math.round(Math.max(4, top))}px`;
     b.classList.toggle('above', !below);

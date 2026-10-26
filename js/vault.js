@@ -23,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.155.0';
+  const APP_VERSION = '1.156.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -379,6 +379,46 @@ const Vault = (() => {
     const before = JSON.stringify([...vault.cases].sort((a, b) => a.id.localeCompare(b.id)));
     vault.cases = rebuilt;
     if (JSON.stringify(rebuilt) !== before) await saveVault();
+  }
+
+  /** v1.156: the monthly self-check. Compares the case folders on the SSD with the case list and reads
+   * each case's data files; nothing is changed. -> { cases, files, problems: [{ id, number, what }] } */
+  const CHECK_JSON = ['case.json', 'timeline.json', 'report-fields.json', 'arrest.json'];
+  async function checkVault() {
+    const problems = [];
+    const numberOf = (id) => ((vault.cases.find((c) => c.id === id) || {}).number || '');
+    const seen = new Set();
+    let files = 0;
+    for (const where of ['active', 'archive']) {
+      const parent = await FS.getDir(root, FOLDERS[where]);
+      if (!parent) continue;
+      for (const e of (await FS.list(parent)).filter((x) => x.kind === 'directory' && !x.name.startsWith('.'))) {
+        seen.add(e.name);
+        const entry = vault.cases.find((c) => c.id === e.name);
+        if (!entry) problems.push({ id: e.name, number: '', what: `The folder ${FOLDERS[where]}\\${e.name} is on the SSD but not in the case list.` });
+        else if ((entry.location === 'archive' ? 'archive' : 'active') !== where) problems.push({ id: e.name, number: entry.number || '', what: `The case is listed as ${entry.location === 'archive' ? 'archived' : 'active'} but its folder is in ${FOLDERS[where]}\\.` });
+        for (const name of CHECK_JSON) {
+          try {
+            const v = await FS.readJSON(e.handle, name);
+            if (name === 'case.json' && !v) problems.push({ id: e.name, number: numberOf(e.name), what: 'case.json is missing.' });
+          } catch (err) {
+            if (FS.isDisconnectError(err)) throw err;
+            problems.push({ id: e.name, number: numberOf(e.name), what: `${name} is damaged and could not be read.` });
+          }
+        }
+        if (!entry) continue;
+        try {
+          for (const f of await listFiles(e.name)) {
+            files++;
+            if (!f.size) problems.push({ id: e.name, number: entry.number || '', what: `files\\${f.name.replace(/\//g, '\\')} is empty (0 bytes).` });
+          }
+        } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+      }
+    }
+    for (const c of vault.cases) if (!seen.has(c.id)) problems.push({ id: c.id, number: c.number || '', what: 'In the case list, but its folder is not on the SSD.' });
+    vault.settings.lastVaultCheck = { at: nowISO(), problems: problems.length };
+    await saveVault();
+    return { cases: seen.size, files, problems };
   }
 
   function upsertIndex(entry) {
@@ -1483,6 +1523,31 @@ const Vault = (() => {
     return T.rows(files, files.length ? await readTraining() : {});
   }
 
+  /** v1.156: for each file about to be added, the case file with the same content (same size, then
+   * the same bytes), or none. -> [{ file, same: path | '' }] */
+  async function findSameFiles(id, files) {
+    const have = await listFiles(id).catch(() => []);
+    const sameBytes = async (a, b) => {
+      const STEP = 4 * 1024 * 1024;
+      for (let at = 0; at < a.size; at += STEP) {
+        const [x, y] = await Promise.all([a.slice(at, at + STEP).arrayBuffer(), b.slice(at, at + STEP).arrayBuffer()]);
+        const u = new Uint8Array(x); const v = new Uint8Array(y);
+        if (u.length !== v.length) return false;
+        for (let i = 0; i < u.length; i++) if (u[i] !== v[i]) return false;
+      }
+      return true;
+    };
+    const out = [];
+    for (const file of files) {
+      let same = '';
+      for (const f of have.filter((x) => x.size === file.size && file.size > 0)) {
+        try { if (await sameBytes(file, await readFile(id, f.name))) { same = f.name; break; } } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+      }
+      out.push({ file, same });
+    }
+    return out;
+  }
+
   async function readFile(id, path) {
     const { folder, base } = CVCaseFiles.splitPath(path);
     return FS.getFile(await folderDir(id, folder), base);
@@ -2132,7 +2197,7 @@ const Vault = (() => {
     newId, localDay, logActivity,
     resolve, create, load, close, ping,
     backupNow, listBackups, rebuildIndex, updateSettings, fullBackup, recordManualBackup, recordHelperBackup, backupHistoryWith, restoreBackup, readLetterheadLogo, saveLetterheadLogo, deleteLetterheadLogo,
-    createCase, getCase, saveCase, deleteCase, restoreCaseFromBackup, caseFolderFiles, listExportFolders, saveExport, readExport, listDeleted, restoreDeleted, purgeDeleted, BIN_DAYS,
+    createCase, getCase, saveCase, deleteCase, restoreCaseFromBackup, caseFolderFiles, findSameFiles, checkVault, listExportFolders, saveExport, readExport, listDeleted, restoreDeleted, purgeDeleted, BIN_DAYS,
     listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
     archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS, archiveFolderName, setSuspectGroup, suspectGroups,
     OP_FOLDERS, OTHER_FOLDERS, readOpVehicles, saveOpVehicles, readOpList, saveOpList, otherCustomFolders, addOtherFolder, removeOtherFolder, listShared, addShared, readShared, deleteShared, readTraining, saveTraining, trainingRows, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
