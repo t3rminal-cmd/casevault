@@ -61,6 +61,16 @@
 
       async function addFiles(list) {
         if (!list.length) return;
+        // v1.156: a file already in the case (the same content, whatever its name) is pointed out first.
+        let dups = [];
+        try { dups = (await Vault.findSameFiles(c.id, list)).filter((x) => x.same); } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
+        if (dups.length) {
+          const addAnyway = await confirmDialog({ title: dups.length === 1 ? 'This File Is Already in the Case' : `${dups.length} Files Are Already in the Case`, confirmText: 'Add Anyway', cancelText: 'Skip Duplicates',
+            message: h('div', { class: 'dup-files' }, h('p', {}, 'Same content as a file this case already has:'),
+              h('ul', {}, dups.map((x) => h('li', {}, h('strong', {}, x.file.name), ' is the same as ', CVFormat.pathText(`files\\${x.same.replace(/\//g, '\\')}`))))) });
+          if (!addAnyway) list = list.filter((f) => !dups.some((x) => x.file === f));
+          if (!list.length) return;
+        }
         const plan = await chooseTypes(c, list, target);
         if (!plan) return;
         const note = toast(`Copying ${list.length} file${list.length === 1 ? '' : 's'} to SSD…`, 'info', 600000);

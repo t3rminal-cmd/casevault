@@ -4,6 +4,10 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.155)
+
+- **Fix:** with the case list hidden, every icon stays inside the thin rail (the padlock no longer sticks out)
+
 ## Features (v1.154)
 
 - **Change:** Export Encrypted saves in a folder you pick on the SSD (CaseVault-Data\exports), never on the PC

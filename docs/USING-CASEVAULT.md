@@ -213,6 +213,21 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.156
+
+- **Password Manager:** the Email is shown in full (it wraps instead of being cut off). New columns: **PIN** (hidden until shown, like the password) and **Department** (CPD, DEA, USPIS, FBI, HSI, ATF, USMS, IRS-CI, ISP, or your own). A **Linked to Google** checkbox shows as a small Google tag next to the email
+- **Covert aliases:** each alias now has a full profile in sections: Identity (gender, nationality, ethnicity, date of birth, age and zodiac worked out from the date of birth, height, weight, body type, civil status, blood type, hobby, two languages), Identification (Social Security, driver's license, state license, library card), Contact (with mailbox details), School (high school and college), Work History (employer, position, address, years, phone; add as many as you need), Family (name, relation, date of birth, phone, notes) and Backstory
+- **Department filter:** the buttons above the Password Manager, Covert Aliases and Covert Accounts show All or one department, so you can switch between your DEA and CPD covert aliases and passwords
+- **Hidden case list:** the hover boxes of the rail icons now open to the right of the icon, and your last 3 opened cases sit on the rail (the last 4 characters of the case number) to jump back
+- **Select Cases:** a new button at the top of the case list picks several cases at once to pin or unpin, put in a Case Group, move into a Mission, or archive together (one reason for all)
+- **Saved searches:** under the case-list search box, quick filters Due This Week, Overdue, Pending and Pinned. Type a search and click Save Search to keep it there; × removes it. The search box now takes words in any order, and filter words: due:week, due:overdue, due:today, due:month, status:pending (or any status) and pinned
+- **Chain of custody:** each exhibit on the Draft tab has a Chain of Custody button: a dated log of who had it (received or seized, placed in evidence, checked out, returned, sent to the lab, taken to court, released, destroyed), who released it and who received it, and why. The button says where the exhibit is now. Print one exhibit's log, or every exhibit's with Chain of Custody PDF (it can be saved in the case's Files next to the report)
+- **Calendar:** a new home page tile (and Ctrl+K) shows a month of every open case's deadlines, court dates, buys, arrests and statutes of limitations. Turn each kind on or off; click a day to list it, and an item to open its Timeline
+- **Weekly Summary:** a new home page tile (and Ctrl+K): what changed on each case this week (Case History changes and notes, Timeline items, opened and closed), week by week, printable as a PDF
+- **Duplicate files:** adding a file that is already in the case (the same content, whatever its name) asks first: Skip Duplicates or Add Anyway
+- **Check the Vault:** once a month, a minute after the vault opens, CaseVault compares the case folders on the SSD with the case list and reads each case's data files, and only says something if a folder is missing, a case is not listed, a data file is damaged or a file is empty. Ctrl+K → Check the Vault runs it any time; nothing is changed
+- **Faster start:** Year Summary, Group Summary and the new Chain of Custody, Calendar and Weekly Summary load the first time they are used
+
 ### What's new in v1.155
 
 - **Hidden case list:** the thin rail on the left is now as wide as its buttons, so no icon (such as the padlock) is pushed outside it in Firefox, with a bigger font, zoom or Bigger Text. On a short window the icons scroll up and down inside the rail instead of spilling out
@@ -221,24 +236,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 - **Export Encrypted saves on the SSD, never on the PC:** pick a folder in `CaseVault-Data\exports\` on the CASEVAULT drive, or make a new one (it is named after the case at first). The file is read back and compared before CaseVault says it is saved, and a second export never overwrites the first. Nothing goes to the PC's Downloads folder any more
 - **Import Case lists the exports on the SSD:** pick one, or **From Another Drive…** for a `.cvcase` on a USB stick
-
-### What's new in v1.153
-
-- **Undo:** deleting a Timeline entry, a file or a report, and moving a file, shows **Undo** for 10 seconds. A deleted file waits in the case folder's hidden `.trash` until then (an hour at most), so even a large video comes back
-- **Report versions:** **Versions** (in a report's button bar) lists the last 10 versions of that report: one is kept every 10 minutes while you write, and one when it is deleted. Click one to read it; **Put This Version Back** restores it (the text from before is kept as a version too)
-- **Quick Add on the Timeline:** pick a common entry (Search Warrant Served, Controlled Buy, Arrest, Court Date, Grand Jury Subpoena Served, Phone Extraction Requested, Evidence Sent to the Lab). It fills the form and can add the deadline that follows it, such as the warrant return 10 days later; the days can be changed
-- **Court dates:** a new **Court** type on the Timeline. From 7 days before, the entry counts down (Court in 5 days … Court tomorrow), and the home page's **Today** panel lists the court dates of the week
-- **Copy Case Details** (Details tab, case actions): the case number, subject, charges, next court date and next deadline as plain lines to paste into an email. They are cleared from the clipboard after 2 minutes
-- **Same person on another case:** typing a suspect's name (and date of birth) that is already on another case shows a yellow note with a link to that case
-- **Before You Send:** Send Draft to Reports first checks the narrative against the evidence list (an exhibit mentioned but not listed, or listed but never mentioned), that its dates are in order and none is in the future. They are reminders: **Send Anyway** goes on
-- **Discovery log:** in Files → Discovery → Earlier productions, **Print Discovery Log** makes one page per case: each recipient, what was produced to them, when, and the Bates range
-- **Backup reminder after 50 changes:** besides every 7 days, the full backup is due again after 50 case saves since the last one
-- **Lock when the SSD is pulled:** the page, any open popup and the messages are cleared at once, and with a PIN set the privacy screen locks
-- **Export Encrypted** (Details tab, case actions): the whole case folder in one `.cvcase` file locked with a password (AES-256, the same as Discovery). Since v1.154 it is saved on the SSD, in `CaseVault-Data\exports\` in a folder you pick or make, never on the PC. **Settings → Backups → Import Case** lists the exports on the SSD (or takes one from another drive) and opens it. CaseVault does not keep the password
-- **Bigger Text** (⋮ → Options → Display): Normal, 110% or 125%. Only the words grow; Zoom still makes everything bigger
-- **Alt+1 … Alt+9** open the tabs of the case you are on, in order (Alt+1 Details, Alt+2 Timeline …)
-- **Pinned cases** (the pin on the home page) are listed at the top of the case list too
-- **Faster start-up:** Reports and the Draft tab load the first time they are opened, like Discovery and Link Chart
 
 ### Earlier versions
 

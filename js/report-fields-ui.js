@@ -906,6 +906,75 @@
     const evNote = h('input', { class: 'rf-ev-note-input', autocomplete: 'off', value: data.evidenceNote || '', 'aria-label': 'Evidence note' });
     evNote.addEventListener('input', () => { data.evidenceNote = evNote.value; save(); });
     const evNoteBox = String(data.evidenceNote || '').trim() ? ui.field('Evidence Note', evNote, 'rf-ev-note') : null;
+    // v1.156: chain of custody: a dated log of who had each exhibit, printed with the report.
+    const custodyLine = (e) => {
+      const st = CVCustody.status(e.custody);
+      const n = CVCustody.normalize(e.custody).length;
+      if (st.state === 'none') return 'No entries yet';
+      const where = { in: 'In evidence', out: `Out: ${st.last.action}${st.last.to ? ` (${st.last.to})` : ''}`, gone: st.last.action }[st.state];
+      return `${n} entr${n === 1 ? 'y' : 'ies'} · ${where}`;
+    };
+    const nextAction = (a) => ({ 'Checked Out': 'Returned', 'Sent to Lab': 'Returned from Lab', 'Taken to Court': 'Returned from Court' }[a] || 'Checked Out');
+    async function custodyDialog(e, after) {
+      const n = e.number;
+      const list = h('div', { class: 'custody-list' });
+      const draw = () => {
+        const log = CVCustody.normalize(e.custody);
+        list.replaceChildren(log.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'data-table custody-table' },
+          h('thead', {}, h('tr', {}, ...['Date / Time', 'Action', 'Released By', 'Received By', 'Purpose', ''].map((t) => h('th', {}, t)))),
+          h('tbody', {}, ...log.map((x, i) => h('tr', {},
+            h('td', { class: 'nowrap' }, `${x.date ? ui.fmtDate(x.date) : '—'}${x.time ? ` ${x.time}` : ''}`), h('td', {}, x.action), h('td', {}, x.from || '—'), h('td', {}, x.to || '—'), h('td', {}, x.purpose || '—'),
+            h('td', {}, archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Delete this entry', onclick: () => {
+              const all = CVCustody.normalize(e.custody);
+              all.splice(i, 1);
+              e.custody = all; save(0); draw();
+            } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, 'Delete entry')))))))) : h('p', { class: 'muted small' }, 'No entries yet. Start with when it was received or seized.'));
+      };
+      draw();
+      const date = h('input', { type: 'date', value: Vault.localDay(), 'aria-label': 'Custody date' });
+      const time = root.CVTimeField ? CVTimeField.create({ label: 'Custody time', value: '' }) : h('input', { type: 'time', 'aria-label': 'Custody time' });
+      const last = CVCustody.normalize(e.custody).pop();
+      const action = h('select', { 'aria-label': 'Custody action' }, CVCustody.ACTIONS.map((a) => h('option', { value: a }, a)));
+      action.value = last ? nextAction(last.action) : CVCustody.ACTIONS[0];
+      const from = h('input', { maxlength: 80, autocomplete: 'off', 'aria-label': 'Released by', value: last ? last.to : '' });
+      const to = h('input', { maxlength: 80, autocomplete: 'off', 'aria-label': 'Received by' });
+      const purpose = h('input', { maxlength: 160, autocomplete: 'off', 'aria-label': 'Purpose' });
+      const err = h('p', { class: 'error-text', role: 'alert' });
+      await ui.openDialog((close) => h('div', { class: 'custody-dialog' },
+        h('h2', { icon: 'clipboard2-check' }, `Chain of Custody: Exhibit ${n}`),
+        h('p', { class: 'muted small' }, String(e.description || '').trim() || 'Each time the exhibit changes hands: when, what happened, who released it and who received it.'),
+        list,
+        archived ? null : h('form', { class: 'custody-form', onsubmit: (ev) => {
+          ev.preventDefault();
+          err.textContent = '';
+          if (!date.value) { err.textContent = 'Pick the date.'; return; }
+          if (!to.value.trim() && !from.value.trim()) { err.textContent = 'Type who released it or who received it.'; to.focus(); return; }
+          e.custody = [...CVCustody.normalize(e.custody), { date: date.value, time: time.value || '', action: action.value, from: from.value.trim(), to: to.value.trim(), purpose: purpose.value.trim() }];
+          save(0); draw();
+          from.value = to.value.trim(); to.value = ''; purpose.value = '';
+          action.value = nextAction(action.value);
+        } },
+        h('div', { class: 'custody-grid' }, ui.field('Date', date), ui.field('Time', time), ui.field('Action', action), ui.field('Released By', from), ui.field('Received By', to), ui.field('Purpose', purpose)),
+        err, h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'submit', icon: 'plus-lg' }, 'Add Entry'))),
+        h('div', { class: 'dialog-actions' },
+          h('button', { 'data-ro-ok': 'true', class: 'btn', type: 'button', icon: 'printer', onclick: () => custodyPdf([e]) }, 'Print'),
+          h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Done'))));
+      if (after) after();
+    }
+    async function custodyPdf(list) {
+      save(0);
+      const bytes = CVCustody.build({ number: c.number || '', title: [CVOperation.subjectLabel(c.subject), c.title].filter(Boolean).join(' · '), exhibits: list, fmtDate: ui.fmtDate },
+        { letterhead: root.CVLetterhead ? await root.CVLetterhead.forPdf().catch(() => null) : null, printed: ui.fmtDate(Vault.localDay()) });
+      const name = `Chain of Custody ${c.number || ''}.pdf`.replace(/\s+\.pdf$/, '.pdf').replace(/[\\/:*?"<>|]/g, '');
+      const viewer = CVPdfViewer.create(bytes, { h, icon: ui.icon, title: 'Chain of Custody', fileName: name });
+      await ui.openDialog((close) => h('div', { class: 'pdf-view' }, h('h2', { icon: 'printer' }, 'Chain of Custody'), viewer,
+        h('div', { class: 'dialog-actions' },
+          archived ? null : h('button', { class: 'btn', type: 'button', icon: 'save', title: 'Save this PDF in the case\'s Files (Supplementary Report)', onclick: async () => {
+            try { await ui.Save.track(`files:${c.id}`, () => Vault.addFile(c.id, new File([bytes], name, { type: 'application/pdf' }), { folder: 'Supplementary Report', description: 'Chain of Custody', replace: true })); ui.toast('Saved to Files → Supplementary Report.', 'success'); } catch (err) { ui.toast(`Not saved: ${err.message}`, 'error'); }
+          } }, 'Save PDF to Case'),
+          h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
+      viewer.destroy();
+    }
     const drawEvidence = () => {
       evRows.replaceChildren(...(data.evidence.length ? data.evidence.map((e, i) => {
         const n = e.number;
@@ -959,6 +1028,7 @@
           drawPhotos();
           save(0);
         });
+        const custodyBtn = h('button', { 'data-ro-ok': 'true', class: 'btn small rf-custody-btn', type: 'button', icon: 'clipboard2-check', title: 'Who had this exhibit and when (received, checked out, sent to the lab, court…)', onclick: () => custodyDialog(e, () => { custodyBtn.firstChild.textContent = `Chain of Custody: ${custodyLine(e)}`; }) }, h('span', {}, `Chain of Custody: ${custodyLine(e)}`));
         // A big camera tile, the size of a photo (v1.34), so it's easy to find.
         const addPhoto = archived ? null : h('button', { class: 'rf-photo-add', type: 'button', title: 'Add photos or PDFs of this exhibit (every page of a PDF goes into the report)', onclick: () => picker.click() }, ui.icon('camera-fill'), h('span', {}, 'Add Photos or PDF'));
         return h('div', { class: 'rf-exhibit-card' },
@@ -966,11 +1036,13 @@
           h('div', { class: 'rf-exhibit-body' },
             h('div', { class: 'rf-exhibit-row' }, ui.field('Inventory Number', inv), ui.field('Type', type), narc),
             ui.field('Description', desc, 'span-all'),
-            h('div', { class: 'rf-photo-row' }, strip, addPhoto, picker)),
+            h('div', { class: 'rf-photo-row' }, strip, addPhoto, picker),
+            h('div', { class: 'rf-custody-row' }, custodyBtn)),
           archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Remove exhibit', onclick: () => { data.evidence.splice(i, 1); drawEvidence(); save(); } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, `Remove exhibit ${n}`)));
       }) : [h('p', { class: 'muted small rf-empty empty-note' }, ui.icon('camera-fill'), h('span', {}, 'No evidence yet.'))]));
     };
     drawEvidence();
+    const custodyAll = h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button', icon: 'printer', title: 'Every exhibit\'s chain of custody in one PDF, to print with the report', onclick: () => custodyPdf(data.evidence) }, 'Chain of Custody PDF');
     const addExhibit = h('button', { class: 'btn small', type: 'button', icon: 'plus-lg', title: c.agencyNumber ? `Numbered on from the last exhibit of any case with federal jacket number ${c.agencyNumber}.` : 'Numbered on from the last exhibit of this case. Cases with the same federal jacket number share one sequence.', onclick: async () => {
       try {
         const n = await nextNumber();
@@ -1348,7 +1420,7 @@
       // v1.85: the department letterhead, as at the top of the PDF.
       archived || !root.CVLetterhead ? null : root.CVLetterhead.summary(), // v1.118: one line; the editor is in Vault → My Profile
       ...sections.slice(0, -1),
-      part('evidence', 'Evidence Inventoried', 'box-seam', evNoteBox, evRows, archived ? null : h('div', { class: 'contact-add rf-evidence-add' }, addExhibit, numbering), extrasBox),
+      part('evidence', 'Evidence Inventoried', 'box-seam', evNoteBox, evRows, archived ? null : h('div', { class: 'contact-add rf-evidence-add' }, addExhibit, custodyAll, numbering), extrasBox),
       part('summary', 'Summary of Investigation', 'journal-text', fmt, rich.el, narrative),
       sections[sections.length - 1]); // Submission and Approval comes last, as on the printed report
     // v1.48: every field is one grey box with its label inside; an empty box shows the label as its

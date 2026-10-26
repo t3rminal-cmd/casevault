@@ -81,7 +81,7 @@ const SP = process.env.SP + '/v1142';
     timeline: pdf,
     arrest: await p.evaluate(async (id) => [...CVArrestPdf.build(await Vault.readCaseJSON(id, 'arrest.json'), { caseNumber: 'EX-100' })].map((c) => String.fromCharCode(c)).join(''), ids.c),
     report: await p.evaluate(() => [...CVReportPdf.build(CVReportFields.normalize({ narrative: 'On September 10, 2026, Detective Jane Doe met with an undercover officer at Example Park in Example City.' }), {})].map((c) => String.fromCharCode(c)).join('')),
-    year: await p.evaluate(() => [...CVYearSummary.build(CVYearSummary.compute('2026', [{ id: 'a', number: 'EX-100', opened: '2026-01-02' }], new Map()), {})].map((c) => String.fromCharCode(c)).join('')),
+    year: await p.evaluate(async () => { await CVKit.loadScripts(['js/year-summary.js']); return [...CVYearSummary.build(CVYearSummary.compute('2026', [{ id: 'a', number: 'EX-100', opened: '2026-01-02' }], new Map()), {})].map((c) => String.fromCharCode(c)).join(''); }),
     training: await p.evaluate(() => [...CVTraining.build([{ file: 'a.pdf', course: 'Basic Narcotics Investigations', provider: 'Example Police Academy', date: '2024-03-04', hours: '40', expires: '2026-09-30' }], { today: '2026-10-17' })].map((c) => String.fromCharCode(c)).join('')),
   };
   for (const [name, s] of Object.entries(shots)) {

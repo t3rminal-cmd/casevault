@@ -180,7 +180,7 @@
     ['panel', '.vault-panel'],
     ['form', '.op-form, .new-case-form, .deep-search, .restore-form, .locker-form'],
     ['full', '.preview, .doc-view, .lib-preview, .pdf-view, .word-view, .disc'],
-    ['wide', '.year-summary, .problem-form, .type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
+    ['wide', '.year-summary, .vault-check, .cal-view, .wk-view, .custody-dialog, .problem-form, .type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
   ];
 
   function openDialog(build) {
@@ -599,7 +599,7 @@
     renderCaseList();
     route();
     CVChecks.onVaultOpen();
-    if (!sameVault) safetyChecks();
+    if (!sameVault) { safetyChecks(); monthlyVaultCheck(); }
     // v1.91: a saved online AI key from an older version was deleted from the SSD.
     if (Vault.lastCleanup && Vault.lastCleanup.keys) toast('Online AI is no longer part of CaseVault. The saved online AI key was deleted from the SSD (CaseVault-Data\\secrets).', 'info', 10000);
   }
@@ -650,6 +650,38 @@
       if (si && si.diskTotal && (si.diskFree < 2 * 1024 ** 3 || si.diskFree / si.diskTotal < 0.05)) warn.push(`The SSD is nearly full: ${fmtSize(si.diskFree)} free. Archive or move large files before it fills up.`);
     }
     if (warn.length) toast(h('span', {}, ...warn.flatMap((w, i) => [i ? h('br') : null, w])), 'error', 12000);
+  }
+
+  /* v1.156: the monthly self-check: once a month, a minute after the vault opens, the case folders on
+   * the SSD are compared with the case list and each case's data files are read. Nothing is said
+   * unless something is wrong. Ctrl+K → Check the Vault runs it any time. */
+  function monthlyVaultCheck() {
+    const last = (Vault.data.settings || {}).lastVaultCheck;
+    if (last && last.at && Date.now() - new Date(last.at).getTime() < 30 * 86400000) return;
+    setTimeout(async () => {
+      if (!Vault.data) return;
+      try {
+        const r = await Vault.checkVault();
+        if (r.problems.length) toast(h('span', {}, `The monthly vault check found ${plural(r.problems.length, 'problem')}. `, h('button', { type: 'button', class: 'linklike toast-link', onclick: () => vaultCheckDialog(r) }, 'See What')), 'error', 20000);
+      } catch { /* drive lost: reported elsewhere */ }
+    }, 60000);
+  }
+  async function vaultCheckDialog(result) {
+    let r = result;
+    if (!r) {
+      const note = toast('Checking every case folder on the SSD…', 'info', 600000);
+      try { r = await Vault.checkVault(); } catch (err) { note.remove(); if (FS.isDisconnectError(err)) return onDriveLost(); toast(`Not checked: ${err.message}`, 'error'); return undefined; }
+      note.remove();
+    }
+    return openDialog((close) => h('div', { class: 'vault-check' },
+      h('h2', { icon: r.problems.length ? 'exclamation-triangle-fill' : 'shield-fill-check' }, 'Check the Vault'),
+      h('p', {}, `${plural(r.cases, 'case folder')} and ${plural(r.files, 'file')} checked against the case list.`),
+      r.problems.length
+        ? h('div', {}, h('p', { class: 'warn-text' }, `${plural(r.problems.length, 'problem')} found. Nothing was changed. Restore the case from a full backup, or ask for help with Report a Problem.`),
+          h('ul', { class: 'vault-check-list' }, r.problems.map((x) => h('li', {}, h('strong', {}, x.number || x.id), ` · ${x.what}`))))
+        : h('p', { class: 'ok-text' }, 'Everything matches: every case folder is in the case list, and every case file could be read.'),
+      h('p', { class: 'muted small' }, 'This check runs by itself once a month.'),
+      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Close'))));
   }
 
   // v1.151: the backup screens are in js/backup-ui.js.
@@ -708,7 +740,30 @@
   const notesOf = (c) => (c.notes ? [c.notes] : Array.isArray(c.activity) ? c.activity.filter((a) => a.note).map((a) => a.what) : []);
   // v1.97: Subject Names read "LAST, First" in every list (the saved name is kept as typed).
   const subj = (c) => CVOperation.subjectLabel(c && c.subject);
-  const matchesSearch = (c, q) => !q || [c.title, c.subject, subj(c), c.fileNumber, c.number, c.agencyNumber, c.client, c.status, CVOperation.opLabel(Vault.operationOf(c)), c.suspectGroup || '', ...(c.tags || []), ...notesOf(c)].join(' ').toLowerCase().includes(q);
+  // v1.156: the search is read word by word (every word must match, in any order), and a few
+  // words are filters: due:week (a deadline in the next 7 days), due:overdue, status:pending (or any
+  // status), pinned. Saved searches under the box are these same words.
+  let onCaseListDrawn = () => {};
+  const SEARCH_TOKEN = /^(due|status):(.+)$|^pinned$/;
+  function searchTokenOk(c, t) {
+    if (t === 'pinned') return ((Vault.data.settings || {}).pinnedCases || []).includes(c.id);
+    const [, k, v] = t.match(SEARCH_TOKEN);
+    if (k === 'status') return String(c.status || '').toLowerCase() === v;
+    const d = c.nextDeadline && c.nextDeadline.date && !isArchivedEntry(c) ? daysUntil(c.nextDeadline.date) : null;
+    if (d == null) return false;
+    if (v === 'overdue') return d < 0;
+    if (v === 'today') return d === 0;
+    if (v === 'week') return d >= 0 && d <= 7;
+    if (v === 'month') return d >= 0 && d <= 31;
+    return false;
+  }
+  const matchesSearch = (c, q) => {
+    if (!q) return true;
+    const text = [c.title, c.subject, subj(c), c.fileNumber, c.number, c.agencyNumber, c.client, c.status, CVOperation.opLabel(Vault.operationOf(c)), c.suspectGroup || '', ...(c.tags || []), ...notesOf(c)].join(' ').toLowerCase();
+    if (text.includes(q)) return true;
+    const words = q.split(/\s+/).filter(Boolean);
+    return words.every((w) => (SEARCH_TOKEN.test(w) ? searchTokenOk(c, w) : text.includes(w)));
+  };
 
   // Cases in cases/ (the archive has its own section below the list): open and pending first,
   // then closed, each most recently changed first. Typing a status in the search box finds those.
@@ -938,6 +993,7 @@
     // v1.151: read together, not one after another.
     await Promise.all(list.map(async (c) => { arrests.set(c.id, await Vault.readCaseJSON(c.id, 'arrest.json').catch(() => null)); }));
     full.push(...list);
+    await CVKit.loadScripts(['js/group-summary.js']); // v1.156: loaded on first use
     const bytes = CVGroupSummary.build(name, CVGroupSummary.rows(full, arrests), { letterhead: await CVLetterhead.forPdf().catch(() => null), printed: fmtDate(today()) });
     await openDialog((done) => h('div', { class: 'pdf-view' }, h('h2', { 'data-keep-case': 'true' }, `Case Group Summary: ${name}`), CVPdfViewer.create(bytes, { h, icon: I, title: `Case Group Summary ${name}`, fileName: `Case Group Summary ${name.replace(/[\\/:*?"<>|]+/g, ' ')}.pdf` }),
       h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => done() }, 'Close'))));
@@ -1081,6 +1137,7 @@
     const list = $('#case-list');
     sideSig = null;
     if (!Vault.data) { list.replaceChildren(); return; }
+    drawRailRecent(); // v1.156
     sideSig = sideSignature();
     const cases = filteredCases();
     const activeCount = Vault.data.cases.filter((c) => !isArchivedEntry(c)).length;
@@ -1107,6 +1164,7 @@
       if (closedGroups.length) list.append(h('li', { class: 'side-found-head muted small' }, 'Closed'), ...closedGroups.map((g) => operationGroup(g)));
       if (archived.length) list.append(h('li', { class: 'side-found-head muted small' }, 'Archived'), ...archived.map(caseItem));
     }
+    onCaseListDrawn();
   }
 
   $('#case-search').addEventListener('input', debounce(renderCaseList, 120));
@@ -2503,6 +2561,9 @@
       tile('Discovery', 'shield-lock-fill', discovery, 'Make a discovery package for a case'),
       tile('Link Chart', 'diagram-3-fill', toTab('linkchart'), 'Open the Link Chart of a case'),
       tile('Reference', 'book', () => { location.hash = '#/reference'; }, 'Charts, codes and calculators'),
+      // v1.156: the Deadline Calendar (a month across every open case) and the Weekly Summary.
+      tile('Calendar', 'calendar-event', () => openAgenda('calendar'), 'A month of deadlines, court dates and statutes of limitations across every open case'),
+      tile('Weekly Summary', 'calendar-check', () => openAgenda('weekly'), 'What changed on each case this week; prints as a PDF'),
       tile('Year Summary', 'bar-chart-line-fill', () => yearSummary(), 'A year at a glance: cases opened, closed and archived, arrests, charges and narcotics recovered; prints as a PDF'),
       // v1.121: Quick Links open in a panel from the right; Library and Vault are one Settings tile
       // (they opened the same window).
@@ -2965,6 +3026,7 @@
     state.caseId = id;
     state.lastCaseId = id;
     state.tab = tab;
+    noteOpened(id);
     renderCaseList();
 
     const archived = Vault.isArchived(id);
@@ -3218,12 +3280,16 @@
 
   /* v1.136: Year Summary: cases opened, closed and archived in a year, arrests by month, charges by
    * type and the most common ones, narcotics recovered; on screen, and as a PDF. */
+  async function openAgenda(which) {
+    try { await (await CVLazy.agenda())[which](); } catch (err) { if (FS.isDisconnectError(err)) onDriveLost(); else toast(`Could not open: ${err.message}`, 'error'); }
+  }
   async function yearSummary(pickYear) {
     const entries = (Vault.data && Vault.data.cases) || [];
     const arrests = new Map();
     try {
       await Promise.all(entries.map(async (e) => { arrests.set(e.id, await Vault.readCaseJSON(e.id, 'arrest.json').catch(() => null)); }));
     } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
+    try { await CVKit.loadScripts(['js/year-summary.js']); } catch (err) { toast(`Could not open: ${err.message}`, 'error'); return undefined; } // v1.156: loaded on first use
     const years = CVYearSummary.years(entries, arrests, today().slice(0, 4));
     let year = pickYear && years.includes(String(pickYear)) ? String(pickYear) : years[0];
     const pdfOf = async (s) => CVYearSummary.build(s, { letterhead: await CVLetterhead.forPdf().catch(() => null), printed: fmtDate(today()) });
@@ -3969,6 +4035,7 @@
       ['Quick Note', 'pencil-square', () => quickNoteDialog()], // v1.149
       ['Keyboard Shortcuts', 'lightning-charge', () => shortcutsDialog()],
       ['Year Summary', 'bar-chart-line-fill', () => yearSummary()],
+      ['Check the Vault', 'shield-fill-check', () => vaultCheckDialog()], ['Calendar', 'calendar-event', () => openAgenda('calendar')], ['Weekly Summary', 'calendar-check', () => openAgenda('weekly')], // v1.156
       ['Training Record', 'file-earmark-pdf', () => trainingRecord()], ['Training', 'patch-check-fill', () => openTraining()],
     ];
     return openDialog((close) => {
@@ -4115,6 +4182,101 @@
     }
   });
 
+  /* v1.156: Select Cases: tick cases in a list, then one action for all of them. */
+  async function bulkDialog() {
+    if (!state.connected) return;
+    const open = Vault.data.cases.filter((c) => !isArchivedEntry(c)).sort(byNumber);
+    if (!open.length) return toast('There are no open cases.', 'info');
+    const picked = new Set();
+    const ops = Vault.listOperations().filter((o) => o.status !== 'Closed');
+    const res = await openDialog((close) => {
+      const count = h('span', { class: 'muted small' }, 'None selected');
+      const boxes = open.map((c) => {
+        const cb = h('input', { type: 'checkbox', 'aria-label': `Select case ${c.number || ''}` });
+        cb.addEventListener('change', () => { if (cb.checked) picked.add(c.id); else picked.delete(c.id); count.textContent = picked.size ? `${picked.size} selected` : 'None selected'; });
+        const op = c.operationId && (Vault.data.operations || []).find((o) => o.id === c.operationId);
+        return h('label', { class: 'bulk-row' }, cb, h('strong', {}, c.number || 'No case number'), h('span', { class: 'muted small' }, [subj(c), op ? CVOperation.opLabel(op) : c.suspectGroup || 'General Files'].filter(Boolean).join(' · ')), statusPill(c.status));
+      });
+      const all = h('button', { type: 'button', class: 'btn small', onclick: () => { const on = picked.size < open.length; boxes.forEach((b) => { const cb = b.querySelector('input'); cb.checked = on; cb.dispatchEvent(new Event('change')); }); } }, 'Select All');
+      const groupName = h('input', { maxlength: 80, placeholder: 'Case Group name', 'aria-label': 'Case Group name', list: 'bulk-groups' });
+      const opSel = h('select', { 'aria-label': 'Mission' }, h('option', { value: '' }, 'Pick a Mission'), ops.map((o) => h('option', { value: o.id }, CVOperation.opLabel(o))));
+      const need = (fn) => () => { if (!picked.size) { toast('Select at least one case.', 'error'); return; } fn(); };
+      return h('div', { class: 'bulk-dialog' },
+        h('h2', { icon: 'card-checklist' }, 'Select Cases'),
+        h('div', { class: 'bulk-top' }, all, count),
+        h('div', { class: 'bulk-list' }, boxes),
+        h('datalist', { id: 'bulk-groups' }, [...new Set(Vault.data.cases.map((c) => c.suspectGroup).filter(Boolean))].map((g) => h('option', { value: g }))),
+        h('div', { class: 'bulk-actions' },
+          h('button', { class: 'btn', type: 'button', icon: 'pin-angle', onclick: need(() => close({ act: 'pin' })) }, 'Pin'),
+          h('button', { class: 'btn', type: 'button', icon: 'pin-angle', onclick: need(() => close({ act: 'unpin' })) }, 'Unpin'),
+          h('span', { class: 'bulk-pair' }, groupName, h('button', { class: 'btn', type: 'button', icon: 'folder', onclick: need(() => { if (!groupName.value.trim()) return toast('Type the Case Group name.', 'error'); close({ act: 'group', name: groupName.value.trim() }); }) }, 'Put in Case Group')),
+          ops.length ? h('span', { class: 'bulk-pair' }, opSel, h('button', { class: 'btn', type: 'button', icon: 'op-folder', onclick: need(() => { if (!opSel.value) return toast('Pick the Mission.', 'error'); close({ act: 'mission', op: opSel.value }); }) }, 'Move to Mission')) : null,
+          h('button', { class: 'btn danger-ghost', type: 'button', icon: 'archive', onclick: need(() => close({ act: 'archive' })) }, 'Archive…')),
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel')));
+    });
+    if (!res) return;
+    const ids = [...picked];
+    const cases = ids.map((id) => open.find((c) => c.id === id));
+    try {
+      if (res.act === 'pin' || res.act === 'unpin') {
+        const now = pinnedIds();
+        const next = res.act === 'pin' ? [...now, ...ids.filter((id) => !now.includes(id))].slice(-12) : now.filter((id) => !ids.includes(id));
+        await Save.track('settings', () => Vault.updateSettings({ pinnedCases: next }));
+        toast(`${plural(ids.length, 'case')} ${res.act === 'pin' ? 'pinned' : 'unpinned'}.`, 'success');
+      } else if (res.act === 'group') {
+        const free = cases.filter((c) => !c.operationId);
+        for (const c of free) await Save.track(`case:${c.id}`, () => Vault.setSuspectGroup(c.id, res.name));
+        toast(`${plural(free.length, 'case')} put in the Case Group ${res.name}.${free.length < cases.length ? ` ${plural(cases.length - free.length, 'case')} in a Mission stayed there.` : ''}`, 'success', 6000);
+      } else if (res.act === 'mission') {
+        for (const c of cases) if (c.operationId !== res.op) await Save.track(`case:${c.id}`, () => Vault.assignCase(c.id, res.op));
+        toast(`${plural(cases.length, 'case')} moved to the Mission.`, 'success');
+      } else if (res.act === 'archive') {
+        const reason = await openDialog((close) => {
+          const pick = h('select', { 'aria-label': 'Reason' }, h('option', { value: '' }, 'Pick a reason'), Vault.ARCHIVE_FOLDERS.map(([k]) => h('option', { value: k }, Vault.archiveFolderName(k))), h('option', { value: 'other' }, Vault.archiveFolderName('other')));
+          const note = h('input', { maxlength: 400, placeholder: 'Reason (required for Other)', 'aria-label': 'Reason details' });
+          return h('form', { class: 'confirm', onsubmit: (e) => { e.preventDefault(); if (!pick.value || (pick.value === 'other' && !note.value.trim())) return toast('Pick a reason (and write it for Other).', 'error'); close({ folder: pick.value === 'other' ? '' : pick.value, reason: [pick.value === 'other' ? '' : Vault.archiveFolderName(pick.value), note.value.trim()].filter(Boolean).join(': ') }); } },
+            h('h2', { icon: 'archive' }, `Archive ${plural(cases.length, 'case')}?`),
+            h('p', {}, 'Each moves to CaseVault-Data\\archive on the SSD with everything in it, copied and checked first. They can be restored at any time.'),
+            field('Reason', pick), field('Reason Details', note),
+            CVKit.cancelRow(h, () => close(null), h('button', { class: 'btn primary', type: 'submit', icon: 'archive' }, 'Archive')));
+        });
+        if (!reason) return;
+        await Save.flushAll();
+        const progress = toast('Archiving…', 'info', 600000);
+        let n = 0;
+        for (const c of cases) { progress.textContent = `Archiving ${c.number || ''} (${++n} of ${cases.length})…`; await Save.track(`archive:${c.id}`, () => Vault.archiveCase(c.id, null, reason.folder, reason.reason)); }
+        progress.remove();
+        toast(`${plural(cases.length, 'case')} archived.`, 'success');
+      }
+    } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); toast(`Stopped: ${err.message}`, 'error', 8000); }
+    renderCaseList();
+    route();
+  }
+
+  /* v1.156: the last 3 cases opened, as small buttons on the hidden case list's rail (kept in
+   * vault.json on the SSD, so they follow the drive). */
+  const RAIL_RECENT = 3;
+  function noteOpened(id) {
+    const s = Vault.data && Vault.data.settings;
+    if (!s) return;
+    const now = Array.isArray(s.recentOpened) ? s.recentOpened : [];
+    const next = [id, ...now.filter((x) => x !== id)].slice(0, RAIL_RECENT);
+    if (next.join('|') !== now.join('|')) Save.track('settings', () => Vault.updateSettings({ recentOpened: next })).catch(() => {});
+    drawRailRecent(next);
+  }
+  function drawRailRecent(ids) {
+    const head = document.querySelector('.sidebar-head');
+    if (!head) return;
+    head.querySelectorAll('.rail-recent').forEach((x) => x.remove());
+    const list = (ids || (Vault.data && Vault.data.settings && Vault.data.settings.recentOpened) || [])
+      .map((id) => Vault.data.cases.find((c) => c.id === id)).filter(Boolean);
+    if (!list.length) return;
+    const tail = (n) => { const t = String(n || '').replace(/\s+/g, ''); return t.length > 4 ? t.slice(-4) : t || '?'; };
+    const box = h('div', { class: 'rail-only rail-recent', role: 'group', 'aria-label': 'Recently opened cases' },
+      ...list.map((c) => h('a', { class: `icon-btn rail-case${c.id === state.caseId ? ' on' : ''}`, href: `#/case/${CVRoute.enc(c.id)}`, title: `Case ${c.number || ''}${subj(c) ? ` · ${subj(c)}` : ''}` }, h('span', { 'aria-hidden': 'true' }, tail(c.number)), h('span', { class: 'sr-only' }, `Open case ${c.number || ''}`))));
+    head.append(box);
+  }
+
   /* ---------- collapsible sidebar ---------- */
 
   // collapsed: true hides the case list to a thin rail (or entirely at phone width).
@@ -4210,7 +4372,9 @@
     toast(`Cases: ${SIDE_ORDERS.find((o) => o[0] === sideOrder)[2].toLowerCase()}.`, 'info', 1800);
   });
   drawSort();
-  $('#btn-sidebar-collapse').after(searchBtn, homeBtn, linksBtn, privacyBtn, sortBtn);
+  // v1.156: Select Cases: several cases at once (pin, Case Group, Mission, archive).
+  const bulkBtn = h('button', { id: 'btn-side-bulk', class: 'icon-btn', type: 'button', title: 'Select several cases to pin, group, move to a Mission or archive together', onclick: () => bulkDialog() }, I('card-checklist'), h('span', { class: 'sr-only' }, 'Select cases'));
+  $('#btn-sidebar-collapse').after(searchBtn, homeBtn, linksBtn, privacyBtn, sortBtn, bulkBtn);
   const tools = $('.sidebar-tools');
   const showSearch = (on) => {
     tools.classList.toggle('search-open', on);
@@ -4228,6 +4392,41 @@
   const deepBtn = h('button', { id: 'btn-deep-search', class: 'btn small deep-search-btn', type: 'button', icon: 'search', hidden: true, title: 'Also look in each case\'s notes, timeline, reports, Draft form, arrest details and file names', onclick: () => searchInsideCases($('#case-search').value) }, 'Search Inside Cases');
   $('#case-search').closest('.search-wrap').after(deepBtn);
   $('#case-search').addEventListener('input', () => { deepBtn.hidden = !$('#case-search').value.trim(); });
+  // v1.156: Saved searches: quick filters under the search box, and searches you name and keep.
+  const BUILT_IN_SEARCHES = [['Due This Week', 'due:week'], ['Overdue', 'due:overdue'], ['Pending', 'status:pending'], ['Pinned', 'pinned']];
+  const savedRow = h('div', { class: 'saved-searches', role: 'group', 'aria-label': 'Saved searches' });
+  const runSearch = (q) => { $('#case-search').value = q; deepBtn.hidden = !q; showSearch(true); renderCaseList(); drawSaved(); };
+  function drawSaved() {
+    const cur = $('#case-search').value.trim().toLowerCase();
+    const mine = ((Vault.data && Vault.data.settings) || {}).savedSearches || [];
+    const chip = (name, q, del) => h('span', { class: `saved-chip${cur === q.toLowerCase() ? ' on' : ''}` },
+      h('button', { class: 'saved-run', type: 'button', title: `Search: ${q}`, onclick: () => runSearch(cur === q.toLowerCase() ? '' : q) }, name),
+      del ? h('button', { class: 'saved-del', type: 'button', title: `Remove the saved search "${name}"`, 'aria-label': `Remove ${name}`, onclick: async () => {
+        await Vault.updateSettings({ savedSearches: mine.filter((x) => x.q !== q || x.name !== name) });
+        drawSaved();
+      } }, '×') : null);
+    const canSave = cur && !BUILT_IN_SEARCHES.some(([, q]) => q === cur) && !mine.some((x) => x.q.toLowerCase() === cur);
+    savedRow.replaceChildren(...BUILT_IN_SEARCHES.map(([n, q]) => chip(n, q, false)), ...mine.map((x) => chip(x.name, x.q, true)),
+      ...(canSave ? [h('button', { class: 'btn small saved-add', type: 'button', icon: 'star-fill', title: 'Keep this search under the box', onclick: saveSearch }, 'Save Search')] : []));
+  }
+  async function saveSearch() {
+    const q = $('#case-search').value.trim();
+    if (!q) return;
+    const name = h('input', { maxlength: 40, value: q.slice(0, 40), 'aria-label': 'Name of the search', autocomplete: 'off' });
+    const got = await openDialog((close) => h('form', { onsubmit: (e) => { e.preventDefault(); close(name.value.trim()); } },
+      h('h2', { icon: 'star-fill' }, 'Save Search'),
+      h('p', { class: 'muted small' }, `Search: ${q}. Words like due:week, due:overdue, status:pending and pinned filter the cases; other words must all be found.`),
+      field('Name', name),
+      CVKit.cancelRow(h, () => close(null), h('button', { class: 'btn primary', type: 'submit', icon: 'star-fill' }, 'Save'))));
+    if (!got) return;
+    const list = ((Vault.data.settings || {}).savedSearches || []).filter((x) => x.name !== got);
+    await Vault.updateSettings({ savedSearches: [...list, { name: got, q }].slice(-12) });
+    drawSaved();
+    toast(`Saved search "${got}".`, 'success', 2000);
+  }
+  deepBtn.after(savedRow);
+  drawSaved();
+  onCaseListDrawn = drawSaved;
   $('#case-search').addEventListener('keydown', (e) => { if (e.key === 'Enter' && $('#case-search').value.trim()) { e.preventDefault(); searchInsideCases($('#case-search').value); } });
   $('#case-search').addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
@@ -4236,7 +4435,7 @@
     showSearch(false);
     searchBtn.focus();
   });
-  $('#case-search').addEventListener('blur', () => { if (!$('#case-search').value.trim()) showSearch(false); });
+  $('#case-search').addEventListener('blur', (e) => { if (!$('#case-search').value.trim() && !(e.relatedTarget && tools.contains(e.relatedTarget))) showSearch(false); });
   setSidebarLock(false, { save: false });
 
   // Drag the case list's right edge to make it wider or narrower (or focus it and use ← →).
@@ -4284,6 +4483,7 @@
   $('#btn-sidebar-collapse').addEventListener('click', () => setSidebar(!document.body.classList.contains('sidebar-collapsed'), { focus: true }));
   $('#btn-sidebar-expand').addEventListener('click', () => setSidebar(false, { focus: true }));
   $('#btn-rail-new').addEventListener('click', () => $('#btn-new-case').click());
+  drawRailRecent();
 
   // Write any pending edits the moment the window is hidden or closed.
   document.addEventListener('visibilitychange', () => { if (document.hidden) Save.flushAll(); });
@@ -4327,10 +4527,10 @@
   CVMailUI.init(window.CaseVaultUI);
   // v1.151: Discovery and Link Chart load the first time they are opened (start-up reads less).
   const lazyPart = (files, name) => { let ready = null; return () => (ready = ready || CVKit.loadScripts(files).then(() => { window[name].init(window.CaseVaultUI); return window[name]; }).catch((err) => { ready = null; throw err; })); };
-  window.CVLazy = { discovery: lazyPart(['js/discovery-receipt.js', 'js/discovery-ui.js'], 'CVDiscoveryUI'), linkChart: lazyPart(['js/linkchart.js', 'js/linkchart-ui.js'], 'CVLinkChartUI'), caseExport: lazyPart(['js/case-export.js', 'js/case-export-ui.js'], 'CVCaseExportUI') };
+  window.CVLazy = { discovery: lazyPart(['js/discovery-receipt.js', 'js/discovery-ui.js'], 'CVDiscoveryUI'), linkChart: lazyPart(['js/linkchart.js', 'js/linkchart-ui.js'], 'CVLinkChartUI'), caseExport: lazyPart(['js/case-export.js', 'js/case-export-ui.js'], 'CVCaseExportUI'), agenda: lazyPart(['js/agenda.js', 'js/agenda-ui.js'], 'CVAgendaUI') };
   // v1.153: Reports and the Draft tab too (they need each other, so they come together).
   let reportsReady = null;
-  CVLazy.reports = () => (reportsReady = reportsReady || CVKit.loadScripts(['js/drafts/ghost.js', 'js/drafts/review.js', 'js/drafts/drafts-ui.js', 'js/report-fields-ui.js'])
+  CVLazy.reports = () => (reportsReady = reportsReady || CVKit.loadScripts(['js/drafts/ghost.js', 'js/drafts/review.js', 'js/drafts/drafts-ui.js', 'js/custody.js', 'js/report-fields-ui.js'])
     .then(() => { CVDraftsUI.init(window.CaseVaultUI); CVReportFieldsUI.init(window.CaseVaultUI); return { drafts: CVDraftsUI, fields: CVReportFieldsUI }; })
     .catch((err) => { reportsReady = null; throw err; }));
   CVSecureSettings.init(window.CaseVaultUI);
