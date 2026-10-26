@@ -4,6 +4,12 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.152
+
+- **Back to your own Firefox:** `Start-CaseVault.bat` opens CaseVault in a new tab of your normal browser again, with your settings, sign-in and look (v1.151 opened a separate, empty browser profile on the SSD). The addresses still hide case numbers and names, so nothing about a case lands in the browser history. The `CaseVault-Browser` folder v1.151 made on the SSD can be deleted
+- **Reconnect fixed:** when the helper was restarted (an update, or Start-CaseVault.bat run again), an open CaseVault tab said "The CaseVault helper is not running" and Reconnect did nothing, because the tab had the helper's old key. It now says **Start CaseVault Again to Reconnect**; double-click `Start-CaseVault.bat` and every open CaseVault tab reconnects by itself
+- **Helper 1.16.1:** opens your normal browser by default; `-OwnProfile` (advanced) still opens the separate profile on the SSD
+
 ## What's new in v1.151
 
 - **PDF viewer:** PDFs now open at **Fit Width**, as wide as the window. The zoom buttons, 100% and Fit Width are still there
