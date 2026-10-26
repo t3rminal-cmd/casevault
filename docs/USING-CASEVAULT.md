@@ -213,6 +213,10 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.155
+
+- **Hidden case list:** the thin rail on the left is now as wide as its buttons, so no icon (such as the padlock) is pushed outside it in Firefox, with a bigger font, zoom or Bigger Text. On a short window the icons scroll up and down inside the rail instead of spilling out
+
 ### What's new in v1.154
 
 - **Export Encrypted saves on the SSD, never on the PC:** pick a folder in `CaseVault-Data\exports\` on the CASEVAULT drive, or make a new one (it is named after the case at first). The file is read back and compared before CaseVault says it is saved, and a second export never overwrites the first. Nothing goes to the PC's Downloads folder any more
@@ -235,12 +239,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Alt+1 … Alt+9** open the tabs of the case you are on, in order (Alt+1 Details, Alt+2 Timeline …)
 - **Pinned cases** (the pin on the home page) are listed at the top of the case list too
 - **Faster start-up:** Reports and the Draft tab load the first time they are opened, like Discovery and Link Chart
-
-### What's new in v1.152
-
-- **Back to your own Firefox:** `Start-CaseVault.bat` opens CaseVault in a new tab of your normal browser again, with your settings, sign-in and look (v1.151 opened a separate, empty browser profile on the SSD). The addresses still hide case numbers and names, so nothing about a case lands in the browser history. The `CaseVault-Browser` folder v1.151 made on the SSD can be deleted
-- **Reconnect fixed:** when the helper was restarted (an update, or Start-CaseVault.bat run again), an open CaseVault tab said "The CaseVault helper is not running" and Reconnect did nothing, because the tab had the helper's old key. It now says **Start CaseVault Again to Reconnect**; double-click `Start-CaseVault.bat` and every open CaseVault tab reconnects by itself
-- **Helper 1.16.1:** opens your normal browser by default; `-OwnProfile` (advanced) still opens the separate profile on the SSD
 
 ### Earlier versions
 

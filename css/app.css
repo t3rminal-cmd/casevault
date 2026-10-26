@@ -4329,3 +4329,11 @@ button.pw-strength:hover { background: var(--danger-soft); }
 .export-folder { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s3, 12px); }
 .export-folder .field[hidden] { display: none; }
 @media (max-width: 640px) { .export-folder { grid-template-columns: 1fr; } }
+
+/* v1.155: the hidden case list's rail is as wide as its buttons (plus a margin), whatever the
+ * browser, zoom or text size, so no icon is pushed outside it. On a short window the icons scroll
+ * up and down inside the rail (no scrollbar taking width), never sideways. */
+body.sidebar-collapsed .sidebar { width: max-content; min-width: 2.9rem; overflow: hidden; }
+body.sidebar-collapsed .sidebar-head { box-sizing: border-box; width: 100%; padding: .5rem .35rem; flex-wrap: nowrap; min-height: 0; overflow-x: hidden; overflow-y: auto; scrollbar-width: none; }
+body.sidebar-collapsed .sidebar-head::-webkit-scrollbar { display: none; }
+body.sidebar-collapsed .sidebar-head > * { flex: 0 0 auto; margin: 0 !important; }

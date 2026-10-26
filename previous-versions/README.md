@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.154)
+
+- **Change:** Export Encrypted saves in a folder you pick on the SSD (CaseVault-Data\exports), never on the PC
+- **Change:** Import Case lists the exports saved on the SSD
+
 ## Features (v1.153)
 
 - **New:** Undo for deleted Timeline entries, files and reports, and for file moves; the last 10 versions of each report

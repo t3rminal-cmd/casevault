@@ -15,10 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.154
+## What's New in v1.155
 
-- **Change:** Export Encrypted saves in a folder you pick on the SSD (CaseVault-Data\exports), never on the PC
-- **Change:** Import Case lists the exports saved on the SSD
+- **Fix:** with the case list hidden, every icon stays inside the thin rail (the padlock no longer sticks out)
 
 ## What CaseVault Does
 
