@@ -4,6 +4,13 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.156)
+
+- **Password Manager:** full email, PIN and Department columns, Linked to Google, and a department filter (e.g. DEA or CPD)
+- **Covert aliases:** full profile with work history, family, mailbox, school, identification, and age and zodiac worked out
+- **Case list:** saved searches and quick filters, Select Cases (pin, group, Mission, archive at once), recent cases and right-side hover boxes on the hidden rail
+- **New:** chain of custody per exhibit (printable), a Calendar of deadlines across cases, a printable Weekly Summary, a duplicate file warning and a monthly Check the Vault
+
 ## Features (v1.155)
 
 - **Fix:** with the case list hidden, every icon stays inside the thin rail (the padlock no longer sticks out)

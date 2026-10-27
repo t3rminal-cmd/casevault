@@ -4,6 +4,11 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.154
+
+- **Export Encrypted saves on the SSD, never on the PC:** pick a folder in `CaseVault-Data\exports\` on the CASEVAULT drive, or make a new one (it is named after the case at first). The file is read back and compared before CaseVault says it is saved, and a second export never overwrites the first. Nothing goes to the PC's Downloads folder any more
+- **Import Case lists the exports on the SSD:** pick one, or **From Another Drive…** for a `.cvcase` on a USB stick
+
 ## What's new in v1.153
 
 - **Undo:** deleting a Timeline entry, a file or a report, and moving a file, shows **Undo** for 10 seconds. A deleted file waits in the case folder's hidden `.trash` until then (an hour at most), so even a large video comes back

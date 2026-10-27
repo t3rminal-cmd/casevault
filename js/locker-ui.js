@@ -291,12 +291,14 @@
           // v1.146: long text is cut with … (the whole of it in the hover box), so the buttons always show.
           ...cols.map(([k, label, kind, extra]) => (kind === 'check' ? h('td', { class: 'check-cell' }, r[k] ? h('span', { class: 'locker-yes', title: label }, I('check2'), h('span', { class: 'sr-only' }, 'Yes')) : h('span', { class: 'muted' }, '—'))
             : kind === 'auto' ? h('td', { class: 'text-cell' }, L().autoValue(extra, r, todayISO()) || h('span', { class: 'muted' }, '—'))
-            : kind === 'dept' ? h('td', { class: 'text-cell' }, r[k] ? h('span', { class: 'dept-tag' }, r[k]) : h('span', { class: 'muted' }, '—'))
-            : h('td', { class: kind === 'secret' ? 'secret-cell' : `text-cell${COPYABLE.includes(k) && r[k] ? ' copy-cell' : ''}`, title: kind === 'secret' ? null : r[k] || null },
+            : kind === 'dept' ? h('td', { class: 'text-cell dept-cell' }, r[k] ? h('span', { class: 'dept-tag' }, r[k]) : h('span', { class: 'muted' }, '—'))
+            : h('td', { class: kind === 'secret' ? 'secret-cell' : `text-cell col-k-${k}${COPYABLE.includes(k) && r[k] ? ' copy-cell' : ''}`, title: kind === 'secret' ? null : r[k] || null },
             kind === 'secret' ? [secretCell(r[k], `${label} for ${name}`), k === 'password' && r[k] ? h('span', { class: 'pw-tags' }, strengthTag(r[k], () => editRow(t, r)), ageTag(r)) : null]
               // v1.148: the username has its own Copy button.
               : COPYABLE.includes(k) && r[k] ? [h('div', { class: 'copy-wrap' }, h('span', { class: 'copy-text' }, r[k]), h('button', { type: 'button', class: 'icon-btn copy-user', title: `Copy the ${label.toLowerCase()}`, onclick: () => copySecret(r[k], label) }, I('copy'), h('span', { class: 'sr-only' }, `Copy ${label}`))), k === 'email' && r.google ? googleTag() : null]
               : k === 'email' && r.google ? googleTag()
+              // v1.157: a covert account's social media accounts, listed in the hover box.
+              : k === 'platform' && Array.isArray(r.social) && r.social.length ? [r[k] || h('span', { class: 'muted' }, '—'), h('span', { class: 'social-tag', title: r.social.map((x) => [x.platform, x.handle, x.url].filter(Boolean).join(' · ')).join('\n') }, `${r.social.length} social`)]
               : (r[k] || h('span', { class: 'muted' }, '—'))))),
           h('td', { class: 'col-actions nowrap' },
             r.notes || r.backstory ? h('span', { class: 'muted small locker-has-notes', title: r.notes || r.backstory }, I('journal-text')) : '',
@@ -391,14 +393,15 @@
           autos.push(() => { el.textContent = L().autoValue(extra, draft, todayISO()) || '—'; });
           return [k, ui.field(label, el)];
         }
-        if (kind === 'list') return [k, listEditor(k, label, extra, draft)];
+        if (kind === 'list') return [k, listEditor(k, label, extra, draft, T.fields.find((f) => f[0] === k)[4])];
         if (kind === 'check') {
           el = h('input', { type: 'checkbox', checked: !!draft[k] });
           el.addEventListener('change', () => { draft[k] = el.checked; });
           return [k, h('label', { class: 'field check-row locker-check' }, el, h('span', {}, label))];
         }
         if (kind === 'wide') { el = h('textarea', { rows: 3 }); el.value = draft[k] || ''; }
-        else if (kind === 'select') el = h('select', {}, extra.map((o) => h('option', { value: o, selected: o === (draft[k] || '') }, o || '—')));
+        // v1.157: a value saved before that isn't in the list stays (shown last).
+        else if (kind === 'select') el = h('select', { 'aria-label': label }, [...extra, ...(draft[k] && !extra.includes(draft[k]) ? [draft[k]] : [])].map((o) => h('option', { value: o, selected: o === (draft[k] || '') }, o || '—')));
         else el = h('input', { type: kind === 'secret' ? 'password' : kind === 'date' ? 'date' : 'text', autocomplete: kind === 'secret' ? 'new-password' : 'off', spellcheck: 'false', value: draft[k] || '', list: kind === 'dept' ? 'locker-dept-list' : null, placeholder: kind === 'dept' ? 'CPD, DEA, USPIS …' : '' });
         el.addEventListener(kind === 'select' ? 'change' : 'input', () => { draft[k] = el.value; if (k === 'dob') autos.forEach((f) => f()); });
         let box = el;
@@ -450,21 +453,23 @@
   }
 
   /** v1.156: a list in the edit form (Work History, Family): one row of boxes per entry, Add and ×. */
-  function listEditor(k, label, parts, draft) {
+  function listEditor(k, label, parts, draft, single = '') {
     const { h, icon: I } = ui;
     draft[k] = Array.isArray(draft[k]) ? draft[k].map((x) => ({ ...x })) : [];
     const rowsBox = h('div', { class: 'locker-list-rows' });
-    const one = label.replace(/ History$/, '').replace(/^Family$/, 'Family Member');
+    const one = single || label.replace(/ History$/, '').replace(/^Family$/, 'Family Member');
     const draw = () => rowsBox.replaceChildren(...(draft[k].length ? draft[k].map((x, i) => h('div', { class: 'locker-list-row' },
-      ...parts.map(([pk, pl]) => {
-        const el = h('input', { type: pk === 'dob' ? 'date' : 'text', value: x[pk] || '', autocomplete: 'off', spellcheck: 'false', 'aria-label': `${one} ${i + 1} ${pl}` });
+      ...parts.map(([pk, pl, hint]) => {
+        const el = h('input', { type: pk === 'dob' ? 'date' : 'text', value: x[pk] || '', autocomplete: 'off', spellcheck: 'false', placeholder: hint || null, 'aria-label': `${one} ${i + 1} ${pl}` });
         el.addEventListener('input', () => { x[pk] = el.value; });
         return ui.field(pl, el);
       }),
       h('button', { type: 'button', class: 'icon-btn danger-icon', title: `Remove this ${one.toLowerCase()}`, onclick: () => { draft[k].splice(i, 1); draw(); } }, I('x-lg'), h('span', { class: 'sr-only' }, 'Remove'))))
       : [h('p', { class: 'muted small' }, `None yet.`)]));
     draw();
-    return h('div', { class: 'locker-list span-2' }, rowsBox,
+    // v1.157: a list that isn't a whole section (More Email Addresses, Mailing Addresses) has its name on top.
+    const own = !Object.values(L().TABLES).some((T) => (T.sections || []).some(([title, keys]) => keys.length === 1 && keys[0] === k && title === label.replace(/ History$/, ' History')));
+    return h('div', { class: 'locker-list span-2' }, own ? h('span', { class: 'locker-list-label' }, label) : null, rowsBox,
       h('button', { type: 'button', class: 'btn small', icon: 'plus-lg', onclick: () => { draft[k].push(Object.fromEntries(parts.map(([pk]) => [pk, '']))); draw(); } }, `Add ${one}`));
   }
 

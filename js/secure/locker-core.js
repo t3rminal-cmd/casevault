@@ -147,27 +147,44 @@
   // 'zodiac', from the date of birth; never saved). cols: the columns of the table (the rest is in
   // Edit); sections: how Edit groups the fields.
   const DEPARTMENTS = ['CPD', 'DEA', 'USPIS', 'FBI', 'HSI', 'ATF', 'USMS', 'IRS-CI', 'ISP'];
+  // v1.157: the choices of the alias form's drop-downs (a value saved before that isn't listed stays).
+  const US_STATES = ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'PR', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'Other'];
+  const STATE_OPTS = ['', ...US_STATES];
+  const NATIONALITIES = ['', 'American', 'Mexican', 'Canadian', 'Puerto Rican', 'Cuban', 'Dominican', 'Salvadoran', 'Guatemalan', 'Honduran', 'Nicaraguan', 'Costa Rican', 'Panamanian',
+    'Colombian', 'Venezuelan', 'Ecuadorian', 'Peruvian', 'Brazilian', 'Argentine', 'Chilean', 'Jamaican', 'Haitian', 'Trinidadian', 'British', 'Irish', 'French', 'German', 'Italian', 'Spanish',
+    'Portuguese', 'Polish', 'Ukrainian', 'Russian', 'Greek', 'Turkish', 'Albanian', 'Serbian', 'Romanian', 'Nigerian', 'Ghanaian', 'Kenyan', 'Ethiopian', 'Somali', 'Egyptian', 'Moroccan',
+    'Lebanese', 'Syrian', 'Iraqi', 'Iranian', 'Jordanian', 'Palestinian', 'Israeli', 'Saudi', 'Pakistani', 'Indian', 'Bangladeshi', 'Afghan', 'Chinese', 'Taiwanese', 'Japanese', 'Korean',
+    'Vietnamese', 'Filipino', 'Thai', 'Cambodian', 'Laotian', 'Indonesian', 'Australian', 'Other'];
+  const ETHNICITIES = ['', 'Hispanic or Latino', 'White', 'Black or African American', 'Asian', 'American Indian or Alaska Native', 'Native Hawaiian or Pacific Islander',
+    'Middle Eastern or North African', 'Two or More', 'Other', 'Unknown'];
   const TABLES = {
     passwords: { title: 'Password Manager', item: 'Password', icon: 'key', fields: [['site', 'Site / System', 'text'], ['username', 'Username', 'text'], ['password', 'Password', 'secret'], ['pin', 'PIN', 'secret'], ['email', 'Email', 'text'], ['dept', 'Department', 'dept'], ['google', 'Linked to Google', 'check'], ['url', 'Web Address', 'text'], ['notes', 'Notes', 'wide']],
       cols: ['site', 'dept', 'username', 'email', 'password', 'pin'] }, // 'Linked to Google' shows as a tag in the Email cell
     aliases: { title: 'Covert Aliases', item: 'Alias', icon: 'person-badge', fields: [
-      ['alias', 'Alias Name', 'text'], ['dept', 'Department', 'dept'], ['gender', 'Gender', 'select', ['', 'Male', 'Female', 'Other']], ['dob', 'Date of Birth Used', 'date'], ['age', 'Age', 'auto', 'age'], ['zodiac', 'Zodiac', 'auto', 'zodiac'],
-      ['nationality', 'Nationality', 'text'], ['ethnicity', 'Ethnicity', 'text'], ['civilStatus', 'Civil Status', 'select', ['', 'Single', 'Married', 'Divorced', 'Separated', 'Widowed', 'In a Relationship']],
-      ['height', 'Height', 'text'], ['weight', 'Weight', 'text'], ['bodyType', 'Body Type', 'select', ['', 'Slim', 'Average', 'Athletic', 'Muscular', 'Heavy', 'Stocky']], ['bloodType', 'Blood Type', 'select', ['', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']],
+      ['alias', 'Alias Name', 'text'], ['dept', 'Department', 'dept'], ['gender', 'Gender', 'select', ['', 'Male', 'Female', 'Non-Binary', 'Other']], ['dob', 'Date of Birth Used', 'date'], ['age', 'Age', 'auto', 'age'], ['zodiac', 'Zodiac', 'auto', 'zodiac'],
+      ['nationality', 'Nationality', 'select', NATIONALITIES], ['ethnicity', 'Ethnicity', 'select', ETHNICITIES],
+      ['civilStatus', 'Civil Status', 'select', ['', 'Single', 'Married', 'Divorced', 'Separated', 'Widowed', 'Engaged', 'Domestic Partnership', 'In a Relationship']],
+      ['height', 'Height', 'text'], ['weight', 'Weight', 'text'], ['bodyType', 'Body Type', 'select', ['', 'Thin', 'Slim', 'Medium', 'Average', 'Athletic', 'Muscular', 'Stocky', 'Heavy', 'Large']], ['bloodType', 'Blood Type', 'select', ['', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Unknown']],
       ['language1', 'Language (Native)', 'text'], ['language2', 'Language (Second)', 'text'], ['hobby', 'Hobbies', 'text'],
-      ['ssn', 'Social Security Number', 'secret'], ['driversLicense', 'Driver\'s License', 'text'], ['stateLicense', 'State License / ID', 'text'], ['libraryCard', 'Library Card', 'text'], ['idNumber', 'Other ID / License Number', 'text'],
-      ['address', 'Address Used', 'text'], ['phone', 'Phone Number', 'text'], ['email', 'Email', 'text'], ['mailbox', 'Mailbox (Provider, Address, Box Number, Key / Code)', 'wide'],
+      ['ssn', 'Social Security Number', 'secret'], ['driversLicense', 'Driver\'s License', 'text'], ['driversLicenseState', 'Driver\'s License State', 'select', STATE_OPTS],
+      ['stateLicense', 'State License / ID', 'text'], ['stateLicenseState', 'State License / ID State', 'select', STATE_OPTS],
+      ['libraryCard', 'Library Card', 'text'], ['libraryCardState', 'Library Card State', 'select', STATE_OPTS],
+      ['idNumber', 'Other ID / License Number', 'text'], ['idState', 'Other ID State', 'select', STATE_OPTS],
+      ['address', 'Address Used', 'text'], ['phone', 'Phone Number', 'text'], ['email', 'Email', 'text'],
+      ['emails', 'More Email Addresses', 'list', [['email', 'Email'], ['provider', 'Provider'], ['notes', 'Notes']], 'Email Address'],
+      ['mailboxes', 'Mailing Addresses', 'list', [['kind', 'Type', 'Home, Mailbox, PO Box'], ['address', 'Address'], ['box', 'Box / Unit'], ['provider', 'Provider'], ['key', 'Key / Code']], 'Mailing Address'],
       ['highSchool', 'High School (Name, City, Years)', 'text'], ['college', 'College (Name, Degree, Years)', 'text'],
       ['work', 'Work History', 'list', [['employer', 'Employer'], ['position', 'Position'], ['address', 'Address'], ['years', 'Years'], ['phone', 'Phone Number']]],
       ['family', 'Family', 'list', [['name', 'Name'], ['relation', 'Relation'], ['dob', 'Date of Birth'], ['phone', 'Phone Number'], ['notes', 'Notes']]],
       ['backstory', 'Backstory / Notes', 'wide']],
       cols: ['alias', 'dept', 'dob', 'age', 'phone', 'email'],
       sections: [['Identity', ['alias', 'dept', 'gender', 'dob', 'age', 'zodiac', 'nationality', 'ethnicity', 'civilStatus', 'height', 'weight', 'bodyType', 'bloodType', 'language1', 'language2', 'hobby']],
-        ['Identification', ['ssn', 'driversLicense', 'stateLicense', 'libraryCard', 'idNumber']],
-        ['Contact', ['address', 'phone', 'email', 'mailbox']],
+        ['Identification', ['ssn', 'driversLicense', 'driversLicenseState', 'stateLicense', 'stateLicenseState', 'libraryCard', 'libraryCardState', 'idNumber', 'idState']],
+        ['Contact', ['address', 'phone', 'email', 'emails', 'mailboxes']],
         ['School', ['highSchool', 'college']],
         ['Work History', ['work']], ['Family', ['family']], ['Backstory', ['backstory']]] },
-    accounts: { title: 'Covert Accounts', item: 'Account', icon: 'globe2', fields: [['platform', 'Platform / App', 'text'], ['handle', 'Username / Handle', 'text'], ['password', 'Password', 'secret'], ['alias', 'Alias It Belongs To', 'text'], ['phone', 'Phone Number', 'text'], ['email', 'Email', 'text'], ['dept', 'Department', 'dept'], ['notes', 'Notes', 'wide']],
+    accounts: { title: 'Covert Accounts', item: 'Account', icon: 'globe2', fields: [['platform', 'Platform / App', 'text'], ['handle', 'Username / Handle', 'text'], ['password', 'Password', 'secret'], ['alias', 'Alias It Belongs To', 'text'], ['phone', 'Phone Number', 'text'], ['email', 'Email', 'text'], ['dept', 'Department', 'dept'],
+      ['social', 'Social Media', 'list', [['platform', 'Platform'], ['handle', 'Username / Handle'], ['url', 'Web Address']], 'Social Media Account'], ['notes', 'Notes', 'wide']],
       cols: ['platform', 'dept', 'handle', 'password', 'alias', 'phone', 'email'] },
   };
   /** The value saved for a field of a row (auto fields are never saved). */
@@ -216,7 +233,9 @@
     const x = { ...emptyData(), ...(d && typeof d === 'object' ? d : {}) };
     for (const t of Object.keys(TABLES)) {
       const keepsOld = TABLES[t].fields.some(([k]) => k === 'password');
-      x[t] = (Array.isArray(x[t]) ? x[t] : []).filter((r) => r && typeof r === 'object').map((r) => {
+      x[t] = (Array.isArray(x[t]) ? x[t] : []).filter((r) => r && typeof r === 'object').map((r0) => {
+        // v1.157: the one Mailbox box of v1.156 becomes the first Mailing Address.
+        const r = t === 'aliases' && String(r0.mailbox || '').trim() && !(Array.isArray(r0.mailboxes) && r0.mailboxes.length) ? { ...r0, mailboxes: [{ kind: 'Mailbox', address: String(r0.mailbox).trim() }] } : r0;
         const row = { id: String(r.id || ''), ...Object.fromEntries(TABLES[t].fields.filter((f) => f[2] !== 'auto').map((f) => [f[0], cleanField(f, r[f[0]])])) };
         if (keepsOld) {
           row.history = cleanHistory(r.history); // v1.145: the passwords it had before
@@ -311,6 +330,6 @@
   }
 
   return { ITER, RK_ITER, MIN_PASSWORD, passwordProblem, newRecoveryKey, cleanRecovery, groupRecovery, recoveryLooksRight, create, open, changePassword, newRecovery,
-    encrypt, decrypt, encryptJSON, decryptJSON, TABLES, DEPARTMENTS, departments, byDept, ageFrom, zodiacOf, autoValue, emptyData, normalizeData, newId, filterRows, generatePassword, strength, AUTO_LOCK,
+    encrypt, decrypt, encryptJSON, decryptJSON, TABLES, US_STATES, NATIONALITIES, ETHNICITIES, DEPARTMENTS, departments, byDept, ageFrom, zodiacOf, autoValue, emptyData, normalizeData, newId, filterRows, generatePassword, strength, AUTO_LOCK,
     HISTORY_MAX, cleanHistory, withHistory, moveRow, sortRows, daysBetween, isStale };
 });

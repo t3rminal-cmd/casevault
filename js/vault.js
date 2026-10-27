@@ -23,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.156.0';
+  const APP_VERSION = '1.157.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -322,6 +322,8 @@ const Vault = (() => {
       archiveFolder: c.archiveFolder || '',
       // v1.145: independent cases kept together under a suspect's name (not a Mission).
       suspectGroup: c.suspectGroup || '',
+      // v1.157: an arrest was made (the case has its Arrest details): marked in the case list.
+      arrested: !!(c.arrest || (c.closure && c.closure.disposition === 'arrest' && !c.arrestRemoved)),
       // v1.90: Case History notes, so the case list search finds them.
       notes: (Array.isArray(c.activity) ? c.activity.filter((a) => a.note && a.what).map((a) => a.what).join(' \n ') : '').slice(0, 4000),
     };

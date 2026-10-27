@@ -38,6 +38,7 @@
   --btn-primary-hover: #d6dfeb;
   --danger: #b3261e;
   --danger-soft: rgba(179, 38, 30, .10);
+  --arrest: #6a3fa0; --arrest-soft: rgba(106, 63, 160, .10); /* v1.157: cases with an arrest */
   --danger-strong: #8f1d17;
   --btn-danger-bg: #f8e3e1;
   --btn-danger-hover: #f2d3cf;
@@ -67,7 +68,7 @@
     --bg: #11161e; --surface: #171d27; --surface-2: #1f2733; --border: #2c3644; --text: #e2e6ec; --muted: #9aa3b2;
     --accent: #8fb3e0; --accent-text: #11161e; --accent-soft: rgba(143, 179, 224, .14); --accent-strong: #b7cfee; --link: #8fb3e0;
     --btn-primary-bg: rgba(143, 179, 224, .16); --btn-primary-hover: rgba(143, 179, 224, .26);
-    --danger: #f2867d; --danger-soft: rgba(242, 134, 125, .15); --danger-strong: #f6a59e; --btn-danger-bg: rgba(242, 134, 125, .16); --btn-danger-hover: rgba(242, 134, 125, .26);
+    --arrest: #b79be6; --arrest-soft: rgba(183, 155, 230, .14); --danger: #f2867d; --danger-soft: rgba(242, 134, 125, .15); --danger-strong: #f6a59e; --btn-danger-bg: rgba(242, 134, 125, .16); --btn-danger-hover: rgba(242, 134, 125, .26);
     --warn: #e2b552; --warn-soft: rgba(226, 181, 82, .15); --ok: #6cc08f; --ok-soft: rgba(108, 192, 143, .14);
     --shadow: 0 1px 2px rgba(0, 0, 0, .3); --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, .55); --topbar-bg: rgba(23, 29, 39, .92);
     --box-edge: #34404f; --box-line: #435064;
@@ -81,7 +82,7 @@
   --bg: #11161e; --surface: #171d27; --surface-2: #1f2733; --border: #2c3644; --text: #e2e6ec; --muted: #9aa3b2;
   --accent: #8fb3e0; --accent-text: #11161e; --accent-soft: rgba(143, 179, 224, .14); --accent-strong: #b7cfee; --link: #8fb3e0;
   --btn-primary-bg: rgba(143, 179, 224, .16); --btn-primary-hover: rgba(143, 179, 224, .26);
-  --danger: #f2867d; --danger-soft: rgba(242, 134, 125, .15); --danger-strong: #f6a59e; --btn-danger-bg: rgba(242, 134, 125, .16); --btn-danger-hover: rgba(242, 134, 125, .26);
+  --arrest: #b79be6; --arrest-soft: rgba(183, 155, 230, .14); --danger: #f2867d; --danger-soft: rgba(242, 134, 125, .15); --danger-strong: #f6a59e; --btn-danger-bg: rgba(242, 134, 125, .16); --btn-danger-hover: rgba(242, 134, 125, .26);
   --warn: #e2b552; --warn-soft: rgba(226, 181, 82, .15); --ok: #6cc08f; --ok-soft: rgba(108, 192, 143, .14);
   --shadow: 0 1px 2px rgba(0, 0, 0, .3); --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, .55); --topbar-bg: rgba(23, 29, 39, .92);
   --box-edge: #34404f; --box-line: #435064;
