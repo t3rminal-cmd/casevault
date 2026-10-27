@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.160)
+
+- **Fix:** drop-down lists open everywhere (also low in Edit Alias) and stay on top
+- **Case list:** folder icons in one column; CLOSED shows a handcuff count
+- **Secure Locker:** row buttons line up; **Timeline:** Paid fills in as money
+
 ## Features (v1.159)
 
 - **Fix:** the padlock no longer sticks out of a narrow case list (the top icons wrap)

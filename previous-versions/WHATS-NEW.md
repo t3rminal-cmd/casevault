@@ -4,6 +4,10 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.158
+
+- **Fix (privacy screen):** refreshing the page (F5 or Ctrl+F5), or closing and opening CaseVault again, while the screen is hidden no longer opens CaseVault. The screen comes back as soon as the vault opens, before any case is shown, and only the PIN opens it (a click, Esc or a wrong PIN don't). The browser keeps only the word "locked" while the screen is on, no case data; the PIN clears it. Without a PIN set, it opens with a click, as before
+
 ## What's new in v1.157
 
 - **Arrest mark:** a case with an arrest (it has Arrest details) has a purple border and an ARREST tag in the case list, the way a reminder has its red border. A case with both shows red on the left and purple on the right

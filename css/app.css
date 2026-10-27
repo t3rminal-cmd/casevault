@@ -4524,8 +4524,6 @@ body:not(.sidebar-collapsed) .sidebar-head > .icon-btn, body:not(.sidebar-collap
 #case-list .op-head > .op-count, #case-list .op-head > .closed-count { grid-column: 4; }
 #case-list .op-head > .mission-add, #case-list .op-head > .general-add { grid-column: 5; }
 #case-list .op-head > .op-chev { grid-column: 6; padding: 0; }
-.closed-count { display: inline-flex; align-items: center; gap: .15rem; font-size: var(--fs-tiny); font-weight: 700; color: var(--arrest); }
-.closed-count :is(svg, img) { width: 1.15rem; height: 1.15rem; color: var(--arrest) !important; }
 #case-list .op-head { grid-template-columns: auto minmax(0, 1fr) 1.45rem 2.1rem 1.75rem 1rem; column-gap: .2rem; }
 /* Top-level folders keep the room nested ones lose to their box (.5rem padding + 1px border), so the
  * right-hand columns line up across both. */

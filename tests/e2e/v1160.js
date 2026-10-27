@@ -1,5 +1,5 @@
 // v1.160: drop-down lists stay open and on top (Edit Alias, combo boxes), the sidebar folder icons in
-// one column with a handcuff count on CLOSED, the locker row buttons lined up, and the Timeline Paid
+// one column with a count on CLOSED, the locker row buttons lined up, and the Timeline Paid
 // box formatted as money. All data is made up (Doe / Roe / Poe, Example City).
 const boot = require('./boot.js');
 const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
@@ -24,8 +24,17 @@ const SP = process.env.SP + '/v1160';
     return { count: at('.op-count, .closed-count'), add: at('.mission-add, .general-add'), chev: at('.op-chev') };
   });
   ok(cols.count.length === 1 && cols.add.length === 1 && cols.chev.length === 1, `folder icons in one column: ${JSON.stringify(cols)}`);
-  const cuffs = await p.evaluate(() => { const c = document.querySelector('#case-list .closed-group > summary .closed-count'); return c ? { icon: !!c.querySelector('svg'), n: c.textContent.trim() } : null; });
-  ok(cuffs && cuffs.icon && cuffs.n === '2', `CLOSED has the handcuffs and its count: ${JSON.stringify(cuffs)}`);
+  const closedN = await p.evaluate(() => { const c = document.querySelector('#case-list .closed-group > summary .closed-count'); return c ? { icon: !!c.querySelector('svg, img'), n: c.textContent.trim() } : null; });
+  ok(closedN && !closedN.icon && closedN.n === '2', `CLOSED shows its count, without an icon (v1.161): ${JSON.stringify(closedN)}`);
+  // v1.161: a folder with a single case shows its count too.
+  const one = await p.evaluate(async () => {
+    const op = await Vault.createOperation({ name: 'Single Op', number: 'OP-9' });
+    const c = await Vault.createCase({ number: 'EX-990', subject: 'Joe Roe' }); await Vault.assignCase(c.id, op.id);
+    return op.id;
+  });
+  await home();
+  const oneN = await p.evaluate(() => { const s = [...document.querySelectorAll('#case-list .mission-children .op-head')].find((x) => /OP-9/.test(x.textContent)); const c = s && s.querySelector('.op-count'); return c ? c.textContent : null; });
+  ok(oneN === '1', `a Mission with one case shows 1: ${oneN}`);
   await p.locator('#sidebar').screenshot({ path: `${SP}/sidebar.png` }).catch(() => {});
 
   // 2. Secure Locker: the row buttons line up from row to row, with or without notes.

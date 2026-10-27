@@ -926,7 +926,8 @@
           h('span', { class: 'op-meta muted' }, meta)),
         // v1.148: how many of its cases are due, in a red box; the hover box lists them.
         op && !group.partial && dueCases.length ? h('span', { class: 'alert-count', title: alertList(dueCases), 'aria-label': `${dueCases.length} due` }, String(dueCases.length)) : null,
-        cases.length > 1 ? h('span', { class: 'op-count' }, String(cases.length)) : null,
+        // v1.161: the count shows from one case up (it used to wait for two).
+        cases.length ? h('span', { class: 'op-count', title: `${cases.length} case${cases.length === 1 ? '' : 's'}` }, String(cases.length)) : null,
         // v1.83: GENERAL FILES has a + for a new case, like MISSION FILES has one for a new Mission.
         !op && !group.closed ? h('button', { class: 'icon-btn mission-add general-add', type: 'button', title: 'New independent case (not in a Mission)', onclick: (e) => { e.preventDefault(); e.stopPropagation(); newCase(); } }, I('plus-lg'), h('span', { class: 'sr-only' }, 'New case')) : null,
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
@@ -1174,8 +1175,8 @@
         h('span', { class: 'op-folder closed-icon' }, I('folder-closed')),
         h('span', { class: 'op-text' }, h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, 'CLOSED')),
           h('span', { class: 'op-meta muted' }, `${n} case${n === 1 ? '' : 's'}`)),
-        // v1.160: handcuffs and how many cases are closed, on the right like the other folders' counts.
-        h('span', { class: 'closed-count', title: `${n} closed case${n === 1 ? '' : 's'}`, 'aria-label': `${n} closed` }, I('handcuffs'), h('span', {}, String(n))),
+        // v1.161: how many cases are closed, in the same box as the other folders' counts (no icon).
+        n ? h('span', { class: 'op-count closed-count', title: `${n} closed case${n === 1 ? '' : 's'}` }, String(n)) : null,
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
       h('ul', { class: 'mission-children closed-children' },
         h('li', { class: 'op-item' }, opsDet),

@@ -15,11 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.160
+## What's New in v1.161
 
-- **Fix:** drop-down lists open everywhere (also low in Edit Alias) and stay on top
-- **Case list:** folder icons in one column; CLOSED shows a handcuff count
-- **Secure Locker:** row buttons line up; **Timeline:** Paid fills in as money
+- **Fix:** folders with one case show their count (1)
+- **Case list:** CLOSED shows its count without the handcuff icon
 
 ## What CaseVault Does
 
