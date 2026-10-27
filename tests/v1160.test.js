@@ -1,4 +1,4 @@
-// v1.160: the Timeline Paid box as money, the handcuff icon, and the drop-down lists that follow
+// v1.160: the Timeline Paid box as money, the CLOSED count, and the drop-down lists that follow
 // their box when the window scrolls. All data is synthetic.
 'use strict';
 const test = require('node:test');
@@ -22,9 +22,8 @@ test('Paid: money while typed, cents when the box is left', () => {
   assert.strictEqual(O.money(Number('1234.50')), '$1,234.50');
 });
 
-test('handcuffs icon, CLOSED count, and lists that move with their box', () => {
-  assert.match(read('js/icons.js'), /handcuffs:/);
-  assert.match(read('js/app.js'), /class: 'closed-count'/);
+test('CLOSED count (no icon since v1.161), and lists that move with their box', () => {
+  assert.match(read('js/app.js'), /class: 'op-count closed-count'/);
   assert.match(read('js/select.js'), /function place\(\)/);
   assert.match(read('js/combo.js'), /function place\(\)/);
   assert.match(read('css/app.css'), /\.locker-acts \{ display: grid;/);

@@ -213,6 +213,11 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.161
+
+- **Fix (case list counts):** a folder holding a single case now shows its count (1) like the others; before, the count only appeared from two cases up, so a Mission or INDEPENDENT with one case looked empty
+- **Case list:** the handcuff icon is gone from CLOSED; it shows just how many cases are closed, in the same grey box as the other folders' counts
+
 ### What's new in v1.160
 
 - **Fix (drop-down lists):** the drop-down lists (Gender, Nationality, the ID states and every other list) open in every window, also the ones low in Edit Alias. A list no longer closes the moment the window scrolls; it moves with its box, and closes only when the box leaves the screen
@@ -226,10 +231,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 - **Fix (case list top icons):** with the case list made narrower, its top icons wrap onto a second line instead of running past its right edge, so the padlock (last, on the right) stays inside the list in every browser and at any width
 - **Case list names:** LAST, First and the middle initial line up in three columns in the Case Group folders too (a group named like "DOE, John Q"; a name such as "Doe Family" stays as typed). The columns are as wide as the longest last and first name in the list, so names are never broken in the middle and every row still fits
-
-### What's new in v1.158
-
-- **Fix (privacy screen):** refreshing the page (F5 or Ctrl+F5), or closing and opening CaseVault again, while the screen is hidden no longer opens CaseVault. The screen comes back as soon as the vault opens, before any case is shown, and only the PIN opens it (a click, Esc or a wrong PIN don't). The browser keeps only the word "locked" while the screen is on, no case data; the PIN clears it. Without a PIN set, it opens with a click, as before
 
 ### Earlier versions
 
