@@ -4,6 +4,21 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.156
+
+- **Password Manager:** the Email is shown in full (it wraps instead of being cut off). New columns: **PIN** (hidden until shown, like the password) and **Department** (CPD, DEA, USPIS, FBI, HSI, ATF, USMS, IRS-CI, ISP, or your own). A **Linked to Google** checkbox shows as a small Google tag next to the email
+- **Covert aliases:** each alias now has a full profile in sections: Identity (gender, nationality, ethnicity, date of birth, age and zodiac worked out from the date of birth, height, weight, body type, civil status, blood type, hobby, two languages), Identification (Social Security, driver's license, state license, library card), Contact (with mailbox details), School (high school and college), Work History (employer, position, address, years, phone; add as many as you need), Family (name, relation, date of birth, phone, notes) and Backstory
+- **Department filter:** the buttons above the Password Manager, Covert Aliases and Covert Accounts show All or one department, so you can switch between your DEA and CPD covert aliases and passwords
+- **Hidden case list:** the hover boxes of the rail icons now open to the right of the icon, and your last 3 opened cases sit on the rail (the last 4 characters of the case number) to jump back
+- **Select Cases:** a new button at the top of the case list picks several cases at once to pin or unpin, put in a Case Group, move into a Mission, or archive together (one reason for all)
+- **Saved searches:** under the case-list search box, quick filters Due This Week, Overdue, Pending and Pinned. Type a search and click Save Search to keep it there; × removes it. The search box now takes words in any order, and filter words: due:week, due:overdue, due:today, due:month, status:pending (or any status) and pinned
+- **Chain of custody:** each exhibit on the Draft tab has a Chain of Custody button: a dated log of who had it (received or seized, placed in evidence, checked out, returned, sent to the lab, taken to court, released, destroyed), who released it and who received it, and why. The button says where the exhibit is now. Print one exhibit's log, or every exhibit's with Chain of Custody PDF (it can be saved in the case's Files next to the report)
+- **Calendar:** a new home page tile (and Ctrl+K) shows a month of every open case's deadlines, court dates, buys, arrests and statutes of limitations. Turn each kind on or off; click a day to list it, and an item to open its Timeline
+- **Weekly Summary:** a new home page tile (and Ctrl+K): what changed on each case this week (Case History changes and notes, Timeline items, opened and closed), week by week, printable as a PDF
+- **Duplicate files:** adding a file that is already in the case (the same content, whatever its name) asks first: Skip Duplicates or Add Anyway
+- **Check the Vault:** once a month, a minute after the vault opens, CaseVault compares the case folders on the SSD with the case list and reads each case's data files, and only says something if a folder is missing, a case is not listed, a data file is damaged or a file is empty. Ctrl+K → Check the Vault runs it any time; nothing is changed
+- **Faster start:** Year Summary, Group Summary and the new Chain of Custody, Calendar and Weekly Summary load the first time they are used
+
 ## What's new in v1.155
 
 - **Hidden case list:** the thin rail on the left is now as wide as its buttons, so no icon (such as the padlock) is pushed outside it in Firefox, with a bigger font, zoom or Bigger Text. On a short window the icons scroll up and down inside the rail instead of spilling out

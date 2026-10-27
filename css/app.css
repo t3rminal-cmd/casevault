@@ -4486,3 +4486,27 @@ body.sidebar-collapsed .rail-case { width: 2.4rem !important; min-width: 0; padd
 .locker-rows td.text-cell, .locker-rows th { min-width: 5.5rem; }
 .locker-rows th.col-dept, .locker-rows td.dept-cell, .locker-rows th.col-check, .locker-rows td.check-cell { min-width: 0; }
 .locker-list-label { display: block; margin: .2rem 0 .3rem; font-size: var(--fs-small); font-weight: 700; color: var(--muted); }
+/* v1.158: Case Group folders: LAST, | First | M. lined up from one folder to the next. */
+.suspect-group .sg-name.cim-name { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 1.7rem; column-gap: .4rem; align-items: baseline; }
+.suspect-group .sg-name.cim-name > span { min-width: 0; overflow-wrap: anywhere; }
+.suspect-group .sg-name .cim-last { font-weight: 700; }
+.suspect-group .sg-name .cim-first, .suspect-group .sg-name .cim-mi { font-weight: 600; }
+/* v1.158: with the case list narrow, its top icons wrap onto a second line (the padlock last, on
+ * the right) instead of running past its right edge. */
+body:not(.sidebar-collapsed) .sidebar-head { flex-wrap: wrap; row-gap: .2rem; }
+body:not(.sidebar-collapsed) .sidebar-head > .icon-btn, body:not(.sidebar-collapsed) .sidebar-head > a.icon-btn { flex: 0 0 auto; }
+/* v1.158: name columns sized to the longest name in the list; a name never breaks inside a word. */
+#case-list .cim-name, #case-list .sg-name.cim-name { grid-template-columns: minmax(0, var(--nm-last, 1.2fr)) minmax(0, var(--nm-first, 1fr)) 2.2ch; column-gap: .6ch; font-variant-numeric: tabular-nums; }
+#case-list .cim-name > span, #case-list .sg-name.cim-name > span { overflow-wrap: normal; word-break: normal; }
+#case-list .cim-name, #case-list .sg-name.cim-name { grid-template-columns: var(--nm-last, 9ch) var(--nm-first, 8ch) 2.2ch; }
+#case-list .cim-name > span, #case-list .sg-name.cim-name > span { white-space: nowrap; }
+#case-list .suspect-group .sg-name.cim-name { flex: 0 0 auto; margin-right: auto; }
+#case-list .case-item-meta .cim-name { grid-template-columns: var(--nm-last-c, 9ch) var(--nm-first-c, 8ch) 2.2ch; column-gap: .5rem; }
+#case-list .sg-name.cim-name { grid-template-columns: var(--nm-last-g, 9ch) var(--nm-first-g, 8ch) 2.2ch; column-gap: .5rem; }
+#case-list .sg-name.cim-name { column-gap: .35rem; grid-template-columns: var(--nm-last-g, 9ch) var(--nm-first-g, 8ch) auto; }
+#case-list .suspect-group > .sg-head { gap: .3rem; flex-wrap: wrap; row-gap: .15rem; }
+#case-list .suspect-group > .sg-head > :not(.sg-name) { flex: 0 0 auto; }
+#case-list .case-item-meta .cim-name { grid-template-columns: var(--nm-last-c, 9ch) var(--nm-first-c, 8ch) var(--nm-mi-c, 2.2ch); }
+#case-list .sg-name.cim-name { grid-template-columns: var(--nm-last-g, 9ch) var(--nm-first-g, 8ch) var(--nm-mi-g, 2.2ch); column-gap: .3rem; }
+#case-list .suspect-group > .sg-head { gap: .25rem; }
+#case-list .suspect-group > .sg-head > .op-chev { width: 1rem; justify-content: center; }

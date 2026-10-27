@@ -781,10 +781,38 @@
 
   /** v1.157: the subject in the case list as LAST, | First | M. columns (a caption or an unknown
    * offender stays as typed, across the three). */
-  function sideName(c) {
-    const p = c.subject ? CVOperation.nameParts(c.subject) : null;
-    if (!p || p.whole) return h('span', { class: 'cim-subject cim-whole' }, subj(c) || 'No subject yet');
-    return h('span', { class: 'cim-subject cim-name' },
+  function sideName(c) { return nameGrid(c.subject, subj(c) || 'No subject yet', 'cim-subject'); }
+  /** v1.158: the name columns are as wide as the longest last and first name in the list (measured
+   * in the font they are shown in, folded folders too), so every name fits whole and all of them line
+   * up: one width for the cases, one for the Case Group folders. */
+  let measureCtx = null;
+  function sizeNameColumns(list) {
+    measureCtx = measureCtx || document.createElement('canvas').getContext('2d');
+    for (const [sel, key] of [['.case-item-meta .cim-name', 'c'], ['.sg-name.cim-name', 'g']]) {
+      const cells = list.querySelectorAll(sel);
+      if (!cells.length) continue;
+      const widest = (cls) => {
+        let m = 0;
+        for (const n of cells) {
+          const el = n.querySelector(cls);
+          const cs = getComputedStyle(el);
+          measureCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+          m = Math.max(m, measureCtx.measureText(el.textContent).width);
+        }
+        return `${Math.ceil(m) + 2}px`;
+      };
+      list.style.setProperty(`--nm-last-${key}`, widest('.cim-last'));
+      list.style.setProperty(`--nm-first-${key}`, widest('.cim-first'));
+      list.style.setProperty(`--nm-mi-${key}`, widest('.cim-mi'));
+    }
+  }
+  /** v1.158: a person's name as LAST, | First | M. grid cells (anything else as typed): the case
+   * list and its Case Group folders line their names up the same way. */
+  function nameGrid(name, shown, cls, { commaOnly = false } = {}) {
+    // A Case Group's name stays as typed ("Doe Family"); only "LAST, First M" is split into columns.
+    const p = name && (!commaOnly || /^[^,]+,\s*\S/.test(name)) ? CVOperation.nameParts(name) : null;
+    if (!p || p.whole) return h('span', { class: `${cls} cim-whole` }, shown);
+    return h('span', { class: `${cls} cim-name` },
       h('span', { class: 'cim-last' }, `${p.last},`), ' ', h('span', { class: 'cim-first' }, p.first), p.middle ? ' ' : '',
       h('span', { class: 'cim-mi', title: p.middle || '' }, p.middle ? `${p.middle[0].toUpperCase()}.` : ''));
   }
@@ -930,7 +958,7 @@
       const open = sideFold.has(key) ? sideFold.get(key) : !!$('#case-search').value.trim() || list.some((c) => c.id === state.caseId) || location.hash === `#/group/${CVRoute.enc(g)}`;
       const det = h('details', { class: 'suspect-group', open },
         h('summary', { class: `sg-head${location.hash === `#/group/${CVRoute.enc(g)}` ? ' active' : ''}`, title: `${g}: a Case Group of ${plural(list.length, 'case')}, kept together (not an Operation). Click to open it; the arrow folds it.` },
-          h('span', { class: 'sg-name' }, g), h('span', { class: 'sg-icon' }, I('person-badge')),
+          nameGrid(g, g, 'sg-name', { commaOnly: true }), h('span', { class: 'sg-icon' }, I('person-badge')),
           list.some((c) => caseDue(c)) ? h('span', { class: 'alert-count', title: alertList(list.filter((c) => caseDue(c))) }, String(list.filter((c) => caseDue(c)).length)) : null,
           h('span', { class: 'sg-count' }, String(list.length)), h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
         h('ul', { class: 'op-cases sg-cases' }, list.map((c) => caseItem(c, true))));
@@ -1180,6 +1208,7 @@
         if (li && li._cvArgs) li.replaceWith(caseItem(c, ...li._cvArgs));
       }
     }
+    sizeNameColumns($('#case-list')); // v1.158: a longer name widens the columns for all
     sideSig = now;
     return undefined;
   }
@@ -1210,6 +1239,7 @@
     // v1.157: CLOSED (Operation and Independent) under the open folders. A search also finds the
     // archived cases: they are listed under the rest.
     if (closedGroups.length) list.append(closedFolder(closedGroups));
+    sizeNameColumns(list);
     const q = $('#case-search').value.trim().toLowerCase();
     if (q) {
       const archived = Vault.data.cases.filter(isArchivedEntry).filter((c) => matchesSearch(c, q));
