@@ -19,7 +19,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   ok(rows['EX-100'] === 'DOE, John' && rows['EX-200'] === 'ROE, Jane' && rows['EX-400'] === 'DOE-ROE, Jonathan' && rows['EX-600'] === 'ROE, Mary Ann', `General Files: LAST, First ${JSON.stringify(rows)}`);
   ok(rows['EX-500'] === 'Unknown Offender', 'Unknown Offender left as typed');
   const side = await p.evaluate(() => [...document.querySelectorAll('.case-item-meta .cim-subject')].map((x) => x.textContent.trim()));
-  ok(side.includes('DOE, John') && side.includes('ROE, Mary Ann'), `sidebar: LAST, First ${side}`);
+  ok(side.includes('DOE, John') && side.includes('ROE, Mary A.'), `sidebar: LAST, First M. ${side}`);
   await p.fill('input[aria-label="Search General Files"]', 'doe, john'); await p.waitForTimeout(500);
   ok(await p.evaluate(() => [...document.querySelectorAll('table tbody tr')].length === 1), 'search by the shown name finds it');
   await p.evaluate((id) => { location.hash = `#/case/${id}/details`; }, ids.c); await p.waitForSelector('.mini-tl-line .mini-tl-dot'); await p.waitForTimeout(500);

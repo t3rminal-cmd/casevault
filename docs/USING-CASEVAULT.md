@@ -213,6 +213,20 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.157
+
+- **Arrest mark:** a case with an arrest (it has Arrest details) has a purple border and an ARREST tag in the case list, the way a reminder has its red border. A case with both shows red on the left and purple on the right
+- **Fix (Firefox):** with the case list hidden, the rail now has a fixed width that every button fits in, so the padlock (and every other icon) stays inside its border at any zoom or text size
+- **Case list:** a Mission's number and its name are in different colours (number in navy, name in grey)
+- **Case list:** the subject reads LAST, First and the middle initial in three columns that line up from one case to the next
+- **Case list:** a CLOSED folder under the open ones, with OPERATION (closed Missions, and the closed cases of Missions still going on) and INDEPENDENT (closed cases not in a Mission) inside. It starts folded
+- **Fix (Covert Accounts):** the Copy buttons are fully shown, and the email stays on one line and is shown whole (the table scrolls sideways if it needs more room). Usernames and handles are no longer broken letter by letter
+- **Secure Locker:** Department is a narrow centred column right after the first column (Platform / App, Site / System, Alias Name)
+- **Covert aliases:** Gender, Nationality, Ethnicity, Civil Status, Blood Type and Body Type are drop-downs. A value typed before that isn't in the list is kept
+- **Covert aliases:** each ID has its state: Driver's License State, State License / ID State, Library Card State and Other ID State
+- **Covert aliases:** More Email Addresses and Mailing Addresses (type, address, box or unit, provider, key or code), as many as you need. What was in the single Mailbox box becomes the first mailing address
+- **Covert accounts:** each account can store its social media accounts (platform, username or handle, web address). The table shows how many, and the hover box lists them
+
 ### What's new in v1.156
 
 - **Password Manager:** the Email is shown in full (it wraps instead of being cut off). New columns: **PIN** (hidden until shown, like the password) and **Department** (CPD, DEA, USPIS, FBI, HSI, ATF, USMS, IRS-CI, ISP, or your own). A **Linked to Google** checkbox shows as a small Google tag next to the email
@@ -231,11 +245,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 ### What's new in v1.155
 
 - **Hidden case list:** the thin rail on the left is now as wide as its buttons, so no icon (such as the padlock) is pushed outside it in Firefox, with a bigger font, zoom or Bigger Text. On a short window the icons scroll up and down inside the rail instead of spilling out
-
-### What's new in v1.154
-
-- **Export Encrypted saves on the SSD, never on the PC:** pick a folder in `CaseVault-Data\exports\` on the CASEVAULT drive, or make a new one (it is named after the case at first). The file is read back and compared before CaseVault says it is saved, and a second export never overwrites the first. Nothing goes to the PC's Downloads folder any more
-- **Import Case lists the exports on the SSD:** pick one, or **From Another Drive…** for a `.cvcase` on a USB stick
 
 ### Earlier versions
 

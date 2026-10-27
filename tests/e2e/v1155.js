@@ -19,11 +19,12 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   r = await inside();
   ok(!r.out.length && !r.sideways, `locked too: ${JSON.stringify(r)}`);
   await p.click('#btn-sidebar-lock'); await p.waitForTimeout(300);
-  // Wider buttons (as with a bigger font in Firefox): the rail grows with them.
+  // Wider buttons (as with a bigger font in Firefox): v1.157: the rail keeps its fixed width and
+  // holds every button inside it.
   await p.evaluate(() => { for (const x of document.querySelectorAll('.sidebar-head > .icon-btn')) x.style.setProperty('width', '2.9rem', 'important'); });
   await p.waitForTimeout(300);
   r = await inside();
-  ok(!r.out.length && !r.sideways && r.width > 50, `wider buttons: the rail grows to fit: ${JSON.stringify(r)}`);
+  ok(!r.out.length && !r.sideways, `wider buttons: every one stays inside the rail: ${JSON.stringify(r)}`);
   ok(!errs.length, `no page errors${errs.length ? `: ${errs.join(' | ')}` : ''}`);
   await b.close();
 })().catch((e) => { console.log('FAIL', e.stack); process.exit(1); });

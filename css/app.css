@@ -4437,3 +4437,52 @@ body:not(.sidebar-collapsed) .rail-recent { display: none !important; }
 .toast .toast-link { border: 0; background: none; padding: 0; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
 .dup-files ul { margin: .3rem 0; padding-left: 1.1rem; }
 .dup-files li { overflow-wrap: anywhere; }
+/* v1.157: a case with an arrest: a purple border and an ARREST tag (a reminder keeps its red). */
+#sidebar .case-item.has-arrest { box-shadow: inset -4px 0 0 var(--arrest), inset 0 0 0 1px var(--arrest); }
+#sidebar .case-item.has-arrest:not(.has-reminder) { background: var(--arrest-soft); }
+#sidebar .case-item.has-arrest.has-reminder { box-shadow: inset 4px 0 0 var(--danger), inset -4px 0 0 var(--arrest), inset 0 0 0 1px var(--danger); }
+.case-arrest-tag { flex: 0 0 auto; padding: .1em .35em; border: 1px solid var(--arrest); color: var(--arrest); font-size: var(--fs-tiny); font-weight: 700; letter-spacing: .04em; line-height: 1.1; }
+/* v1.157: a Mission's number and its name in different colours. */
+#sidebar .op-name .op-num { color: var(--accent); }
+#sidebar .op-name .op-title { color: var(--muted); opacity: 1; }
+#sidebar .mission-children .op-group.has-reminder > .op-head .op-name .op-num { color: var(--danger); }
+/* v1.157: CLOSED in the case list. */
+#sidebar .closed-group { opacity: 1; }
+#sidebar .closed-group > .op-head .op-name { font-size: var(--fs-text); font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
+#sidebar .closed-children .case-item { opacity: .85; }
+/* v1.157: the subject as LAST, | First | M. columns, lined up from one case to the next. */
+.case-item .case-item-meta { display: block; }
+.case-item-meta .cim-subject.cim-name { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 1.7rem; column-gap: .4rem; white-space: normal; overflow: visible; text-overflow: clip; }
+.case-item-meta .cim-name > span { min-width: 0; overflow-wrap: anywhere; }
+.case-item-meta .cim-last { font-weight: 600; color: var(--text); }
+.case-item-meta .cim-mi { text-align: left; }
+.case-item-meta .cim-whole { display: block; white-space: normal; overflow-wrap: anywhere; }
+.case-item-meta .cim-op { display: block; font-size: var(--fs-tiny); overflow-wrap: anywhere; }
+/* v1.157: the hidden case list's rail has a fixed width that every button fits in (Firefox sized
+ * the max-content rail narrower than its buttons, and the padlock stuck out). Nothing in it can be
+ * wider than the rail, and each button holds its own screen-reader text. */
+body.sidebar-collapsed .sidebar { width: 3rem; min-width: 3rem; max-width: 3rem; flex: 0 0 3rem; overflow: hidden; }
+body.sidebar-collapsed .sidebar-head { width: 3rem; max-width: 3rem; padding: .5rem 0; align-items: center; overflow-x: hidden; }
+body.sidebar-collapsed .sidebar-head > * { max-width: 2.4rem; }
+body.sidebar-collapsed .sidebar-head .icon-btn { width: 2.1rem; min-width: 0; height: 2.1rem; box-sizing: border-box; }
+body.sidebar-collapsed .sidebar-head .icon-btn svg, body.sidebar-collapsed .sidebar-head .icon-btn .bi { max-width: 1.25rem; max-height: 1.25rem; }
+body.sidebar-collapsed .sidebar-head .icon-btn { position: relative; }
+body.sidebar-collapsed .rail-recent { width: 2.4rem; }
+body.sidebar-collapsed .rail-case { width: 2.4rem !important; min-width: 0; padding: 0 !important; font-size: .68rem; letter-spacing: -.02em; overflow: hidden; }
+/* v1.157: Secure Locker tables size their columns to what is in them: the email stays on one line
+ * and is shown whole (the table scrolls sideways if it must), each Copy button is fully shown, and
+ * Department is a narrow centred column right after the first one. */
+.locker-rows { table-layout: auto; }
+.locker-rows th.col-k-email { width: auto; }
+.locker-rows td.col-k-email, .locker-rows td.col-k-email .copy-text { white-space: nowrap; overflow-wrap: normal; word-break: normal; }
+.locker-rows td.copy-cell { overflow: visible; }
+.locker-rows td.copy-cell .copy-user { width: 1.8rem; height: 1.8rem; flex: 0 0 1.8rem; }
+.locker-rows th.col-dept, .locker-rows td.dept-cell { width: 1%; white-space: nowrap; text-align: center; padding-left: .5rem; padding-right: .5rem; }
+.social-tag { display: inline-block; margin-left: .35rem; padding: .02rem .35rem; border: 1px solid var(--accent); color: var(--accent); font-size: var(--fs-tiny); font-weight: 700; white-space: nowrap; }
+/* v1.157: no column of the locker tables is squeezed to a letter a line: text wraps only between
+ * words, and a username, handle or email is never broken (the table scrolls sideways instead). */
+.locker-rows td.text-cell { overflow-wrap: normal; word-break: normal; }
+.locker-rows td.copy-cell .copy-text { white-space: nowrap; overflow-wrap: normal; }
+.locker-rows td.text-cell, .locker-rows th { min-width: 5.5rem; }
+.locker-rows th.col-dept, .locker-rows td.dept-cell, .locker-rows th.col-check, .locker-rows td.check-cell { min-width: 0; }
+.locker-list-label { display: block; margin: .2rem 0 .3rem; font-size: var(--fs-small); font-weight: 700; color: var(--muted); }

@@ -776,6 +776,16 @@
       .sort((a, b) => rank(a) - rank(b) || (b.updated || '').localeCompare(a.updated || ''));
   }
 
+  /** v1.157: the subject in the case list as LAST, | First | M. columns (a caption or an unknown
+   * offender stays as typed, across the three). */
+  function sideName(c) {
+    const p = c.subject ? CVOperation.nameParts(c.subject) : null;
+    if (!p || p.whole) return h('span', { class: 'cim-subject cim-whole' }, subj(c) || 'No subject yet');
+    return h('span', { class: 'cim-subject cim-name' },
+      h('span', { class: 'cim-last' }, `${p.last},`), ' ', h('span', { class: 'cim-first' }, p.first), p.middle ? ' ' : '',
+      h('span', { class: 'cim-mi', title: p.middle || '' }, p.middle ? `${p.middle[0].toUpperCase()}.` : ''));
+  }
+
   // A case in the left list: [Open] Title [bell], then file | case | client. A red bell means a
   // deadline is overdue or due within a week; the details are in the hover box.
   function caseItem(c, inGroup = false, { dim = false } = {}) {
@@ -792,12 +802,13 @@
       opened ? `Opened ${opened.long} (${opened.future ? `${opened.ageLong.toLowerCase()}: a date in the future, check it` : opened.days ? `${opened.days} day${opened.days === 1 ? '' : 's'} ago` : 'today'})` : null,
       sol ? `Statute of limitations ${sol === 'expired' ? 'expired' : 'expires'} ${fmtDate(c.sol.expires)}` : null,
       due && !sol ? `${due.cls === 'overdue' || due.cls === 'soon' ? 'Alarm: ' : 'Next deadline: '}${c.nextDeadline.title || 'Deadline'}, ${fmtDate(c.nextDeadline.date)}${c.nextDeadline.time ? ` ${c.nextDeadline.time}` : ''} (${due.text})` : null,
+      c.arrested ? 'Arrest made: this case has Arrest details' : null,
     ].filter(Boolean).join('\n');
     const li = h('li', {},
       h('a', {
         href: `#/case/${CVRoute.enc(c.id)}`,
         // v1.60: a case with a reminder (a deadline overdue or within a week) has a thin red border.
-        class: `case-item st-${String(c.status).toLowerCase()} ${c.id === state.caseId ? 'active' : ''}${due ? ` has-reminder reminder-${due.cls}` : ''}${dim ? ' case-dim' : ''}`,
+        class: `case-item st-${String(c.status).toLowerCase()} ${c.id === state.caseId ? 'active' : ''}${due ? ` has-reminder reminder-${due.cls}` : ''}${c.arrested ? ' has-arrest' : ''}${dim ? ' case-dim' : ''}`,
         'aria-current': c.id === state.caseId ? 'page' : null,
         title: tip,
       },
@@ -806,13 +817,16 @@
         // v1.46: the Case Number, with the Subject Name under it.
         h('span', { class: 'case-item-title is-number' }, dim ? h('span', { class: 'case-lock', title: 'Closed. The Mission is still going on.' }, I('lock-fill')) : null, c.number || 'No case number yet'),
         alarm ? h('span', { class: `case-bell ${due.cls}`, 'aria-label': `Deadline ${due.text}` }, I('bell-fill')) : null,
+        // v1.157: a case with an arrest: a purple border and this badge.
+        c.arrested ? h('span', { class: 'case-arrest-tag', 'aria-label': 'Arrest made' }, 'ARREST') : null,
         h('span', { class: 'case-item-flags' },
           h('span', { class: `case-status status-${String(c.status).toLowerCase()}` }, c.status))),
       // Just the numbers: file number | case number | client, e.g. "100 | JH123456 | State".
       // (No empty line when there are no numbers to show, v1.29. Inside an operation only the case
       // number shows, v1.32: the file number, original case and client are on the operation.)
-      h('div', { class: `case-item-meta muted${c.subject ? '' : ' no-subject'}` },
-        h('span', { class: 'cim-subject' }, [subj(c) || 'No subject yet', inGroup ? '' : CVOperation.opLabel(Vault.operationOf(c))].filter(Boolean).join(' | '))),
+      // v1.157: LAST, First and the middle initial in three columns, lined up from case to case.
+      h('div', { class: `case-item-meta muted${c.subject ? '' : ' no-subject'}` }, sideName(c),
+        !inGroup && Vault.operationOf(c) ? h('span', { class: 'cim-op' }, CVOperation.opLabel(Vault.operationOf(c))) : null),
       // v1.100: the day it was opened and how long ago, on its own line so the name is never cut off.
       opened ? h('div', { class: 'case-item-opened muted', title: `Opened ${opened.long}${opened.days ? `, ${opened.days} day${opened.days === 1 ? '' : 's'} ago` : ', today'}` },
         I('calendar-event'), h('span', { class: 'cim-opened' }, `${opened.short} · ${opened.age}`)) : null));
@@ -866,7 +880,7 @@
     const dueCases = cases.filter((c) => caseDue(c)); // v1.148: snoozed deadlines don't ring
     const bell = dueCases.length > 0;
     const meta = op && group.partial ? `${cases.length} closed · ongoing`
-      : op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : `${group.total} case${group.total === 1 ? '' : 's'}`; // v1.101: the title already says independent
+      : op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : `${group.closed ? cases.length : group.total} case${(group.closed ? cases.length : group.total) === 1 ? '' : 's'}${group.closed ? ' closed' : ''}`; // v1.101: the title already says independent
     const det = h('details', { class: `op-group${op ? '' : ' general-group'}${bell ? ' has-reminder' : ''}`, open },
       h('summary', { class: 'op-head', title: op && group.partial ? `${label}: the closed cases of this Mission, which is still going on. They stay in its folder in OPERATION CASES too.` : op ? `${label}: open the Mission` : 'INDEPENDENT: the cases not in an Operation. Click to open General Files, the list of every case.' },
         // v1.101: INDEPENDENT CASES has no room beside its name: its bell sits on the folder's corner.
@@ -1101,6 +1115,40 @@
     return h('li', { class: 'op-item mission-item' }, det);
   }
 
+  /** v1.157: CLOSED in the case list, after the open folders: an OPERATION folder with the closed
+   * Missions (and the closed cases of Missions still going on), and INDEPENDENT with the closed
+   * cases not in a Mission. Folded until opened; a search opens it. */
+  function closedFolder(groups) {
+    const key = 'closed';
+    const searching = !!$('#case-search').value.trim();
+    const opGroupsClosed = groups.filter((g) => g.op);
+    const loose = groups.filter((g) => !g.op);
+    const n = groups.reduce((t, g) => t + g.cases.length, 0);
+    const holds = (list) => list.some((g) => g.cases.some((c) => c.id === state.caseId));
+    const open = searching || (sideFold.has(key) ? sideFold.get(key) : holds(groups));
+    const opKey = 'closed-ops';
+    const opOpen = searching || (sideFold.has(opKey) ? sideFold.get(opKey) : holds(opGroupsClosed));
+    const opsDet = h('details', { class: 'op-group closed-ops-group', open: opOpen },
+      h('summary', { class: 'op-head', title: 'The closed Missions, and the closed cases of Missions still going on' },
+        h('span', { class: 'op-folder mission-icon' }, I('folder-mission')),
+        h('span', { class: 'op-text' }, h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, 'OPERATION')),
+          h('span', { class: 'op-meta muted' }, `${opGroupsClosed.length} mission${opGroupsClosed.length === 1 ? '' : 's'}`)),
+        h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
+      h('ul', { class: 'mission-children' }, opGroupsClosed.length ? opGroupsClosed.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted small' }, 'No closed Missions.')]));
+    opsDet.addEventListener('toggle', () => { if (!searching) sideFold.set(opKey, opsDet.open); });
+    const det = h('details', { class: 'op-group closed-group', open },
+      h('summary', { class: 'op-head', title: 'CLOSED: the closed cases, by Operation and Independent. The arrow folds the folder.' },
+        h('span', { class: 'op-folder closed-icon' }, I('folder-closed')),
+        h('span', { class: 'op-text' }, h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, 'CLOSED')),
+          h('span', { class: 'op-meta muted' }, `${n} case${n === 1 ? '' : 's'}`)),
+        h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
+      h('ul', { class: 'mission-children closed-children' },
+        h('li', { class: 'op-item' }, opsDet),
+        ...(loose.length ? loose.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted small' }, 'No closed independent cases.')])));
+    det.addEventListener('toggle', () => { if (!searching) sideFold.set(key, det.open); });
+    return h('li', { class: 'op-item closed-item' }, det);
+  }
+
   /** v1.132: what the case list shows, as text: the whole list, and the same without the subject
    * names. After a save the list is drawn again only when this changed, and when only a subject
    * changed just that case's row is replaced (drawing every row after each pause in typing froze a
@@ -1108,7 +1156,7 @@
   let sideSig = null;
   function sideSignature() {
     const q = $('#case-search').value.trim().toLowerCase();
-    const row = (c, withSubject) => [c.id, c.location, c.number, withSubject ? c.subject : '', c.operationId, c.status, c.opened, c.nextDeadline, c.sol,
+    const row = (c, withSubject) => [c.id, c.location, c.number, withSubject ? c.subject : '', c.operationId, c.status, c.opened, c.nextDeadline, c.sol, c.arrested,
       q ? [c.title, c.fileNumber, c.agencyNumber, c.client, c.tags, c.notes] : null];
     const ctx = [q, state.caseId, location.hash, sideOrder, today(), [...sideFold], Vault.listOperations().map((o) => [o.id, o.number, o.name, o.status]), pinnedIds()];
     const cases = Vault.data.cases;
@@ -1156,12 +1204,12 @@
       h('ul', { class: 'side-pinned-list' }, pinned.map((c) => caseItem(c)))) : null;
     list.replaceChildren(...(pinBox ? [pinBox] : []), missionFolder(missionGroups), ...(otherGroups.length ? otherGroups.map((g) => operationGroup(g)) : missionGroups.length ? [] : [h('li', { class: 'empty muted' },
       closedGroups.length ? 'Every Mission is closed.' : activeCount ? 'No cases match.' : Vault.data.cases.length ? 'No active cases.' : 'No cases yet. Click "New case".')]));
-    // v1.121: no Closed / Archived area in the sidebar (they are on the home page: CLOSED FILES and
-    // ARCHIVED). A search still finds closed and archived cases: they are listed under the open ones.
+    // v1.157: CLOSED (Operation and Independent) under the open folders. A search also finds the
+    // archived cases: they are listed under the rest.
+    if (closedGroups.length) list.append(closedFolder(closedGroups));
     const q = $('#case-search').value.trim().toLowerCase();
     if (q) {
       const archived = Vault.data.cases.filter(isArchivedEntry).filter((c) => matchesSearch(c, q));
-      if (closedGroups.length) list.append(h('li', { class: 'side-found-head muted small' }, 'Closed'), ...closedGroups.map((g) => operationGroup(g)));
       if (archived.length) list.append(h('li', { class: 'side-found-head muted small' }, 'Archived'), ...archived.map(caseItem));
     }
     onCaseListDrawn();

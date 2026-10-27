@@ -10,12 +10,14 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   await p.evaluate(() => { document.querySelectorAll('.toast').forEach((t) => t.remove()); location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(1000);
   ok(!(await p.$('#side-bottom, #closed-cases, #archived-cases')), 'no Closed / Archived area in the sidebar');
   const listText = await p.textContent('#case-list');
-  ok(!/EX-500|EX-700/.test(listText), 'closed and archived cases are not in the sidebar list');
+  // v1.157: closed cases sit in the CLOSED folder (folded) under the open ones; archived ones are not listed.
+  const closedIn = await p.evaluate(() => { const g = document.querySelector('#case-list .closed-group'); return { inFolder: !!g && /EX-500/.test(g.textContent), folded: !!g && !g.open }; });
+  ok(!/EX-700/.test(listText) && closedIn.inFolder && closedIn.folded, `closed cases in the folded CLOSED folder, archived not listed: ${JSON.stringify(closedIn)}`);
   ok((await p.locator('.closed-files-section').count()) === 1 && (await p.locator('.archived-section').count()) === 1, 'they are on the home page (CLOSED FILES, ARCHIVED)');
   // A search finds them, under Closed and Archived headings.
   await p.click('#btn-side-search'); await p.fill('#case-search', 'EX-50'); await p.waitForTimeout(500);
-  const closed = await p.evaluate(() => ({ head: [...document.querySelectorAll('#case-list .side-found-head')].map((x) => x.textContent), text: document.getElementById('case-list').textContent }));
-  ok(closed.head.includes('Closed') && /EX-500/.test(closed.text), `a search finds closed cases: ${closed.head.join(',')}`);
+  const closed = await p.evaluate(() => { const g = document.querySelector('#case-list .closed-group'); return { open: !!g && g.open, text: g ? g.textContent : '' }; });
+  ok(closed.open && /EX-500/.test(closed.text), `a search finds closed cases, in the CLOSED folder opened: ${JSON.stringify({ open: closed.open })}`);
   await p.fill('#case-search', 'EX-70'); await p.waitForTimeout(500);
   const arch = await p.evaluate(() => ({ head: [...document.querySelectorAll('#case-list .side-found-head')].map((x) => x.textContent), text: document.getElementById('case-list').textContent }));
   ok(arch.head.includes('Archived') && /EX-700/.test(arch.text) && /EX-701/.test(arch.text), `a search finds archived cases: ${arch.head.join(',')}`);
