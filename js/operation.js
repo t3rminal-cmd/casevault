@@ -294,6 +294,19 @@
     const amount = String(ev.qty == null ? '' : ev.qty).trim();
     return [String(ev.drug || '').trim(), amount ? `${amount} ${ev.unit || 'g'}` : '', String(ev.paid == null ? '' : ev.paid).trim() ? money(num(ev.paid)) : ''].filter(Boolean).join(' · ');
   }
+  /** v1.160: what the Paid box shows while it is typed in: "$1,234.5"; done = true (on leaving the
+   * box) gives the cents too: "$1,234.50". Anything but digits and one point is dropped. */
+  function moneyTyped(v, done) {
+    let t = String(v == null ? '' : v).replace(/[^0-9.]/g, '');
+    const dot = t.indexOf('.');
+    if (dot >= 0) t = t.slice(0, dot + 1) + t.slice(dot + 1).replace(/\./g, '').slice(0, 2);
+    if (!t) return '';
+    let [whole, cents] = t.split('.');
+    whole = whole.replace(/^0+(?=\d)/, '') || '0';
+    whole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    if (done) return `$${whole}.${(cents || '').padEnd(2, '0')}`;
+    return `$${whole}${cents != null ? `.${cents}` : ''}`;
+  }
   function money(n) { return `$${n.toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`; }
   /** rows: mergeEvents() output -> [{ key, name, color, buys: [{ date, time, number, title, drug, qty, unit, paid }],
    * paid, drugs: [{ drug, amounts: [{ unit, qty }] }] }], suspects in order of their first buy; buys
@@ -385,7 +398,7 @@
 
   const api = {
     KIND_LABELS, kindLabel, TL_TEMPLATES, plusDays, daysBetween, templateFollowUp, courtReminder, nextCourt,
-    BUY_UNITS, buyLine, buySummary, money, suspectGroups,
+    BUY_UNITS, buyLine, buySummary, money, moneyTyped, suspectGroups,
     subjectLabel, nameParts, TL_COLORS, isColor, suspectKey, suspectColors, eventColor,
     opKey, mergeOverview, sameOverview, mergeEvents,
     OP_STATUSES, normNumber, opLabel, normName, nameMatch, subjectMatches, caseWithNumber, duplicateNumbers,

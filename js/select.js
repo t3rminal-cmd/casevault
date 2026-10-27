@@ -82,7 +82,14 @@
       }
     };
     const outside = (e) => { if (!pop.contains(e.target) && e.target !== sel) close(); };
-    const scrolled = (e) => { if (!pop.contains(e.target)) close(); };
+    // v1.160: a scroll (the form moving the box into view as it is clicked, or the page scrolled with
+    // the list open) moves the list with its box; it closes only when the box has left the screen.
+    // (Closing on any scroll made lists near the bottom of a form vanish as soon as they opened.)
+    const scrolled = (e) => {
+      if (pop.contains(e.target)) return;
+      const b = sel.getBoundingClientRect();
+      if (b.bottom < 0 || b.top > root.innerHeight || !sel.isConnected) close(); else place();
+    };
     function close() {
       if (!pop.isConnected) return;
       pop.remove();
@@ -97,15 +104,18 @@
     const onBlur = () => setTimeout(() => { if (doc.activeElement !== sel) close(); }, 0);
     host.append(pop);
     // Under the box (above it when there's no room), inside the page's zoom.
-    const z = parseFloat(doc.documentElement.style.zoom) || 1;
-    const r = sel.getBoundingClientRect();
-    const W = root.innerWidth / z; const H = root.innerHeight / z;
-    pop.style.minWidth = `${Math.min(Math.max(r.width / z, 120), W - 8)}px`;
-    pop.style.maxWidth = `${Math.max(W - 8, 120)}px`; // v1.79: never wider than the window
-    const w = pop.offsetWidth; const h = pop.offsetHeight;
-    pop.style.left = `${Math.max(4, Math.min(r.left / z, W - w - 4))}px`;
-    const below = r.bottom / z + 2;
-    pop.style.top = `${below + h > H - 4 && r.top / z - h - 2 > 4 ? r.top / z - h - 2 : Math.min(below, Math.max(4, H - h - 4))}px`;
+    function place() {
+      const z = parseFloat(doc.documentElement.style.zoom) || 1;
+      const r = sel.getBoundingClientRect();
+      const W = root.innerWidth / z; const H = root.innerHeight / z;
+      pop.style.minWidth = `${Math.min(Math.max(r.width / z, 120), W - 8)}px`;
+      pop.style.maxWidth = `${Math.max(W - 8, 120)}px`; // v1.79: never wider than the window
+      const w = pop.offsetWidth; const h = pop.offsetHeight;
+      pop.style.left = `${Math.max(4, Math.min(r.left / z, W - w - 4))}px`;
+      const below = r.bottom / z + 2;
+      pop.style.top = `${below + h > H - 4 && r.top / z - h - 2 > 4 ? r.top / z - h - 2 : Math.min(below, Math.max(4, H - h - 4))}px`;
+    }
+    place();
     setActive(active);
     sel.setAttribute('aria-expanded', 'true');
     sel.addEventListener('keydown', onKey, true);
@@ -120,7 +130,7 @@
     const sel = e.target instanceof Element && e.target.closest('select');
     if (!sel || !usable(sel) || e.button !== 0) return;
     e.preventDefault();
-    sel.focus();
+    sel.focus({ preventScroll: true });
     open(sel);
   }, true);
   doc.addEventListener('keydown', (e) => {

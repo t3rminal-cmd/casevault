@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.159)
+
+- **Fix:** the padlock no longer sticks out of a narrow case list (the top icons wrap)
+- **Case list:** Case Group names line up as LAST, First, M. like the cases, never broken in the middle
+
 ## Features (v1.158)
 
 - **Fix:** refreshing the page while the privacy screen is on no longer opens CaseVault without the PIN

@@ -50,7 +50,7 @@
     let active = -1;
     let picking = false;
     const open = () => !list.hidden;
-    function close() { list.hidden = true; active = -1; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); }
+    function close() { root.removeEventListener('scroll', onScroll, true); root.removeEventListener('resize', onResize); list.hidden = true; active = -1; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); }
     function mark() {
       [...list.children].forEach((li, i) => li.classList.toggle('active', i === active));
       const li = list.children[active];
@@ -74,14 +74,32 @@
       // Nothing to choose when the text already is the one match.
       const exact = !all && shown.length === 1 && shown[0].value.toLowerCase() === input.value.trim().toLowerCase();
       list.hidden = !shown.length || exact;
-      // v1.79: a list wider than the room to its right moves left, so it stays inside the window.
-      list.style.left = '';
-      if (!list.hidden) { const r = list.getBoundingClientRect(); const room = root.innerWidth - 8; if (r.right > room) list.style.left = `${Math.max(room - r.right, -r.left + 8)}px`; }
+      if (!list.hidden) { place(); root.addEventListener('scroll', onScroll, true); root.addEventListener('resize', onResize); }
       // A hover box already showing for this box steps aside for the list (v1.38).
       if (!list.hidden) { const t = doc.getElementById('cv-tip'); if (t) t.hidden = true; }
       input.setAttribute('aria-expanded', String(!list.hidden));
       active = -1;
     }
+    // v1.160: the list floats over the page under its box (above it when there's no room below), so
+    // a box near the bottom of a form that scrolls is never cut off or hidden under the Save bar; it
+    // follows its box when the page scrolls and stays inside the window (v1.79).
+    function place() {
+      const z = parseFloat(doc.documentElement.style.zoom) || 1;
+      const r = wrap.getBoundingClientRect();
+      const W = root.innerWidth / z; const H = root.innerHeight / z;
+      list.style.minWidth = `${Math.min(Math.max(r.width / z, 160), W - 16)}px`;
+      const w = list.offsetWidth; const h = list.offsetHeight;
+      list.style.left = `${Math.max(8, Math.min(r.left / z, W - w - 8))}px`;
+      const below = r.bottom / z + 2;
+      list.style.top = `${below + h > H - 4 && r.top / z - h - 2 > 4 ? r.top / z - h - 2 : Math.min(below, Math.max(4, H - h - 4))}px`;
+    }
+    // Listened to only while the list is open (added in draw, removed in close).
+    function onScroll(e) {
+      if (!open() || list.contains(e.target)) return;
+      const b = wrap.getBoundingClientRect();
+      if (b.bottom < 0 || b.top > root.innerHeight || !wrap.isConnected) close(); else place();
+    }
+    function onResize() { if (open()) place(); }
     function pick(i) {
       const it = shown[i];
       if (!it) return;
