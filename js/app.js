@@ -583,6 +583,9 @@
     if (!/^[0-9a-f]{32,128}$/.test(String((Vault.data.settings || {}).routeKey || ''))) await Vault.updateSettings({ routeKey: CVRoute.newSecret() }).catch(() => {});
     CVRoute.setSecret((Vault.data.settings || {}).routeKey);
     state.connected = true;
+    // v1.158: hidden when the page was refreshed or closed: covered again before any case is drawn,
+    // and only the PIN (now that vault.json is read) opens it.
+    if (window.CVPrivacy && CVPrivacy.wasLocked()) CVPrivacy.lock();
     // v1.119: the Memory icon shows with the others at once, not five seconds later (no jump).
     if (memBox) memBox.tick();
     state.vaultId = data.vaultId;
