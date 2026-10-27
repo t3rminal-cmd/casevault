@@ -213,6 +213,10 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.158
+
+- **Fix (privacy screen):** refreshing the page (F5 or Ctrl+F5), or closing and opening CaseVault again, while the screen is hidden no longer opens CaseVault. The screen comes back as soon as the vault opens, before any case is shown, and only the PIN opens it (a click, Esc or a wrong PIN don't). The browser keeps only the word "locked" while the screen is on, no case data; the PIN clears it. Without a PIN set, it opens with a click, as before
+
 ### What's new in v1.157
 
 - **Arrest mark:** a case with an arrest (it has Arrest details) has a purple border and an ARREST tag in the case list, the way a reminder has its red border. A case with both shows red on the left and purple on the right
@@ -241,10 +245,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Duplicate files:** adding a file that is already in the case (the same content, whatever its name) asks first: Skip Duplicates or Add Anyway
 - **Check the Vault:** once a month, a minute after the vault opens, CaseVault compares the case folders on the SSD with the case list and reads each case's data files, and only says something if a folder is missing, a case is not listed, a data file is damaged or a file is empty. Ctrl+K → Check the Vault runs it any time; nothing is changed
 - **Faster start:** Year Summary, Group Summary and the new Chain of Custody, Calendar and Weekly Summary load the first time they are used
-
-### What's new in v1.155
-
-- **Hidden case list:** the thin rail on the left is now as wide as its buttons, so no icon (such as the padlock) is pushed outside it in Firefox, with a bigger font, zoom or Bigger Text. On a short window the icons scroll up and down inside the rail instead of spilling out
 
 ### Earlier versions
 

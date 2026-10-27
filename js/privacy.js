@@ -98,6 +98,7 @@
     function lock() {
       if (s.locked) return false;
       s.locked = true;
+      try { env.remember && env.remember(true); } catch { /* not kept: locks again only in this page */ }
       s.savedTitle = env.getTitle();
       s.savedIcon = env.getIcon();
       env.setTitle(COVER_TITLE);
@@ -112,6 +113,7 @@
 
     function restore() {
       s.locked = false;
+      try { env.remember && env.remember(false); } catch { /* nothing kept */ }
       s.tries = 0;
       env.setTitle(s.savedTitle);
       env.setIcon(s.savedIcon);
@@ -296,6 +298,9 @@
       clearClipboard: () => { if (clearClipboard) clearClipboard(); },
       upgradePin,
       getPinRecord,
+      // v1.158: a refresh (or closing and opening CaseVault again) while the screen is hidden must not
+      // open it: only the word "locked" is kept in this browser, no case data, until the PIN opens it.
+      remember: (on) => { if (on) root.localStorage.setItem(LOCK_KEY, '1'); else root.localStorage.removeItem(LOCK_KEY); },
     });
 
     const tryUnlock = async () => {
@@ -343,10 +348,15 @@
     return controller;
   }
 
+  const LOCK_KEY = 'cv-privacy-locked';
+  /** v1.158: true when the privacy screen was on as the page was refreshed or closed. */
+  function wasLocked() { try { return root.localStorage.getItem(LOCK_KEY) === '1'; } catch { return false; } }
+
   const api = {
     PIN_RE, BLANK_ICON, COVER_TITLE, MAX_TRIES, COOLDOWN_MS,
     isValidPin, hashPin, slowHashPin, makePinRecord, verifyPin, isOldPinRecord, PIN_ROUNDS, createEscDetector, createController, createIdleTimer, init,
     lock: () => controller && controller.lock(),
+    wasLocked, LOCK_KEY,
     get locked() { return !!(controller && controller.locked); },
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

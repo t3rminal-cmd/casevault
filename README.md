@@ -15,12 +15,9 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.157
+## What's New in v1.158
 
-- **Case list:** ARREST mark on cases with an arrest, CLOSED folder (Operation and Independent), Mission number and name in different colours, and names lined up as LAST, First, M.
-- **Fix:** with the case list hidden, the padlock no longer sticks out of the rail in Firefox
-- **Secure Locker:** Covert Accounts Copy buttons and emails shown whole, Department next to the first column, social media per account
-- **Covert aliases:** drop-downs for gender, nationality, ethnicity, civil status, blood type and body type; the state of each ID; more email and mailing addresses
+- **Fix:** refreshing the page while the privacy screen is on no longer opens CaseVault without the PIN
 
 ## What CaseVault Does
 

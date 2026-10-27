@@ -4,6 +4,13 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.157)
+
+- **Case list:** ARREST mark on cases with an arrest, CLOSED folder (Operation and Independent), Mission number and name in different colours, and names lined up as LAST, First, M.
+- **Fix:** with the case list hidden, the padlock no longer sticks out of the rail in Firefox
+- **Secure Locker:** Covert Accounts Copy buttons and emails shown whole, Department next to the first column, social media per account
+- **Covert aliases:** drop-downs for gender, nationality, ethnicity, civil status, blood type and body type; the state of each ID; more email and mailing addresses
+
 ## Features (v1.156)
 
 - **Password Manager:** full email, PIN and Department columns, Linked to Google, and a department filter (e.g. DEA or CPD)
