@@ -300,21 +300,23 @@
               // v1.157: a covert account's social media accounts, listed in the hover box.
               : k === 'platform' && Array.isArray(r.social) && r.social.length ? [r[k] || h('span', { class: 'muted' }, '—'), h('span', { class: 'social-tag', title: r.social.map((x) => [x.platform, x.handle, x.url].filter(Boolean).join(' · ')).join('\n') }, `${r.social.length} social`)]
               : (r[k] || h('span', { class: 'muted' }, '—'))))),
-          h('td', { class: 'col-actions nowrap' },
-            r.notes || r.backstory ? h('span', { class: 'muted small locker-has-notes', title: r.notes || r.backstory }, I('journal-text')) : '',
-            old.length ? h('button', { type: 'button', class: `btn small locker-hist-btn${histOpen ? ' active' : ''}`, 'aria-expanded': String(histOpen), title: `The passwords ${name} had before`, onclick: () => {
+          // v1.160: the buttons sit in fixed slots (notes, old passwords, Edit, up, down, delete), an empty
+          // slot kept where a row has none, so they line up from one row to the next.
+          h('td', { class: 'col-actions nowrap' }, h('div', { class: `locker-acts${keepsAge ? ' has-old' : ''}${arranging ? ' has-move' : ''}` },
+            r.notes || r.backstory ? h('span', { class: 'muted small locker-has-notes', title: r.notes || r.backstory }, I('journal-text')) : h('span', { class: 'locker-slot' }),
+            !keepsAge ? null : old.length ? h('button', { type: 'button', class: `btn small locker-hist-btn${histOpen ? ' active' : ''}`, 'aria-expanded': String(histOpen), title: `The passwords ${name} had before`, onclick: () => {
               if (mem.openHist.has(r.id)) mem.openHist.delete(r.id); else mem.openHist.add(r.id);
               draw();
-            } }, `Old (${old.length})`, I(histOpen ? 'chevron-up' : 'clock-history')) : '',
+            } }, `Old (${old.length})`, I(histOpen ? 'chevron-up' : 'clock-history')) : h('span', { class: 'locker-slot' }),
             h('button', { type: 'button', class: 'btn small locker-edit', title: `Change this ${T.item.toLowerCase()}: a new password, username, address or notes`, onclick: () => editRow(t, r) }, 'Edit', I('pencil-square')),
             arranging ? h('span', { class: 'locker-move' },
               h('button', { type: 'button', class: 'icon-btn', title: 'Move up', disabled: i === 0, onclick: () => move(r, -1) }, I('arrow-up'), h('span', { class: 'sr-only' }, `Move ${name} up`)),
-              h('button', { type: 'button', class: 'icon-btn', title: 'Move down', disabled: i === list.length - 1, onclick: () => move(r, 1) }, I('arrow-down'), h('span', { class: 'sr-only' }, `Move ${name} down`))) : '',
+              h('button', { type: 'button', class: 'icon-btn', title: 'Move down', disabled: i === list.length - 1, onclick: () => move(r, 1) }, I('arrow-down'), h('span', { class: 'sr-only' }, `Move ${name} down`))) : null,
             h('button', { type: 'button', class: 'icon-btn danger-icon', title: `Delete this ${T.item.toLowerCase()}`, onclick: async () => {
               if (!(await ui.confirmDialog({ title: `Delete ${name}?`, message: `This ${T.item.toLowerCase()} is deleted from the locker${old.length ? ', with its old passwords' : ''}.`, confirmText: 'Delete', danger: true }))) return;
               mem.data[t] = mem.data[t].filter((x) => x !== r);
               await saveSafe(); render();
-            } }, I('trash3'), h('span', { class: 'sr-only' }, 'Delete'))));
+            } }, I('trash3'), h('span', { class: 'sr-only' }, 'Delete')))));
         if (!histOpen) return [row];
         return [row, h('tr', { class: 'locker-hist-row' }, h('td', { colspan: cols.length + 1 },
           h('div', { class: 'locker-hist' }, h('span', { class: 'locker-hist-title muted small' }, 'Old Passwords, newest first'),

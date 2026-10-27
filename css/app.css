@@ -4510,3 +4510,37 @@ body:not(.sidebar-collapsed) .sidebar-head > .icon-btn, body:not(.sidebar-collap
 #case-list .sg-name.cim-name { grid-template-columns: var(--nm-last-g, 9ch) var(--nm-first-g, 8ch) var(--nm-mi-g, 2.2ch); column-gap: .3rem; }
 #case-list .suspect-group > .sg-head { gap: .25rem; }
 #case-list .suspect-group > .sg-head > .op-chev { width: 1rem; justify-content: center; }
+/* v1.160: the type-in lists float over the page (placed by js/combo.js), never clipped by a form. */
+.combo-list { position: fixed; top: auto; right: auto; z-index: 1000; }
+/* v1.160: every folder heading in the case list has the same slots on the right (red alert count,
+ * case count or handcuffs, +, arrow), so the counts, the + buttons and the arrows line up in
+ * columns from one folder to the next, whichever of them a folder has. */
+#case-list .op-head { display: grid; grid-template-columns: auto minmax(0, 1fr) 1.7rem 2.6rem 1.9rem 1.1rem; column-gap: .3rem; align-items: center; }
+#case-list .op-head > * { margin: 0 !important; justify-self: center; }
+#case-list .op-head > .op-folder { grid-column: 1; }
+#case-list .op-head > .op-text { grid-column: 2; justify-self: stretch; min-width: 0; }
+#case-list .op-head:not(:has(> .alert-count)) > .op-text { grid-column: 2 / 4; }
+#case-list .op-head > .alert-count { grid-column: 3; }
+#case-list .op-head > .op-count, #case-list .op-head > .closed-count { grid-column: 4; }
+#case-list .op-head > .mission-add, #case-list .op-head > .general-add { grid-column: 5; }
+#case-list .op-head > .op-chev { grid-column: 6; padding: 0; }
+.closed-count { display: inline-flex; align-items: center; gap: .15rem; font-size: var(--fs-tiny); font-weight: 700; color: var(--arrest); }
+.closed-count :is(svg, img) { width: 1.15rem; height: 1.15rem; color: var(--arrest) !important; }
+#case-list .op-head { grid-template-columns: auto minmax(0, 1fr) 1.45rem 2.1rem 1.75rem 1rem; column-gap: .2rem; }
+/* Top-level folders keep the room nested ones lose to their box (.5rem padding + 1px border), so the
+ * right-hand columns line up across both. */
+#case-list > li > details > .op-head { padding-right: calc(1rem + 1px); }
+#case-list .mission-group > .op-head .op-name, #case-list .general-group > .op-head .op-name, #case-list .closed-group > .op-head .op-name, #case-list .closed-ops-group > .op-head .op-name { white-space: nowrap; overflow-wrap: normal; word-break: keep-all; }
+/* The case list's top icons fit on one line at the usual width (they wrap only when it is narrower). */
+body:not(.sidebar-collapsed) .sidebar-head { padding-left: .3rem; padding-right: .3rem; column-gap: .1rem; }
+#sidebar .op-head > .alert-bell { background: none; border: 0; min-width: 0; padding: 0; color: var(--danger); }
+/* v1.160: the row buttons of the locker tables in fixed slots, lined up from row to row:
+ * notes | (Old) | Edit | (up, down) | delete. */
+.locker-rows th:last-child, .locker-rows td.col-actions { width: auto; white-space: nowrap; }
+.locker-acts { display: grid; align-items: center; justify-items: start; column-gap: .3rem; grid-template-columns: 1.4rem 4.8rem 2.1rem; }
+.locker-acts.has-old { grid-template-columns: 1.4rem 5.6rem 4.8rem 2.1rem; }
+.locker-acts.has-move { grid-template-columns: 1.4rem 4.8rem 4.6rem 2.1rem; }
+.locker-acts.has-old.has-move { grid-template-columns: 1.4rem 5.6rem 4.8rem 4.6rem 2.1rem; }
+.locker-acts > * { margin: 0 !important; }
+.locker-acts .locker-has-notes { display: inline-flex; justify-self: center; }
+.locker-acts .locker-move { margin: 0; }

@@ -62,15 +62,25 @@
     // v1.68
     'folder-mission': 'folder-mission', 'folder-general': 'folder-general', 'folder-other': 'folder-other', // v1.74
     // v1.127: the last three that were plain shapes
-    'list-ol': 'list-numbered', 'hash': 'hash', 'marshal-star': 'marshal-star',
+    'list-ol': 'list-numbered', 'hash': 'hash', 'marshal-star': 'marshal-star', 'handcuffs': 'handcuffs',
     'power': 'power', 'chat-square-text': 'sms', 'images': 'photo-stack', 'table': 'bar-chart',
     'drug-powder': 'drug-powder', 'drug-syringe': 'drug-syringe', 'drug-vial': 'drug-vial', 'drug-crystal': 'drug-crystal', 'drug-pills': 'drug-pills', 'drug-mushroom': 'drug-mushroom', 'drug-steroid': 'drug-steroid', 'drug-cannabis': 'cannabis',
+  };
+  /* v1.160: shapes drawn for CaseVault (not in Bootstrap Icons): handcuffs, two cuffs on a short chain. */
+  const EXTRA = {
+    handcuffs: [
+      ['circle', { cx: '4.2', cy: '10.6', r: '3.1', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }],
+      ['circle', { cx: '11.8', cy: '10.6', r: '3.1', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }],
+      ['rect', { x: '3', y: '5.2', width: '2.4', height: '2.6', rx: '.4' }],
+      ['rect', { x: '10.6', y: '5.2', width: '2.4', height: '2.6', rx: '.4' }],
+      ['path', { d: 'M5.4 5.9c.8-1.6 1.6-2.3 2.6-2.3s1.8.7 2.6 2.3', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.3', 'stroke-dasharray': '1.2 .7' }],
+    ],
   };
   const colorUrl = (name) => (COLOR[name] ? `icons/color/${COLOR[name]}.png` : '');
 
   function icon(name, { label = '', size = null, cls = '' } = {}) {
     const doc = root.document;
-    const data = (root.CVIconData || {})[name];
+    const data = (root.CVIconData || {})[name] || EXTRA[name];
     const svg = doc.createElementNS(NS, 'svg');
     svg.setAttribute('viewBox', '0 0 16 16');
     const color = colorUrl(name);
@@ -105,7 +115,7 @@
     }
   }
 
-  const has = (name) => !!((root.CVIconData || {})[name] || COLOR[name]);
+  const has = (name) => !!((root.CVIconData || {})[name] || EXTRA[name] || COLOR[name]);
 
   root.CVIcons = { icon, decorate, has, colorUrl, COLOR };
 })(this);

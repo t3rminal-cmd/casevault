@@ -99,8 +99,20 @@
         drug: h('input', { maxlength: 80, 'aria-label': 'Narcotic', autocomplete: 'off', placeholder: 'What was bought' }),
         qty: h('input', { inputmode: 'decimal', maxlength: 12, 'aria-label': 'Amount', placeholder: '0' }),
         unit: h('select', { 'aria-label': 'Unit' }, root.CVOperation.BUY_UNITS.map((u) => h('option', { value: u }, u))),
-        paid: h('input', { inputmode: 'decimal', maxlength: 14, 'aria-label': 'Paid', placeholder: '$0' }),
+        paid: h('input', { inputmode: 'decimal', maxlength: 16, 'aria-label': 'Paid', placeholder: '$0.00', class: 'money-input' }),
       };
+      // v1.160: the Paid box is formatted as money while it is typed in ($1,234.5) and on leaving it ($1,234.50).
+      f.paid.addEventListener('input', () => {
+        const el = f.paid; const at = el.selectionStart == null ? el.value.length : el.selectionStart;
+        const keep = el.value.slice(0, at).replace(/[^0-9.]/g, '').length;
+        el.value = O.moneyTyped(el.value);
+        let i = 0; let n = 0;
+        while (i < el.value.length && n < keep) { if (/[0-9.]/.test(el.value[i])) n += 1; i += 1; }
+        try { el.setSelectionRange(Math.max(i, 1), Math.max(i, 1)); } catch { /* not focused */ }
+      });
+      // Saved as a plain number: "$1,234.50" -> "1234.5".
+      const paidValue = () => { const v = f.paid.value.replace(/[$,\s]/g, ''); return v && Number.isFinite(Number(v)) ? String(Number(v)) : v; };
+      f.paid.addEventListener('blur', () => { f.paid.value = O.moneyTyped(f.paid.value, true); });
       const drugBox = root.CVCombo ? CVCombo.attach(f.drug, { label: 'Show the narcotics', items: () => ((root.CVReportFields && CVReportFields.DRUG_TYPES) || []).map((t) => ({ value: t, label: t })) }) : f.drug;
       const buyRow = h('div', { class: 'tl-buy-row full', hidden: true },
         field('Narcotic', drugBox, 'grow'),
@@ -190,7 +202,7 @@
       const form = h('form', { class: 'timeline-form cv-boxed', onsubmit: async (e) => {
         e.preventDefault();
         const data = { date: f.date.value, time: f.time.value, kind: f.kind.value, title: f.title.value.trim(), note: f.note.value.trim(), suspect: f.suspect.value.trim(), color: pickedColor };
-        if (data.kind === 'buy') Object.assign(data, { drug: f.drug.value.trim(), qty: f.qty.value.trim(), unit: f.unit.value, paid: f.paid.value.trim().replace(/^\$/, '') });
+        if (data.kind === 'buy') Object.assign(data, { drug: f.drug.value.trim(), qty: f.qty.value.trim(), unit: f.unit.value, paid: paidValue() });
         else Object.assign(data, { drug: undefined, qty: undefined, unit: undefined, paid: undefined });
         if (!data.date || !data.title) return;
         const target = many ? f.caseSel.value : c.id;
@@ -393,7 +405,7 @@
                 f.title.value = ev.title; f.note.value = ev.note || '';
                 f.caseSel.value = caseId;
                 f.suspect.value = ev.suspect || ''; pickedColor = O.isColor(ev.color) ? ev.color : ''; colorTouched = !!pickedColor; drawSwatches();
-                f.drug.value = ev.drug || ''; f.qty.value = ev.qty || ''; f.unit.value = ev.unit || 'g'; f.paid.value = ev.paid || ''; showBuy();
+                f.drug.value = ev.drug || ''; f.qty.value = ev.qty || ''; f.unit.value = ev.unit || 'g'; f.paid.value = O.moneyTyped(ev.paid || '', true); showBuy();
                 submit.textContent = 'Save changes'; cancel.hidden = false;
                 f.title.focus();
               } }, 'Edit'),

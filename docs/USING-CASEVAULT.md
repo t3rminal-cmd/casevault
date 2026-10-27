@@ -213,6 +213,15 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.160
+
+- **Fix (drop-down lists):** the drop-down lists (Gender, Nationality, the ID states and every other list) open in every window, also the ones low in Edit Alias. A list no longer closes the moment the window scrolls; it moves with its box, and closes only when the box leaves the screen
+- **Fix (lists with suggestions):** the suggestion lists of the boxes you can type in (narcotics, platforms, departments and others) show on top of the window instead of being cut off at its edge
+- **Case list:** the counts, the green + buttons and the arrows of every folder sit in one straight column, top folders and the missions inside them alike; a folder name stays on one line
+- **Case list:** CLOSED shows a handcuff icon and how many closed cases it holds, on the right
+- **Secure Locker:** the buttons of each row (notes, Edit, the up and down arrows, delete) line up from row to row, also when some rows have notes and others don't
+- **Timeline:** the Paid box of a Buy fills in as money while you type ($1,234.5) and adds the cents when you leave it ($1,234.50); it is saved as a plain number, so the Buy Summary totals are unchanged
+
 ### What's new in v1.159
 
 - **Fix (case list top icons):** with the case list made narrower, its top icons wrap onto a second line instead of running past its right edge, so the padlock (last, on the right) stays inside the list in every browser and at any width
@@ -221,20 +230,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 ### What's new in v1.158
 
 - **Fix (privacy screen):** refreshing the page (F5 or Ctrl+F5), or closing and opening CaseVault again, while the screen is hidden no longer opens CaseVault. The screen comes back as soon as the vault opens, before any case is shown, and only the PIN opens it (a click, Esc or a wrong PIN don't). The browser keeps only the word "locked" while the screen is on, no case data; the PIN clears it. Without a PIN set, it opens with a click, as before
-
-### What's new in v1.157
-
-- **Arrest mark:** a case with an arrest (it has Arrest details) has a purple border and an ARREST tag in the case list, the way a reminder has its red border. A case with both shows red on the left and purple on the right
-- **Fix (Firefox):** with the case list hidden, the rail now has a fixed width that every button fits in, so the padlock (and every other icon) stays inside its border at any zoom or text size
-- **Case list:** a Mission's number and its name are in different colours (number in navy, name in grey)
-- **Case list:** the subject reads LAST, First and the middle initial in three columns that line up from one case to the next
-- **Case list:** a CLOSED folder under the open ones, with OPERATION (closed Missions, and the closed cases of Missions still going on) and INDEPENDENT (closed cases not in a Mission) inside. It starts folded
-- **Fix (Covert Accounts):** the Copy buttons are fully shown, and the email stays on one line and is shown whole (the table scrolls sideways if it needs more room). Usernames and handles are no longer broken letter by letter
-- **Secure Locker:** Department is a narrow centred column right after the first column (Platform / App, Site / System, Alias Name)
-- **Covert aliases:** Gender, Nationality, Ethnicity, Civil Status, Blood Type and Body Type are drop-downs. A value typed before that isn't in the list is kept
-- **Covert aliases:** each ID has its state: Driver's License State, State License / ID State, Library Card State and Other ID State
-- **Covert aliases:** More Email Addresses and Mailing Addresses (type, address, box or unit, provider, key or code), as many as you need. What was in the single Mailbox box becomes the first mailing address
-- **Covert accounts:** each account can store its social media accounts (platform, username or handle, web address). The table shows how many, and the hover box lists them
 
 ### Earlier versions
 

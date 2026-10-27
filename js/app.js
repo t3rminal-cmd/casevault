@@ -1132,8 +1132,10 @@
       h('summary', { class: 'op-head', title: 'OPERATION: every Operation (Mission). Click to see them all; the arrow folds the folder.' },
         h('span', { class: 'op-folder mission-icon' }, I('folder-mission')),
         h('span', { class: 'op-text' },
-          h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, 'OPERATION'), bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
+          h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, 'OPERATION')),
           h('span', { class: 'op-meta muted' }, `${n} mission${n === 1 ? '' : 's'}`)),
+        // v1.160: the bell in the alert column on the right, lined up with the red counts below it.
+        bell ? h('span', { class: 'case-bell alert-count alert-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null,
         add,
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
       h('ul', { class: 'mission-children' }, groups.length ? groups.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted small' }, 'No Missions yet. Click + to make one.')]));
@@ -1172,6 +1174,8 @@
         h('span', { class: 'op-folder closed-icon' }, I('folder-closed')),
         h('span', { class: 'op-text' }, h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, 'CLOSED')),
           h('span', { class: 'op-meta muted' }, `${n} case${n === 1 ? '' : 's'}`)),
+        // v1.160: handcuffs and how many cases are closed, on the right like the other folders' counts.
+        h('span', { class: 'closed-count', title: `${n} closed case${n === 1 ? '' : 's'}`, 'aria-label': `${n} closed` }, I('handcuffs'), h('span', {}, String(n))),
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
       h('ul', { class: 'mission-children closed-children' },
         h('li', { class: 'op-item' }, opsDet),
