@@ -15,9 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.158
+## What's New in v1.159
 
-- **Fix:** refreshing the page while the privacy screen is on no longer opens CaseVault without the PIN
+- **Fix:** the padlock no longer sticks out of a narrow case list (the top icons wrap)
+- **Case list:** Case Group names line up as LAST, First, M. like the cases, never broken in the middle
 
 ## What CaseVault Does
 

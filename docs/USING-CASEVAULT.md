@@ -213,6 +213,11 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.159
+
+- **Fix (case list top icons):** with the case list made narrower, its top icons wrap onto a second line instead of running past its right edge, so the padlock (last, on the right) stays inside the list in every browser and at any width
+- **Case list names:** LAST, First and the middle initial line up in three columns in the Case Group folders too (a group named like "DOE, John Q"; a name such as "Doe Family" stays as typed). The columns are as wide as the longest last and first name in the list, so names are never broken in the middle and every row still fits
+
 ### What's new in v1.158
 
 - **Fix (privacy screen):** refreshing the page (F5 or Ctrl+F5), or closing and opening CaseVault again, while the screen is hidden no longer opens CaseVault. The screen comes back as soon as the vault opens, before any case is shown, and only the PIN opens it (a click, Esc or a wrong PIN don't). The browser keeps only the word "locked" while the screen is on, no case data; the PIN clears it. Without a PIN set, it opens with a click, as before
@@ -230,21 +235,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Covert aliases:** each ID has its state: Driver's License State, State License / ID State, Library Card State and Other ID State
 - **Covert aliases:** More Email Addresses and Mailing Addresses (type, address, box or unit, provider, key or code), as many as you need. What was in the single Mailbox box becomes the first mailing address
 - **Covert accounts:** each account can store its social media accounts (platform, username or handle, web address). The table shows how many, and the hover box lists them
-
-### What's new in v1.156
-
-- **Password Manager:** the Email is shown in full (it wraps instead of being cut off). New columns: **PIN** (hidden until shown, like the password) and **Department** (CPD, DEA, USPIS, FBI, HSI, ATF, USMS, IRS-CI, ISP, or your own). A **Linked to Google** checkbox shows as a small Google tag next to the email
-- **Covert aliases:** each alias now has a full profile in sections: Identity (gender, nationality, ethnicity, date of birth, age and zodiac worked out from the date of birth, height, weight, body type, civil status, blood type, hobby, two languages), Identification (Social Security, driver's license, state license, library card), Contact (with mailbox details), School (high school and college), Work History (employer, position, address, years, phone; add as many as you need), Family (name, relation, date of birth, phone, notes) and Backstory
-- **Department filter:** the buttons above the Password Manager, Covert Aliases and Covert Accounts show All or one department, so you can switch between your DEA and CPD covert aliases and passwords
-- **Hidden case list:** the hover boxes of the rail icons now open to the right of the icon, and your last 3 opened cases sit on the rail (the last 4 characters of the case number) to jump back
-- **Select Cases:** a new button at the top of the case list picks several cases at once to pin or unpin, put in a Case Group, move into a Mission, or archive together (one reason for all)
-- **Saved searches:** under the case-list search box, quick filters Due This Week, Overdue, Pending and Pinned. Type a search and click Save Search to keep it there; × removes it. The search box now takes words in any order, and filter words: due:week, due:overdue, due:today, due:month, status:pending (or any status) and pinned
-- **Chain of custody:** each exhibit on the Draft tab has a Chain of Custody button: a dated log of who had it (received or seized, placed in evidence, checked out, returned, sent to the lab, taken to court, released, destroyed), who released it and who received it, and why. The button says where the exhibit is now. Print one exhibit's log, or every exhibit's with Chain of Custody PDF (it can be saved in the case's Files next to the report)
-- **Calendar:** a new home page tile (and Ctrl+K) shows a month of every open case's deadlines, court dates, buys, arrests and statutes of limitations. Turn each kind on or off; click a day to list it, and an item to open its Timeline
-- **Weekly Summary:** a new home page tile (and Ctrl+K): what changed on each case this week (Case History changes and notes, Timeline items, opened and closed), week by week, printable as a PDF
-- **Duplicate files:** adding a file that is already in the case (the same content, whatever its name) asks first: Skip Duplicates or Add Anyway
-- **Check the Vault:** once a month, a minute after the vault opens, CaseVault compares the case folders on the SSD with the case list and reads each case's data files, and only says something if a folder is missing, a case is not listed, a data file is damaged or a file is empty. Ctrl+K → Check the Vault runs it any time; nothing is changed
-- **Faster start:** Year Summary, Group Summary and the new Chain of Custody, Calendar and Weekly Summary load the first time they are used
 
 ### Earlier versions
 
