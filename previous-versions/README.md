@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.162)
+
+- **Consistency Checker:** nicknames, Known Aliases and names in context; addresses read alike however they're written
+- **Consistency Checker:** weights, totals and the Timeline buys checked; a confidence on every flag, grouped by kind
+- **Consistency Checker:** Mark as Reviewed / Dismiss; a clearer AI prompt that stops early on a slow computer
+
 ## Features (v1.161)
 
 - **Fix:** folders with one case show their count (1)

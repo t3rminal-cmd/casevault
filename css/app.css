@@ -4553,3 +4553,19 @@ body:not(.sidebar-collapsed) .sidebar-head { padding-left: .3rem; padding-right:
 .flag-group-head { margin: .2rem 0 0; font-size: var(--fs-h3, 1rem); border-bottom: 1px solid var(--border); padding-bottom: .25rem; }
 .filters .hide-low { margin: 0; font-size: var(--fs-small); }
 .chk-aliases { font-size: var(--fs-text); }
+
+/* v1.163: Document Anonymizer: the colour-coded preview of what was found. A click keeps a
+ * detail (dashed outline) or replaces it again; critical details and known names are locked. */
+.anon-style-field { max-width: 18rem; }
+.anon-highlight { max-height: 16rem; overflow: auto; border: 1px solid var(--border); padding: .6rem .8rem; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; background: var(--surface); font-size: var(--fs-small); }
+.anon-highlight mark, .anon-legend mark { padding: 0 .1em; border-radius: 0; color: var(--text); }
+.anon-highlight mark { cursor: pointer; }
+.anon-highlight mark:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pii-critical { background: var(--danger-soft); box-shadow: inset 0 0 0 1px var(--danger); }
+.pii-high { background: color-mix(in srgb, #e8590c 22%, transparent); box-shadow: inset 0 0 0 1px #e8590c; }
+.pii-medium { background: color-mix(in srgb, #f5c400 30%, transparent); box-shadow: inset 0 0 0 1px var(--warn); }
+.pii-skip { background: transparent; box-shadow: inset 0 0 0 1px var(--muted); outline: 1px dashed var(--muted); outline-offset: -1px; opacity: .75; }
+.anon-highlight .pii-locked { cursor: not-allowed; }
+.anon-legend { display: flex; flex-wrap: wrap; gap: .4rem 1rem; color: var(--muted); }
+.anon-key { white-space: nowrap; }
+.anon-stats { margin: 0; }

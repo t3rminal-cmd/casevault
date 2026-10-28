@@ -49,7 +49,7 @@ test('PII: a known word inside an address or email hides the whole address or em
   const known = P.knownTerms({ affiant: { name: 'Detective Casey Example', email: 'casey.example@agency.example' } });
   const text = 'Vehicle TST-1284 at 1420 Example Avenue. Call me at 555-0142 or casey.example@agency.example.';
   const r = P.redact(text, P.scan(text, { known }));
-  assert.strictEqual(r.text, 'Vehicle [PLATE_1] at [ADDRESS_1] Call me at [PHONE_1] or [EMAIL_1].');
+  assert.strictEqual(r.text, 'Vehicle [PLATE_1] at [ADDRESS_1]. Call me at [PHONE_1] or [EMAIL_1].'); // v1.163: the full stop stays
   assert.strictEqual(P.rehydrate(r.text, r.map), text);
   // The agency's city is also a word in the street address.
   const known2 = P.knownTerms({ affiant: { name: 'Det. Sam Poe' } });

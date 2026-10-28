@@ -127,18 +127,34 @@
   };
 
   /**
-   * Swap personal details for fillers. The same real value always gets the same filler, so the
-   * document still reads consistently. known: extra names or terms to catch (strings).
-   * Returns { text, replaced, map: [{ type, label, from, to }] }.
+   * v1.163: what the Document Anonymizer finds in a text. known: names or terms to catch (strings),
+   * always replaced. Names found anywhere are looked for everywhere, so "Alex Sample" also catches
+   * "ALEX SAMPLE", "SAMPLE, Alex" and "Sample" later in the text; those stay guessed names (type
+   * person), which a person may choose to keep.
    */
-  function fictitious(text, { known = [] } = {}) {
+  function anonFindings(text, { known = [] } = {}) {
     const s = String(text || '');
-    // Names found anywhere are looked for everywhere, so "Alex Sample" also catches "ALEX SAMPLE",
-    // "SAMPLE, Alex" and "Sample" later in the text.
     const asKnown = (list) => list.filter(Boolean).map((v) => ({ value: v, type: 'known' }));
     const first = PII().scan(s, { known: asKnown(known) });
-    const names = first.filter((f) => f.type === 'person' || f.type === 'known').map((f) => splitTitle(f.value.trim())[1]).filter((v) => /\s/.test(v));
-    const findings = PII().scan(s, { known: asKnown([...known, ...names]) });
+    const names = first.filter((f) => f.type === 'person').map((f) => splitTitle(f.value.trim())[1]).filter((v) => /\s/.test(v));
+    return PII().scan(s, { known: [...asKnown(known), ...names.map((v) => ({ value: v, type: 'person' }))] });
+  }
+
+  /** v1.163: what a person may keep in the Anonymizer: anything but critical details and known terms. */
+  const canKeep = (f) => f.level !== 'critical' && f.type !== 'known';
+  /** The same value written the same way, for keeping every mention of it at once. */
+  const keyOf = (f) => String(f.value).toLowerCase().replace(/\s+/g, ' ').trim();
+
+  /**
+   * Swap personal details for fillers. The same real value always gets the same filler, so the
+   * document still reads consistently. known: extra names or terms to catch (strings).
+   * v1.163: findings (from anonFindings) and skip (their indexes to leave as they are; only those
+   * canKeep allows) can be given, for the Anonymizer's preview.
+   * Returns { text, replaced, map: [{ type, label, from, to }] }.
+   */
+  function fictitious(text, { known = [], findings = null, skip = new Set() } = {}) {
+    const s = String(text || '');
+    if (!findings) findings = anonFindings(s, { known });
     const seen = new Map(); // "type:value" -> filler
     const counts = {};
     // People: "Casey Placeholder", "PLACEHOLDER, Casey" and "Placeholder" are the same person.
@@ -152,8 +168,11 @@
     const map = [];
     let out = '';
     let at = 0;
-    for (const f of findings) {
+    let replaced = 0;
+    for (const [i, f] of findings.entries()) {
       if (f.index < at) continue;
+      if (skip.has(i) && canKeep(f)) continue;
+      replaced++;
       const kind = f.type === 'known' || f.type === 'person' ? 'name' : f.type;
       // Names keep their own shape (ALEX SAMPLE -> JOHN DOE), so their key keeps the case.
       const key = `${kind}:${kind === 'name' ? f.value.replace(/\s+/g, ' ') : f.value.toLowerCase().replace(/\s+/g, ' ')}`;
@@ -174,7 +193,23 @@
       at = f.index + f.length;
     }
     out += s.slice(at);
-    return { text: out, replaced: findings.length, map };
+    return { text: out, replaced, map };
+  }
+
+  // v1.163: how the Anonymizer replaces what it finds: made-up people and numbers (the default, as
+  // before), or one of the redaction styles of js/secure/pii.js.
+  const ANON_STYLES = [['fictitious', 'Fictitious (John Doe)'], ['placeholder', 'Placeholder [NAME_1]'], ['redacted', 'REDACTED'], ['blackbar', 'Black Bar ████'], ['initials', 'Initials J. D.']];
+
+  /**
+   * v1.163: one pass of the Anonymizer: find, leave out what the person keeps (kept: Set of keyOf
+   * values), and replace in the chosen style. Returns { findings, skip, text, replaced, map }.
+   */
+  function anonymize(text, { known = [], style = 'fictitious', kept = new Set() } = {}) {
+    const findings = anonFindings(text, { known });
+    const skip = new Set(findings.map((f, i) => (canKeep(f) && kept.has(keyOf(f)) ? i : -1)).filter((i) => i >= 0));
+    if (style === 'fictitious') return { findings, skip, ...fictitious(text, { known, findings, skip }) };
+    const r = PII().redact(text, findings, { skip, style, canSkip: canKeep });
+    return { findings, skip, text: r.text, replaced: r.replaced, map: [] };
   }
 
   // The local AI's second pass: the rules can miss names and places, especially in unusual layouts.
@@ -289,6 +324,50 @@
     const runBtn = h('button', { class: 'btn primary dev-btn', type: 'button', title: 'Swaps names, phone numbers, addresses, dates of birth and case numbers for made-up ones, then lets the local AI look for anything missed. Nothing leaves this PC.' }, 'Anonymize');
     let ctrl = null;
 
+    // v1.163: the style, and a live preview: what was found, colour-coded (critical red, high
+    // orange, medium yellow). A click on a highlight keeps that detail (every mention of it) or
+    // replaces it again; critical details and known names are always replaced.
+    const styleSel = h('select', { 'aria-label': 'Style', class: 'anon-style' }, ANON_STYLES.map(([v, l]) => h('option', { value: v }, l)));
+    const highlight = h('div', { class: 'anon-highlight', role: 'region', 'aria-label': 'What was found. Click a highlight to keep it or replace it.' });
+    const stats = h('p', { class: 'muted small anon-stats', 'aria-live': 'polite' });
+    const legend = h('div', { class: 'anon-legend small' }, ...[['critical', 'Critical: always replaced'], ['high', 'High'], ['medium', 'Medium'], ['skip', 'Kept']]
+      .map(([k, l]) => h('span', { class: 'anon-key' }, h('mark', { class: `pii-${k}` }, 'Aa'), ` ${l}`)));
+    const kept = new Set();
+    let last = null;
+    function preview() {
+      if (ctrl) return; // the AI is writing the result
+      if (!src.value.trim()) { highlight.replaceChildren(h('span', { class: 'muted' }, 'Paste some text or open a file, and what\'s found shows here.')); stats.textContent = ''; outBox.value = ''; return; }
+      last = anonymize(src.value, { known: known(), style: styleSel.value, kept });
+      const { findings, skip } = last;
+      highlight.replaceChildren(...PII().segments(src.value, findings).map((g) => {
+        if (!g.finding) return g.text;
+        const f = g.finding;
+        const keep = skip.has(g.i);
+        const locked = !canKeep(f);
+        const m = h('mark', { class: keep ? 'pii-skip' : `pii-${f.level}${locked ? ' pii-locked' : ''}`, tabindex: '0', role: 'button', 'aria-pressed': String(!keep),
+          title: `${f.label}${locked ? ': always replaced' : keep ? ': kept. Click to replace it.' : ': replaced. Click to keep it.'}` }, g.text);
+        const toggle = () => {
+          if (locked) { toast(f.level === 'critical' ? 'A critical detail is always replaced.' : 'A known name is always replaced.', 'info', 3000); return; }
+          const k = keyOf(f);
+          if (kept.has(k)) kept.delete(k); else kept.add(k);
+          preview();
+        };
+        m.addEventListener('click', toggle);
+        m.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+        return m;
+      }));
+      outBox.value = last.text;
+      const n = findings.length;
+      const counts = Object.entries(PII().summarize(findings)).map(([t, c]) => `${c} ${PII().TYPES[t].label.toLowerCase()}`);
+      stats.textContent = n ? `${n - skip.size} of ${n} replaced${skip.size ? ` (${skip.size} kept)` : ''}: ${counts.join(', ')}.` : 'Nothing personal was found. Read it through yourself.';
+    }
+    let timer = null;
+    const later = () => { clearTimeout(timer); timer = setTimeout(preview, 300); };
+    src.addEventListener('input', later);
+    extra.addEventListener('input', later);
+    styleSel.addEventListener('change', preview);
+
+
     // v1.32: drop a Word (.docx), Markdown (.md) or text (.txt) file, or click to choose one.
     async function openFile(f) {
       if (!f) return;
@@ -300,6 +379,8 @@
           src.value = r.paragraphs.map((p) => p.text).join('\n\n');
         }
         report.textContent = `Opened ${f.name}. Only the text is used; the file isn't changed.`;
+        kept.clear();
+        preview();
       } catch (err) { toast(`Could not read ${f.name}: ${err.message}`, 'error'); }
     }
     file.addEventListener('change', () => { const f = file.files[0]; file.value = ''; openFile(f); });
@@ -322,15 +403,21 @@
     };
     const swapsText = (r) => (r.map.length
       ? h('span', {}, `${r.replaced} detail${r.replaced === 1 ? '' : 's'} replaced: `, r.map.slice(0, 40).map((m, i) => h('span', { class: 'dev-swap' }, i ? ', ' : '', `${m.label.toLowerCase()} → ${m.to}`)), r.map.length > 40 ? ' …' : '')
-      : h('span', {}, 'The rules found nothing personal.'));
+      : r.replaced ? h('span', {}, `${r.replaced} detail${r.replaced === 1 ? '' : 's'} replaced.`)
+        : h('span', {}, 'The rules found nothing personal.'));
 
     const idle = () => { ctrl = null; runBtn.textContent = 'Anonymize'; runBtn.classList.add('primary'); };
     runBtn.addEventListener('click', async () => {
       if (ctrl) { ctrl.abort(); return; }
       if (!src.value.trim()) { toast('Paste some text or open a file first.', 'error'); return; }
-      // 1. The rules: instant.
-      const r = fictitious(src.value, { known: known() });
-      outBox.value = r.text;
+      // 1. The rules: instant (the preview already shows them).
+      preview();
+      const r = last;
+      // v1.163: the AI's second pass writes made-up people, so it goes with the Fictitious style.
+      if (styleSel.value !== 'fictitious') {
+        report.replaceChildren(swapsText(r), ' The local AI\'s second look is used with the Fictitious style only. Read it through yourself.');
+        return;
+      }
       // 2. The local AI over the rules' result, when it's running.
       const Engine = root.CVChecks && root.CVChecks.Engine;
       if (Engine) await Engine.refresh().catch(() => {});
@@ -354,12 +441,13 @@
           onText: (piece) => { text += piece; outBox.value = text; },
         }), { label: 'Anonymizing…', model: CVAI.modelName(choice.model) });
         // 3. The rules once more over the AI's version, in case it put a real detail back.
-        const again = fictitious(text, { known: known() });
+        const again = anonymize(text, { known: known(), style: 'fictitious', kept });
         outBox.value = again.text;
         report.replaceChildren(swapsText(r), ` Checked with ${CVAI.modelName(choice.model)}. Read it through before you use it: neither the rules nor the AI are perfect.`);
       } catch (err) {
         if (!my.signal.aborted) toast(`The AI could not finish: ${err.message}`, 'error');
-        outBox.value = r.text;
+        ctrl = null;
+        preview();
         report.replaceChildren(swapsText(r), my.signal.aborted ? ' Stopped: the rules\' version is shown.' : ' The AI could not finish: the rules\' version is shown.');
       } finally { idle(); }
     });
@@ -367,6 +455,8 @@
     const clear = () => {
       if (ctrl) ctrl.abort();
       src.value = ''; outBox.value = ''; extra.value = ''; name.value = ''; report.textContent = '';
+      kept.clear();
+      preview();
       src.focus();
     };
     const name = h('input', { type: 'text', class: 'dev-name', maxlength: 80, placeholder: 'Name: DEA 6 sample', 'aria-label': 'Name to save it under' });
@@ -374,6 +464,7 @@
     const fileName = (ext) => `${(name.value.trim() || 'Anonymized document').replace(/\.(md|txt)$/i, '')}.${ext}`;
     const libFolder = (root.CVLibrary && root.CVLibrary.CATEGORIES[0] && root.CVLibrary.CATEGORIES[0].folder) || 'Report examples';
 
+    preview();
     // v1.42: laid out as cards: the Anonymizer in numbered steps, the Emergency Purge apart below it.
     const step = (n, title, sub) => h('div', { class: 'dev-step-head' }, h('span', { class: 'dev-step-num', 'aria-hidden': 'true' }, String(n)), h('div', {}, h('strong', {}, title), h('span', { class: 'muted small block' }, sub)));
     return h('section', { class: 'opt-panel dev-panel' },
@@ -384,14 +475,18 @@
       h('div', { class: 'dev-col dev-step' },
         step(1, 'Original', 'Drop a file or paste the text.'),
         drop, src, extra),
+      h('div', { class: 'dev-col dev-step' },
+        step(2, 'Review', 'Choose a style. Click a highlight to keep that detail; red ones are always replaced.'),
+        h('label', { class: 'field anon-style-field' }, h('span', {}, 'Style'), styleSel),
+        legend, highlight, stats),
       h('div', { class: 'dev-actions' },
         runBtn,
         h('button', { class: 'btn dev-btn', type: 'button', onclick: clear }, 'Clear')),
       report,
       h('div', { class: 'dev-col dev-step' },
-        step(2, 'Fictitious', 'Read it through, edit if needed.'), outBox),
+        step(3, 'Result', 'Updates as you go. Read it through, edit if needed.'), outBox),
       file,
-      h('div', { class: 'dev-col dev-step' }, step(3, 'Keep It', 'Name it, then copy it or save it.')),
+      h('div', { class: 'dev-col dev-step' }, step(4, 'Keep It', 'Name it, then copy it or save it.')),
       h('div', { class: 'dev-save' },
         name,
         h('button', { class: 'btn dev-btn', type: 'button', onclick: async () => { const t = text(); if (!t) return; try { await navigator.clipboard.writeText(t); toast('Copied.', 'success', 1500); } catch { toast('Could not copy.', 'error'); } } }, 'Copy'),
@@ -505,7 +600,7 @@
         } }, 'Email it'))));
   }
 
-  const api = { fictitious, AI_PROMPT, getZoom, getBrightness, setZoom, setBrightness, getTextSize, setTextSize, TEXT_SIZES, applyDisplay, open, contactDev, ZOOM, BRIGHT, getSaveEvery, setSaveEvery, saveEveryMs, SAVE_CHOICES };
+  const api = { fictitious, anonFindings, anonymize, canKeep, ANON_STYLES, AI_PROMPT, getZoom, getBrightness, setZoom, setBrightness, getTextSize, setTextSize, TEXT_SIZES, applyDisplay, open, contactDev, ZOOM, BRIGHT, getSaveEvery, setSaveEvery, saveEveryMs, SAVE_CHOICES };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else {
     root.CVOptions = api;
