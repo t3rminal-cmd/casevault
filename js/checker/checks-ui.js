@@ -28,8 +28,9 @@
     ['addresses', 'Addresses', ['address']],
     ['money', 'Money, Weights and Totals', ['money', 'weight', 'total', 'buy', 'count']],
     ['dates', 'Dates and Times', ['date', 'time']],
+    ['inventory', 'Inventory Numbers', ['inventory']], // v1.168
     ['numbers', 'Numbers, Plates and Phones', ['number', 'plate', 'phone']],
-    ['statements', 'Statements (AI)', ['statement']],
+    ['statements', 'Statements and Narratives (AI)', ['statement', 'narrative']],
   ];
   const groupOf = (f) => (GROUPS.find(([, , types]) => types.includes(f.type)) || GROUPS[GROUPS.length - 1])[0];
   /** Brings a flag saved by an older version up to date: its status, and a confidence. */
@@ -324,18 +325,31 @@
           h('input', { type: 'checkbox', value: f.name, checked: prev.has(f.name) ? prev.get(f.name) : true }),
           h('span', {}, f.name.split('/').pop(), f.name.includes('/') ? h('span', { class: 'muted small block' }, f.name.split('/').slice(0, -1).join(' › ')) : null))));
       if (!reportList.children.length) reportList.append(h('p', { class: 'muted small' }, 'No other documents are attached.'));
+      // v1.168: Buy and Surveillance reports are marked (by their names); each Buy report is checked with its pair.
+      for (const row of reportList.querySelectorAll('label.chk-doc')) {
+        const k = CVRules.kindFromName(row.querySelector('input').value);
+        if (k) row.querySelector('span').append(h('span', { class: `chk-kind chk-kind-${k}` }, k === 'buy' ? 'Buy' : 'Surveillance'));
+      }
       updateAiLine();
     }
+    reportList.addEventListener('change', () => updateAiLine());
 
+    // v1.168: a Buy report and a Surveillance report among the chosen ones (by their names): the AI
+    // can compare their narratives, with or without a document to check.
+    const pairsChosen = () => {
+      const kinds = [...reportList.querySelectorAll('input:checked')].map((i) => CVRules.kindFromName(i.value));
+      return kinds.includes('buy') && kinds.includes('surveillance');
+    };
     function updateAiLine() {
       const st = Engine.status();
       const choice = Engine.choice();
       const hasAff = !!affSelect.value;
-      aiToggle.disabled = !(st === 'connected' && choice && hasAff);
+      const pairs = pairsChosen();
+      aiToggle.disabled = !(st === 'connected' && choice && (hasAff || pairs));
       if (aiToggle.disabled) aiToggle.checked = false;
       else if (!aiToggle.dataset.touched) aiToggle.checked = true;
       aiLine.textContent = st === 'connected' && choice
-        ? (hasAff ? ` using ${profileLabel(choice)}` : ' (needs a document to check)')
+        ? (hasAff ? ` using ${profileLabel(choice)}${pairs ? ', and compares the Buy and Surveillance narratives' : ''}` : pairs ? ` compares the Buy and Surveillance narratives, using ${profileLabel(choice)}` : ' (needs a document to check, or a Buy and a Surveillance report)')
         : st === 'rules-only' ? ' (switched off: AI profile is Rules-only)'
           : st === 'checking' ? ' (looking for the AI engine…)'
             : ' (AI engine offline: start Start-CaseVault.bat on the CV-AI drive)';
@@ -356,7 +370,7 @@
 
     const form = files.length
       ? h('div', { class: 'card chk-card' },
-        head('clipboard2-check', 'New Check', 'Compares an affidavit or draft with the reports: dates, times, names, numbers, addresses, plates, phones, amounts, weights, totals and the Timeline buys. Reports are cross-checked too.'),
+        head('clipboard2-check', 'New Check', 'Compares an affidavit or draft with the reports: dates, times, names, numbers, addresses, plates, phones, amounts, weights, totals, inventory numbers and the Timeline buys. Reports are cross-checked too, and each Buy report with its Surveillance report.'),
         h('div', { class: 'chk-grid' },
           h('div', { class: 'chk-col' },
             h('label', { class: 'field', title: 'An affidavit or a draft.' }, h('span', {}, 'Document to check'), affSelect),
@@ -462,15 +476,19 @@
         const tl = await Vault.getTimeline(c.id);
         buys = (tl.events || []).filter((e) => e.kind === 'buy').map((e) => ({ date: e.date, suspect: e.suspect || '', drug: e.drug || '', qty: e.qty, unit: e.unit || 'g', paid: e.paid }));
       } catch (err) { if (FS.isDisconnectError(err)) throw err; }
-      const ruleFlags = CVRules.compare(docs.map((d) => ({ id: d.docIndex, name: d.name, role: d.role, paragraphs: d.paragraphs })), { ignore: ownDetails(), aliases, buys });
+      // v1.168: each Buy report with its Surveillance report.
+      const ruleDocs = docs.map((d) => ({ id: d.docIndex, name: d.name, role: d.role, paragraphs: d.paragraphs }));
+      const pairs = CVRules.pairReports(ruleDocs);
+      for (const d of docInfo) { const k = d.skipped ? '' : CVRules.reportKind(docs.find((x) => x.name === d.name) || d); if (k && d.role === 'report') d.reportKind = k; }
+      const ruleFlags = CVRules.compare(ruleDocs, { ignore: ownDetails(), aliases, buys, pairs });
       done(rulesStep);
       bar.value = useAI ? 35 : 90;
 
       // 3. AI review.
       let ai = null;
       let engineInfo = { mode: 'rules-only' };
-      if (useAI && affidavit) {
-        const aiStep = addStep('AI review');
+      if (useAI && (affidavit || pairs.length)) {
+        const aiStep = addStep(affidavit ? 'AI review' : 'AI: Buy and Surveillance narratives');
         const choice = Engine.choice();
         const det = Engine.detected;
         if (!choice) {
@@ -498,7 +516,7 @@
           try {
             ai = await CVActivity.exclusive('check', async (task) => {
               if (ctrl.signal.aborted) throw new DOMException('Cancelled', 'AbortError'); // cancelled while waiting
-              return CVAI.review({
+              const r = !affidavit ? { flags: [], stats: null, complete: true, stopped: null } : await CVAI.review({
                 fetchImpl: Engine.fetchImpl(),
                 docs,
                 engine: { base: det.base, model: choice.model, embed: det.embed, numCtx },
@@ -525,9 +543,31 @@
                     task.set(`Checking ${Math.min(p.done + 1, p.total)} of ${p.total}`);
                     drawTiming();
                   }
-                  if (p.total) bar.value = 35 + Math.round((p.done / p.total) * 60);
+                  if (p.total) bar.value = 35 + Math.round((p.done / p.total) * (pairs.length ? 45 : 60));
                 },
               });
+              // v1.168: then each Buy report and its Surveillance report, read together.
+              const pairStats = [];
+              for (let k = 0; k < pairs.length && !r.stopped; k++) {
+                if (ctrl.signal.aborted) return { ...r, complete: false };
+                const pr = pairs[k];
+                const label = `Comparing ${docs[pr.buy].name} with ${docs[pr.surv].name}`;
+                activity.textContent = `${label} (${k + 1} of ${pairs.length})…`;
+                task.set(`Narratives ${k + 1} of ${pairs.length}`);
+                try {
+                  const out = await CVAI.comparePair({
+                    fetchImpl: Engine.fetchImpl(), buy: docs[pr.buy], surv: docs[pr.surv], aliases, signal: ctrl.signal,
+                    engine: { base: det.base, model: choice.model, numCtx }, timeoutMs: choice.profile === 'light' ? 300000 : 180000,
+                  });
+                  r.flags.push(...out.flags);
+                  pairStats.push({ buy: docs[pr.buy].name, surv: docs[pr.surv].name, ...out.stats, cut: out.cut });
+                } catch (err) {
+                  if (ctrl.signal.aborted) return { ...r, complete: false };
+                  pairStats.push({ buy: docs[pr.buy].name, surv: docs[pr.surv].name, error: err.name === 'AbortError' ? 'too slow on this computer' : err.message });
+                }
+                bar.value = (affidavit ? 80 : 35) + Math.round(((k + 1) / pairs.length) * (affidavit ? 15 : 60));
+              }
+              return { ...r, pairStats };
             }, { label: 'Checking…', model: CVAI.modelName(choice.model) });
             done(aiStep, ai.complete ? 'done' : 'done warn');
           } catch (err) {
@@ -561,7 +601,8 @@
         documents: docInfo,
         docOrder: docs.map((d) => d.name),
         engine: engineInfo,
-        ai: ai ? { stats: ai.stats, complete: ai.complete, error: ai.error || null, stopped: ai.stopped || null } : null,
+        ai: ai ? { stats: ai.stats, complete: ai.complete, error: ai.error || null, stopped: ai.stopped || null, ...(ai.pairStats ? { pairs: ai.pairStats } : {}) } : null,
+        pairs: pairs.map((pr) => ({ buy: docs[pr.buy].name, surv: docs[pr.surv].name, why: pr.why })), // v1.168
         buys: buys.length,
         complete: !ai || ai.complete,
         flags,
@@ -670,7 +711,7 @@
 
     const st = data.ai && data.ai.stats;
     const docsLine = (data.documents || []).map((d) => h('li', {},
-      h('strong', {}, d.name), ` (${d.role === 'affidavit' ? 'checked' : 'report'}${d.xfa ? ', XFA form' : ''}${d.pageCount ? `, ${d.pageCount} page${d.pageCount === 1 ? '' : 's'}` : ''})`,
+      h('strong', {}, d.name), ` (${d.role === 'affidavit' ? 'checked' : d.reportKind === 'buy' ? 'Buy report' : d.reportKind === 'surveillance' ? 'Surveillance report' : 'report'}${d.xfa ? ', XFA form' : ''}${d.pageCount ? `, ${d.pageCount} page${d.pageCount === 1 ? '' : 's'}` : ''})`,
       d.skipped ? h('span', { class: 'error-text' }, ` Skipped: ${d.error}`) : null,
       ...(d.warnings || []).map((w) => h('span', { class: 'warn-text block small' }, w))));
 
@@ -689,6 +730,14 @@
         h('p', { class: 'muted' }, `${data.created ? fmtDateTime(Date.parse(data.created)) : ''} · `,
           data.engine && data.engine.mode === 'ai' ? `Rules + AI (${CVAI.modelName(data.engine.model)})` : 'Rules only', ' · ', summaryOpen),
         h('ul', { class: 'doc-list' }, docsLine),
+        // v1.168: the Buy and Surveillance reports checked together.
+        (data.pairs || []).length ? h('div', { class: 'chk-pairs' }, h('strong', {}, 'Checked as pairs: '),
+          h('ul', {}, ...data.pairs.map((pr) => {
+            const ps = ((data.ai && data.ai.pairs) || []).find((x) => x.buy === pr.buy && x.surv === pr.surv);
+            return h('li', {}, `${pr.buy} with ${pr.surv}`, h('span', { class: 'muted small' }, ` (${pr.why})`),
+              ps ? h('span', { class: 'small block' }, ps.error ? `AI narrative comparison stopped: ${ps.error}.`
+                : `AI compared the narratives: ${ps.kept} difference${ps.kept === 1 ? '' : 's'} found${ps.discarded ? `, ${ps.discarded} answer${ps.discarded === 1 ? '' : 's'} discarded (quote not found in the reports)` : ''}${ps.cut ? '. The reports were too long to read whole; the end of one was left out' : ''}.`) : null);
+          }))) : null,
         st ? h('p', { class: 'small' },
           `AI reviewed ${st.reviewed} of ${st.statements} statements: ${st.supported} supported, ${st.contradicted} contradicted, ${st.notFound} not found.`,
           st.skipped ? ` ${st.skipped} needed no AI: the rules had already flagged them, or a report says the same word for word.` : '',

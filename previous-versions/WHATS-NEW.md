@@ -4,6 +4,17 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.165
+
+- **Fix (folder counts):** every folder now shows how many it holds, including 1 and 0 (an empty folder shows a grey 0). This applies on the home page (Mission, Year and General tiles, shared folders) and in the sidebar, where the OPERATION folder and CLOSED → OPERATION now show their counts too
+- **Sidebar: a quieter look.** The buttons along the top of the sidebar are now plain outline icons in one muted colour, with colour only when you point at one or when it is on. The green padlock stays as it is. The + buttons for a new case are gone from the sidebar; use **New Case** or **New Mission** on the home page, the menu, **N** or **Ctrl+K**
+- **Training: Groups.** Edit a certificate (✎) and type a **Group** (for example *CPR* or *Firearms*); earlier group names are offered as you type. In Cards view each group gets its own heading with a count, and the ungrouped ones go last under *Other Certificates*. In Arrange, dragging a card onto a card in another group moves it into that group
+- **Training: faster.** Certificate pictures are drawn only when their card comes on screen, and each picture is saved on the SSD (in a hidden folder inside Training), so opening Training again shows them at once. A picture is redrawn only when its file changes
+- **Shortcut:** press **T** (when not typing) to open Training. The list of shortcuts (?) shows it
+- **AI: Keep the Model Loaded.** In the Consistency Checker's engine settings you can choose how long the AI model stays in memory after a task: 2, 10 (default) or 30 minutes, or *Unload When Done* to free memory straight away
+- **AI: less waiting.** The Consistency Checker's AI review now skips statements the rules have already settled with high confidence, and statements that match the source word for word. The results line shows how many were skipped
+- **Faster sidebar:** switching tabs or cases no longer redraws the whole case list when nothing in it changed
+
 ## What's new in v1.164
 
 - **Fix (drop-down lists in Firefox):** Firefox now uses its own drop-down lists. It could open its built-in list on top of CaseVault's, so the two fought over the click (Edit Alias and other forms). Firefox's list is square already; Chrome and Edge keep CaseVault's

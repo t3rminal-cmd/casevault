@@ -91,11 +91,32 @@
     const out = [];
     for (const c of cases || []) {
       if (!c || c.id === self.id || (self.operationId && c.operationId === self.operationId)) continue;
-      const hit = [...(c.suspects || []).filter((sx) => sx && !sx.notIdentified).map((sx) => ({ name: sx.name, dob: sx.dob })), { name: c.subject, dob: '' }]
+      const hit = [...(c.suspects || []).filter((sx) => sx && !sx.notIdentified).map((sx) => ({ name: sx.name, dob: sx.dob, suspect: sx })), { name: c.subject, dob: '' }]
         .find((x) => clean(x.name) && Op.nameMatch(name, x.name) === 'same' && !(dob && clean(x.dob) && clean(x.dob) !== dob));
-      if (hit) out.push({ c, name: clean(hit.name), dob: clean(hit.dob), sameDob: !!(dob && clean(hit.dob) === dob) });
+      // v1.168: the suspect's record too (to fill in the same person on this case), and how much it holds.
+      if (hit) out.push({ c, name: clean(hit.name), dob: clean(hit.dob), sameDob: !!(dob && clean(hit.dob) === dob), ...(hit.suspect ? { suspect: hit.suspect, filled: filledCount(hit.suspect) } : {}) });
     }
-    return out.sort((a, b) => Number(b.sameDob) - Number(a.sameDob) || String(a.c.number || '').localeCompare(String(b.c.number || '')));
+    // The same date of birth first, then a case in a Mission (a group case), then the fullest record.
+    return out.sort((a, b) => Number(b.sameDob) - Number(a.sameDob) || Number(!!b.c.operationId) - Number(!!a.c.operationId)
+      || (b.filled || 0) - (a.filled || 0) || String(a.c.number || '').localeCompare(String(b.c.number || '')));
+  }
+
+  /** v1.168: how many details a suspect's record has (date of birth, residence, description). */
+  function filledCount(sx) {
+    return ['dob', 'residence'].filter((k) => clean(sx[k])).length + Object.values((sx && sx.info) || {}).filter((v) => clean(v)).length;
+  }
+
+  /**
+   * v1.168: fills in a suspect from the same person's record on another case: only the empty boxes
+   * (date of birth, residence, the description and record numbers); what is already typed stays.
+   * -> the number of boxes filled.
+   */
+  function fillFrom(target, source) {
+    let n = 0;
+    for (const k of ['dob', 'residence']) if (!clean(target[k]) && clean(source[k])) { target[k] = clean(source[k]); n++; }
+    if (!target.info || typeof target.info !== 'object') target.info = {};
+    for (const [k, v] of Object.entries(source.info || {})) if (!clean(target.info[k]) && clean(v)) { target.info[k] = clean(v); n++; }
+    return n;
   }
 
   // The cases read for duplicates(), kept while each case's "updated" stays the same.
@@ -115,7 +136,19 @@
   /** Browser: duplicates() over every case on the SSD. */
   async function findDuplicates(person, self) { return duplicates(person, await allCases(), self); }
 
-  const api = { appearances, duplicates, findDuplicates, open };
+  /** v1.168: the identified suspects on the other cases (names for the Name box's suggestions),
+   * those on a Mission's cases first. self: the case being edited. -> [{ name, dob, number }] */
+  async function knownSuspects(self = {}) {
+    const seen = new Map();
+    const cases = (await allCases()).filter((c) => c.id !== self.id).sort((a, b) => Number(!!b.operationId) - Number(!!a.operationId));
+    for (const c of cases) for (const sx of c.suspects || []) {
+      const name = clean(sx && !sx.notIdentified && sx.name);
+      if (name && !seen.has(name.toLowerCase())) seen.set(name.toLowerCase(), { name, dob: clean(sx.dob), number: c.number || '' });
+    }
+    return [...seen.values()];
+  }
+
+  const api = { appearances, duplicates, findDuplicates, fillFrom, filledCount, knownSuspects, open };
   if (isNode) module.exports = api;
   else root.CVPersonView = api;
 })(this);
