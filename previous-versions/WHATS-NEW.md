@@ -4,6 +4,11 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.159
+
+- **Fix (case list top icons):** with the case list made narrower, its top icons wrap onto a second line instead of running past its right edge, so the padlock (last, on the right) stays inside the list in every browser and at any width
+- **Case list names:** LAST, First and the middle initial line up in three columns in the Case Group folders too (a group named like "DOE, John Q"; a name such as "Doe Family" stays as typed). The columns are as wide as the longest last and first name in the list, so names are never broken in the middle and every row still fits
+
 ## What's new in v1.158
 
 - **Fix (privacy screen):** refreshing the page (F5 or Ctrl+F5), or closing and opening CaseVault again, while the screen is hidden no longer opens CaseVault. The screen comes back as soon as the vault opens, before any case is shown, and only the PIN opens it (a click, Esc or a wrong PIN don't). The browser keeps only the word "locked" while the screen is on, no case data; the PIN clears it. Without a PIN set, it opens with a click, as before

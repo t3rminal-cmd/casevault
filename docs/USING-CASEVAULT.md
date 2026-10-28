@@ -213,6 +213,18 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.162
+
+- **Consistency Checker: names.** Nicknames count as the same name (*Bill / William*, *Rick / Rich*, *Beto / Roberto*). Names are read in context: *Mary Poez / Mary Poes* is flagged as one person spelled two ways, *Jon Doe / Joan Roe* is two people and is not flagged
+- **Consistency Checker: Known Aliases.** A box on the Checks tab for the names that belong to one person (one person per line). They are saved with the case, never flagged as spelled differently, and the AI is told they are the same person
+- **Consistency Checker: addresses.** Abbreviations, *Fifth / 5th*, *North / N.*, *Mount / Mt*, the unit word (*Apt.*, *Apartment*, *Suite*, *#*) and punctuation no longer make two addresses differ
+- **Consistency Checker: weights and totals.** Weights are compared in grams (*1 oz* = *28.35 grams*). A stated total is checked against the amounts or weights listed with it (*$200, $300 and $500, a total of $1,100*: they add up to $1,000), and is only ever compared with another total. An amount the report already matches is no longer counted against the other amounts of the same sentence
+- **Consistency Checker: the Timeline buys.** Each buy on the Timeline (the Buy Summary) is checked against what the documents say about a buy on that date, and a total paid or total weight against all the buys and each suspect's buys
+- **Consistency Checker: confidence.** Every flag has a confidence (High, Medium, Low) beside its severity, with **Hide Low Confidence**. The flags are grouped by kind (Names, Addresses, Money, Weights and Totals, Dates and Times, Numbers, Plates and Phones, Statements)
+- **Consistency Checker: Mark as Reviewed and Dismiss** replace Fix / Not an issue / Explained, each with a note. A dismissed flag leaves the list (**Dismissed only** shows it). Older checks open as before
+- **Consistency Checker: AI.** A clearer prompt: spelling, formatting, abbreviations, nicknames and the same time or weight written another way are not contradictions; the AI says how sure it is, and a contradiction the rules also found is High confidence. On a slow computer the AI stops early (2 minutes a statement twice in a row, or 20 minutes in all) and the rule-based results stand
+- **Self-test:** a step for nicknames, address formatting and a wrong total
+
 ### What's new in v1.161
 
 - **Fix (case list counts):** a folder holding a single case now shows its count (1) like the others; before, the count only appeared from two cases up, so a Mission or INDEPENDENT with one case looked empty
@@ -226,11 +238,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Case list:** CLOSED shows a handcuff icon and how many closed cases it holds, on the right
 - **Secure Locker:** the buttons of each row (notes, Edit, the up and down arrows, delete) line up from row to row, also when some rows have notes and others don't
 - **Timeline:** the Paid box of a Buy fills in as money while you type ($1,234.5) and adds the cents when you leave it ($1,234.50); it is saved as a plain number, so the Buy Summary totals are unchanged
-
-### What's new in v1.159
-
-- **Fix (case list top icons):** with the case list made narrower, its top icons wrap onto a second line instead of running past its right edge, so the padlock (last, on the right) stays inside the list in every browser and at any width
-- **Case list names:** LAST, First and the middle initial line up in three columns in the Case Group folders too (a group named like "DOE, John Q"; a name such as "Doe Family" stays as typed). The columns are as wide as the longest last and first name in the list, so names are never broken in the middle and every row still fits
 
 ### Earlier versions
 
@@ -522,11 +529,18 @@ The text read from each document is kept on the SSD (`checks\text-cache`), so re
 - times (9:40 PM = 21:40 = 2140 hours)
 - names, including spelling variants such as *Poez / Poes* or *Katherine / Catherine*
 - case and report numbers
-- addresses (*1420 Oak Street* = *1420 Oak St.*)
+- addresses (*1420 N. Fifth Avenue, Apt. #3-B* = *1420 North 5th Ave #3B*: abbreviations, *Fifth / 5th*, directions, the unit word and punctuation don't matter)
 - licence plates
 - phone numbers
 - money amounts
+- weights (*1 oz* = *28.35 grams*; rounding within 1% is not a difference)
 - counts (*three shots* vs *two shots*)
+- totals: a stated total against the amounts or weights listed with it (*$200, $300 and $500, a total of $1,100* is flagged: they add up to $1,000)
+- the **Timeline buys** (the Buy Summary): a sentence about a buy on a buy's date that gives a different amount paid or weight, and a total paid or total weight that matches neither all the buys nor any one suspect's buys. These flags show **Timeline Buy Summary** as their source.
+
+**Names are read in context (v1.162).** Nicknames are the same name (*Bill / William*, *Rick / Rich*, *Beto / Roberto*). When both spellings come with the rest of a name, the other part decides: *Mary Poez / Mary Poes* is one person spelled two ways (High confidence); *Jon Doe / Joan Roe* is two people and isn't flagged. An amount the report already matches isn't counted against the other amounts of the same sentence, and a stated total is only ever compared with another total.
+
+**Known Aliases.** On the Checks tab, list the names that belong to one person: one person per line, names separated by commas (*Richard Poe, Rick Poe, Ricky*). They are saved with the case, never flagged as spelled differently, and the AI is told they are the same person.
 
 Names spelled with two letters swapped (*Sampel / Sample*) are flagged too. `00123` and `2026-00123` count as the same case number. Your own details from **My Profile** and today's date (a template's signature block and *Prepared …* line) are never reported as "not found in the reports".
 
@@ -534,7 +548,9 @@ Names spelled with two letters swapped (*Sampel / Sample*) are flagged too. `001
 
 **No usable text.** If a document gave no text at all (an empty scan, or an XFA form whose fields couldn't be read), a warning box at the top of the results says it wasn't compared. A check with no flags against that document means nothing.
 
-**AI review (optional).** For each statement in the affidavit, CaseVault finds the most relevant report passages. The local AI decides whether the statement is **Supported**, **Contradicted**, or **Not found in reports**, and it must quote the exact report sentence it relied on. **If that quote can't be found word-for-word in the report, the answer is thrown away**, and the results tell you how many were. This stops the AI from inventing sources.
+**AI review (optional).** For each statement in the affidavit, CaseVault finds the most relevant report passages. The local AI decides whether the statement is **Supported**, **Contradicted**, or **Not found in reports**, and it must quote the exact report sentence it relied on. **If that quote can't be found word-for-word in the report, the answer is thrown away**, and the results tell you how many were. This stops the AI from inventing sources. The AI is told that spelling, formatting, abbreviations, nicknames, the same time written two ways and the same weight in another unit are not contradictions.
+
+**A slow computer.** If one statement takes more than 2 minutes (3 on the CPU-only Light profile) twice in a row, or the whole AI review would run past 20 minutes, the AI stops early and says so. The rule-based checks still cover every statement, and everything found so far is kept.
 
 ### Reading the results
 
@@ -544,19 +560,28 @@ Names spelled with two letters swapped (*Sampel / Sample*) are flagged too. `001
 | **Medium** | Contradiction: a report says something that conflicts with the statement | AI |
 | **Low** | Unsupported: a fact or statement that no report mentions | Rules and AI |
 
+Every flag also has a **confidence**: how sure the checker is, apart from how serious it would be.
+
+| Confidence | Meaning |
+|---|---|
+| **High** | A number one character off, a closely matching statement, a name spelled two ways next to the same first name, a total that doesn't add up in one sentence, or an AI contradiction the rules also found |
+| **Medium** | Likely, but read both passages: a looser match, a total whose amounts are in earlier sentences, the Buy Summary totals, most AI contradictions |
+| **Low** | Often fine: a fact no report mentions, or an AI answer it couldn't back up |
+
+**Hide Low Confidence** hides the Low ones. The flags are **grouped by kind** (Names, Addresses, Money, Weights and Totals, Dates and Times, Numbers, Plates and Phones, Statements); choose **One List** to see them in order instead.
+
 Each flag shows the **statement** (left) and the **source** sentence with the document name and page (right), with the differing words highlighted. **Click either quote** to open the document at that place, with the sentence highlighted. **Open original** shows the actual file, at that page for PDFs.
 
 Flags from OCR'd pages carry a warning. OCR can misread characters (for example *Elm* as *EIm*), so check those against the original.
 
 ### Marking flags
 
-Mark every flag as one of:
+Each flag has two buttons (v1.162):
 
-- **Fix**: the document needs correcting.
-- **Not an issue**: a false alarm.
-- **Explained**: a note box opens. Write why it's fine or how it was resolved.
+- **Mark as Reviewed**: you've dealt with it. It stays in the list, greyed.
+- **Dismiss**: a false alarm. It leaves the list (choose **Dismissed only** to see it again).
 
-Click the same button again to set a flag back to open. Use the filters to show open or resolved flags, a severity, or only rule or AI flags. Everything saves to the SSD automatically.
+Either one opens a note box: write why it's fine or how it was fixed. Click the same button again to set a flag back to open. Use the filters to show open, reviewed or dismissed flags, a severity, or only rule or AI flags. Everything saves to the SSD automatically. Checks saved before v1.162 open as before: *Fix* and *Explained* show as Reviewed, *Not an issue* as Dismissed.
 
 ### Where checks are saved
 

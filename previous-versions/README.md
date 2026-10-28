@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.161)
+
+- **Fix:** folders with one case show their count (1)
+- **Case list:** CLOSED shows its count without the handcuff icon
+
 ## Features (v1.160)
 
 - **Fix:** drop-down lists open everywhere (also low in Edit Alias) and stay on top

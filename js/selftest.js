@@ -122,6 +122,18 @@
         if (extra.length) return fail('A matching address (Ave. / Avenue) was wrongly flagged.');
         return ok(`All ${EXPECT.length} planted errors flagged (time, plate, count, amount, name spelling); the matching address was not.`);
       }],
+      // v1.162: nicknames, address formatting and a total that doesn't add up.
+      ['Names, addresses and totals', async () => {
+        const flags = root.CVRules.compare([
+          { name: 'Affidavit', role: 'affidavit', paragraphs: [{ index: 0, page: 1, text: 'On March 3, 2026, Bill Doe met the UC at 1420 N. Fifth Avenue, Apt. #3-B. The UC paid $200, $300 and $500, a total of $1,100.' }] },
+          { name: 'Report', role: 'report', paragraphs: [{ index: 0, page: 1, text: 'On 03/03/2026 William Doe met the UC at 1420 North 5th Ave #3B and was paid $200, $300 and $500.' }] },
+        ]);
+        const wrong = flags.filter((f) => f.type === 'name' || f.type === 'address');
+        const total = flags.find((f) => f.type === 'total');
+        if (wrong.length) return fail(`Wrongly flagged: ${wrong.map((f) => f.title).join('; ')}`);
+        if (!total) return fail('The total of $1,100 (the amounts add up to $1,000) was not flagged.');
+        return ok('Bill / William and the two ways of writing the address were not flagged; the wrong total was.');
+      }],
       ['Privacy: personal details found and replaced (mail check, Anonymizer)', async () => {
         const known = root.CVPii.knownTerms({ affiant: { name: 'Detective Casey Example', email: 'casey.example@agency.example' } });
         const r = root.CVPii.redact(PII_TEXT, root.CVPii.scan(PII_TEXT, { known }));
