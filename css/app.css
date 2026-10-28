@@ -4569,3 +4569,11 @@ body:not(.sidebar-collapsed) .sidebar-head { padding-left: .3rem; padding-right:
 .anon-legend { display: flex; flex-wrap: wrap; gap: .4rem 1rem; color: var(--muted); }
 .anon-key { white-space: nowrap; }
 .anon-stats { margin: 0; }
+
+/* v1.164: Training → Arrange: cards can be dragged onto another card, or moved with the arrows. */
+.cert-arranging .cert-card { cursor: grab; }
+.cert-arranging .cert-card .cert-open { cursor: grab; }
+.cert-arranging .cert-card.dragging { opacity: .45; }
+.cert-arranging .cert-card.drop-here { outline: 2px dashed var(--accent); outline-offset: 2px; }
+.cert-move { display: inline-flex; gap: .2rem; }
+.cert-pos { white-space: nowrap; }

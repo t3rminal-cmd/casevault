@@ -7,9 +7,10 @@ runs on its own, and it never touches `CaseVault-Data`.
 ## The window (how you'll normally use it)
 
 Double-click **`Check-For-Updates.bat`** in `V:\CaseVault-App\updater\`. The **CaseVault Updater**
-opens as a small, plain window (updater 1.3.1): a slim navy banner with the vault door (its handle
-turns while it works), the version line (**Installed 1.145**), one line of status, the progress bar
-and the buttons. Nothing else is on screen until you ask for it.
+opens as a small, plain window (updater 1.4): a quiet light header with the title (it says
+**Working…** while it works; nothing moves), the version line (**Installed 1.145**), one line of
+status, a thin progress bar and the buttons, in neutral greys. Nothing else is on screen until you
+ask for it.
 
 1. **Check for Updates**: it checks GitHub, compares every file on the SSD and downloads only the
    ones that changed. The progress bar moves; nothing in CaseVault is changed yet.

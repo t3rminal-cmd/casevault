@@ -4,6 +4,11 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.161
+
+- **Fix (case list counts):** a folder holding a single case now shows its count (1) like the others; before, the count only appeared from two cases up, so a Mission or INDEPENDENT with one case looked empty
+- **Case list:** the handcuff icon is gone from CLOSED; it shows just how many cases are closed, in the same grey box as the other folders' counts
+
 ## What's new in v1.160
 
 - **Fix (drop-down lists):** the drop-down lists (Gender, Nationality, the ID states and every other list) open in every window, also the ones low in Edit Alias. A list no longer closes the moment the window scrolls; it moves with its box, and closes only when the box leaves the screen

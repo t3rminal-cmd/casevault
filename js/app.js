@@ -1598,6 +1598,7 @@
     const norm = (f) => (typeof f === 'string' ? { name: f, label: f } : { ...f, label: f.label || f.name });
     let folders = fixed.map(norm);
     let vehEl = null;
+    let arranging = false; // v1.164: Training: the certificates can be put in the order wanted
     let folder = sharedOpen[key] != null ? sharedOpen[key] : (tiles ? null : folders.length ? folders[0].name : (getFolders ? null : ''));
     const newFolder = async () => {
       const inp = h('input', { maxlength: 60, autocomplete: 'off', 'aria-label': 'Folder name', placeholder: 'ATF Files' });
@@ -1634,6 +1635,19 @@
         list = folder == null ? [] : await Vault.listShared(key, folder);
         if (folders.length) for (const f of folders) counts[f.name] = f.name === folder ? list.length : (await Vault.listShared(key, f.name)).length;
       } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); }
+      // v1.164: Training shows its certificates in the order chosen with Arrange (kept in .training.json).
+      const isTraining = key === 'other' && folder === 'Training';
+      const tmeta = isTraining && list.length ? await Vault.readTraining().catch(() => ({})) : {};
+      if (isTraining) list = CVTraining.ordered(list, tmeta);
+      if (!isTraining || list.length < 2) arranging = false;
+      const saveOrder = async (name, to) => {
+        try {
+          const all = await Vault.readTraining();
+          all[CVTraining.ORDER_KEY] = CVTraining.moveTo(list, name, to);
+          await Save.track('shared:training', () => Vault.saveTraining(all));
+        } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); toast(`The order wasn't saved: ${err.message}`, 'error'); }
+        draw();
+      };
       const cur = folders.find((f) => f.name === folder);
       const folderLabel = cur ? cur.label : '';
       // v1.69: the folders are tabs, like a case's Details / Timeline / Draft tabs.
@@ -1666,8 +1680,8 @@
       const training = key === 'other' && folder === 'Training';
       const cards = folderView(key, folder) === 'cards';
       // v1.140: each certificate's details (course, completed, hours, expires) from .training.json.
-      const meta = training && cards && list.length ? await Vault.readTraining().catch(() => ({})) : {};
-      const rows = list.length && cards ? h('div', { class: 'cert-grid', role: 'list' }, list.map((f) => {
+      const meta = tmeta;
+      const rows = list.length && cards ? h('div', { class: `cert-grid${arranging ? ' cert-arranging' : ''}`, role: 'list' }, list.map((f, i) => {
         const img = h('img', { class: 'cert-thumb', alt: '', hidden: true });
         const art = h('span', { class: 'cert-art' }, h('span', { class: 'cert-icon' }, I(FILE_ICONS[fileKind(f.base)])), img);
         sharedThumb(reader, f, img);
@@ -1684,13 +1698,34 @@
         // v1.145: the card shows the course name and, when there is one, the expiry; the rest is in the pencil's details.
         const exp = d.expires ? h('span', { class: `cert-exp${st ? ` cert-exp-${st}` : ''}`, title: `Expires ${fmtDate(d.expires)}` },
           st === 'expired' ? 'Expired' : st ? `Renew in ${left} day${left === 1 ? '' : 's'}` : `Expires ${shortDate(d.expires)}`) : null;
-        return h('div', { class: `cert-card${st ? ` cert-${st}` : ''}`, role: 'listitem', 'data-file': f.base },
-          h('button', { type: 'button', class: 'cert-open', title: `Open ${f.base}`, onclick: () => previewFile(reader, f.base) }, art,
-            h('span', { class: 'cert-name', title: `${f.base} · ${fmtSize(f.size)}${d.date ? ` · completed ${fmtDate(d.date)}` : ''}${d.hours ? ` · ${d.hours} hours` : ''}` }, CVTraining.courseOf(f.base, d)), exp),
-          h('div', { class: 'cert-foot' }, h('span', { class: 'spacer' }),
-            h('span', { class: 'cert-tools' },
+        const course = CVTraining.courseOf(f.base, d);
+        // v1.164: while arranging, a card is dragged onto another to take its place, or moved one
+        // place with the arrows (also by keyboard); opening a certificate waits until Done.
+        const moveBtns = arranging ? h('span', { class: 'cert-move' },
+          h('button', { type: 'button', class: 'icon-btn', title: 'Move earlier', disabled: i === 0, onclick: () => saveOrder(f.base, i - 1) }, I('chevron-left'), h('span', { class: 'sr-only' }, `Move ${course} earlier`)),
+          h('button', { type: 'button', class: 'icon-btn', title: 'Move later', disabled: i === list.length - 1, onclick: () => saveOrder(f.base, i + 1) }, I('chevron-right'), h('span', { class: 'sr-only' }, `Move ${course} later`))) : null;
+        const card = h('div', { class: `cert-card${st ? ` cert-${st}` : ''}`, role: 'listitem', 'data-file': f.base },
+          h('button', { type: 'button', class: 'cert-open', title: arranging ? 'Drag to move it' : `Open ${f.base}`, onclick: () => { if (!arranging) previewFile(reader, f.base); } }, art,
+            h('span', { class: 'cert-name', title: `${f.base} · ${fmtSize(f.size)}${d.date ? ` · completed ${fmtDate(d.date)}` : ''}${d.hours ? ` · ${d.hours} hours` : ''}` }, course), exp),
+          h('div', { class: 'cert-foot' }, moveBtns || h('span', { class: 'spacer' }),
+            arranging ? h('span', { class: 'muted small cert-pos' }, `${i + 1} of ${list.length}`) : h('span', { class: 'cert-tools' },
               h('button', { type: 'button', class: 'icon-btn cert-edit', title: 'Course, date completed, hours and expiry date', onclick: () => editCertificate(f.base, meta, draw) }, I('pencil-square'), h('span', { class: 'sr-only' }, `Details of ${f.base}`)),
               h('button', { type: 'button', class: 'icon-btn danger-icon', title: 'Delete this file', onclick: () => delFile(f) }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${f.base}`)))));
+        if (arranging) {
+          card.draggable = true;
+          card.addEventListener('dragstart', (e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/x-cv-cert', f.base); card.classList.add('dragging'); });
+          card.addEventListener('dragend', () => card.classList.remove('dragging'));
+          card.addEventListener('dragover', (e) => { if ([...e.dataTransfer.types].includes('text/x-cv-cert')) { e.preventDefault(); e.stopPropagation(); card.classList.add('drop-here'); } });
+          card.addEventListener('dragleave', () => card.classList.remove('drop-here'));
+          card.addEventListener('drop', (e) => {
+            const name = e.dataTransfer.getData('text/x-cv-cert');
+            if (!name) return;
+            e.preventDefault(); e.stopPropagation();
+            card.classList.remove('drop-here');
+            if (name !== f.base) saveOrder(name, i);
+          });
+        }
+        return card;
       })) : list.length ? h('table', { class: 'files shared-table' },
         h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', { class: 'num' }, 'Size'), h('th', { class: 'date-cell' }, 'Updated'), h('th', { class: 'col-actions' }, ''))),
         h('tbody', {}, list.map((f) => h('tr', {},
@@ -1707,6 +1742,8 @@
       const vehicles = vehEl || '';
       box.replaceChildren(...[chips, tiles ? h('div', { class: 'op-open-head shared-open-head' }, h('strong', {}, folderLabel), h('div', { class: 'spacer' }),
         training ? h('button', { type: 'button', class: 'btn small', icon: 'file-earmark-pdf', title: 'A list of your courses with dates and hours, and the certificates after it, as a PDF', onclick: () => trainingRecord() }, 'Training Record') : '',
+        // v1.164: Arrange: put the certificates in the order wanted, to keep similar ones together.
+        training && cards && list.length > 1 ? h('button', { type: 'button', class: `btn small${arranging ? ' primary' : ''}`, icon: 'arrows-move', 'aria-pressed': String(arranging), title: arranging ? 'Finish arranging' : 'Put the certificates in the order you want: drag them, or use the arrows', onclick: () => { arranging = !arranging; draw(); } }, arranging ? 'Done Arranging' : 'Arrange') : '',
         h('div', { class: 'view-switch', role: 'group', 'aria-label': 'Show files as' },
           ...[['cards', 'grid-3x3', 'Cards'], ['list', 'list-ul', 'List']].map(([v, icon, label]) => h('button', { type: 'button', class: `btn small view-btn${(cards ? 'cards' : 'list') === v ? ' on' : ''}`, 'aria-pressed': String((cards ? 'cards' : 'list') === v), icon, title: `Show the files as ${label.toLowerCase()}`, onclick: () => { setFolderView(key, folder, v); draw(); } }, label))),
         h('button', { type: 'button', class: 'btn small ghost', title: 'Close this folder', onclick: () => { folder = null; sharedOpen[key] = null; draw(); } }, 'Close')) : '', vehicles, h('div', { class: 'shared-drop', title: 'Drop files here, or click Add Files' }, rows,
