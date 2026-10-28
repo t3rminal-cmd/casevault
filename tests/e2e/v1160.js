@@ -23,7 +23,7 @@ const SP = process.env.SP + '/v1160';
     const at = (sel) => [...new Set([...document.querySelectorAll(`#case-list .op-head > :is(${sel})`)].filter((e) => e.offsetParent).map((e) => { const r = e.getBoundingClientRect(); return Math.round(r.left + r.width / 2); }))];
     return { count: at('.op-count, .closed-count'), add: at('.mission-add, .general-add'), chev: at('.op-chev') };
   });
-  ok(cols.count.length === 1 && cols.add.length === 1 && cols.chev.length === 1, `folder icons in one column: ${JSON.stringify(cols)}`);
+  ok(cols.count.length === 1 && cols.add.length === 0 && cols.chev.length === 1, `folder icons in one column (no + since v1.165): ${JSON.stringify(cols)}`);
   const closedN = await p.evaluate(() => { const c = document.querySelector('#case-list .closed-group > summary .closed-count'); return c ? { icon: !!c.querySelector('svg, img'), n: c.textContent.trim() } : null; });
   ok(closedN && !closedN.icon && closedN.n === '2', `CLOSED shows its count, without an icon (v1.161): ${JSON.stringify(closedN)}`);
   // v1.161: a folder with a single case shows its count too.

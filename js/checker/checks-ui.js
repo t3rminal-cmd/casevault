@@ -164,6 +164,13 @@
         h('h3', {}, 'Profile on this PC'),
         h('p', { class: 'muted small explain' }, 'Remembered by this PC\'s browser, not on the SSD, so the Beelink and the L14 can each use the model that suits them.'),
         h('div', { class: 'radio-list' }, radios),
+        // v1.165: how long the model stays loaded after use (frees the GPU memory sooner).
+        h('h3', {}, 'Keep the Model Loaded'),
+        (() => {
+          const sel = h('select', { 'aria-label': 'Keep the model loaded', class: 'ai-keep' }, CVAI.KEEP_CHOICES.map(([v, l]) => h('option', { value: v, selected: v === CVAI.keepChoice() }, v === CVAI.KEEP_ALIVE ? `${l} (Default)` : l)));
+          sel.addEventListener('change', () => { CVAI.setKeepChoice(sel.value); toast(`The model stays loaded: ${sel.options[sel.selectedIndex].textContent.toLowerCase()}.`, 'success'); });
+          return h('div', { class: 'ai-keep-row' }, sel, h('p', { class: 'muted small explain' }, 'After it is used, the model stays in the graphics card\'s memory for this long, so the next answer starts at once. A shorter time frees the memory sooner; Unload When Done frees it as soon as a check or draft finishes (the next one waits for the model to load). On this PC only.'));
+        })(),
         h('p', { class: 'muted small explain' }, 'Privacy: CaseVault only talks to the AI engine on this computer (127.0.0.1:11434). Nothing is sent anywhere else.'),
         h('div', { class: 'dialog-actions' },
           h('button', { class: 'btn', type: 'button', onclick: async () => { close(); await Engine.refresh(); showEngineDialog(); } }, 'Check again'),
@@ -684,6 +691,7 @@
         h('ul', { class: 'doc-list' }, docsLine),
         st ? h('p', { class: 'small' },
           `AI reviewed ${st.reviewed} of ${st.statements} statements: ${st.supported} supported, ${st.contradicted} contradicted, ${st.notFound} not found.`,
+          st.skipped ? ` ${st.skipped} needed no AI: the rules had already flagged them, or a report says the same word for word.` : '',
           st.discarded ? h('strong', {}, ` ${st.discarded} AI answer${st.discarded === 1 ? ' was' : 's were'} discarded because the quoted text was not found in the reports.`) : '') : null,
         data.ai && data.ai.stopped ? h('p', { class: 'warn-text small' }, `The AI was too slow on this computer${data.ai.stopped === 'time' ? ' to finish in 20 minutes' : ''}, so it stopped early. The rule-based checks still cover every statement.`)
           : data.ai && !data.ai.complete ? h('p', { class: 'warn-text small' }, `The AI review did not finish${data.ai.error ? ` (${data.ai.error})` : ''}. Statements after that point were not reviewed by AI.`) : null,

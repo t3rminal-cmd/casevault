@@ -23,7 +23,22 @@
     light: { label: 'Light', hint: '~3–4B, runs on the CPU', numCtx: 4096, min: 1, max: 5.5, prefer: ['qwen2.5:3b', 'llama3.2:3b', 'phi4-mini', 'gemma3:4b'] },
   };
   const PROFILE_ORDER = ['quick', 'light', 'thorough']; // what "Auto" picks first
-  const KEEP_ALIVE = '10m'; // keep the model loaded between requests, then free the GPU
+  const KEEP_ALIVE = '10m'; // keep the model loaded between requests, then free the GPU (the default)
+  /* v1.165: how long the model stays loaded after it was used, chosen on this PC (Settings of the AI
+   * engine): a shorter time frees the GPU memory sooner. '0' unloads it when a check or a draft is
+   * done; during one it stays loaded (unloading between statements would load it again each time). */
+  const KEEP_CHOICES = [['2m', '2 Minutes'], ['10m', '10 Minutes'], ['30m', '30 Minutes'], ['0', 'Unload When Done']];
+  const KEEP_KEY = 'cv-ai-keep';
+  function keepChoice() {
+    try { const v = globalThis.localStorage && globalThis.localStorage.getItem(KEEP_KEY); return KEEP_CHOICES.some(([k]) => k === v) ? v : KEEP_ALIVE; } catch { return KEEP_ALIVE; }
+  }
+  function setKeepChoice(v) {
+    try { if (!v || v === KEEP_ALIVE) globalThis.localStorage.removeItem(KEEP_KEY); else globalThis.localStorage.setItem(KEEP_KEY, v); } catch { /* this session only */ }
+  }
+  /** keep_alive for a request: the choice, or 2 minutes while a task runs when it is "when done". */
+  const keepAlive = () => (keepChoice() === '0' ? '2m' : keepChoice());
+  /** How long a model stays warm after an answer, in ms (for the "Loading model…" hint). */
+  const keepMs = () => ({ '2m': 120e3, '10m': 600e3, '30m': 1800e3, 0: 120e3 })[keepChoice()] || 600e3;
   const DEFAULT_CTX = 4096;
   const numCtxFor = (profile) => (PROFILES[profile] && PROFILES[profile].numCtx) || DEFAULT_CTX;
 
@@ -254,14 +269,19 @@
    *                time, the review stops early (stopped: 'slow' or 'time') and the rule-based
    *                results stand for the rest; nothing already found is lost.
    */
-  async function review({ docs, engine, fetchImpl, onProgress = () => {}, signal, aliases = [], ruleFlags = [], timeoutMs = 0, budgetMs = 0, now = () => Date.now() } = {}) {
+  async function review({ docs, engine, fetchImpl, onProgress = () => {}, signal, aliases = [], ruleFlags = [], timeoutMs = 0, budgetMs = 0, now = () => Date.now(), quick = true } = {}) {
     fetchImpl = fetchImpl || ((...args) => globalThis.fetch(...args));
     const startedAt = now();
     let timeouts = 0;
     const ruleHit = new Set(ruleFlags.filter((f) => f.statement).map((f) => `${f.statement.docIndex}:${f.statement.start}`));
+    // v1.165 (quick): statements the AI needn't read: one the rules already flagged as a sure
+    // mismatch (High severity and confidence), and one a report repeats word for word.
+    const ruleSure = new Set(ruleFlags.filter((f) => f.statement && f.layer === 'rules' && f.severity === 'High' && f.confidence === 'High')
+      .map((f) => `${f.statement.docIndex}:${f.statement.start}`));
+    const plain = (t) => T.normalize(t).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     const affidavits = docs.filter((d) => d.role === 'affidavit');
     const reports = docs.filter((d) => d.role === 'report');
-    const stats = { statements: 0, reviewed: 0, supported: 0, contradicted: 0, notFound: 0, discarded: 0, errors: 0 };
+    const stats = { statements: 0, reviewed: 0, supported: 0, contradicted: 0, notFound: 0, discarded: 0, errors: 0, skipped: 0 };
     const flags = [];
     if (!affidavits.length || !reports.length) return { flags, stats, complete: true, stopped: null };
 
@@ -275,7 +295,7 @@
     const embedAll = async (inputs) => {
       const vecs = [];
       for (let i = 0; i < inputs.length; i += 32) {
-        const data = await fetchJson(fetchImpl, `${engine.base}/api/embed`, { method: 'POST', body: JSON.stringify({ model: engine.embed, input: inputs.slice(i, i + 32), keep_alive: KEEP_ALIVE }), signal });
+        const data = await fetchJson(fetchImpl, `${engine.base}/api/embed`, { method: 'POST', body: JSON.stringify({ model: engine.embed, input: inputs.slice(i, i + 32), keep_alive: keepAlive() }), signal });
         vecs.push(...data.embeddings);
       }
       return vecs;
@@ -307,6 +327,7 @@
       }
       const st = statements[i];
       onProgress({ phase: 'review', done: i, total: statements.length });
+      if (quick && ruleSure.has(`${st.doc}:${st.start}`)) { stats.skipped++; continue; }
 
       // Retrieve: best keyword matches, plus best semantic matches when available.
       let picked = index.search(st.text, passageVecs ? 4 : 6);
@@ -321,6 +342,12 @@
         }
       }
 
+      // v1.165 (quick): a report sentence with the very same words (capitals, punctuation and spacing
+      // aside) supports it. Only exact: one changed word ("north" / "south") still goes to the AI.
+      if (quick && picked.length && picked.some((p) => T.sentences(p.text).some((x) => plain(x.text) === plain(st.text)))) {
+        stats.reviewed++; stats.supported++; stats.skipped++;
+        continue;
+      }
       picked = fitPassages(st, picked, engine.numCtx || DEFAULT_CTX);
       const stDoc = docByIndex.get(st.doc);
       const statementLoc = loc(stDoc, st, st.text, st.start, st.end);
@@ -350,7 +377,7 @@
             model: engine.model,
             stream: false,
             format: SCHEMA,
-            keep_alive: KEEP_ALIVE,
+            keep_alive: keepAlive(),
             options: { temperature: 0, seed: 7, num_ctx: engine.numCtx || DEFAULT_CTX },
             messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: userPrompt(st, picked, aliases) }],
           }),
@@ -421,7 +448,7 @@
    * (qwen3:8b) is still what is sent to Ollama. */
   const modelName = (m) => { const s = String(m || '').replace(/:latest$/, ''); return s ? s[0].toUpperCase() + s.slice(1) : s; };
 
-  const api = { SYSTEM, aliasLine, modelName, PROFILES, KEEP_ALIVE, DEFAULT_CTX, numCtxFor, tokensOf, fitPassages, userPrompt, detect, choose, review, statementsOf, passagesOf, parseAnswer, sizeB };
+  const api = { SYSTEM, aliasLine, modelName, PROFILES, KEEP_ALIVE, KEEP_CHOICES, keepChoice, setKeepChoice, keepAlive, keepMs, DEFAULT_CTX, numCtxFor, tokensOf, fitPassages, userPrompt, detect, choose, review, statementsOf, passagesOf, parseAnswer, sizeB };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVAI = api;
 })(this);

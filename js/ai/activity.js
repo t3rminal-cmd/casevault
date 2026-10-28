@@ -15,7 +15,8 @@
 
 (function (root) {
   const LOADING_AFTER_MS = 10000; // no first response after this long: the model is probably loading
-  const WARM_MS = 10 * 60 * 1000; // matches keep_alive "10m": a model used this recently is still loaded
+  // A model used this recently is still loaded: the keep-alive time chosen on this PC (v1.165).
+  const warmMs = () => (root.CVAI && root.CVAI.keepMs ? root.CVAI.keepMs() : 10 * 60 * 1000);
   const HEAVY = new Set(['check', 'draft', 'chat']);
   const DEFAULT_LABEL = { check: 'Checking…', draft: 'Drafting…', chat: 'Answering…', suggest: 'Suggesting…', embed: 'Indexing…' };
 
@@ -23,6 +24,7 @@
     const tasks = new Map(); // id -> { id, kind, label, model, start, waiting }
     const requests = new Map(); // id -> { id, model, kind, stream, start, firstAt }
     const warm = new Map(); // model -> last time it answered
+    const used = new Map(); // v1.165: model -> the engine's address, to unload it when a task is done
     const listeners = new Set();
     let seq = 0;
     let last = null; // { model, tps, at }
@@ -59,10 +61,22 @@
         t.waiting = false;
         t.start = now();
         notify();
-        try { return await fn(task); } finally { task.end(); }
+        try { return await fn(task); } finally { task.end(); unloadIfDone(); }
       });
       queue = run.catch(() => {});
       return run;
+    }
+
+    /** v1.165: with "Unload When Done", the models a check or draft used are unloaded when it ends
+     * (and nothing else is running or waiting), so the GPU memory is free at once. */
+    function unloadIfDone() {
+      if (!(root.CVAI && root.CVAI.keepChoice && root.CVAI.keepChoice() === '0')) return;
+      if (queued > 0 || tasks.size > 0) return;
+      for (const [model, at] of used) {
+        Promise.resolve(globalThis.fetch(`${at}/api/generate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, keep_alive: 0 }) })).catch(() => {});
+        warm.delete(model);
+      }
+      used.clear();
     }
 
     /** Is a check or a draft running or waiting? Inline suggestions stay quiet then. */
@@ -107,6 +121,7 @@
         }
         r.firstAt = now();
         if (r.model) warm.set(r.model, now());
+        if (r.model && body.keep_alive !== 0) used.set(r.model, String(url).replace(/\/api\/.*$/, ''));
         notify();
         if (!res.ok || kind === 'embed') { finish(); return res; }
         if (!r.stream || !res.body || typeof TransformStream === 'undefined') {
@@ -156,7 +171,7 @@
       // The heaviest running task decides the label; suggestions only when nothing else runs.
       const task = running.find((x) => HEAVY.has(x.kind)) || running[0] || list[0] || null;
       const loading = reqs.some((q) => q.firstAt == null && q.kind !== 'embed' && t - q.start >= LOADING_AFTER_MS
-        && (q.stream || !(warm.has(q.model) && t - warm.get(q.model) < WARM_MS)));
+        && (q.stream || !(warm.has(q.model) && t - warm.get(q.model) < warmMs())));
       let label = task ? (task.waiting ? 'Waiting…' : task.label || DEFAULT_LABEL[task.kind] || 'Working…') : (DEFAULT_LABEL[(reqs[0] || {}).kind] || 'Working…');
       if (loading) label = 'Loading model…';
       const model = (task && task.model) || (reqs.find((q) => q.model) || {}).model || '';

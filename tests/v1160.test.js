@@ -23,7 +23,7 @@ test('Paid: money while typed, cents when the box is left', () => {
 });
 
 test('CLOSED count (no icon since v1.161), and lists that move with their box', () => {
-  assert.match(read('js/app.js'), /class: 'op-count closed-count'/);
+  assert.match(read('js/app.js'), /countBadge\(n, 'op-count closed-count'/); // v1.165: through countBadge
   assert.match(read('js/select.js'), /function place\(\)/);
   assert.match(read('js/combo.js'), /function place\(\)/);
   assert.match(read('css/app.css'), /\.locker-acts \{ display: grid;/);

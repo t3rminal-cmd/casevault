@@ -27,8 +27,8 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   // INDEPENDENT CASES header: nothing overlaps
   const hd = await p.evaluate(() => { const g = document.querySelector('.general-group .op-head'); const r = (s) => g.querySelector(s) && g.querySelector(s).getBoundingClientRect();
     const name = r('.ind-name'); const count = r('.op-count'); const add = r('.general-add'); const bell = r('.folder-bell'); const folder = r('.op-folder');
-    return { gapCount: count ? count.left - name.right : 99, gapAdd: add.left - name.right, bellOnFolder: !!bell && bell.left >= folder.left - 8 && bell.right <= folder.right + 8, bellNotOnName: !bell || bell.right <= name.left + 2, meta: g.querySelector('.op-meta').textContent }; });
-  ok(hd.gapCount >= 4 && hd.gapAdd >= 4, `the count and + keep clear of the name (${hd.gapCount.toFixed(1)}px, ${hd.gapAdd.toFixed(1)}px)`);
+    return { gapCount: count ? count.left - name.right : 99, gapAdd: add ? add.left - name.right : 99, noAdd: !add, bellOnFolder: !!bell && bell.left >= folder.left - 8 && bell.right <= folder.right + 8, bellNotOnName: !bell || bell.right <= name.left + 2, meta: g.querySelector('.op-meta').textContent }; });
+  ok(hd.gapCount >= 4 && hd.noAdd, `the count keeps clear of the name (${hd.gapCount.toFixed(1)}px); no + since v1.165`);
   ok(hd.bellOnFolder && hd.bellNotOnName, 'the bell sits on the folder, not on the name');
   ok(/^\d+ cases?$/.test(hd.meta), `the line under it is short: "${hd.meta}"`);
 

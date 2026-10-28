@@ -15,11 +15,12 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.164
+## What's New in v1.165
 
-- **Fix:** drop-down lists in Firefox (its own list is used) and lists that scrolled the form
-- **Training:** Arrange the certificates in the order you want (drag or arrows)
-- **Updater 1.4:** a quieter, neutral look without the animation
+- **Fix:** every folder shows its count, including 1 and 0, on the home page and sidebar
+- **Sidebar:** plain outline icons (green padlock kept); the + buttons are gone
+- **Training:** certificate Groups, pictures saved on the SSD, and **T** to open it
+- **AI:** Keep the Model Loaded setting, and fewer statements sent to the AI
 
 ## What CaseVault Does
 

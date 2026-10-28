@@ -903,6 +903,9 @@
     return group.key === GENERAL && /^#\/general\b/.test(location.hash);
   }
   const byNumber = (a, b) => String(a.number || '').localeCompare(String(b.number || ''), undefined, { numeric: true });
+  /** v1.165: every folder shows how many it holds, 0 and 1 too (the same rule on the home page and
+   * in the case list). cls: the badge's class; what: "case", "mission", "file"… for the hover box. */
+  const countBadge = (n, cls = 'op-folder-count', what = 'case') => h('span', { class: `${cls}${n ? '' : ' is-zero'}`, title: `${n} ${what}${n === 1 ? '' : 's'}` }, String(n));
   /** A folder in the case list: { key, op (null for General Files), cases }. */
   function operationGroup(group) {
     const { key, op, cases } = group;
@@ -927,14 +930,15 @@
         // v1.148: how many of its cases are due, in a red box; the hover box lists them.
         op && !group.partial && dueCases.length ? h('span', { class: 'alert-count', title: alertList(dueCases), 'aria-label': `${dueCases.length} due` }, String(dueCases.length)) : null,
         // v1.161: the count shows from one case up (it used to wait for two).
-        cases.length ? h('span', { class: 'op-count', title: `${cases.length} case${cases.length === 1 ? '' : 's'}` }, String(cases.length)) : null,
+        // v1.161/1.165: the count shows from 0 up, on every folder.
+        countBadge(cases.length, 'op-count'),
         // v1.83: GENERAL FILES has a + for a new case, like MISSION FILES has one for a new Mission.
-        !op && !group.closed ? h('button', { class: 'icon-btn mission-add general-add', type: 'button', title: 'New independent case (not in a Mission)', onclick: (e) => { e.preventDefault(); e.stopPropagation(); newCase(); } }, I('plus-lg'), h('span', { class: 'sr-only' }, 'New case')) : null,
+        // v1.165: no + here; New Case is on the home page, in the menu and on N.
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
       h('ul', { class: 'op-cases' }, cases.length ? (op ? cases.map((c) => caseItem(c, true, { dim: !group.closed && c.status === 'Closed' })) : independentItems(cases)) : [h('li', { class: 'empty muted small' }, op ? 'No cases in this Mission yet.' : 'No independent cases.')]));
     // A click on the folder's name opens the Operation (or General Files); the arrow folds it.
     det.querySelector('summary').addEventListener('click', (e) => {
-      if (e.target.closest('.op-chev') || e.target.closest('.general-add')) return;
+      if (e.target.closest('.op-chev')) return;
       e.preventDefault();
       location.hash = op ? `#/operation/${encodeURIComponent(op.id)}` : '#/general';
     });
@@ -1124,11 +1128,7 @@
     const open = sideFold.has(key) ? sideFold.get(key) : true;
     const n = groups.filter((g) => g.op).length;
     const bell = groups.some((g) => g.cases.some((c) => caseDue(c)));
-    const add = h('button', { class: 'icon-btn mission-add', type: 'button', title: 'New Mission', onclick: async (e) => {
-      e.preventDefault(); e.stopPropagation();
-      const op = await operationDialog();
-      if (op) { renderCaseList(); location.hash = `#/operation/${encodeURIComponent(op.id)}`; }
-    } }, I('plus-lg'), h('span', { class: 'sr-only' }, 'New Mission'));
+    // v1.165: no + in the case list (New Mission is on the home page, in the menu and in Ctrl+K).
     const det = h('details', { class: `op-group mission-group${bell ? ' has-reminder' : ''}`, open: open || searching },
       h('summary', { class: 'op-head', title: 'OPERATION: every Operation (Mission). Click to see them all; the arrow folds the folder.' },
         h('span', { class: 'op-folder mission-icon' }, I('folder-mission')),
@@ -1137,12 +1137,11 @@
           h('span', { class: 'op-meta muted' }, `${n} mission${n === 1 ? '' : 's'}`)),
         // v1.160: the bell in the alert column on the right, lined up with the red counts below it.
         bell ? h('span', { class: 'case-bell alert-count alert-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null,
-        add,
+        countBadge(n, 'op-count', 'mission'),
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
       h('ul', { class: 'mission-children' }, groups.length ? groups.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted small' }, 'No Missions yet. Click + to make one.')]));
     det.querySelector('summary').addEventListener('click', (e) => {
       if (e.target.closest('.op-chev')) { e.preventDefault(); sideFoldHash = location.hash; sideFold.set(key, !det.open); det.open = !det.open; return; }
-      if (e.target.closest('.mission-add')) return;
       e.preventDefault();
       location.hash = '#/operations';
     });
@@ -1167,6 +1166,7 @@
         h('span', { class: 'op-folder mission-icon' }, I('folder-mission')),
         h('span', { class: 'op-text' }, h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, 'OPERATION')),
           h('span', { class: 'op-meta muted' }, `${opGroupsClosed.length} mission${opGroupsClosed.length === 1 ? '' : 's'}`)),
+        countBadge(opGroupsClosed.length, 'op-count', 'mission'),
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
       h('ul', { class: 'mission-children' }, opGroupsClosed.length ? opGroupsClosed.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted small' }, 'No closed Missions.')]));
     opsDet.addEventListener('toggle', () => { if (!searching) sideFold.set(opKey, opsDet.open); });
@@ -1176,7 +1176,7 @@
         h('span', { class: 'op-text' }, h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, 'CLOSED')),
           h('span', { class: 'op-meta muted' }, `${n} case${n === 1 ? '' : 's'}`)),
         // v1.161: how many cases are closed, in the same box as the other folders' counts (no icon).
-        n ? h('span', { class: 'op-count closed-count', title: `${n} closed case${n === 1 ? '' : 's'}` }, String(n)) : null,
+        countBadge(n, 'op-count closed-count', 'closed case'),
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
       h('ul', { class: 'mission-children closed-children' },
         h('li', { class: 'op-item' }, opsDet),
@@ -1194,10 +1194,33 @@
     const q = $('#case-search').value.trim().toLowerCase();
     const row = (c, withSubject) => [c.id, c.location, c.number, withSubject ? c.subject : '', c.operationId, c.status, c.opened, c.nextDeadline, c.sol, c.arrested,
       q ? [c.title, c.fileNumber, c.agencyNumber, c.client, c.tags, c.notes] : null];
-    const ctx = [q, state.caseId, location.hash, sideOrder, today(), [...sideFold], Vault.listOperations().map((o) => [o.id, o.number, o.name, o.status]), pinnedIds()];
+    const rest = [q, sideOrder, today(), [...sideFold], Vault.listOperations().map((o) => [o.id, o.number, o.name, o.status]), pinnedIds()];
+    const ctx = [state.caseId, location.hash, ...rest];
     const cases = Vault.data.cases;
-    return { all: JSON.stringify([ctx, cases.map((c) => row(c, true))]), shape: JSON.stringify([ctx, cases.map((c) => row(c, false))]),
+    const rows = cases.map((c) => row(c, true));
+    // v1.165: data is everything but where you are (the open case and the page), for navCaseList().
+    return { all: JSON.stringify([ctx, rows]), shape: JSON.stringify([ctx, cases.map((c) => row(c, false))]),
+      data: JSON.stringify([rest, rows]), caseId: state.caseId, hash: location.hash,
       subjects: new Map(cases.map((c) => [c.id, c.subject])) };
+  }
+  /** v1.165: after moving to a case or one of its tabs. When only the place changed (not the cases),
+   * the list isn't drawn again: a tab of the same case changes nothing in it, and another case whose
+   * row is already on screen just takes the highlight. Anything else draws it again. */
+  function navCaseList() {
+    if (!Vault.data || !sideSig) return renderCaseList();
+    const now = sideSignature();
+    const isCasePage = (hash) => /^#\/case\//.test(hash || '');
+    if (now.data !== sideSig.data || !isCasePage(now.hash) || !isCasePage(sideSig.hash)) return renderCaseList();
+    if (now.caseId !== sideSig.caseId) {
+      const list = $('#case-list');
+      const href = `#/case/${CVRoute.enc(now.caseId)}`;
+      const el = [...list.querySelectorAll('a.case-item')].find((a) => a.getAttribute('href') === href);
+      if (!el || !el.getClientRects().length || [...list.querySelectorAll('details')].some((d) => !d.open && d.contains(el))) return renderCaseList();
+      for (const a of list.querySelectorAll('a.case-item.active')) { a.classList.remove('active'); a.removeAttribute('aria-current'); }
+      for (const a of list.querySelectorAll('a.case-item')) if (a.getAttribute('href') === href) { a.classList.add('active'); a.setAttribute('aria-current', 'page'); }
+    }
+    sideSig = now;
+    return undefined;
   }
   /** Redraws the case list unless nothing in it changed (see sideSignature). */
   function refreshCaseList() {
@@ -1481,16 +1504,19 @@
       date: h('input', { type: 'date', value: d.date, 'aria-label': 'Date Completed' }),
       hours: h('input', { inputmode: 'decimal', maxlength: 8, autocomplete: 'off', value: d.hours, placeholder: '40', 'aria-label': 'Hours' }),
       expires: h('input', { type: 'date', value: d.expires, 'aria-label': 'Expires' }),
+      // v1.165: a group keeps similar certificates together on the cards (CPR, Firearms…).
+      group: h('input', { maxlength: 60, autocomplete: 'off', value: d.group || '', placeholder: 'CPR, Firearms, Narcotics…', 'aria-label': 'Group', list: 'cert-group-names' }),
     };
+    const groupList = h('datalist', { id: 'cert-group-names' }, CVTraining.groupNames(meta).map((g) => h('option', { value: g })));
     const ok = await openDialog((close) => h('form', { class: 'dialog-form cert-form', onsubmit: (e) => { e.preventDefault(); close(true); } },
       h('h2', { icon: 'pencil-square' }, 'Certificate Details'),
       h('p', { class: 'muted small' }, file),
-      field('Course', f.course), field('Given By', f.provider),
+      field('Course', f.course), field('Given By', f.provider), field('Group', f.group, '', 'Certificates with the same group are shown together. Leave it empty for none.'), groupList,
       h('div', { class: 'cert-form-row' }, field('Date Completed', f.date), field('Hours', f.hours), field('Expires', f.expires)),
       h('p', { class: 'muted small' }, 'Leave Expires empty when the certificate does not expire. Needs Attention reminds you 90 and 30 days before.'),
       CVKit.cancelRow(h, () => close(false), h('button', { class: 'btn primary', type: 'submit' }, 'Save'))));
     if (!ok) return;
-    const next = CVTraining.normalize({ course: f.course.value, provider: f.provider.value, date: f.date.value, hours: f.hours.value, expires: f.expires.value });
+    const next = CVTraining.normalize({ course: f.course.value, provider: f.provider.value, date: f.date.value, hours: f.hours.value, expires: f.expires.value, group: f.group.value });
     try {
       const all = await Vault.readTraining();
       if (Object.values(next).some(Boolean)) all[file] = next; else delete all[file];
@@ -1568,29 +1594,46 @@
    * memory only (nothing written to the PC), kept while CaseVault is open, and redrawn when the file
    * changes. */
   const thumbCache = new Map();
+  /* v1.165: a card's picture is made only when the card comes on screen (a folder of 40 certificates
+   * no longer reads and draws 40 PDFs at once), and a made picture is kept on the SSD (.thumbs), so
+   * the next start shows it straight away. */
+  const thumbWatch = 'IntersectionObserver' in window ? new IntersectionObserver((entries) => {
+    for (const e of entries) if (e.isIntersecting) { thumbWatch.unobserve(e.target); const go = e.target.cvThumb; delete e.target.cvThumb; if (go) go(); }
+  }, { rootMargin: '300px' }) : null;
+  const thumbName = (f) => `${String(f.base).replace(/[^\w.-]+/g, '_').slice(0, 80)}~${f.size}-${Math.round(f.modified || 0)}.png`;
   function sharedThumb(reader, f, img) {
     const kind = /\.pdf$/i.test(f.base) ? 'pdf' : /\.(png|jpe?g|gif|webp|bmp)$/i.test(f.base) ? 'img' : '';
     if (!kind) return;
     const id = `${reader.where}|${f.base}|${f.size}|${f.modified}`;
-    if (!thumbCache.has(id)) {
-      thumbCache.set(id, (async () => {
-        const file = await reader.readFile(f.base);
-        if (kind === 'img') return URL.createObjectURL(file);
-        const lib = await CVExtract.loadPdfjs();
-        const task = CVExtract.openPdf(lib, new Uint8Array(await file.arrayBuffer()));
-        try {
-          const page = await (await task.promise).getPage(1);
-          const base = page.getViewport({ scale: 1 });
-          const vp = page.getViewport({ scale: Math.min(2, 480 / Math.max(base.width, base.height)) });
-          const cv = Object.assign(document.createElement('canvas'), { width: Math.ceil(vp.width), height: Math.ceil(vp.height) });
-          const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
-          await page.render({ canvasContext: g, viewport: vp }).promise;
-          page.cleanup();
-          return URL.createObjectURL(await new Promise((res) => cv.toBlob(res, 'image/png')));
-        } finally { await task.destroy(); }
-      })().catch(() => { thumbCache.delete(id); return ''; }));
-    }
-    thumbCache.get(id).then((url) => { if (!url) return; img.src = url; img.hidden = false; img.closest('.cert-art')?.classList.add('has-thumb'); });
+    const load = () => {
+      if (!thumbCache.has(id)) {
+        thumbCache.set(id, (async () => {
+          if (kind === 'img') return URL.createObjectURL(await reader.readFile(f.base));
+          const saved = reader.thumbs ? await reader.thumbs.read(thumbName(f)).catch(() => null) : null;
+          if (saved) return URL.createObjectURL(saved);
+          const file = await reader.readFile(f.base);
+          const lib = await CVExtract.loadPdfjs();
+          const task = CVExtract.openPdf(lib, new Uint8Array(await file.arrayBuffer()));
+          try {
+            const page = await (await task.promise).getPage(1);
+            const base = page.getViewport({ scale: 1 });
+            const vp = page.getViewport({ scale: Math.min(2, 480 / Math.max(base.width, base.height)) });
+            const cv = Object.assign(document.createElement('canvas'), { width: Math.ceil(vp.width), height: Math.ceil(vp.height) });
+            const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+            await page.render({ canvasContext: g, viewport: vp }).promise;
+            page.cleanup();
+            const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
+            if (reader.thumbs && blob) reader.thumbs.save(thumbName(f), blob).catch(() => {}); // next time from the SSD
+            return URL.createObjectURL(blob);
+          } finally { await task.destroy(); }
+        })().catch(() => { thumbCache.delete(id); return ''; }));
+      }
+      thumbCache.get(id).then((url) => { if (!url) return; img.src = url; img.hidden = false; img.closest('.cert-art')?.classList.add('has-thumb'); });
+    };
+    // Drawn now if already made in this session; otherwise when its card is near the screen.
+    const box = img.parentElement || img;
+    if (thumbCache.has(id) || !thumbWatch) load();
+    else { box.cvThumb = load; thumbWatch.observe(box); }
   }
 
   function sharedFilesBox(key, { folders: fixed = [], getFolders = null, allowNew = false, newTile = true, tiles = false, tileIcon = 'folder2-open', empty = 'No files yet.' } = {}) {
@@ -1638,12 +1681,17 @@
       // v1.164: Training shows its certificates in the order chosen with Arrange (kept in .training.json).
       const isTraining = key === 'other' && folder === 'Training';
       const tmeta = isTraining && list.length ? await Vault.readTraining().catch(() => ({})) : {};
-      if (isTraining) list = CVTraining.ordered(list, tmeta);
+      // v1.165: and under their groups, when any certificate has one.
+      const tgroups = isTraining ? CVTraining.grouped(CVTraining.ordered(list, tmeta), tmeta) : [];
+      if (isTraining) list = tgroups.flatMap((g) => g.files);
+      const groupOfFile = new Map(tgroups.flatMap((g) => g.files.map((f) => [f.base, g.group])));
       if (!isTraining || list.length < 2) arranging = false;
-      const saveOrder = async (name, to) => {
+      const saveOrder = async (name, to, group) => {
         try {
           const all = await Vault.readTraining();
           all[CVTraining.ORDER_KEY] = CVTraining.moveTo(list, name, to);
+          // v1.165: dropped onto a card of another group: it joins that group.
+          if (group != null) { const d = CVTraining.normalize(all[name]); if (group) d.group = group; else delete d.group; all[name] = d; }
           await Save.track('shared:training', () => Vault.saveTraining(all));
         } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); toast(`The order wasn't saved: ${err.message}`, 'error'); }
         draw();
@@ -1655,7 +1703,7 @@
         type: 'button', role: 'listitem', class: `op-folder-tile shared-tile ${f.name === folder ? 'open' : ''}`, 'aria-expanded': String(f.name === folder),
         title: `${f.label}${f.desc ? `: ${f.desc}` : ''} (${counts[f.name] || 0} file${counts[f.name] === 1 ? '' : 's'})`,
         onclick: () => { folder = f.name === folder ? null : f.name; sharedOpen[key] = folder; draw(); },
-      }, h('span', { class: 'op-folder-art' }, I(tileIcon), counts[f.name] ? h('span', { class: 'op-folder-count' }, String(counts[f.name])) : null),
+      }, h('span', { class: 'op-folder-art' }, I(tileIcon), countBadge(counts[f.name] || 0, 'op-folder-count', 'file')),
       // v1.139: the folder's name only (its description is in the hover box), so the tiles match.
       h('span', { class: 'op-folder-name' }, h('span', { class: 'op-num' }, f.label)))),
       allowNew && newTile ? h('button', { type: 'button', role: 'listitem', class: 'op-folder-tile shared-tile shared-tile-new', title: 'Make a new folder in Other Files', onclick: newFolder },
@@ -1667,7 +1715,8 @@
       }, h('span', { class: 'tab-main' }, I(SHARED_ICONS[f.label] || (f.custom ? 'folder' : 'folder2-open')), h('span', { class: 'tab-name' }, f.label), h('span', { class: 'tab-count' }, String(counts[f.name] || 0))),
       f.desc ? h('span', { class: 'tab-desc' }, f.desc) : '')),
       allowNew ? h('button', { type: 'button', class: 'tab tab-new', title: 'Make a new folder in Other Files', onclick: newFolder }, h('span', { class: 'tab-main' }, I('folder-plus'), h('span', { class: 'tab-name' }, 'New Folder')), folders.some((f) => f.desc) ? h('span', { class: 'tab-desc' }, 'Your own folder') : '') : '') : null;
-      const reader = { readFile: (name) => Vault.readShared(key, folder, name.split('/').pop()), where: `${key}${folder ? `\\${folder}` : ''}` };
+      const reader = { readFile: (name) => Vault.readShared(key, folder, name.split('/').pop()), where: `${key}${folder ? `\\${folder}` : ''}`,
+        thumbs: { read: (n) => Vault.readSharedThumb(key, folder, n), save: (n, blob) => Vault.saveSharedThumb(key, folder, n, blob) } };
       const delFile = async (f) => {
         if (!(await confirmDialog({ title: `Delete ${f.base}?`, message: 'The file is deleted from the SSD.', confirmText: 'Delete', danger: true }))) return;
         try { await Vault.deleteShared(key, folder, f.base); } catch (err) { if (FS.isDisconnectError(err)) return onDriveLost(); toast(`Not deleted: ${err.message}`, 'error'); }
@@ -1681,7 +1730,8 @@
       const cards = folderView(key, folder) === 'cards';
       // v1.140: each certificate's details (course, completed, hours, expires) from .training.json.
       const meta = tmeta;
-      const rows = list.length && cards ? h('div', { class: `cert-grid${arranging ? ' cert-arranging' : ''}`, role: 'list' }, list.map((f, i) => {
+      // v1.165: one card; the cards sit in one grid, or under their group's heading when any has one.
+      const cardFor = (f, i) => {
         const img = h('img', { class: 'cert-thumb', alt: '', hidden: true });
         const art = h('span', { class: 'cert-art' }, h('span', { class: 'cert-icon' }, I(FILE_ICONS[fileKind(f.base)])), img);
         sharedThumb(reader, f, img);
@@ -1702,8 +1752,9 @@
         // v1.164: while arranging, a card is dragged onto another to take its place, or moved one
         // place with the arrows (also by keyboard); opening a certificate waits until Done.
         const moveBtns = arranging ? h('span', { class: 'cert-move' },
-          h('button', { type: 'button', class: 'icon-btn', title: 'Move earlier', disabled: i === 0, onclick: () => saveOrder(f.base, i - 1) }, I('chevron-left'), h('span', { class: 'sr-only' }, `Move ${course} earlier`)),
-          h('button', { type: 'button', class: 'icon-btn', title: 'Move later', disabled: i === list.length - 1, onclick: () => saveOrder(f.base, i + 1) }, I('chevron-right'), h('span', { class: 'sr-only' }, `Move ${course} later`))) : null;
+          // v1.165: the arrows move it within its group; dragging it onto another group's card moves it there.
+          h('button', { type: 'button', class: 'icon-btn', title: 'Move earlier', disabled: i === 0 || groupOfFile.get(list[i - 1].base) !== groupOfFile.get(f.base), onclick: () => saveOrder(f.base, i - 1) }, I('chevron-left'), h('span', { class: 'sr-only' }, `Move ${course} earlier`)),
+          h('button', { type: 'button', class: 'icon-btn', title: 'Move later', disabled: i === list.length - 1 || groupOfFile.get(list[i + 1].base) !== groupOfFile.get(f.base), onclick: () => saveOrder(f.base, i + 1) }, I('chevron-right'), h('span', { class: 'sr-only' }, `Move ${course} later`))) : null;
         const card = h('div', { class: `cert-card${st ? ` cert-${st}` : ''}`, role: 'listitem', 'data-file': f.base },
           h('button', { type: 'button', class: 'cert-open', title: arranging ? 'Drag to move it' : `Open ${f.base}`, onclick: () => { if (!arranging) previewFile(reader, f.base); } }, art,
             h('span', { class: 'cert-name', title: `${f.base} · ${fmtSize(f.size)}${d.date ? ` · completed ${fmtDate(d.date)}` : ''}${d.hours ? ` · ${d.hours} hours` : ''}` }, course), exp),
@@ -1722,11 +1773,16 @@
             if (!name) return;
             e.preventDefault(); e.stopPropagation();
             card.classList.remove('drop-here');
-            if (name !== f.base) saveOrder(name, i);
+            if (name !== f.base) saveOrder(name, i, groupOfFile.get(name) !== groupOfFile.get(f.base) ? groupOfFile.get(f.base) : undefined);
           });
         }
         return card;
-      })) : list.length ? h('table', { class: 'files shared-table' },
+      };
+      const grid = (files) => h('div', { class: `cert-grid${arranging ? ' cert-arranging' : ''}`, role: 'list' }, files.map((f) => cardFor(f, list.indexOf(f))));
+      const rows = list.length && cards ? (training && tgroups.length > 1
+        ? h('div', { class: 'cert-groups' }, ...tgroups.map((g) => h('section', { class: 'cert-group' },
+          h('h3', { class: 'cert-group-head' }, g.group || 'Other Certificates', h('span', { class: 'muted small' }, ` ${g.files.length}`)), grid(g.files))))
+        : grid(list)) : list.length ? h('table', { class: 'files shared-table' },
         h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', { class: 'num' }, 'Size'), h('th', { class: 'date-cell' }, 'Updated'), h('th', { class: 'col-actions' }, ''))),
         h('tbody', {}, list.map((f) => h('tr', {},
           h('td', {}, h('button', { type: 'button', class: 'linklike', title: 'Open', onclick: () => previewFile(reader, f.base) }, I(FILE_ICONS[fileKind(f.base)]), ' ', f.base)),
@@ -2372,7 +2428,7 @@
     const box = h('div', { class: `dash-section ov-panel op-folders-section ${cls}` });
     const plural2 = (n) => `${n} case number${n === 1 ? '' : 's'}`;
     const tile = (o, isOpen, onclick, extra = '') => h('button', { type: 'button', role: 'listitem', class: `op-folder-tile done-tile${extra} ${isOpen ? 'open' : ''}`, 'aria-expanded': String(isOpen), title: o.title, onclick },
-      h('span', { class: 'op-folder-art' }, I(o.icon), o.count > 1 ? h('span', { class: 'op-folder-count' }, String(o.count)) : null),
+      h('span', { class: 'op-folder-art' }, I(o.icon), countBadge(o.count || 0)),
       o.sub ? h('span', { class: 'op-folder-name op-two-line' }, h('span', { class: 'op-num' }, o.name), h('span', { class: 'op-title' }, o.sub)) : h('span', { class: 'op-folder-name' }, o.name));
     const draw = () => {
       const year = years.find((y) => y.k === st.open);
@@ -2511,7 +2567,7 @@
         return h('button', { type: 'button', role: 'listitem', class: `op-folder-tile year-tile ${open === o ? 'open' : ''}${o.placeholder ? ' placeholder-tile' : ''}`, 'aria-expanded': String(open === o),
           title: o.placeholder ? 'No cases outside a Mission yet: New Case puts one here' : `${o.name}: ${o.group.length} case${o.group.length === 1 ? '' : 's'} not in a Mission`,
           onclick: () => { yearFolderState.open = open === o ? '' : o.k; draw(); } },
-        h('span', { class: 'op-folder-art' }, I('folder-general'), o.group.length > 1 ? h('span', { class: 'op-folder-count' }, String(o.group.length)) : null),
+        h('span', { class: 'op-folder-art' }, I('folder-general'), countBadge(o.group.length)),
         h('span', { class: 'op-folder-name' }, o.name, bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null));
       }));
       const inside = open ? h('div', { class: 'op-open' },
@@ -2551,7 +2607,7 @@
         return h('button', { type: 'button', role: 'listitem', class: `op-folder-tile ${open === o ? 'open' : ''}`, 'aria-expanded': String(open === o),
           title: `${o.name}: ${o.group.length} case number${o.group.length === 1 ? '' : 's'}`,
           onclick: () => { opFolderState.open = open === o ? '' : o.k; draw(); } },
-        h('span', { class: 'op-folder-art' }, I('folder-mission'), o.group.length > 1 ? h('span', { class: 'op-folder-count' }, String(o.group.length)) : null),
+        h('span', { class: 'op-folder-art' }, I('folder-mission'), countBadge(o.group.length, 'op-folder-count', 'case number')),
         // v1.60: Operation Number on top, name below (as in the sidebar).
         h('span', { class: 'op-folder-name op-two-line' }, ...[h('span', { class: 'op-num' }, o.op.number || 'No number', bell ? h('span', { class: 'case-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null),
           o.op.name ? h('span', { class: 'op-title' }, o.op.name) : null].filter(Boolean)));
@@ -3150,7 +3206,7 @@
     state.lastCaseId = id;
     state.tab = tab;
     noteOpened(id);
-    renderCaseList();
+    navCaseList(); // v1.165: was a full redraw at every tab
 
     const archived = Vault.isArchived(id);
     const panel = h('div', { class: 'tab-panel', role: 'tabpanel' });
@@ -4143,7 +4199,7 @@
   }
 
   /* v1.85: keyboard shortcuts. */
-  const SHORTCUTS = [['Ctrl+K', 'Find a case, Mission, person or page'], ['Alt+N', 'Quick Note into a case\'s Case History'], ['Alt+1 … Alt+9', 'The tabs of the open case, in order'], ['N', 'New case (when not typing)'], ['Ctrl+S', 'Save every change now'], ['Ctrl+\\', 'Show or hide the case list'], ['Esc', 'Close the popup'], ['?', 'This list']];
+  const SHORTCUTS = [['Ctrl+K', 'Find a case, Mission, person or page'], ['Alt+N', 'Quick Note into a case\'s Case History'], ['Alt+1 … Alt+9', 'The tabs of the open case, in order'], ['N', 'New case (when not typing)'], ['T', 'Training certificates (when not typing)'], ['Ctrl+S', 'Save every change now'], ['Ctrl+\\', 'Show or hide the case list'], ['Esc', 'Close the popup'], ['?', 'This list']];
   /* v1.131: Find (Ctrl+K). One box for cases (number, subject, notes, status: the same match as the
    * sidebar search), Missions, CaseVault's pages and actions, and two searches for the words typed:
    * every case a person is on (the person view) and inside every case's notes, reports and files.
@@ -4294,6 +4350,8 @@
     }
     if (state.connected && !popup && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
       if (e.key === 'n' || e.key === 'N') { e.preventDefault(); newCase(); return; }
+      // v1.165: T opens Other Files → Training (Alt+T is a browser menu key).
+      if (e.key === 't' || e.key === 'T') { e.preventDefault(); openTraining(); return; }
       if (e.key === '?') { e.preventDefault(); shortcutsDialog(); return; }
     }
     // Ctrl+\ shows or hides the case list (Ctrl+B is left to the browser and text fields).

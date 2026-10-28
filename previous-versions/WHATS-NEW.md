@@ -4,6 +4,18 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.162
+
+- **Consistency Checker: names.** Nicknames count as the same name (*Bill / William*, *Rick / Rich*, *Beto / Roberto*). Names are read in context: *Mary Poez / Mary Poes* is flagged as one person spelled two ways, *Jon Doe / Joan Roe* is two people and is not flagged
+- **Consistency Checker: Known Aliases.** A box on the Checks tab for the names that belong to one person (one person per line). They are saved with the case, never flagged as spelled differently, and the AI is told they are the same person
+- **Consistency Checker: addresses.** Abbreviations, *Fifth / 5th*, *North / N.*, *Mount / Mt*, the unit word (*Apt.*, *Apartment*, *Suite*, *#*) and punctuation no longer make two addresses differ
+- **Consistency Checker: weights and totals.** Weights are compared in grams (*1 oz* = *28.35 grams*). A stated total is checked against the amounts or weights listed with it (*$200, $300 and $500, a total of $1,100*: they add up to $1,000), and is only ever compared with another total. An amount the report already matches is no longer counted against the other amounts of the same sentence
+- **Consistency Checker: the Timeline buys.** Each buy on the Timeline (the Buy Summary) is checked against what the documents say about a buy on that date, and a total paid or total weight against all the buys and each suspect's buys
+- **Consistency Checker: confidence.** Every flag has a confidence (High, Medium, Low) beside its severity, with **Hide Low Confidence**. The flags are grouped by kind (Names, Addresses, Money, Weights and Totals, Dates and Times, Numbers, Plates and Phones, Statements)
+- **Consistency Checker: Mark as Reviewed and Dismiss** replace Fix / Not an issue / Explained, each with a note. A dismissed flag leaves the list (**Dismissed only** shows it). Older checks open as before
+- **Consistency Checker: AI.** A clearer prompt: spelling, formatting, abbreviations, nicknames and the same time or weight written another way are not contradictions; the AI says how sure it is, and a contradiction the rules also found is High confidence. On a slow computer the AI stops early (2 minutes a statement twice in a row, or 20 minutes in all) and the rule-based results stand
+- **Self-test:** a step for nicknames, address formatting and a wrong total
+
 ## What's new in v1.161
 
 - **Fix (case list counts):** a folder holding a single case now shows its count (1) like the others; before, the count only appeared from two cases up, so a Mission or INDEPENDENT with one case looked empty
