@@ -23,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.164.0';
+  const APP_VERSION = '1.165.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -1472,6 +1472,22 @@ const Vault = (() => {
     }
     return out.sort((a, b) => a.base.localeCompare(b.base, undefined, { numeric: true }));
   }
+  /* v1.165: small pictures of a shared file's first page (the Training cards), saved once in a hidden
+   * .thumbs folder beside the files, so they aren't drawn again from the PDF at every start. The
+   * name says which version of the file it was made from; listShared() never shows dot-names. */
+  async function readSharedThumb(key, folder, name) {
+    const dir = await sharedDir(key, folder).catch(() => null);
+    const t = dir ? await FS.getDir(dir, '.thumbs').catch(() => null) : null;
+    return t ? FS.getFile(t, name).catch(() => null) : null;
+  }
+  async function saveSharedThumb(key, folder, name, blob) {
+    const dir = await sharedDir(key, folder, true);
+    const t = await FS.getDir(dir, '.thumbs', true);
+    // Older pictures of the same file (it was replaced) go.
+    const stem = name.replace(/~[^~]*$/, '~');
+    for (const e of await FS.list(t).catch(() => [])) if (e.kind === 'file' && e.name !== name && e.name.startsWith(stem)) await FS.remove(t, e.name).catch(() => {});
+    await FS.writeData(t, name, blob);
+  }
   async function addShared(key, folder, file) {
     const dir = await sharedDir(key, folder, true);
     const name = await FS.uniqueName(dir, file.name);
@@ -2202,7 +2218,7 @@ const Vault = (() => {
     createCase, getCase, saveCase, deleteCase, restoreCaseFromBackup, caseFolderFiles, findSameFiles, checkVault, listExportFolders, saveExport, readExport, listDeleted, restoreDeleted, purgeDeleted, BIN_DAYS,
     listOperations, getOperation, operationOf, operationMembers, caseNumberTaken, createOperation, updateOperation, deleteOperation, assignCase, unlinkCase,
     archiveCase, restoreCase, isArchived, setArchiveFolder, ARCHIVE_FOLDERS, archiveFolderName, setSuspectGroup, suspectGroups,
-    OP_FOLDERS, OTHER_FOLDERS, readOpVehicles, saveOpVehicles, readOpList, saveOpList, otherCustomFolders, addOtherFolder, removeOtherFolder, listShared, addShared, readShared, deleteShared, readTraining, saveTraining, trainingRows, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
+    OP_FOLDERS, OTHER_FOLDERS, readOpVehicles, saveOpVehicles, readOpList, saveOpList, otherCustomFolders, addOtherFolder, removeOtherFolder, listShared, readSharedThumb, saveSharedThumb, addShared, readShared, deleteShared, readTraining, saveTraining, trainingRows, deleteConfirmText, deleteConfirmMatches, MOVE_MARKER,
     lockerHeader, lockerRead, lockerWrite, lockerRemove,
     getNotes, saveNotes, listChats, readChat, saveChat, deleteChat,
     getTimeline, saveTimeline, sortEvents,

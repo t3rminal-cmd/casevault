@@ -26,7 +26,7 @@ const SP = process.env.SP + '/v1112';
   await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForSelector('.general-years-section');
   const yr = String(new Date().getFullYear());
   const tiles = await p.$$eval('.general-years-section .year-tile', (x) => x.map((e) => [e.textContent.trim(), e.classList.contains('placeholder-tile')]));
-  ok(tiles.length === 1 && tiles[0][0] === yr && tiles[0][1], `an empty General Files shows a ${yr} placeholder folder: ${JSON.stringify(tiles)}`);
+  ok(tiles.length === 1 && tiles[0][0] === '0' + yr && tiles[0][1], `an empty General Files shows a ${yr} placeholder folder: ${JSON.stringify(tiles)}`);
   await p.click('.general-years-section .year-tile'); await p.waitForTimeout(300);
   ok(/Empty/.test(await p.textContent('.general-years-section')) && await p.locator('.general-years-section button:has-text("New Case")').count() === 1, 'opening it says Empty and offers New Case');
   await p.locator('.general-years-section').screenshot({ path: `${SP}/general-empty.png` }).catch(() => {});

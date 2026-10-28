@@ -213,6 +213,17 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.165
+
+- **Fix (folder counts):** every folder now shows how many it holds, including 1 and 0 (an empty folder shows a grey 0). This applies on the home page (Mission, Year and General tiles, shared folders) and in the sidebar, where the OPERATION folder and CLOSED → OPERATION now show their counts too
+- **Sidebar: a quieter look.** The buttons along the top of the sidebar are now plain outline icons in one muted colour, with colour only when you point at one or when it is on. The green padlock stays as it is. The + buttons for a new case are gone from the sidebar; use **New Case** or **New Mission** on the home page, the menu, **N** or **Ctrl+K**
+- **Training: Groups.** Edit a certificate (✎) and type a **Group** (for example *CPR* or *Firearms*); earlier group names are offered as you type. In Cards view each group gets its own heading with a count, and the ungrouped ones go last under *Other Certificates*. In Arrange, dragging a card onto a card in another group moves it into that group
+- **Training: faster.** Certificate pictures are drawn only when their card comes on screen, and each picture is saved on the SSD (in a hidden folder inside Training), so opening Training again shows them at once. A picture is redrawn only when its file changes
+- **Shortcut:** press **T** (when not typing) to open Training. The list of shortcuts (?) shows it
+- **AI: Keep the Model Loaded.** In the Consistency Checker's engine settings you can choose how long the AI model stays in memory after a task: 2, 10 (default) or 30 minutes, or *Unload When Done* to free memory straight away
+- **AI: less waiting.** The Consistency Checker's AI review now skips statements the rules have already settled with high confidence, and statements that match the source word for word. The results line shows how many were skipped
+- **Faster sidebar:** switching tabs or cases no longer redraws the whole case list when nothing in it changed
+
 ### What's new in v1.164
 
 - **Fix (drop-down lists in Firefox):** Firefox now uses its own drop-down lists. It could open its built-in list on top of CaseVault's, so the two fought over the click (Edit Alias and other forms). Firefox's list is square already; Chrome and Edge keep CaseVault's
@@ -228,18 +239,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Better addresses and phones:** compass points (NW, North), floors and buildings, the city, state and ZIP after them, PO Box #; phone extensions ("ext.", "extension", "x"), +1, dots and spaces, and "contact" / "fax" labels
 - **Known names come first:** a name from the case, your profile or the watch list always beats a guessed one
 - **Fix:** a full stop taken with an address ("Oak St.") stays in the replaced text, and putting the values back gives the original exactly
-
-### What's new in v1.162
-
-- **Consistency Checker: names.** Nicknames count as the same name (*Bill / William*, *Rick / Rich*, *Beto / Roberto*). Names are read in context: *Mary Poez / Mary Poes* is flagged as one person spelled two ways, *Jon Doe / Joan Roe* is two people and is not flagged
-- **Consistency Checker: Known Aliases.** A box on the Checks tab for the names that belong to one person (one person per line). They are saved with the case, never flagged as spelled differently, and the AI is told they are the same person
-- **Consistency Checker: addresses.** Abbreviations, *Fifth / 5th*, *North / N.*, *Mount / Mt*, the unit word (*Apt.*, *Apartment*, *Suite*, *#*) and punctuation no longer make two addresses differ
-- **Consistency Checker: weights and totals.** Weights are compared in grams (*1 oz* = *28.35 grams*). A stated total is checked against the amounts or weights listed with it (*$200, $300 and $500, a total of $1,100*: they add up to $1,000), and is only ever compared with another total. An amount the report already matches is no longer counted against the other amounts of the same sentence
-- **Consistency Checker: the Timeline buys.** Each buy on the Timeline (the Buy Summary) is checked against what the documents say about a buy on that date, and a total paid or total weight against all the buys and each suspect's buys
-- **Consistency Checker: confidence.** Every flag has a confidence (High, Medium, Low) beside its severity, with **Hide Low Confidence**. The flags are grouped by kind (Names, Addresses, Money, Weights and Totals, Dates and Times, Numbers, Plates and Phones, Statements)
-- **Consistency Checker: Mark as Reviewed and Dismiss** replace Fix / Not an issue / Explained, each with a note. A dismissed flag leaves the list (**Dismissed only** shows it). Older checks open as before
-- **Consistency Checker: AI.** A clearer prompt: spelling, formatting, abbreviations, nicknames and the same time or weight written another way are not contradictions; the AI says how sure it is, and a contradiction the rules also found is High confidence. On a slow computer the AI stops early (2 minutes a statement twice in a row, or 20 minutes in all) and the rule-based results stand
-- **Self-test:** a step for nicknames, address formatting and a wrong total
 
 ### Earlier versions
 

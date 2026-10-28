@@ -162,7 +162,7 @@
         const t0 = Date.now();
         const res = await Engine.fetchImpl()(`${d.base}/api/generate`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: choice.model, prompt: 'Reply with the single word OK.', stream: false, keep_alive: root.CVAI.KEEP_ALIVE, options: { num_predict: 8, temperature: 0, num_ctx: root.CVAI.numCtxFor(choice.profile) } }),
+          body: JSON.stringify({ model: choice.model, prompt: 'Reply with the single word OK.', stream: false, keep_alive: root.CVAI.keepAlive(), options: { num_predict: 8, temperature: 0, num_ctx: root.CVAI.numCtxFor(choice.profile) } }),
         });
         if (!res.ok) return fail(`The engine answered ${res.status}.`);
         const j = await res.json();

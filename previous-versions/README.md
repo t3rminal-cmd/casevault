@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.164)
+
+- **Fix:** drop-down lists in Firefox (its own list is used) and lists that scrolled the form
+- **Training:** Arrange the certificates in the order you want (drag or arrows)
+- **Updater 1.4:** a quieter, neutral look without the animation
+
 ## Features (v1.163)
 
 - **Document Anonymizer:** live colour-coded review, click to keep or replace a detail, five styles (Fictitious, Placeholder, REDACTED, Black Bar, Initials)

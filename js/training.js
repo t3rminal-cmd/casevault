@@ -29,6 +29,8 @@
       course: clean(x.course).slice(0, 200), provider: clean(x.provider).slice(0, 200),
       date: isoOk(x.date) ? clean(x.date) : '', expires: isoOk(x.expires) ? clean(x.expires) : '',
       hours: Number.isFinite(hrs) && hrs > 0 ? String(Math.round(hrs * 100) / 100) : '',
+      // v1.165: an optional group (CPR, Firearms…) to keep similar certificates together.
+      ...(clean(x.group) ? { group: clean(x.group).slice(0, 60) } : {}),
     };
   }
   /** The course name shown: the one typed, or the file's name without its extension. */
@@ -168,6 +170,44 @@
       return x - y;
     }).map((x) => x.f);
   }
+  /**
+   * v1.165: the files (already in their order) under their groups: [{ group, files }], each group
+   * where its first certificate is, the ones without a group last (group ''). One group '' when no
+   * certificate has a group, so the cards show as before.
+   */
+  function grouped(files, meta) {
+    const m = meta && typeof meta === 'object' ? meta : {};
+    // One way of writing each group: the one used most, else the first written ("CPR" / "cpr").
+    const spelled = new Map();
+    for (const [k, d] of Object.entries(m)) {
+      const g = k.startsWith('.') ? '' : normalize(d).group;
+      if (!g) continue;
+      const key = g.toLowerCase();
+      if (!spelled.has(key)) spelled.set(key, new Map());
+      spelled.get(key).set(g, (spelled.get(key).get(g) || 0) + 1);
+    }
+    const canon = (g) => { const c = spelled.get(g.toLowerCase()); return c ? [...c].reduce((a, b) => (b[1] > a[1] ? b : a))[0] : g; };
+    const groupOf = (f) => { const g = normalize(m[f.base]).group || ''; return g ? canon(g) : ''; };
+    const out = [];
+    for (const f of files || []) {
+      const g = groupOf(f);
+      let box = out.find((x) => x.group.toLowerCase() === g.toLowerCase());
+      if (!box) { box = { group: g, files: [] }; out.push(box); }
+      box.files.push(f);
+    }
+    const none = out.findIndex((x) => !x.group);
+    if (none >= 0 && out.length > 1) out.push(out.splice(none, 1)[0]);
+    return out;
+  }
+  /** The group names in use, A to Z (for the Group box's suggestions). */
+  function groupNames(meta) {
+    const seen = new Map(); // lower case -> as first written ("CPR" and "cpr" are one group)
+    for (const [k, d] of Object.entries(meta && typeof meta === 'object' ? meta : {})) {
+      const g = k.startsWith('.') ? '' : normalize(d).group;
+      if (g && !seen.has(g.toLowerCase())) seen.set(g.toLowerCase(), g);
+    }
+    return [...seen.values()].sort((a, b) => a.localeCompare(b));
+  }
   /** The new order (file names) after moving `name` to position `to` of the files shown. */
   function moveTo(files, name, to) {
     const names = (files || []).map((f) => f.base).filter((n) => n !== name);
@@ -176,7 +216,7 @@
     return names;
   }
 
-  const api = { ORDER_KEY, ordered, moveTo, FIELDS, PLACEHOLDERS, normalize, rows, courseOf, daysLeft, notice, renewals, totalHours, line, paragraph, context, build, longDate };
+  const api = { ORDER_KEY, ordered, moveTo, grouped, groupNames, FIELDS, PLACEHOLDERS, normalize, rows, courseOf, daysLeft, notice, renewals, totalHours, line, paragraph, context, build, longDate };
   if (isNode) module.exports = api;
   else root.CVTraining = api;
 })(this);

@@ -10,7 +10,8 @@
   const T = typeof module !== 'undefined' && module.exports ? require('../checker/nlp.js') : root.CVText;
   const AI = typeof module !== 'undefined' && module.exports ? require('../checker/ai.js') : root.CVAI;
   const D = typeof module !== 'undefined' && module.exports ? require('./draft-core.js') : root.CVDraft;
-  const KEEP_ALIVE = AI.KEEP_ALIVE; // keep the model loaded between requests (10 minutes)
+  // v1.165: the time chosen on this PC (js/checker/ai.js keepAlive), read at each request.
+  const keepAlive = () => (AI.keepAlive ? AI.keepAlive() : AI.KEEP_ALIVE);
 
   /** Smallest installed chat model (fast enough for suggestions while typing). */
   function fastModel(detected) {
@@ -61,7 +62,7 @@
         system: SUGGEST_SYSTEM,
         prompt: suggestPrompt(before, caseInfo),
         stream: false,
-        keep_alive: KEEP_ALIVE,
+        keep_alive: keepAlive(),
         options: { num_predict: 40, temperature: 0.2, top_p: 0.9, stop: ['\n\n'], num_ctx: numCtx },
       }),
     });
@@ -216,7 +217,7 @@
     if (engine && engine.embed && engine.base) {
       try {
         const post = async (input) => {
-          const res = await (fetchImpl || globalThis.fetch)(`${engine.base}/api/embed`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: engine.embed, input, keep_alive: KEEP_ALIVE }) });
+          const res = await (fetchImpl || globalThis.fetch)(`${engine.base}/api/embed`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: engine.embed, input, keep_alive: keepAlive() }) });
           if (!res.ok) throw new Error(String(res.status));
           return (await res.json()).embeddings;
         };
@@ -239,7 +240,7 @@
       method: 'POST',
       signal,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages, stream: true, keep_alive: KEEP_ALIVE, options: { temperature: 0.2, num_ctx: numCtx } }),
+      body: JSON.stringify({ model, messages, stream: true, keep_alive: keepAlive(), options: { temperature: 0.2, num_ctx: numCtx } }),
     });
     if (!res.ok || !res.body) {
       let msg = `${res.status}`;
@@ -268,7 +269,7 @@
     return full;
   }
 
-  const api = { contactLines, rephraseMessages, reviewMessages, DEA_STANDARD, KEEP_ALIVE, fastModel, numCtxForModel, isSmallModel, suggest, suggestPrompt, draftMessages, relevantPassages, streamChat, DRAFT_RULES };
+  const api = { contactLines, rephraseMessages, reviewMessages, DEA_STANDARD, KEEP_ALIVE: AI.KEEP_ALIVE, keepAlive, fastModel, numCtxForModel, isSmallModel, suggest, suggestPrompt, draftMessages, relevantPassages, streamChat, DRAFT_RULES };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVCopilot = api;
 })(this);
