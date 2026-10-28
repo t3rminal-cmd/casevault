@@ -15,10 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.167
+## What's New in v1.168
 
-- **Closed is red:** the Closed tag, the closed folder and a red border round a closed case's box
-- **Arrest:** a case closed with an arrest has an X across its box
+- **Suspects:** Fill In From a Mission's case when the same name is a suspect there
+- **Checker:** each Buy report is checked with its Surveillance report: matching inventory numbers and dates
+- **AI:** compares the Buy and Surveillance narratives side by side
 
 ## What CaseVault Does
 

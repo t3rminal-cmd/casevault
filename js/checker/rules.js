@@ -29,7 +29,7 @@
   const TYPE_LABEL = {
     date: 'Date', time: 'Time', name: 'Name', number: 'Case/report number', address: 'Address',
     plate: 'Licence plate', phone: 'Phone number', money: 'Amount', count: 'Count', weight: 'Weight',
-    total: 'Total', buy: 'Buy',
+    total: 'Total', buy: 'Buy', inventory: 'Inventory number', narrative: 'Narrative',
   };
 
   // Collects facts while remembering which characters are already used, so e.g. the digits of
@@ -127,6 +127,16 @@
     const cents = (whole, frac) => String(Math.round(Number(whole.replace(/,/g, '')) * 100 + Number((frac || '0').padEnd(2, '0'))));
     each(/\$\s?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?\b/g, s, (m) => c.add('money', cents(m[1], m[2]), m.index, m.index + m[0].length));
     each(/\b(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?\s*(?:dollars|USD)\b/gi, s, (m) => c.add('money', cents(m[1], m[2]), m.index, m.index + m[0].length));
+  }
+
+  /* v1.168: inventory numbers ("Inventory #12345678", "Inv. Nos. 12345678, 12345679 and 12345680"):
+   * the evidence a buy produced, which the Buy report and its Surveillance report must both give. */
+  const INV_RE = /\b(?:inventory|inv\.?)(?:\s+(?:numbers?|nos?\.?|nums?\.?|#'?s?))?\s*[:#]?\s*#?\s*(\d{5,10}(?:\s*(?:,|&|\/|\band\b|,\s*and\b)\s*#?\s*\d{5,10})*)\b/gi;
+  function extractInventory(s, c) {
+    each(INV_RE, s, (m) => {
+      const listAt = m.index + m[0].length - m[1].length;
+      each(/\d{5,10}/g, m[1], (n) => c.add('inventory', n[0], listAt + n.index, listAt + n.index + n[0].length));
+    });
   }
 
   const NUMBER_LABELS = 'case|report|incident|file|docket|citation|cad|event|complaint|warrant|arrest|booking|item|evidence|property|offense|offence|tracking|receipt|serial|badge|vin';
@@ -241,6 +251,7 @@
   function extractFacts(sentence) {
     const c = collector(sentence);
     extractDates(sentence, c);
+    extractInventory(sentence, c);
     extractPhones(sentence, c);
     extractTimes(sentence, c);
     extractMoney(sentence, c);
@@ -346,7 +357,7 @@
     };
   }
 
-  const TYPO_TYPES = new Set(['number', 'plate', 'phone']);
+  const TYPO_TYPES = new Set(['number', 'plate', 'phone', 'inventory']);
 
   /**
    * Compare documents. docs[i].role is 'affidavit' or 'report'.
@@ -361,7 +372,7 @@
    *  buys:    the case's Timeline buys [{ date, suspect, drug, qty, unit, paid }] (the Buy Summary):
    *           each buy and the totals are checked against what the documents say.
    */
-  function compare(inputDocs, { ignore = [], aliases = [], buys = [] } = {}) {
+  function compare(inputDocs, { ignore = [], aliases = [], buys = [], pairs = null } = {}) {
     const docs = analyze(inputDocs);
     const ignored = new Set(ignore.flatMap((t) => T.sentences(String(t || '')).flatMap((s) => extractFacts(s.text)))
       .map((f) => `${f.type}|${f.value}`));
@@ -371,11 +382,17 @@
 
     const affidavits = docs.map((d, i) => (d.role === 'affidavit' ? i : -1)).filter((i) => i >= 0);
     const reports = docs.map((d, i) => (d.role === 'report' ? i : -1)).filter((i) => i >= 0);
+    // v1.168: the Buy and Surveillance pairs. Reports of two different buys tell different events,
+    // so one pair's reports are not compared with another pair's ("$200" and "$300" are two buys).
+    const pairList = pairs || pairReports(docs);
+    const pairOf = new Map();
+    pairList.forEach((pr, n) => { pairOf.set(pr.buy, n); pairOf.set(pr.surv, n); });
+    const sameBuy = (a, b) => !pairOf.has(a) || !pairOf.has(b) || pairOf.get(a) === pairOf.get(b);
 
     // Checks: every affidavit against all reports; every report against the reports after it.
     const plans = [
       ...affidavits.map((a) => ({ from: a, against: reports, affidavit: true })),
-      ...reports.map((r, k) => ({ from: r, against: reports.slice(k + 1), affidavit: false })),
+      ...reports.map((r, k) => ({ from: r, against: reports.slice(k + 1).filter((o) => sameBuy(r, o)), affidavit: false })),
     ];
 
     for (const plan of plans) {
@@ -383,11 +400,12 @@
       const otherSents = plan.against.flatMap((d) => docs[d].sentences);
       // For "is it supported anywhere?" a report is checked against ALL other reports.
       const supportSents = plan.affidavit ? otherSents
-        : reports.filter((r) => r !== plan.from).flatMap((d) => docs[d].sentences);
+        : reports.filter((r) => r !== plan.from && sameBuy(r, plan.from)).flatMap((d) => docs[d].sentences);
 
       for (const sent of docs[plan.from].sentences) {
         for (const f of sent.facts) {
           if (f.type === 'name') continue;
+          if (f.type === 'inventory' && !plan.affidavit && pairOf.has(plan.from)) continue; // pairsCheck() does these
           const supported = supportSents.some((o) => o.facts.some((g) => g.type === f.type && sameValue(f.type, f.value, g.value)
             && (f.type !== 'count' || g.key === f.key)));
           if (supported) continue;
@@ -510,6 +528,8 @@
 
     totalsCheck(docs, push);
     if (buys && buys.length) buysCheck(docs, buys, push);
+    // v1.168: each Buy report against its Surveillance report.
+    pairsCheck(docs, pairList, push);
 
     const rank = { High: 0, Medium: 1, Low: 2 };
     return flags.sort((x, y) => rank[x.severity] - rank[y.severity]
@@ -669,6 +689,149 @@
     }
   }
 
+  /* ------------------------------------------------------------------ */
+  /* v1.168: Buy and Surveillance reports, in pairs                      */
+  /* ------------------------------------------------------------------ */
+
+  const BUY_NAME = /\b(?:buy|buys|purchase|controlled[\s_-]*(?:buy|purchase)|uc[\s_-]*buy|undercover)\b|(?:^|[\s_-])buy\d/i;
+  const SURV_NAME = /\bsurv(?:eillance|eil|\.)?\b|(?:^|[\s_-])surv\d/i;
+  const baseName = (name) => String(name || '').split('/').pop().replace(/\.[a-z0-9]+$/i, '');
+  /** 'buy' | 'surveillance' | '' from a file name ("Buy 2.pdf", "SURV-2 Report.docx"). */
+  function kindFromName(name) {
+    const b = baseName(name).replace(/_/g, ' ');
+    if (SURV_NAME.test(b)) return 'surveillance';
+    if (BUY_NAME.test(b)) return 'buy';
+    return '';
+  }
+  /** The kind of a read document: its name, else how its first lines describe it. */
+  function reportKind(doc) {
+    const byName = kindFromName(doc.name);
+    if (byName) return byName;
+    const head = (doc.paragraphs || []).slice(0, 4).map((p) => p.text).join(' ').slice(0, 600);
+    if (/\bsurveillance\s+(?:report|log|narrative|summary)\b/i.test(head)) return 'surveillance';
+    if (/\b(?:buy|controlled\s+purchase|undercover\s+purchase)\s+(?:report|narrative|summary)\b/i.test(head)) return 'buy';
+    return '';
+  }
+  // The buy's number in a file name ("Buy 2", "SURV-02", "Buy #3"), not a year or a case number.
+  const nameNumber = (name) => { const m = /(?:^|[^\d])(\d{1,2})(?!\d)(?!.*[^\d]\d{1,2}(?!\d))/.exec(baseName(name)); return m ? Number(m[1]) : null; };
+  const factValues = (doc, type) => new Set(doc.sentences.flatMap((x) => x.facts.filter((f) => f.type === type && !f.total).map((f) => f.value)));
+  // The date a report is mostly about (the one it gives most often).
+  function mainDate(doc) {
+    const n = new Map();
+    for (const x of doc.sentences) for (const f of x.facts) if (f.type === 'date' && !f.value.startsWith('XXXX')) n.set(f.value, (n.get(f.value) || 0) + 1);
+    return [...n].sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+  }
+  /**
+   * Pairs each Buy report with the Surveillance report of the same buy: the same number in their
+   * names ("Buy 2" / "Surv 2"), the same date, the same inventory numbers. With one of each they are
+   * a pair. docs: analyzed documents (or raw ones). -> [{ buy, surv, why }] (indexes into docs)
+   */
+  function pairReports(inputDocs) {
+    const docs = inputDocs.length && inputDocs[0].sentences ? inputDocs : analyze(inputDocs);
+    const reportsOnly = docs.map((d, i) => ({ d, i })).filter((x) => x.d.role !== 'affidavit');
+    const buys = reportsOnly.filter((x) => reportKind(x.d) === 'buy');
+    const survs = reportsOnly.filter((x) => reportKind(x.d) === 'surveillance');
+    if (!buys.length || !survs.length) return [];
+    const scored = [];
+    for (const b of buys) {
+      for (const v of survs) {
+        const why = [];
+        let score = 0;
+        const nb = nameNumber(b.d.name); const nv = nameNumber(v.d.name);
+        if (nb != null && nb === nv) { score += 3; why.push(`both numbered ${nb}`); }
+        const db = mainDate(b.d); const dv = mainDate(v.d);
+        if (db && db === dv) { score += 2; why.push(`the same date (${db})`); }
+        const ib = factValues(b.d, 'inventory'); const iv = factValues(v.d, 'inventory');
+        if ([...ib].some((x) => iv.has(x))) { score += 2; why.push('the same inventory numbers'); }
+        if (nb != null && nv != null && nb !== nv) score -= 3;
+        if (db && dv && db !== dv) score -= 1;
+        scored.push({ buy: b.i, surv: v.i, score, why });
+      }
+    }
+    const one = buys.length === 1 && survs.length === 1;
+    const out = [];
+    const used = new Set();
+    for (const x of scored.sort((a, b) => b.score - a.score)) {
+      if (used.has(`b${x.buy}`) || used.has(`s${x.surv}`)) continue;
+      if (x.score <= 0 && !one) continue;
+      used.add(`b${x.buy}`); used.add(`s${x.surv}`);
+      out.push({ buy: x.buy, surv: x.surv, why: x.why.length ? x.why.join(', ') : 'the only Buy and Surveillance reports' });
+    }
+    return out.sort((a, b) => a.buy - b.buy);
+  }
+
+  /**
+   * In each pair: every inventory number in one report must be in the other (a near-identical one is
+   * a typo, High); a date, an amount paid or a plate one report gives and the other doesn't is
+   * noted (Low: a surveillance officer may not have seen it).
+   */
+  function pairsCheck(docs, pairs, push) {
+    const LABEL = (i) => (reportKind(docs[i]) === 'buy' ? 'Buy report' : 'Surveillance report');
+    for (const pr of pairs) {
+      for (const [from, to] of [[pr.buy, pr.surv], [pr.surv, pr.buy]]) {
+        const mine = docs[from].sentences.flatMap((x) => x.facts.filter((f) => f.type === 'inventory').map((f) => ({ x, f })));
+        const theirs = docs[to].sentences.flatMap((x) => x.facts.filter((f) => f.type === 'inventory').map((f) => ({ x, f })));
+        const has = (list, v) => list.some((o) => o.f.value === v);
+        // A number missing on one side and a near-identical one missing on the other are one typo;
+        // each is matched once, the closest first.
+        const nearOf = new Map();
+        const taken = new Set();
+        const cands = [];
+        for (const m of mine) {
+          if (has(theirs, m.f.value)) continue;
+          for (const o of theirs) {
+            if (has(mine, o.f.value)) continue;
+            const dist = T.levenshtein(o.f.value, m.f.value);
+            if (dist <= 2) cands.push({ m, o, dist });
+          }
+        }
+        for (const k of cands.sort((a, b) => a.dist - b.dist)) {
+          if (nearOf.has(k.m) || taken.has(k.o.f.value)) continue;
+          nearOf.set(k.m, k.o); taken.add(k.o.f.value);
+        }
+        for (const m of mine) {
+          const { x, f } = m;
+          if (has(theirs, f.value)) continue;
+          const near = nearOf.get(m);
+          if (near) {
+            const [a, b] = [`${from}:${x.start}:${x.paragraph}:${f.value}`, `${to}:${near.x.start}:${near.x.paragraph}:${near.f.value}`].sort();
+            push(makeFlag(docs, {
+              severity: 'High', confidence: 'High', type: 'inventory',
+              title: `Inventory number mismatch: "${f.display}" vs "${near.f.display}"`,
+              detail: `The ${LABEL(from)} (${docs[from].name}) gives inventory number ${f.display}; its ${LABEL(to)} (${docs[to].name}) gives ${near.f.display}. One of them is likely a typo.`,
+              statement: x, statementFact: f, source: near.x, sourceFact: near.f,
+            }), `m|inventory|${a}|${b}`);
+            continue;
+          }
+          push(makeFlag(docs, {
+            severity: 'High', confidence: theirs.length ? 'High' : 'Medium', type: 'inventory',
+            title: `Inventory number ${f.display} is not in the ${LABEL(to)}`,
+            detail: `${docs[from].name} gives inventory number ${f.display}; ${docs[to].name}, its ${LABEL(to)}, ${theirs.length ? `gives ${[...new Set(theirs.map((o) => o.f.display))].join(', ')} but not this one` : 'gives no inventory numbers'}.`,
+            statement: x, statementFact: f, source: null, sourceLabel: docs[to].name,
+          }), `p|inv|${from}|${to}|${f.value}`);
+        }
+        // Facts one report of the pair gives and the other doesn't.
+        for (const type of ['date', 'money', 'plate']) {
+          const other = factValues(docs[to], type);
+          const seen = new Set();
+          for (const x of docs[from].sentences) {
+            for (const f of x.facts) {
+              if (f.type !== type || f.total || seen.has(f.value)) continue;
+              seen.add(f.value);
+              if ([...other].some((v) => sameValue(type, f.value, v))) continue;
+              push(makeFlag(docs, {
+                severity: 'Low', confidence: 'Medium', type,
+                title: `${TYPE_LABEL[type]} "${display(f)}" is not in the ${LABEL(to)}`,
+                detail: `${docs[from].name} gives ${display(f)}; its ${LABEL(to)} (${docs[to].name}) doesn't mention it. It may simply not have been seen; check that the two reports tell the same buy.`,
+                statement: x, statementFact: f, source: null, sourceLabel: docs[to].name,
+              }), `p|${type}|${from}|${to}|${f.value}`);
+            }
+          }
+        }
+      }
+    }
+  }
+
   function pickOccurrence(docs, list) {
     return list.find((o) => docs[o.sent.doc].role === 'affidavit') || list[0];
   }
@@ -697,7 +860,7 @@
     return false;
   }
 
-  const api = { extractFacts, analyze, compare, isNameVariant, TYPE_LABEL, buyGrams };
+  const api = { extractFacts, analyze, compare, isNameVariant, TYPE_LABEL, buyGrams, kindFromName, reportKind, pairReports };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVRules = api;
 })(this);

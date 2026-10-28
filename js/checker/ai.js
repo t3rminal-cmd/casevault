@@ -444,11 +444,143 @@
     return { flags, stats, complete: true, stopped: null };
   }
 
+  /* ---------------- v1.168: a Buy report and its Surveillance report ---------------- */
+
+  // The two narratives of one buy, read side by side: the buying officer's and the surveillance
+  // officer's. Only differences that change what happened are wanted; one report giving fewer
+  // details (surveillance doesn't hear the deal) is normal.
+  const PAIR_SYSTEM = [
+    'You compare two police reports about the SAME controlled buy: the BUY report (written by the officer who made the buy) and the SURVEILLANCE report (written by the officer who watched it).',
+    'Use ONLY the two reports, never outside knowledge.',
+    '',
+    'List every place where they CONTRADICT each other in a way that changes what happened:',
+    '- a different date, time or order of events (who arrived, met, handed over, left first);',
+    '- a different place, address, direction of travel or vehicle (make, colour, plate);',
+    '- different people present, or a different person doing something;',
+    '- a different amount paid, quantity, weight, drug or inventory number;',
+    '- one report says something happened that the other says did not happen.',
+    '',
+    'These are NOT contradictions; do not list them:',
+    '- one report giving details the other doesn\'t mention (surveillance cannot hear the conversation; the buyer may not see the surveillance positions);',
+    '- different wording, spelling, abbreviations, or the same time written two ways (9:40 PM / 2140 hours);',
+    '- the known aliases listed below (one person).',
+    '',
+    'For each contradiction copy ONE sentence from each report EXACTLY, character for character: "buy_quote" from the BUY report and "surveillance_quote" from the SURVEILLANCE report.',
+    'Explain in one short sentence (at most 25 words) what differs. Set "confidence" to high, medium or low.',
+    'If they agree, return an empty list. Reply with JSON only.',
+  ].join('\n');
+  const PAIR_SCHEMA = {
+    type: 'object',
+    properties: {
+      issues: {
+        type: 'array',
+        maxItems: 8,
+        items: {
+          type: 'object',
+          properties: { buy_quote: { type: 'string' }, surveillance_quote: { type: 'string' }, explanation: { type: 'string' }, confidence: { type: 'string', enum: ['high', 'medium', 'low'] } },
+          required: ['buy_quote', 'surveillance_quote', 'explanation', 'confidence'],
+        },
+      },
+    },
+    required: ['issues'],
+  };
+  /** A report's narrative for the prompt, cut to at most `chars` characters. */
+  function narrativeOf(doc, chars) {
+    const text = doc.paragraphs.map((p) => p.text.trim()).filter(Boolean).join('\n\n');
+    return text.length <= chars ? { text, cut: false } : { text: `${text.slice(0, chars)} …`, cut: true };
+  }
+  function pairPrompt(buy, surv, aliases = [], numCtx = DEFAULT_CTX) {
+    const room = Math.max(1200, Math.floor((numCtx - 700 - tokensOf(PAIR_SYSTEM) - tokensOf(JSON.stringify(PAIR_SCHEMA))) * 3.5));
+    const lb = buy.paragraphs.reduce((t, p) => t + p.text.length + 2, 0);
+    const ls = surv.paragraphs.reduce((t, p) => t + p.text.length + 2, 0);
+    // Each gets half the room; one that needs less leaves the rest to the other.
+    const half = Math.floor(room / 2);
+    const forBuy = lb < half ? lb : ls < half ? room - ls : half;
+    const b = narrativeOf(buy, forBuy);
+    const v = narrativeOf(surv, room - Math.min(forBuy, b.text.length));
+    return { text: `BUY REPORT (${buy.name}):\n${b.text}\n\nSURVEILLANCE REPORT (${surv.name}):\n${v.text}${aliasLine(aliases)}`, cut: b.cut || v.cut };
+  }
+  function parsePair(content) {
+    let obj;
+    try { obj = JSON.parse(content); } catch {
+      const m = /\{[\s\S]*\}/.exec(content || '');
+      if (!m) return null;
+      try { obj = JSON.parse(m[0]); } catch { return null; }
+    }
+    const list = Array.isArray(obj && obj.issues) ? obj.issues : null;
+    if (!list) return null;
+    return list.map((x) => ({
+      buyQuote: String((x && x.buy_quote) || ''), survQuote: String((x && x.surveillance_quote) || ''),
+      explanation: String((x && x.explanation) || '').trim(),
+      confidence: /^high$/i.test(x && x.confidence) ? 'High' : /^low$/i.test(x && x.confidence) ? 'Low' : 'Medium',
+    }));
+  }
+  // Where a quote is in a document: its paragraph and whole sentence (null when it isn't there).
+  function locate(doc, quote) {
+    for (const para of doc.paragraphs) {
+      const at = T.findVerbatim(para.text, quote);
+      if (!at) continue;
+      const sent = T.sentences(para.text).find((x) => x.start <= at.start && x.end >= at.end) || { text: para.text.slice(at.start, at.end), start: at.start, end: at.end };
+      return { doc: doc.name, docIndex: doc.docIndex, page: para.page ?? null, ...cellOf(para), paragraph: para.index, text: sent.text, start: sent.start, end: sent.end, highlight: [at.start - sent.start, at.end - sent.start] };
+    }
+    return null;
+  }
+  /**
+   * v1.168: the AI reads a Buy report and its Surveillance report together and lists where their
+   * narratives contradict each other. Both quotes must be found word for word in the reports, or
+   * the answer is dropped (as in review()). -> { flags, stats: { issues, kept, discarded }, cut }
+   */
+  async function comparePair({ buy, surv, engine, fetchImpl, signal, aliases = [], timeoutMs = 0 } = {}) {
+    fetchImpl = fetchImpl || ((...args) => globalThis.fetch(...args));
+    const prompt = pairPrompt(buy, surv, aliases, engine.numCtx || DEFAULT_CTX);
+    const own = new AbortController();
+    const onOuter = () => own.abort();
+    if (signal) signal.addEventListener('abort', onOuter);
+    const timer = timeoutMs ? setTimeout(() => own.abort(), timeoutMs) : null;
+    let data;
+    try {
+      data = await fetchJson(fetchImpl, `${engine.base}/api/chat`, {
+        method: 'POST',
+        signal: own.signal,
+        body: JSON.stringify({
+          model: engine.model, stream: false, format: PAIR_SCHEMA, keep_alive: keepAlive(),
+          options: { temperature: 0, seed: 7, num_ctx: engine.numCtx || DEFAULT_CTX },
+          messages: [{ role: 'system', content: PAIR_SYSTEM }, { role: 'user', content: prompt.text }],
+        }),
+      });
+    } finally {
+      if (timer) clearTimeout(timer);
+      if (signal) signal.removeEventListener('abort', onOuter);
+    }
+    const issues = parsePair(data && data.message && data.message.content) || [];
+    const stats = { issues: issues.length, kept: 0, discarded: 0 };
+    const flags = [];
+    let seq = 0;
+    const seen = new Set();
+    for (const x of issues) {
+      const a = locate(buy, x.buyQuote);
+      const b = locate(surv, x.survQuote);
+      if (!a || !b) { stats.discarded++; continue; } // a quote not in the report: not trusted
+      const key = `${a.paragraph}:${a.start}|${b.paragraph}:${b.start}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      stats.kept++;
+      flags.push({
+        id: `p${Date.now().toString(36)}${(seq++).toString(36)}`,
+        layer: 'ai', severity: 'Medium', confidence: x.confidence, type: 'narrative',
+        title: `Buy and Surveillance narratives differ (${surv.name})`,
+        detail: x.explanation || 'The two reports tell this part of the buy differently.',
+        statement: a, source: b, status: 'open', note: '',
+      });
+    }
+    return { flags, stats, cut: prompt.cut };
+  }
+
   /** A model's name as shown on screen: first letter capital, no ":latest" (v1.28). The real name
    * (qwen3:8b) is still what is sent to Ollama. */
   const modelName = (m) => { const s = String(m || '').replace(/:latest$/, ''); return s ? s[0].toUpperCase() + s.slice(1) : s; };
 
-  const api = { SYSTEM, aliasLine, modelName, PROFILES, KEEP_ALIVE, KEEP_CHOICES, keepChoice, setKeepChoice, keepAlive, keepMs, DEFAULT_CTX, numCtxFor, tokensOf, fitPassages, userPrompt, detect, choose, review, statementsOf, passagesOf, parseAnswer, sizeB };
+  const api = { SYSTEM, aliasLine, modelName, PROFILES, KEEP_ALIVE, KEEP_CHOICES, keepChoice, setKeepChoice, keepAlive, keepMs, DEFAULT_CTX, numCtxFor, tokensOf, fitPassages, userPrompt, detect, choose, review, comparePair, pairPrompt, parsePair, PAIR_SYSTEM, statementsOf, passagesOf, parseAnswer, sizeB };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVAI = api;
 })(this);

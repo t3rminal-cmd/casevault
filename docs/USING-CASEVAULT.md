@@ -213,6 +213,23 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.168
+
+- **Suspects: Fill In From a Mission's case.** When you add a suspect to a case (an independent one, for example) and type a name that is a suspect on another case, the note under the suspect now has a **Fill In From EX-200** button:
+  - It copies that person's date of birth, residence, description and record numbers into the boxes you left empty. Anything you already typed stays
+  - A case in a Mission (a group case) is used first, then the one with the most details
+  - While you type a name, the suspects of your other cases are suggested, those on a Mission's cases first
+- **Consistency Checker: Buy and Surveillance reports, checked in pairs.** The checker recognises a Buy report and a Surveillance report from their file names (*Buy 2.pdf*, *SURV-2.docx*, *Controlled Purchase…*) or from their first lines, and marks them in the list. It pairs each Buy report with the Surveillance report of the same buy: the same number in the name, the same date or the same inventory numbers. In each pair:
+  - **Inventory numbers must match:** a number in one report that is missing from the other is flagged High. A near-identical number (*12345678* / *12345687*) is flagged once, as a likely typo
+  - A date, an amount paid or a plate one report gives and the other doesn't is noted (Low: surveillance may not have seen it)
+  - Reports of two different buys are no longer compared with each other, so *$200* on Buy 1 and *$300* on Buy 2 isn't flagged as a mismatch
+  - The results list the pairs checked, under a new **Inventory Numbers** group
+- **AI: the two narratives side by side.** With the AI engine on, the AI reads each Buy report together with its Surveillance report and lists where the narratives contradict each other:
+  - It looks at the time, the order of events, who was there, the vehicle, the place, the amount, the drugs and the inventory numbers. A detail only one report gives doesn't count
+  - Each difference quotes both reports. An answer whose quotes aren't found word for word in the reports is dropped
+  - This works without an affidavit too: choose *None: compare the reports with each other*
+- The checker now reads inventory numbers anywhere (*Inventory #12345678*, *Inv. Nos. 12345678, 12345679 and 12345680*), so an affidavit is checked against the reports' inventory numbers too
+
 ### What's new in v1.167
 
 - **Closed is red, not green.** A closed case is now marked in red everywhere: the **Closed** tag, the closed folder icon (CLOSED in the case list, Closed Files on the home page, the Year Summary) and the case colour in the themes. This is most visible for a case closed while its Mission is still open:
@@ -230,17 +247,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
   - The buttons are no longer pinned over the other columns
 - **Narrow windows:** when a window is too narrow for one line, the table still doesn't scroll sideways or cut anything. Instead, long names wrap between words and the Strong / Weak tag goes under the password. Then the text gets a little smaller and an email breaks after its @. Phone numbers and dates never break. Hiding the sidebar gives the table more room
 - **Fix:** a new locker said *Locks after undefined minutes*, and its Lock After list showed 2 minutes. Both now show the real setting, 5 minutes
-
-### What's new in v1.165
-
-- **Fix (folder counts):** every folder now shows how many it holds, including 1 and 0 (an empty folder shows a grey 0). This applies on the home page (Mission, Year and General tiles, shared folders) and in the sidebar, where the OPERATION folder and CLOSED → OPERATION now show their counts too
-- **Sidebar: a quieter look.** The buttons along the top of the sidebar are now plain outline icons in one muted colour, with colour only when you point at one or when it is on. The green padlock stays as it is. The + buttons for a new case are gone from the sidebar; use **New Case** or **New Mission** on the home page, the menu, **N** or **Ctrl+K**
-- **Training: Groups.** Edit a certificate (✎) and type a **Group** (for example *CPR* or *Firearms*); earlier group names are offered as you type. In Cards view each group gets its own heading with a count, and the ungrouped ones go last under *Other Certificates*. In Arrange, dragging a card onto a card in another group moves it into that group
-- **Training: faster.** Certificate pictures are drawn only when their card comes on screen, and each picture is saved on the SSD (in a hidden folder inside Training), so opening Training again shows them at once. A picture is redrawn only when its file changes
-- **Shortcut:** press **T** (when not typing) to open Training. The list of shortcuts (?) shows it
-- **AI: Keep the Model Loaded.** In the Consistency Checker's engine settings you can choose how long the AI model stays in memory after a task: 2, 10 (default) or 30 minutes, or *Unload When Done* to free memory straight away
-- **AI: less waiting.** The Consistency Checker's AI review now skips statements the rules have already settled with high confidence, and statements that match the source word for word. The results line shows how many were skipped
-- **Faster sidebar:** switching tabs or cases no longer redraws the whole case list when nothing in it changed
 
 ### Earlier versions
 

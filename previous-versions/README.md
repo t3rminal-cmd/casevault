@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.167)
+
+- **Closed is red:** the Closed tag, the closed folder and a red border round a closed case's box
+- **Arrest:** a case closed with an arrest has an X across its box
+
 ## Features (v1.166)
 
 - **Secure Locker:** each row on one line, nothing cut off and no sideways scroll bar

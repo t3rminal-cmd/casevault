@@ -57,7 +57,7 @@
             // v1.69: the same fields as an offender on the Draft (all but Clothing Description).
             ['gender', 'identity', 'race', 'complexion', 'height', 'weight', 'hair', 'hairStyle', 'eyes', 'veteran', 'relation', 'irNumber', 'fbiNumber', 'idocNumber', 'phone', 'moniker', 'marks'].map((k) => infoInput(k)));
           // v1.67: Not Identified: the name box is set aside (kept, in case it's filled later).
-          const nameIn = input('name', { maxlength: 120, 'aria-label': `${who} name` });
+          const nameIn = input('name', { maxlength: 120, 'aria-label': `${who} name`, list: 'suspect-known' }); // v1.168: suspects of other cases suggested
           const notId = h('input', { type: 'checkbox', checked: !!s.notIdentified, 'aria-label': `${who} not identified` });
           const showNotId = () => { nameIn.disabled = notId.checked; nameIn.placeholder = notId.checked ? 'Not Identified' : ''; card.classList.toggle('not-identified', notId.checked); };
           notId.addEventListener('change', () => { s.notIdentified = notId.checked; showNotId(); save(); });
@@ -67,9 +67,20 @@
             if (s.notIdentified || !String(s.name || '').trim() || !root.CVPersonView.findDuplicates) { dup.hidden = true; return; }
             const hits = await root.CVPersonView.findDuplicates({ name: s.name, dob: s.dob }, c).catch(() => []);
             if (!hits.length) { dup.hidden = true; return; }
+            // v1.168: their record on that case (a Mission's case first) can fill in this one's empty boxes.
+            const src = hits.find((x) => x.suspect && x.filled);
+            const op = src && src.c.operationId ? opOf(src.c) : null;
+            const fill = src ? h('button', { class: 'btn small suspect-fill', type: 'button', icon: 'person-plus',
+              title: `Fills in the empty boxes (date of birth, residence, description and record numbers) from ${src.name} on ${src.c.number || 'that case'}${op ? ` (${op.number || op.name})` : ''}. What you already typed stays.`,
+              onclick: () => {
+                const n = root.CVPersonView.fillFrom(s, src.suspect);
+                if (!n) { root.CaseVaultUI.toast('Nothing to fill in: every box already has something.', 'info'); return; }
+                save(); draw();
+                root.CaseVaultUI.toast(`Filled in ${n} detail${n === 1 ? '' : 's'} of ${src.name} from ${src.c.number || 'the other case'}${op ? ` (${op.number || op.name})` : ''}.`, 'success');
+              } }, `Fill In From ${src.c.number || 'That Case'}`) : null;
             dup.replaceChildren(I('person-exclamation'), h('span', {}, `${hits[0].sameDob ? 'The same person (name and date of birth)' : 'Someone with this name'} is on ${hits.length === 1 ? 'another case' : `${hits.length} other cases`}: `),
-              ...hits.slice(0, 4).flatMap((x, n) => [n ? ', ' : '', h('a', { href: `#/case/${CVRoute.enc(x.c.id)}`, title: `${x.name}${x.dob ? `, DOB ${x.dob}` : ''}` }, x.c.number || 'No case number')]),
-              hits.length > 4 ? ` and ${hits.length - 4} more` : '');
+              ...hits.slice(0, 4).flatMap((x, n) => [n ? ', ' : '', h('a', { href: `#/case/${CVRoute.enc(x.c.id)}`, title: `${x.name}${x.dob ? `, DOB ${x.dob}` : ''}${x.c.operationId && opOf(x.c) ? `\nMission ${opOf(x.c).number || opOf(x.c).name}` : ''}` }, x.c.number || 'No case number')]),
+              hits.length > 4 ? ` and ${hits.length - 4} more` : '', fill);
             dup.hidden = false;
           };
           nameIn.addEventListener('change', checkDup);
@@ -85,13 +96,22 @@
             h('button', { class: 'icon-btn danger-icon contact-remove', type: 'button', title: 'Remove this suspect', onclick: () => { c.suspects.splice(i, 1); draw(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Remove ${who}`))),
             dup,
             demo);
+          // v1.168: the suggestions list now, not later from the page watcher (which moved the box and
+          // took the focus away from a new suspect's name).
+          if (root.CVCombo && root.CVCombo.upgrade) root.CVCombo.upgrade(nameIn);
           showNotId();
           return card;
         }) : [h('p', { class: 'muted small suspect-empty empty-note' }, I('person-vcard'), h('span', {}, 'No suspects yet. Add suspect makes one.'))]));
       };
       draw();
+      // v1.168: the suspects of the other cases (a Mission's first), as suggestions while typing a name.
+      const known = h('datalist', { id: 'suspect-known' });
+      if (root.CVPersonView && root.CVPersonView.knownSuspects) {
+        root.CVPersonView.knownSuspects(c).then((list) => known.replaceChildren(...list.slice(0, 300).map((x) => h('option', { value: x.name, label: [x.dob, x.number].filter(Boolean).join(' · ') })))).catch(() => {});
+      }
       return h('section', { class: 'contacts suspects cv-boxed', 'aria-labelledby': 'suspects-title' },
         h('h3', { id: 'suspects-title', icon: 'person-exclamation', title: 'The people this case is about. The age is worked out from the date of birth. The main suspect fills {{suspect.name}}, {{suspect.dob}}, {{suspect.age}} and so on in templates; {{suspects}} lists them all.' }, 'Suspects'),
+        known,
         h('datalist', { id: 'suspect-hair' }, CVReportFields.PICKS.hair.map((x) => h('option', { value: x }))),
         h('datalist', { id: 'suspect-hairstyle' }, CVReportFields.PICKS.hairStyle.map((x) => h('option', { value: x }))),
         h('datalist', { id: 'suspect-eyes' }, CVReportFields.PICKS.eyes.map((x) => h('option', { value: x }))),
