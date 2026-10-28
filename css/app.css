@@ -4587,3 +4587,43 @@ body:not(.sidebar-collapsed) .sidebar-head { padding-left: .3rem; padding-right:
 /* v1.165: Training: certificates under their group's heading. */
 .cert-groups { display: grid; gap: 1rem; }
 .cert-group-head { margin: 0 0 .4rem; font-size: var(--fs-text); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; border-bottom: 1px solid var(--border); padding-bottom: .2rem; }
+
+/* v1.166: each locker row on one line, nothing cut and no sideways scroll bar. The buttons are no
+   longer pinned over the other columns; the table takes the width it has. Only when the window is
+   too narrow (.tight, set by the page) do long names wrap, between words. */
+.locker-section .table-wrap:has(.locker-rows) { overflow-x: visible; }
+.locker-rows { min-width: 0; width: 100%; table-layout: auto; }
+.locker-rows th, .locker-rows td { overflow: visible; white-space: nowrap; min-width: 0; width: auto; }
+.locker-rows th:last-child, .locker-rows td.col-actions { position: static; box-shadow: none; width: 1%; white-space: nowrap; }
+.locker-rows th.col-secret, .locker-rows th.col-k-pin, .locker-rows th.col-k-email, .locker-rows th.col-auto, .locker-rows th.col-date, .locker-rows .secret-cell { width: auto; }
+.locker-rows td.text-cell, .locker-rows td.copy-cell .copy-text { white-space: nowrap; }
+.locker-rows th { vertical-align: middle; }
+.locker-rows .secret-cell .secret-wrap { display: inline-flex; align-items: center; vertical-align: middle; }
+.locker-rows .secret-cell .pw-tags { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: .4rem; margin: 0 0 0 .4rem; vertical-align: middle; }
+.locker-rows .secret-cell .pw-age { display: inline-flex; align-items: center; gap: .2rem; margin: 0; }
+.locker-rows .secret-cell .pw-age svg { width: .9em; height: .9em; }
+.locker-rows.tight td.text-cell, .locker-rows.tight th { white-space: normal; overflow-wrap: normal; word-break: normal; }
+.locker-rows .icon-btn { width: 1.75rem; height: 1.75rem; }
+.locker-rows .secret-wrap .icon-btn:first-of-type { margin-left: .2rem; }
+.locker-rows td.copy-cell .copy-user { width: 1.75rem; height: 1.75rem; flex: 0 0 1.75rem; }
+.locker-rows .locker-hist-btn { padding: .15rem .4rem; }
+.locker-acts { grid-template-columns: 1.4rem 1.75rem 1.75rem; column-gap: .15rem; }
+.locker-acts.has-old { grid-template-columns: 1.4rem auto 1.75rem 1.75rem; }
+.locker-acts.has-move { grid-template-columns: 1.4rem 1.75rem 3.6rem 1.75rem; }
+.locker-acts.has-old.has-move { grid-template-columns: 1.4rem auto 1.75rem 3.6rem 1.75rem; }
+.locker-acts .locker-move { display: inline-flex; border: 0; }
+.locker-rows th, .locker-rows td { padding-left: .45rem; padding-right: .45rem; }
+.locker-rows th.col-actions { background: var(--surface-2); }
+.locker-rows td.col-actions { background: var(--surface); }
+.locker-rows tbody tr:nth-child(even) > td.col-actions { background: color-mix(in srgb, var(--surface-2) 38%, var(--surface)); } /* striped like the rest of the row */
+.locker-rows .secret-text { min-width: 0; }
+.locker-rows .secret-wrap { gap: 0; }
+/* Too narrow for one line: names wrap between words, the password tags go under it, then an email breaks after its @
+   (and only if it still does not fit, anywhere). */
+.locker-rows.tighter { font-size: .88em; } /* a little smaller text before anything breaks */
+.locker-rows.tighter td.copy-cell .copy-text { white-space: normal; overflow-wrap: normal; word-break: normal; }
+.locker-rows.tightest td.copy-cell .copy-text { overflow-wrap: anywhere; }
+.locker-rows.tight .secret-cell .pw-tags { display: flex; margin: .1rem 0 0; }
+/* The locker tables use the whole width of the window, so a row stays on one line on a wide screen. */
+#main > section.locker-page:has(.locker-rows) { max-width: none; }
+.locker-rows td.col-k-phone, .locker-rows td.col-k-dob, .locker-rows td.col-k-age { white-space: nowrap !important; } /* a phone number or a date never breaks */

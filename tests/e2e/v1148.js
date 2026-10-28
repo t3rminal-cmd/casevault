@@ -86,7 +86,7 @@ const SP = process.env.SP + '/v1148';
   const inp = p.locator('#dialog[open] .locker-form input');
   await inp.nth(0).fill('Example Mail'); await inp.nth(1).fill('jdoe'); await inp.nth(2).fill('Synthetic-1');
   await p.click('#dialog[open] button[type=submit]'); await p.waitForTimeout(700);
-  ok((await p.textContent('.locker-rows .pw-age')).trim() === 'Changed today', 'a new password is "Changed today"');
+  ok((await p.textContent('.locker-rows .pw-age')).trim() === 'Today', 'a new password says it was changed Today');
   ok(await p.$('.locker-rows .copy-user') !== null, 'the username has a Copy button');
   await p.context().grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
   await p.click('.locker-rows .copy-user'); await p.waitForTimeout(300);

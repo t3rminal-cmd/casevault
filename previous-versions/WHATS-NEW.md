@@ -4,6 +4,15 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.163
+
+- **Document Anonymizer: live, colour-coded review.** What's found shows as you type: red critical details (Social Security, card and bank numbers, dates of birth, ID numbers), orange high (phones, emails, addresses, plates, VINs, case numbers, known names), yellow medium (guessed names). Click a highlight to keep that detail (every mention of it), click again to replace it; red ones and known names are always replaced. The result updates as you go
+- **Document Anonymizer: styles.** Fictitious (John Doe, as before), Placeholder [NAME_1], REDACTED, Black Bar ████, or Initials (J. D., for names only; other details get their placeholder so no digit is given away). The local AI's second look goes with the Fictitious style
+- **Better names** for the Anonymizer, the mail check and the Library: hyphenated (Roe-Poe-Doe), Mc / Mac / O', particles (Maria de la Cruz, Pieter van der Poe), DE LA CRUZ, Maria, and a name in capitals in running text (arrested JOHN DOE); headings in capitals are left alone. A word that isn't a name no longer hides the name next to it ("Later, John Doe"), and a hyphenated or Mc / O' name is found at the start of a sentence too
+- **Better addresses and phones:** compass points (NW, North), floors and buildings, the city, state and ZIP after them, PO Box #; phone extensions ("ext.", "extension", "x"), +1, dots and spaces, and "contact" / "fax" labels
+- **Known names come first:** a name from the case, your profile or the watch list always beats a guessed one
+- **Fix:** a full stop taken with an address ("Oak St.") stays in the replaced text, and putting the values back gives the original exactly
+
 ## What's new in v1.162
 
 - **Consistency Checker: names.** Nicknames count as the same name (*Bill / William*, *Rick / Rich*, *Beto / Roberto*). Names are read in context: *Mary Poez / Mary Poes* is flagged as one person spelled two ways, *Jon Doe / Joan Roe* is two people and is not flagged

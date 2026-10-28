@@ -213,6 +213,18 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.166
+
+- **Secure Locker: each row on one line.** The Password Manager and Covert tables show each row on one line, with nothing cut off and no sideways scroll bar:
+  - **Strong / Weak** and the password's age now sit beside the password instead of under it. The age is short (*Today*, *45 days*), and the full date is in the hover box
+  - **Edit** is now a pencil icon (point at it to see *Edit*), and the row buttons are smaller and closer together
+  - The tables use the whole width of the window
+  - The **Department** column shows only once a row has a department
+  - Shorter column headings: *Alias*, *Birth Date*, *Phone*, *Platform*, *Handle*. Point at one to see the full name
+  - The buttons are no longer pinned over the other columns
+- **Narrow windows:** when a window is too narrow for one line, the table still doesn't scroll sideways or cut anything. Instead, long names wrap between words and the Strong / Weak tag goes under the password. Then the text gets a little smaller and an email breaks after its @. Phone numbers and dates never break. Hiding the sidebar gives the table more room
+- **Fix:** a new locker said *Locks after undefined minutes*, and its Lock After list showed 2 minutes. Both now show the real setting, 5 minutes
+
 ### What's new in v1.165
 
 - **Fix (folder counts):** every folder now shows how many it holds, including 1 and 0 (an empty folder shows a grey 0). This applies on the home page (Mission, Year and General tiles, shared folders) and in the sidebar, where the OPERATION folder and CLOSED → OPERATION now show their counts too
@@ -230,15 +242,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Fix (drop-down lists):** moving through a long list (with the arrow keys or by typing a letter) scrolls only the list, never the form behind it, and picking a value no longer scrolls the form either
 - **Training: Arrange.** In Other Files → Training (Cards), **Arrange** lets you put the certificates in the order you want, to keep similar ones together: drag a card onto another to take its place, or use the arrows under each card (it shows its place, *2 of 6*). **Done Arranging** finishes. The order is kept on the SSD (in the Training folder) and used by the Cards and List views; a certificate added later goes last. The Training Record PDF still lists them by date
 - **Updater 1.4: a quieter look.** Neutral greys with a charcoal main button, a plain light header, a thin progress bar and thin borders. The spinning vault door is gone: while it works the header just says *Working…*
-
-### What's new in v1.163
-
-- **Document Anonymizer: live, colour-coded review.** What's found shows as you type: red critical details (Social Security, card and bank numbers, dates of birth, ID numbers), orange high (phones, emails, addresses, plates, VINs, case numbers, known names), yellow medium (guessed names). Click a highlight to keep that detail (every mention of it), click again to replace it; red ones and known names are always replaced. The result updates as you go
-- **Document Anonymizer: styles.** Fictitious (John Doe, as before), Placeholder [NAME_1], REDACTED, Black Bar ████, or Initials (J. D., for names only; other details get their placeholder so no digit is given away). The local AI's second look goes with the Fictitious style
-- **Better names** for the Anonymizer, the mail check and the Library: hyphenated (Roe-Poe-Doe), Mc / Mac / O', particles (Maria de la Cruz, Pieter van der Poe), DE LA CRUZ, Maria, and a name in capitals in running text (arrested JOHN DOE); headings in capitals are left alone. A word that isn't a name no longer hides the name next to it ("Later, John Doe"), and a hyphenated or Mc / O' name is found at the start of a sentence too
-- **Better addresses and phones:** compass points (NW, North), floors and buildings, the city, state and ZIP after them, PO Box #; phone extensions ("ext.", "extension", "x"), +1, dots and spaces, and "contact" / "fax" labels
-- **Known names come first:** a name from the case, your profile or the watch list always beats a guessed one
-- **Fix:** a full stop taken with an address ("Oak St.") stays in the replaced text, and putting the values back gives the original exactly
 
 ### Earlier versions
 

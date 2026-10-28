@@ -4,6 +4,13 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.165)
+
+- **Fix:** every folder shows its count, including 1 and 0, on the home page and sidebar
+- **Sidebar:** plain outline icons (green padlock kept); the + buttons are gone
+- **Training:** certificate Groups, pictures saved on the SSD, and **T** to open it
+- **AI:** Keep the Model Loaded setting, and fewer statements sent to the AI
+
 ## Features (v1.164)
 
 - **Fix:** drop-down lists in Firefox (its own list is used) and lists that scrolled the form

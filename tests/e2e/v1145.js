@@ -106,9 +106,9 @@ const SP = process.env.SP + '/v1145';
   ok(await p.$eval('.locker-table tbody tr[data-id] button[title="Move up"]', (e) => e.disabled), 'the first one cannot move up');
   await p.click('.locker-section button:has-text("Sort A")'); await p.waitForTimeout(500);
   ok((await order()).join() === 'Alpha Mail,Mid Records,Zeta Portal', `Sort A to Z: ${(await order()).join()}`);
-  // Edit (a button with its word) changes the password; the old one is kept.
-  const editTxt = (await p.textContent('.locker-table tr:has-text("Alpha Mail") .locker-edit')).trim();
-  ok(editTxt === 'Edit', `the Edit button says Edit: ${editTxt}`);
+  // Edit changes the password; the old one is kept. (v1.166: an icon named Edit, to keep the row on one line.)
+  const editTxt = await p.getAttribute('.locker-table tr:has-text("Alpha Mail") .locker-edit', 'title');
+  ok(/^Edit/.test(editTxt), `the Edit button says Edit: ${editTxt}`);
   await p.click('.locker-table tr:has-text("Alpha Mail") .locker-edit'); await p.waitForSelector('#dialog[open] .locker-form');
   await p.locator('#dialog[open] .locker-form input').nth(2).fill('New-Pass-2');
   await p.click('#dialog[open] button[type=submit]'); await p.waitForTimeout(700);
