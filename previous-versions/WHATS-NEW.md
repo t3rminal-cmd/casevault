@@ -4,6 +4,13 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.164
+
+- **Fix (drop-down lists in Firefox):** Firefox now uses its own drop-down lists. It could open its built-in list on top of CaseVault's, so the two fought over the click (Edit Alias and other forms). Firefox's list is square already; Chrome and Edge keep CaseVault's
+- **Fix (drop-down lists):** moving through a long list (with the arrow keys or by typing a letter) scrolls only the list, never the form behind it, and picking a value no longer scrolls the form either
+- **Training: Arrange.** In Other Files → Training (Cards), **Arrange** lets you put the certificates in the order you want, to keep similar ones together: drag a card onto another to take its place, or use the arrows under each card (it shows its place, *2 of 6*). **Done Arranging** finishes. The order is kept on the SSD (in the Training folder) and used by the Cards and List views; a certificate added later goes last. The Training Record PDF still lists them by date
+- **Updater 1.4: a quieter look.** Neutral greys with a charcoal main button, a plain light header, a thin progress bar and thin borders. The spinning vault door is gone: while it works the header just says *Working…*
+
 ## What's new in v1.163
 
 - **Document Anonymizer: live, colour-coded review.** What's found shows as you type: red critical details (Social Security, card and bank numbers, dates of birth, ID numbers), orange high (phones, emails, addresses, plates, VINs, case numbers, known names), yellow medium (guessed names). Click a highlight to keep that detail (every mention of it), click again to replace it; red ones and known names are always replaced. The result updates as you go

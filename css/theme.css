@@ -54,7 +54,7 @@
   /* Status: one colour per meaning, everywhere. */
   --st-open: #2f6db5; --st-open-soft: rgba(47, 109, 181, .12);
   --st-pending: #946200; --st-pending-soft: rgba(148, 98, 0, .13);
-  --st-closed: #2e7d4f; --st-closed-soft: rgba(46, 125, 79, .12);
+  --st-closed: #a3262e; --st-closed-soft: rgba(163, 38, 46, .1); /* v1.167: closed is red (was green) */
   --st-archived: #6b665c; --st-archived-soft: rgba(107, 102, 92, .14);
   /* Sections: Missions navy-blue, General Files muted plum. */
   --sec-mission: #2f6db5;
@@ -73,7 +73,7 @@
     --shadow: 0 1px 2px rgba(0, 0, 0, .3); --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, .55); --topbar-bg: rgba(23, 29, 39, .92);
     --box-edge: #34404f; --box-line: #435064;
     --st-open: #8fb3e0; --st-open-soft: rgba(143, 179, 224, .15); --st-pending: #e2b552; --st-pending-soft: rgba(226, 181, 82, .15);
-    --st-closed: #6cc08f; --st-closed-soft: rgba(108, 192, 143, .14); --st-archived: #b1aa9d; --st-archived-soft: rgba(177, 170, 157, .14);
+    --st-closed: #ef8a86; --st-closed-soft: rgba(239, 138, 134, .15); --st-archived: #b1aa9d; --st-archived-soft: rgba(177, 170, 157, .14);
     --sec-mission: #8fb3e0; --sec-general: #b3a3d6; --hero-1: #16233a; --hero-2: #213a5c;
     color-scheme: dark;
   }
@@ -87,7 +87,7 @@
   --shadow: 0 1px 2px rgba(0, 0, 0, .3); --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, .55); --topbar-bg: rgba(23, 29, 39, .92);
   --box-edge: #34404f; --box-line: #435064;
   --st-open: #8fb3e0; --st-open-soft: rgba(143, 179, 224, .15); --st-pending: #e2b552; --st-pending-soft: rgba(226, 181, 82, .15);
-  --st-closed: #6cc08f; --st-closed-soft: rgba(108, 192, 143, .14); --st-archived: #b1aa9d; --st-archived-soft: rgba(177, 170, 157, .14);
+  --st-closed: #ef8a86; --st-closed-soft: rgba(239, 138, 134, .15); --st-archived: #b1aa9d; --st-archived-soft: rgba(177, 170, 157, .14);
   --sec-mission: #8fb3e0; --sec-general: #b3a3d6; --hero-1: #16233a; --hero-2: #213a5c;
   color-scheme: dark;
 }
