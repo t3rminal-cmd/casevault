@@ -446,7 +446,7 @@ tr.clickable:hover td { background: var(--surface-2); }
 
 .flag-list { display: grid; gap: .8rem; }
 .flag { background: var(--surface); border: 1px solid var(--border); border-left: 5px solid var(--sev); border-radius: var(--radius); padding: .75rem 1rem; display: grid; gap: .55rem; }
-.flag.status-fix, .flag.status-not-issue, .flag.status-explained { opacity: .72; }
+.flag.status-fix, .flag.status-not-issue, .flag.status-explained, .flag.status-reviewed, .flag.status-dismissed { opacity: .72; }
 .flag-head { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
 .flag-title { word-break: break-word; }
 .layer-badge { font-size: var(--fs-tiny); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding: .1em .5em; border-radius: 4px; background: var(--surface-2); color: var(--muted); }
@@ -4542,3 +4542,14 @@ body:not(.sidebar-collapsed) .sidebar-head { padding-left: .3rem; padding-right:
 .locker-acts > * { margin: 0 !important; }
 .locker-acts .locker-has-notes { display: inline-flex; justify-self: center; }
 .locker-acts .locker-move { margin: 0; }
+
+/* v1.162: Consistency Checker: confidence badges, flag groups, Hide Low Confidence. */
+.pill.conf { font-size: var(--fs-tiny); font-weight: 700; padding: .1em .5em; border-radius: 0; border: 1px solid currentColor; background: transparent; white-space: nowrap; }
+.pill.conf-high { color: var(--danger); }
+.pill.conf-medium { color: var(--warn); }
+.pill.conf-low { color: var(--muted); }
+.flag-group { display: grid; gap: .8rem; }
+.flag-group + .flag-group { margin-top: .6rem; }
+.flag-group-head { margin: .2rem 0 0; font-size: var(--fs-h3, 1rem); border-bottom: 1px solid var(--border); padding-bottom: .25rem; }
+.filters .hide-low { margin: 0; font-size: var(--fs-small); }
+.chk-aliases { font-size: var(--fs-text); }

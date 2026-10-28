@@ -187,7 +187,102 @@
     return out.padEnd(4, '0');
   }
 
-  const api = { normalize, sentences, tokens, terms, similarity, createIndex, findVerbatim, levenshtein, soundex };
+
+  /* ---------------- v1.162: names ---------------- */
+
+  // Common first names and their nicknames. Each line is one group: any two names in a group are
+  // the same first name (Bill / William), so they are never flagged as a spelling difference.
+  // A nickname can sit in more than one group (Alex: Alexander and Alexandra).
+  const NICKNAME_GROUPS = [
+    'william bill billy will willy liam', 'robert bob bobby rob robbie bert', 'richard rick ricky rich richie dick',
+    'james jim jimmy jamie', 'john jack johnny jon', 'jonathan jon jonny john', 'joseph joe joey', 'michael mike mikey mick',
+    'thomas tom tommy', 'charles charlie chuck chas', 'christopher chris kris topher', 'daniel dan danny', 'anthony tony',
+    'edward ed eddie ted ned', 'samuel sam sammy', 'alexander alex al xander', 'andrew andy drew', 'benjamin ben benny',
+    'nicholas nick nicky', 'matthew matt matty', 'steven steve stevie', 'stephen steve stevie', 'timothy tim timmy',
+    'gregory greg', 'jeffrey jeff', 'kenneth ken kenny', 'lawrence larry', 'raymond ray', 'ronald ron ronnie',
+    'donald don donnie', 'gerald gerry jerry', 'harold hal harry', 'henry hank harry', 'francis frank fran',
+    'zachary zach zack', 'nathaniel nate nathan', 'joshua josh', 'jacob jake', 'david dave davey', 'douglas doug',
+    'frederick fred freddy', 'peter pete', 'phillip phil', 'philip phil', 'walter walt wally', 'eugene gene',
+    'leonard leo len lenny', 'vincent vince vinny', 'patrick pat paddy', 'terrence terry', 'albert al bert',
+    'francisco frank paco pancho', 'jose pepe', 'antonio tony tono', 'enrique kike quique', 'ignacio nacho',
+    'alejandro alex ale', 'roberto beto', 'alberto beto', 'eduardo lalo', 'guillermo memo', 'jesus chuy',
+    'manuel manny manolo', 'rafael rafa', 'ricardo ricky', 'guadalupe lupe', 'gustavo gus', 'fernando fer nando',
+    'elizabeth liz lizzy beth betty eliza libby', 'katherine kate katie kathy kat', 'catherine cathy cat kate katie',
+    'margaret maggie meg peggy marge', 'jennifer jen jenny', 'patricia pat patty trish tricia', 'susan sue suzy',
+    'deborah debbie deb', 'rebecca becky', 'victoria vicky tori', 'theresa terry tess', 'teresa terry tess',
+    'dorothy dot dottie', 'abigail abby', 'samantha sam sammie', 'alexandra alex lexi sandra', 'isabella bella izzy',
+    'olivia liv', 'christina chris tina', 'kimberly kim', 'jessica jess jessie', 'cynthia cindy', 'barbara barb babs',
+    'pamela pam', 'stephanie steph', 'jacqueline jackie', 'josephine jo josie', 'josefina pepa', 'maria mari',
+  ];
+  const NICK = new Map(); // name -> Set of group indexes
+  NICKNAME_GROUPS.forEach((g, i) => { for (const n of g.split(' ')) { if (!NICK.has(n)) NICK.set(n, new Set()); NICK.get(n).add(i); } });
+
+  /** True when two first names are the same name or nicknames of one name (Bill / William). */
+  function sameFirstName(a, b) {
+    a = String(a || '').toLowerCase(); b = String(b || '').toLowerCase();
+    if (a === b) return true;
+    const A = NICK.get(a); const B = NICK.get(b);
+    if (!A || !B) return false;
+    for (const i of A) if (B.has(i)) return true;
+    return false;
+  }
+
+  /**
+   * Known aliases of a case: one person per line, names separated by commas, slashes, ";", " aka "
+   * or " a/k/a ". Returns groups of lower-case words that belong to the same person, so the checker
+   * never flags "Rick" vs "Ricky" or "Poe" vs a moniker as a spelling difference.
+   * "Ricky Poe, Rick Poe, Little R" -> [['ricky', 'poe', 'rick', 'little']] (2+ letters per word).
+   */
+  function parseAliases(text) {
+    return String(text || '').split(/\n+/).map((line) => line.split(/\s*(?:,|;|\/|\ba\/?k\/?a\b|\baka\b)\s*/i)
+      .flatMap((n) => normalize(n).toLowerCase().match(/[a-z][a-z'-]+/g) || [])
+      .map((w) => w.replace(/'s$/, '')))
+      .map((words) => [...new Set(words)])
+      .filter((words) => words.length > 1);
+  }
+
+  /* ---------------- v1.162: addresses ---------------- */
+
+  // Street suffixes and designators in their short form, so "Street" and "St." read the same.
+  const STREET_SUFFIX = {
+    street: 'st', st: 'st', str: 'st', avenue: 'ave', ave: 'ave', av: 'ave', road: 'rd', rd: 'rd', boulevard: 'blvd', blvd: 'blvd',
+    drive: 'dr', dr: 'dr', lane: 'ln', ln: 'ln', court: 'ct', ct: 'ct', way: 'way', wy: 'way', place: 'pl', pl: 'pl', highway: 'hwy',
+    hwy: 'hwy', parkway: 'pkwy', pkwy: 'pkwy', terrace: 'ter', ter: 'ter', circle: 'cir', cir: 'cir', trail: 'trl', trl: 'trl',
+    square: 'sq', sq: 'sq', alley: 'aly', aly: 'aly', expressway: 'expy', expy: 'expy', freeway: 'fwy', fwy: 'fwy',
+  };
+  const DIRECTION = { north: 'n', south: 's', east: 'e', west: 'w', northeast: 'ne', northwest: 'nw', southeast: 'se', southwest: 'sw', n: 'n', s: 's', e: 'e', w: 'w', ne: 'ne', nw: 'nw', se: 'se', sw: 'sw' };
+  const ORDINAL = {
+    first: '1st', second: '2nd', third: '3rd', fourth: '4th', fifth: '5th', sixth: '6th', seventh: '7th', eighth: '8th', ninth: '9th',
+    tenth: '10th', eleventh: '11th', twelfth: '12th', thirteenth: '13th', fourteenth: '14th', fifteenth: '15th', sixteenth: '16th',
+    seventeenth: '17th', eighteenth: '18th', nineteenth: '19th', twentieth: '20th',
+  };
+  const WORD = { mount: 'mt', mt: 'mt', fort: 'ft', ft: 'ft' };
+  const UNIT_WORDS = /^(apt|apartment|unit|suite|ste|no|number|rm|room|fl|floor|#)$/;
+
+  /**
+   * One canonical form of a street address, so formatting never makes a difference:
+   * "1420 N. Fifth Avenue, Apt. #3-B" and "1420 North 5th Ave #3B" both give "1420 n 5th ave #3b".
+   * Abbreviations (Street/St, Avenue/Ave, North/N, Fifth/5th, Mount/Mt), commas, periods and the
+   * unit word (Apt, Apartment, Unit, Suite, #) are all evened out. Returns '' for empty input.
+   */
+  function normalizeAddress(s) {
+    const words = normalize(s).toLowerCase().replace(/[.,]/g, ' ').replace(/#/g, ' # ').split(/\s+/).filter(Boolean);
+    const out = [];
+    let unit = '';
+    for (let i = 0; i < words.length; i++) {
+      const w = words[i];
+      if (UNIT_WORDS.test(w) && i > 0) {
+        // The unit: the rest, without its word, "#" or hyphens ("Apt. #3-B" -> "3b").
+        const rest = words.slice(i + 1).filter((x) => !UNIT_WORDS.test(x)).join('').replace(/-/g, '');
+        if (rest) unit = rest;
+        break;
+      }
+      out.push(STREET_SUFFIX[w] && out.length > 1 ? STREET_SUFFIX[w] : DIRECTION[w] && (out.length === 1 || i === words.length - 1) ? DIRECTION[w] : ORDINAL[w] || WORD[w] || w);
+    }
+    return `${out.join(' ')}${unit ? ` #${unit}` : ''}`.trim();
+  }
+
+  const api = { sameFirstName, parseAliases, normalizeAddress, STREET_SUFFIX, normalize, sentences, tokens, terms, similarity, createIndex, findVerbatim, levenshtein, soundex };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVText = api;
 })(this);

@@ -153,15 +153,29 @@
 
   /* ---------------- prompting ---------------- */
 
+  // v1.162: a tighter prompt. The model is told what is NOT a contradiction (formatting, spelling,
+  // abbreviations, nicknames, the same time written two ways), so it flags only differences that
+  // change the meaning, and it says how sure it is.
   const SYSTEM = [
     'You check a sworn affidavit against police reports for consistency.',
     'You get ONE statement from the affidavit and numbered passages from the reports. Use ONLY those passages, never outside knowledge.',
+    '',
     'Choose a verdict:',
     '- "supported": a passage states the same facts.',
-    '- "contradicted": a passage states something that conflicts with the statement (a different time, date, place, person, number, order of events, or action).',
+    '- "contradicted": a passage states a fact that conflicts with the statement and changes its meaning: a different date, time, place, person, amount, weight, number, order of events, or action.',
     '- "not_found": the passages do not address the statement.',
+    '',
+    'These are NOT contradictions; treat them as the same:',
+    '- spelling, capitals, punctuation and formatting (Poe / POE; 1,250 / 1250);',
+    '- abbreviations (St / Street, Ave / Avenue, Apt / #, Ofc. / Officer, approx. / approximately);',
+    '- the same time or date written another way (9:40 PM / 2140 hours; March 3 / 03/03/2026);',
+    '- nicknames and the known aliases listed with the statement (Bill / William);',
+    '- the same weight in another unit (1 oz / 28.35 grams);',
+    '- a passage that gives fewer details than the statement, without conflicting with it (that is "supported" if the main facts match, otherwise "not_found").',
+    '',
     'For "supported" or "contradicted", copy the single most relevant sentence from the passages into "quote" EXACTLY, character for character, and give its passage number. For "not_found" use an empty quote and passage 0.',
-    'Explain in one short sentence. Reply with JSON only.',
+    'Set "confidence": "high" when the passage clearly states the fact, "medium" when it is likely but needs reading in context, "low" when unsure.',
+    'Explain in one short sentence (at most 25 words) naming the fact that differs. Reply with JSON only.',
   ].join('\n');
 
   const SCHEMA = {
@@ -171,15 +185,22 @@
       passage: { type: 'integer' },
       quote: { type: 'string' },
       explanation: { type: 'string' },
+      confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
     },
-    required: ['verdict', 'passage', 'quote', 'explanation'],
+    required: ['verdict', 'passage', 'quote', 'explanation', 'confidence'],
   };
 
-  function userPrompt(statement, passages) {
+  /** v1.162: the case's Known Aliases as a line for the prompt ("Ricky Poe = Rick Poe"). */
+  function aliasLine(aliases) {
+    const list = (aliases || []).map((g) => g.join(' ')).filter(Boolean);
+    return list.length ? `\n\nKNOWN ALIASES (each line is one person; these names are the same person):\n${list.join('\n')}` : '';
+  }
+
+  function userPrompt(statement, passages, aliases = []) {
     // v1.69: a photo is named "Photo 2" here, never by its file name (a camera's IMG_20250312_1430
     // read as a date and time and was flagged).
     const list = passages.map((p, i) => `[${i + 1}] (${p.promptName || p.docName}${p.sheet != null ? `, ${p.sheet} row ${p.row}` : p.field != null ? `, ${p.field}` : p.page ? `, page ${p.page}` : ''})\n${p.promptText || p.text}`).join('\n\n');
-    return `STATEMENT FROM THE AFFIDAVIT:\n${statement.text}\n\nPASSAGES FROM THE REPORTS:\n${list}`;
+    return `STATEMENT FROM THE AFFIDAVIT:\n${statement.text}${aliasLine(aliases)}\n\nPASSAGES FROM THE REPORTS:\n${list}`;
   }
 
   /**
@@ -212,7 +233,9 @@
     }
     const verdict = String(obj.verdict || '').toLowerCase().replace(/[\s-]/g, '_');
     if (!['supported', 'contradicted', 'not_found'].includes(verdict)) return null;
-    return { verdict, passage: Number(obj.passage) || 0, quote: String(obj.quote || ''), explanation: String(obj.explanation || '').trim() };
+    const c = String(obj.confidence || '').toLowerCase();
+    const confidence = c === 'high' ? 'High' : c === 'low' ? 'Low' : 'Medium';
+    return { verdict, passage: Number(obj.passage) || 0, quote: String(obj.quote || ''), explanation: String(obj.explanation || '').trim(), confidence };
   }
 
   /* ---------------- the review ---------------- */
@@ -220,15 +243,27 @@
   /**
    * docs: [{ name, role, docIndex, paragraphs }] (docIndex = position in the check's document list)
    * engine: { base, model, embed }
-   * Returns { flags, stats: { statements, reviewed, supported, contradicted, notFound, discarded, errors }, complete }
+   * Returns { flags, stats: { statements, reviewed, supported, contradicted, notFound, discarded, errors }, complete, stopped }
+   *
+   * v1.162 options:
+   *  aliases:      the case's Known Aliases (groups of words), given to the model with each statement.
+   *  ruleFlags:    the rule layer's flags. A contradiction on a statement the rules also flagged gets
+   *                High confidence (two independent checks agree).
+   *  timeoutMs:    the longest one statement may take (a slow computer); 2 in a row stop the review.
+   *  budgetMs:     the longest the whole review may take. When the model is too slow to finish in
+   *                time, the review stops early (stopped: 'slow' or 'time') and the rule-based
+   *                results stand for the rest; nothing already found is lost.
    */
-  async function review({ docs, engine, fetchImpl, onProgress = () => {}, signal } = {}) {
+  async function review({ docs, engine, fetchImpl, onProgress = () => {}, signal, aliases = [], ruleFlags = [], timeoutMs = 0, budgetMs = 0, now = () => Date.now() } = {}) {
     fetchImpl = fetchImpl || ((...args) => globalThis.fetch(...args));
+    const startedAt = now();
+    let timeouts = 0;
+    const ruleHit = new Set(ruleFlags.filter((f) => f.statement).map((f) => `${f.statement.docIndex}:${f.statement.start}`));
     const affidavits = docs.filter((d) => d.role === 'affidavit');
     const reports = docs.filter((d) => d.role === 'report');
     const stats = { statements: 0, reviewed: 0, supported: 0, contradicted: 0, notFound: 0, discarded: 0, errors: 0 };
     const flags = [];
-    if (!affidavits.length || !reports.length) return { flags, stats, complete: true };
+    if (!affidavits.length || !reports.length) return { flags, stats, complete: true, stopped: null };
 
     const passages = reports.flatMap(passagesOf);
     const statements = affidavits.flatMap((d) => statementsOf(d));
@@ -262,7 +297,14 @@
     const docByIndex = new Map(docs.map((d) => [d.docIndex, d]));
 
     for (let i = 0; i < statements.length; i++) {
-      if (signal && signal.aborted) return { flags, stats, complete: false };
+      if (signal && signal.aborted) return { flags, stats, complete: false, stopped: null };
+      // Time budget: stop when what is left would not fit (average so far × statements left).
+      if (budgetMs && i > 0) {
+        const spent = now() - startedAt;
+        if (spent > budgetMs || (i >= 3 && spent + (spent / i) * (statements.length - i) > budgetMs * 1.5)) {
+          return { flags, stats, complete: false, stopped: 'time' };
+        }
+      }
       const st = statements[i];
       onProgress({ phase: 'review', done: i, total: statements.length });
 
@@ -275,16 +317,16 @@
           for (const p of sem) if (!picked.some((q) => q.doc === p.doc && q.paragraph === p.paragraph && q.start === p.start)) picked.push(p);
           picked = picked.slice(0, 6);
         } catch (err) {
-          if (signal && signal.aborted) return { flags, stats, complete: false };
+          if (signal && signal.aborted) return { flags, stats, complete: false, stopped: null };
         }
       }
 
       picked = fitPassages(st, picked, engine.numCtx || DEFAULT_CTX);
       const stDoc = docByIndex.get(st.doc);
       const statementLoc = loc(stDoc, st, st.text, st.start, st.end);
-      const mk = (severity, title, detail, source) => ({
+      const mk = (severity, title, detail, source, confidence = 'Low') => ({
         id: `a${Date.now().toString(36)}${(seq++).toString(36)}`,
-        layer: 'ai', severity, type: 'statement', title, detail, statement: statementLoc, source, status: 'open', note: '',
+        layer: 'ai', severity, confidence, type: 'statement', title, detail, statement: statementLoc, source, status: 'open', note: '',
       });
 
       if (!picked.length) {
@@ -294,25 +336,41 @@
       }
 
       let answer = null;
+      // A per-statement time limit, so one slow answer can't hold up the whole check.
+      const own = new AbortController();
+      const onOuter = () => own.abort();
+      if (signal) signal.addEventListener('abort', onOuter);
+      let timedOut = false;
+      const timer = timeoutMs ? setTimeout(() => { timedOut = true; own.abort(); }, timeoutMs) : null;
       try {
         const data = await fetchJson(fetchImpl, `${engine.base}/api/chat`, {
           method: 'POST',
-          signal,
+          signal: own.signal,
           body: JSON.stringify({
             model: engine.model,
             stream: false,
             format: SCHEMA,
             keep_alive: KEEP_ALIVE,
             options: { temperature: 0, seed: 7, num_ctx: engine.numCtx || DEFAULT_CTX },
-            messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: userPrompt(st, picked) }],
+            messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: userPrompt(st, picked, aliases) }],
           }),
         });
         answer = parseAnswer(data.message && data.message.content);
+        timeouts = 0;
       } catch (err) {
-        if (signal && signal.aborted) return { flags, stats, complete: false };
+        if (signal && signal.aborted) return { flags, stats, complete: false, stopped: null };
+        if (timedOut) {
+          // Too slow on this computer: two statements in a row over the limit end the AI review.
+          timeouts++; stats.errors++;
+          if (timeouts >= 2) return { flags, stats, complete: false, stopped: 'slow' };
+          continue;
+        }
         stats.errors++;
         if (stats.errors >= 3 && stats.errors > stats.reviewed) throw err; // engine is down, not a one-off
         continue;
+      } finally {
+        if (timer) clearTimeout(timer);
+        if (signal) signal.removeEventListener('abort', onOuter);
       }
       stats.reviewed++;
       if (!answer) { stats.discarded++; continue; }
@@ -348,18 +406,22 @@
       const s1 = p.start + hit.at.end;
       const sent = T.sentences(p.paraText).find((s) => s.start <= s0 && s.end >= s1) || { text: p.paraText.slice(s0, s1), start: s0, end: s1 };
       const srcDoc = docByIndex.get(p.doc);
+      // Confidence: the quote was found word for word, so at least Medium unless the model itself
+      // was unsure; High when the rule layer flagged the same statement too.
+      const agreed = ruleHit.has(`${st.doc}:${st.start}`);
+      const confidence = agreed ? 'High' : answer.confidence === 'Low' ? 'Low' : 'Medium';
       flags.push(mk('Medium', `Contradicted by ${srcDoc.name}`, answer.explanation || 'The report says something different.',
-        loc(srcDoc, p, sent.text, sent.start, sent.end, [s0 - sent.start, s1 - sent.start])));
+        loc(srcDoc, p, sent.text, sent.start, sent.end, [s0 - sent.start, s1 - sent.start]), confidence));
     }
     onProgress({ phase: 'review', done: statements.length, total: statements.length });
-    return { flags, stats, complete: true };
+    return { flags, stats, complete: true, stopped: null };
   }
 
   /** A model's name as shown on screen: first letter capital, no ":latest" (v1.28). The real name
    * (qwen3:8b) is still what is sent to Ollama. */
   const modelName = (m) => { const s = String(m || '').replace(/:latest$/, ''); return s ? s[0].toUpperCase() + s.slice(1) : s; };
 
-  const api = { modelName, PROFILES, KEEP_ALIVE, DEFAULT_CTX, numCtxFor, tokensOf, fitPassages, userPrompt, detect, choose, review, statementsOf, passagesOf, parseAnswer, sizeB };
+  const api = { SYSTEM, aliasLine, modelName, PROFILES, KEEP_ALIVE, DEFAULT_CTX, numCtxFor, tokensOf, fitPassages, userPrompt, detect, choose, review, statementsOf, passagesOf, parseAnswer, sizeB };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVAI = api;
 })(this);

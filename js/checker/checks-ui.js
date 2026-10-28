@@ -12,7 +12,32 @@
     Medium: 'Contradiction',
     Low: 'Not supported by the reports',
   };
-  const STATUS_LABEL = { open: 'Open', fix: 'Fix', 'not-issue': 'Not an issue', explained: 'Explained' };
+  // v1.162: two actions on a flag: Mark as Reviewed (dealt with, stays in the list, greyed) and
+  // Dismiss (not a problem, hidden unless "Dismissed" is shown). Each can carry a note.
+  const STATUS_LABEL = { open: 'Open', reviewed: 'Mark as Reviewed', dismissed: 'Dismiss' };
+  // Checks saved before v1.162 used Fix / Not an issue / Explained.
+  const OLD_STATUS = { fix: 'reviewed', explained: 'reviewed', 'not-issue': 'dismissed' };
+  const CONFIDENCE_HELP = {
+    High: 'High confidence: the checker is sure about this one',
+    Medium: 'Medium confidence: likely, but read both passages',
+    Low: 'Low confidence: often fine; check only if it matters',
+  };
+  // Kinds of flag, for grouping the results.
+  const GROUPS = [
+    ['names', 'Names', ['name']],
+    ['addresses', 'Addresses', ['address']],
+    ['money', 'Money, Weights and Totals', ['money', 'weight', 'total', 'buy', 'count']],
+    ['dates', 'Dates and Times', ['date', 'time']],
+    ['numbers', 'Numbers, Plates and Phones', ['number', 'plate', 'phone']],
+    ['statements', 'Statements (AI)', ['statement']],
+  ];
+  const groupOf = (f) => (GROUPS.find(([, , types]) => types.includes(f.type)) || GROUPS[GROUPS.length - 1])[0];
+  /** Brings a flag saved by an older version up to date: its status, and a confidence. */
+  function upgradeFlag(f) {
+    if (OLD_STATUS[f.status]) f.status = OLD_STATUS[f.status];
+    if (!f.confidence) f.confidence = f.severity === 'Low' ? 'Low' : 'Medium';
+    return f;
+  }
 
   /* =====================================================================
    * AI engine: detection, header status, settings
@@ -272,6 +297,14 @@
     const aiToggle = h('input', { type: 'checkbox' });
     const aiLine = h('span', { class: 'muted small' });
     const runBtn = h('button', { class: 'btn primary', type: 'button', icon: 'clipboard2-check' }, 'Run check');
+    // v1.162: Known Aliases of this case: names that are one person, never flagged as misspellings.
+    const aliasBox = h('textarea', { rows: 3, class: 'chk-aliases', 'aria-label': 'Known Aliases', placeholder: 'One person per line, names separated by commas: Richard Poe, Rick Poe, Ricky' });
+    aliasBox.value = c.checkAliases || '';
+    aliasBox.addEventListener('input', () => {
+      const value = aliasBox.value;
+      c.checkAliases = value;
+      ui.Save.schedule(`check-aliases:${c.id}`, async () => { const full = await Vault.getCase(c.id); full.checkAliases = value; await Vault.saveCase(full); }, 800);
+    });
     // v1.59: a header like the other boxes: an icon tile, the title and a line under it.
     const head = (ic, title, sub) => h('div', { class: 'chk-head' }, h('span', { class: 'chk-head-icon', 'aria-hidden': 'true' }, ui.icon(ic)),
       h('div', {}, h('h2', {}, title), sub ? h('p', { class: 'muted small' }, sub) : null));
@@ -316,11 +349,12 @@
 
     const form = files.length
       ? h('div', { class: 'card chk-card' },
-        head('clipboard2-check', 'New Check', 'Compares an affidavit or draft with the reports: dates, times, names, numbers, addresses, plates, phones, amounts and counts. Reports are cross-checked too.'),
+        head('clipboard2-check', 'New Check', 'Compares an affidavit or draft with the reports: dates, times, names, numbers, addresses, plates, phones, amounts, weights, totals and the Timeline buys. Reports are cross-checked too.'),
         h('div', { class: 'chk-grid' },
           h('div', { class: 'chk-col' },
             h('label', { class: 'field', title: 'An affidavit or a draft.' }, h('span', {}, 'Document to check'), affSelect),
-            h('label', { class: 'check-row chk-ai' }, aiToggle, h('span', {}, h('strong', {}, 'Include AI review'), aiLine))),
+            h('label', { class: 'check-row chk-ai' }, aiToggle, h('span', {}, h('strong', {}, 'Include AI review'), aiLine)),
+            h('label', { class: 'field', title: 'Names that belong to one person (nicknames, monikers). The check never flags them as spelled differently, and the AI is told they are the same person.' }, h('span', {}, 'Known Aliases'), aliasBox)),
           h('div', { class: 'chk-col' }, h('div', { class: 'field' }, h('span', {}, 'Compare against'), reportList))),
         h('div', { class: 'chk-actions' }, h('span', { class: 'muted small' }, 'Nothing leaves this PC.'), h('div', { class: 'spacer' }), runBtn))
       : h('div', { class: 'card chk-card' }, head('clipboard2-check', 'New Check', ''),
@@ -413,7 +447,15 @@
       const rulesStep = addStep('Rule-based checks');
       activity.textContent = 'Comparing dates, times, names and numbers…';
       await new Promise((r) => setTimeout(r, 20));
-      const ruleFlags = CVRules.compare(docs.map((d) => ({ id: d.docIndex, name: d.name, role: d.role, paragraphs: d.paragraphs })), { ignore: ownDetails() });
+      // v1.162: the case's Known Aliases and its Timeline buys (the Buy Summary) go into the checks.
+      const caseNow = await Vault.getCase(c.id).catch(() => c);
+      const aliases = CVText.parseAliases(caseNow.checkAliases || c.checkAliases || '');
+      let buys = [];
+      try {
+        const tl = await Vault.getTimeline(c.id);
+        buys = (tl.events || []).filter((e) => e.kind === 'buy').map((e) => ({ date: e.date, suspect: e.suspect || '', drug: e.drug || '', qty: e.qty, unit: e.unit || 'g', paid: e.paid }));
+      } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+      const ruleFlags = CVRules.compare(docs.map((d) => ({ id: d.docIndex, name: d.name, role: d.role, paragraphs: d.paragraphs })), { ignore: ownDetails(), aliases, buys });
       done(rulesStep);
       bar.value = useAI ? 35 : 90;
 
@@ -454,6 +496,12 @@
                 docs,
                 engine: { base: det.base, model: choice.model, embed: det.embed, numCtx },
                 signal: ctrl.signal,
+                aliases,
+                ruleFlags,
+                // v1.162: on a slow computer the AI stops early and the rule-based results stand:
+                // at most 2 minutes for one statement (3 on the CPU-only Light profile), 20 in all.
+                timeoutMs: choice.profile === 'light' ? 180000 : 120000,
+                budgetMs: 20 * 60 * 1000,
                 onProgress: (p) => {
                   timing.phase = p.phase;
                   if (p.phase === 'embed') {
@@ -506,7 +554,8 @@
         documents: docInfo,
         docOrder: docs.map((d) => d.name),
         engine: engineInfo,
-        ai: ai ? { stats: ai.stats, complete: ai.complete, error: ai.error || null } : null,
+        ai: ai ? { stats: ai.stats, complete: ai.complete, error: ai.error || null, stopped: ai.stopped || null } : null,
+        buys: buys.length,
         complete: !ai || ai.complete,
         flags,
       };
@@ -514,7 +563,8 @@
       done(saveStep);
       bar.value = 100;
       finish();
-      if (!data.complete) toast('The AI review was stopped early. The results so far were saved.', 'info', 8000);
+      if (ai && ai.stopped) toast('The AI was too slow on this computer, so it stopped early. The rule-based checks cover every statement; the results were saved.', 'info', 10000);
+      else if (!data.complete) toast('The AI review was stopped early. The results so far were saved.', 'info', 8000);
       go(c.id, 'checks', name);
     } catch (err) {
       finish();
@@ -536,7 +586,8 @@
    * Results
    * ===================================================================== */
 
-  const view = { severity: new Set(['High', 'Medium', 'Low']), status: 'all', layer: 'all' };
+  // status: 'active' = everything but the dismissed flags (the default).
+  const view = { severity: new Set(['High', 'Medium', 'Low']), status: 'active', layer: 'all', hideLow: false, group: 'kind' };
 
   async function renderResult(panel, c, token, name) {
     const { h, state, Save, fmtDateTime } = ui;
@@ -556,6 +607,7 @@
       Save.schedule(`check:${c.id}:${name}`, () => Vault.saveCheck(c.id, name, snapshot), 500);
     };
 
+    data.flags.forEach(upgradeFlag);
     const counts = { High: 0, Medium: 0, Low: 0 };
     for (const f of data.flags) counts[f.severity]++;
     const openCount = () => data.flags.filter((f) => f.status === 'open').length;
@@ -564,11 +616,28 @@
     const summaryOpen = h('span', {});
     const drawSummary = () => { summaryOpen.textContent = `${openCount()} of ${data.flags.length} still open`; };
 
+    const statusOk = (f) => (view.status === 'all' ? true : view.status === 'active' ? f.status !== 'dismissed' : f.status === view.status);
     function draw() {
       const shown = data.flags.filter((f) => view.severity.has(f.severity)
         && (view.layer === 'all' || f.layer === view.layer)
-        && (view.status === 'all' || (view.status === 'open' ? f.status === 'open' : f.status !== 'open')));
-      list.replaceChildren(...(shown.length ? shown.map((f) => flagCard(c, data, f, save, () => { drawSummary(); })) : [h('p', { class: 'muted' }, data.flags.length ? 'No flags match these filters.' : 'No inconsistencies were found. Still read the documents yourself: no flags is not proof of accuracy.')]));
+        && !(view.hideLow && f.confidence === 'Low')
+        && statusOk(f));
+      const card = (f) => flagCard(c, data, f, save, () => { drawSummary(); if (view.status !== 'all') draw(); });
+      let body;
+      if (!shown.length) {
+        body = [h('p', { class: 'muted' }, data.flags.length ? 'No flags match these filters.' : 'No inconsistencies were found. Still read the documents yourself: no flags is not proof of accuracy.')];
+      } else if (view.group === 'kind') {
+        // v1.162: grouped by kind (Names, Addresses, Money…), each group in its own order.
+        body = GROUPS.map(([key, label]) => {
+          const items = shown.filter((f) => groupOf(f) === key);
+          if (!items.length) return null;
+          const open = items.filter((f) => f.status === 'open').length;
+          return h('section', { class: 'flag-group' },
+            h('h3', { class: 'flag-group-head' }, label, h('span', { class: 'muted small' }, ` ${items.length} flag${items.length === 1 ? '' : 's'}${open !== items.length ? `, ${open} open` : ''}`)),
+            ...items.map(card));
+        }).filter(Boolean);
+      } else body = shown.map(card);
+      list.replaceChildren(...body);
       drawSummary();
     }
 
@@ -581,7 +650,13 @@
       });
       return b;
     });
-    const statusSel = h('select', { 'data-ro-ok': 'true', 'aria-label': 'Show' }, [['all', 'All flags'], ['open', 'Open only'], ['done', 'Resolved only']].map(([v, l]) => h('option', { value: v, selected: view.status === v }, l)));
+    const statusSel = h('select', { 'data-ro-ok': 'true', 'aria-label': 'Show' }, [['active', 'All but Dismissed'], ['open', 'Open only'], ['reviewed', 'Reviewed only'], ['dismissed', 'Dismissed only'], ['all', 'All flags']].map(([v, l]) => h('option', { value: v, selected: view.status === v }, l)));
+    const groupSel = h('select', { 'data-ro-ok': 'true', 'aria-label': 'Group' }, [['kind', 'Grouped by Kind'], ['none', 'One List']].map(([v, l]) => h('option', { value: v, selected: view.group === v }, l)));
+    groupSel.addEventListener('change', () => { view.group = groupSel.value; draw(); });
+    const lowBox = h('input', { type: 'checkbox', 'data-ro-ok': 'true', checked: view.hideLow });
+    lowBox.addEventListener('change', () => { view.hideLow = lowBox.checked; draw(); });
+    const lowCount = data.flags.filter((f) => f.confidence === 'Low').length;
+    const lowToggle = h('label', { class: 'check-row hide-low', title: 'Hide the flags the checker is least sure about' }, lowBox, h('span', {}, `Hide Low Confidence (${lowCount})`));
     statusSel.addEventListener('change', () => { view.status = statusSel.value; draw(); });
     const layerSel = h('select', { 'data-ro-ok': 'true', 'aria-label': 'Layer' }, [['all', 'Rules + AI'], ['rules', 'Rules only'], ['ai', 'AI only']].map(([v, l]) => h('option', { value: v, selected: view.layer === v }, l)));
     layerSel.addEventListener('change', () => { view.layer = layerSel.value; draw(); });
@@ -610,12 +685,13 @@
         st ? h('p', { class: 'small' },
           `AI reviewed ${st.reviewed} of ${st.statements} statements: ${st.supported} supported, ${st.contradicted} contradicted, ${st.notFound} not found.`,
           st.discarded ? h('strong', {}, ` ${st.discarded} AI answer${st.discarded === 1 ? ' was' : 's were'} discarded because the quoted text was not found in the reports.`) : '') : null,
-        data.ai && !data.ai.complete ? h('p', { class: 'warn-text small' }, `The AI review did not finish${data.ai.error ? ` (${data.ai.error})` : ''}. Statements after that point were not reviewed by AI.`) : null,
+        data.ai && data.ai.stopped ? h('p', { class: 'warn-text small' }, `The AI was too slow on this computer${data.ai.stopped === 'time' ? ' to finish in 20 minutes' : ''}, so it stopped early. The rule-based checks still cover every statement.`)
+          : data.ai && !data.ai.complete ? h('p', { class: 'warn-text small' }, `The AI review did not finish${data.ai.error ? ` (${data.ai.error})` : ''}. Statements after that point were not reviewed by AI.`) : null,
         h('div', { class: 'row result-foot' },
           h('p', { class: 'muted small explain' }, `Saved on the SSD: ${CVFormat.pathText(`${Vault.isArchived(c.id) ? 'archive' : 'cases'}\\${c.id}\\checks\\${name}`)}`),
           h('div', { class: 'spacer' }),
           h('button', { class: 'btn small ghost danger-text', type: 'button', onclick: () => deleteCheck(c, name, data) }, 'Delete this check'))),
-      h('div', { class: 'filters' }, sevChips, h('div', { class: 'spacer' }), layerSel, statusSel),
+      h('div', { class: 'filters' }, sevChips, lowToggle, h('div', { class: 'spacer' }), groupSel, layerSel, statusSel),
       list);
     draw();
   }
@@ -642,23 +718,25 @@
 
   function flagCard(c, data, f, save, onChange) {
     const { h } = ui;
-    const note = h('textarea', { rows: 2, class: 'flag-note', placeholder: 'Explain how this was resolved. It is saved with the check.', 'aria-label': 'Note' });
+    upgradeFlag(f);
+    const note = h('textarea', { rows: 2, class: 'flag-note', placeholder: 'Why it was dismissed, or how it was dealt with. It is saved with the check.', 'aria-label': 'Note' });
     note.value = f.note || '';
-    note.hidden = f.status !== 'explained' && !f.note;
+    note.hidden = f.status === 'open' && !f.note;
     note.addEventListener('input', () => { f.note = note.value; save(); });
 
     const card = h('article', { class: `flag sev-${f.severity.toLowerCase()} status-${f.status}` });
-    const buttons = ['fix', 'not-issue', 'explained'].map((s) => {
-      const b = h('button', { type: 'button', class: `btn small ${f.status === s ? 'active' : ''}`, 'aria-pressed': String(f.status === s) }, STATUS_LABEL[s]);
+    const ACTIONS = ['reviewed', 'dismissed'];
+    const buttons = ACTIONS.map((s) => {
+      const b = h('button', { type: 'button', class: `btn small ${f.status === s ? 'active' : ''}`, 'aria-pressed': String(f.status === s), icon: s === 'reviewed' ? 'check2' : 'x-lg' }, STATUS_LABEL[s]);
       b.addEventListener('click', () => {
         f.status = f.status === s ? 'open' : s;
         f.reviewed = f.status === 'open' ? null : new Date().toISOString();
         buttons.forEach((x, i) => {
-          const on = ['fix', 'not-issue', 'explained'][i] === f.status;
+          const on = ACTIONS[i] === f.status;
           x.classList.toggle('active', on); x.setAttribute('aria-pressed', String(on));
         });
         card.className = `flag sev-${f.severity.toLowerCase()} status-${f.status}`;
-        if (f.status === 'explained') { note.hidden = false; note.focus(); }
+        if (f.status !== 'open') note.hidden = false;
         save();
         onChange();
       });
@@ -672,13 +750,14 @@
     card.append(
       h('header', { class: 'flag-head' },
         h('span', { class: `pill sev sev-${f.severity.toLowerCase()}`, title: SEVERITY_HELP[f.severity] }, f.severity),
+        h('span', { class: `pill conf conf-${f.confidence.toLowerCase()}`, title: CONFIDENCE_HELP[f.confidence] }, `${f.confidence} Confidence`),
         h('span', { class: 'layer-badge' }, f.layer === 'ai' ? 'AI' : 'Rules'),
         h('strong', { class: 'flag-title' }, f.title)),
       h('div', { class: 'flag-sides' },
         quote(f.statement, data.affidavit && f.statement.doc === data.affidavit ? 'Statement' : 'Says'),
-        f.source ? quote(f.source, 'Source') : h('div', { class: 'quote none' }, h('span', { class: 'quote-where' }, 'Source'), h('span', { class: 'muted' }, 'Not found in the reports'))),
+        f.source ? quote(f.source, 'Source') : h('div', { class: 'quote none' }, h('span', { class: 'quote-where' }, 'Source'), h('span', { class: 'muted' }, f.sourceLabel || (f.type === 'total' ? 'The same passage' : 'Not found in the reports')))),
       f.detail ? h('p', { class: 'flag-detail muted small' }, f.detail) : null,
-      h('div', { class: 'flag-actions' }, h('span', { class: 'muted small' }, 'Mark as:'), ...buttons),
+      h('div', { class: 'flag-actions' }, ...buttons, f.status !== 'open' && f.reviewed ? h('span', { class: 'muted small' }, `${f.status === 'dismissed' ? 'Dismissed' : 'Reviewed'} ${ui.fmtDateTime(Date.parse(f.reviewed))}`) : null),
       note);
     return card;
   }
