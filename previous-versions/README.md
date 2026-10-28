@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.166)
+
+- **Secure Locker:** each row on one line, nothing cut off and no sideways scroll bar
+- **Fix:** a new locker said "Locks after undefined minutes"
+
 ## Features (v1.165)
 
 - **Fix:** every folder shows its count, including 1 and 0, on the home page and sidebar

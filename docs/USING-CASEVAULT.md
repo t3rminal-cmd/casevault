@@ -213,6 +213,12 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.167
+
+- **Closed is red, not green.** A closed case is now marked in red everywhere: the **Closed** tag, the closed folder icon (CLOSED in the case list, Closed Files on the home page, the Year Summary) and the case colour in the themes. This is most visible for a case closed while its Mission is still open:
+  - In the case list, its box has a red border all the way round (thicker on the left) and a red lock before the case number
+- **An X for a case closed with an arrest.** When a closed case has Arrest details, its box in the case list has a red X across it, and so does its card on the home page's open Mission. The text stays readable through the X, and pointing at the box says *Closed with an arrest*
+
 ### What's new in v1.166
 
 - **Secure Locker: each row on one line.** The Password Manager and Covert tables show each row on one line, with nothing cut off and no sideways scroll bar:
@@ -235,13 +241,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **AI: Keep the Model Loaded.** In the Consistency Checker's engine settings you can choose how long the AI model stays in memory after a task: 2, 10 (default) or 30 minutes, or *Unload When Done* to free memory straight away
 - **AI: less waiting.** The Consistency Checker's AI review now skips statements the rules have already settled with high confidence, and statements that match the source word for word. The results line shows how many were skipped
 - **Faster sidebar:** switching tabs or cases no longer redraws the whole case list when nothing in it changed
-
-### What's new in v1.164
-
-- **Fix (drop-down lists in Firefox):** Firefox now uses its own drop-down lists. It could open its built-in list on top of CaseVault's, so the two fought over the click (Edit Alias and other forms). Firefox's list is square already; Chrome and Edge keep CaseVault's
-- **Fix (drop-down lists):** moving through a long list (with the arrow keys or by typing a letter) scrolls only the list, never the form behind it, and picking a value no longer scrolls the form either
-- **Training: Arrange.** In Other Files → Training (Cards), **Arrange** lets you put the certificates in the order you want, to keep similar ones together: drag a card onto another to take its place, or use the arrows under each card (it shows its place, *2 of 6*). **Done Arranging** finishes. The order is kept on the SSD (in the Training folder) and used by the Cards and List views; a certificate added later goes last. The Training Record PDF still lists them by date
-- **Updater 1.4: a quieter look.** Neutral greys with a charcoal main button, a plain light header, a thin progress bar and thin borders. The spinning vault door is gone: while it works the header just says *Working…*
 
 ### Earlier versions
 

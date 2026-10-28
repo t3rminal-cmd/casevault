@@ -15,10 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.166
+## What's New in v1.167
 
-- **Secure Locker:** each row on one line, nothing cut off and no sideways scroll bar
-- **Fix:** a new locker said "Locks after undefined minutes"
+- **Closed is red:** the Closed tag, the closed folder and a red border round a closed case's box
+- **Arrest:** a case closed with an arrest has an X across its box
 
 ## What CaseVault Does
 

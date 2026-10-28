@@ -833,13 +833,13 @@
       opened ? `Opened ${opened.long} (${opened.future ? `${opened.ageLong.toLowerCase()}: a date in the future, check it` : opened.days ? `${opened.days} day${opened.days === 1 ? '' : 's'} ago` : 'today'})` : null,
       sol ? `Statute of limitations ${sol === 'expired' ? 'expired' : 'expires'} ${fmtDate(c.sol.expires)}` : null,
       due && !sol ? `${due.cls === 'overdue' || due.cls === 'soon' ? 'Alarm: ' : 'Next deadline: '}${c.nextDeadline.title || 'Deadline'}, ${fmtDate(c.nextDeadline.date)}${c.nextDeadline.time ? ` ${c.nextDeadline.time}` : ''} (${due.text})` : null,
-      c.arrested ? 'Arrest made: this case has Arrest details' : null,
+      c.arrested ? (c.status === 'Closed' ? 'Closed with an arrest (the X)' : 'Arrest made: this case has Arrest details') : null,
     ].filter(Boolean).join('\n');
     const li = h('li', {},
       h('a', {
         href: `#/case/${CVRoute.enc(c.id)}`,
         // v1.60: a case with a reminder (a deadline overdue or within a week) has a thin red border.
-        class: `case-item st-${String(c.status).toLowerCase()} ${c.id === state.caseId ? 'active' : ''}${due ? ` has-reminder reminder-${due.cls}` : ''}${c.arrested ? ' has-arrest' : ''}${dim ? ' case-dim' : ''}`,
+        class: `case-item st-${String(c.status).toLowerCase()} ${c.id === state.caseId ? 'active' : ''}${due ? ` has-reminder reminder-${due.cls}` : ''}${c.arrested ? ' has-arrest' : ''}${c.arrested && c.status === 'Closed' ? ' closed-arrest' : ''}${dim ? ' case-dim' : ''}`, // v1.167: closed with an arrest: an X across the box
         'aria-current': c.id === state.caseId ? 'page' : null,
         title: tip,
       },
@@ -2377,7 +2377,7 @@
   function overviewCard(c, withOp = false) {
     const to = (tab, sub) => `#/case/${CVRoute.enc(c.id)}/${tab}${sub ? `/${sub}` : ''}`;
     const op = withOp ? opOf(c) : null;
-    return h('div', { class: 'op-case-card' },
+    return h('div', { class: `op-case-card${c.arrested && c.status === 'Closed' ? ' closed-arrest' : ''}`, title: c.arrested && c.status === 'Closed' ? 'Closed with an arrest' : null },
       h('a', { class: 'op-case-top', href: to('details') }, h('span', { class: 'op-case-id' }, h('span', { class: 'op-case-num' }, c.number || 'No case number yet'),
         h('span', { class: 'op-case-subject muted' }, [subj(c) || 'No subject yet', op ? opLabel(op) : ''].filter(Boolean).join(' · '))), statusPill(c.status)),
       // v1.135: when a closed or archived case was closed (and archived).
