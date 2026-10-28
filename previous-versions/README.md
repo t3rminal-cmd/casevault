@@ -4,6 +4,11 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.163)
+
+- **Document Anonymizer:** live colour-coded review, click to keep or replace a detail, five styles (Fictitious, Placeholder, REDACTED, Black Bar, Initials)
+- **Personal details:** better names (hyphens, de la, capitals), addresses and phones; known names first
+
 ## Features (v1.162)
 
 - **Consistency Checker:** nicknames, Known Aliases and names in context; addresses read alike however they're written

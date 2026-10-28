@@ -12,7 +12,12 @@
   if (!doc) return;
   let cur = null; // { sel, pop, close }
 
-  const usable = (el) => el instanceof root.HTMLSelectElement && !el.multiple && !(el.size > 1) && !el.disabled && !el.closest('[inert]');
+  // v1.164: Firefox keeps its own list. It can open its built-in list even when the mouse press is
+  // cancelled, so CaseVault's list and Firefox's showed together and fought over the click (Edit
+  // Alias and other forms). Firefox's list is square already; Chrome and Edge get CaseVault's.
+  const NATIVE = /\bFirefox\//.test((root.navigator && root.navigator.userAgent) || '');
+  if (NATIVE) doc.documentElement.classList.add('native-select');
+  const usable = (el) => !NATIVE && el instanceof root.HTMLSelectElement && !el.multiple && !(el.size > 1) && !el.disabled && !el.closest('[inert]');
 
   function open(sel) {
     if (cur && cur.sel === sel) { cur.close(); return; }
@@ -51,13 +56,17 @@
       if (rows[active]) rows[active].el.classList.remove('active');
       active = i;
       rows[active].el.classList.add('active');
-      rows[active].el.scrollIntoView({ block: 'nearest' });
+      // v1.164: scroll the list only. scrollIntoView() also scrolled the window behind it (Edit
+      // Alias jumped when a list near the bottom of the form opened).
+      const el = rows[active].el;
+      if (el.offsetTop < pop.scrollTop) pop.scrollTop = el.offsetTop;
+      else if (el.offsetTop + el.offsetHeight > pop.scrollTop + pop.clientHeight) pop.scrollTop = el.offsetTop + el.offsetHeight - pop.clientHeight;
     }
     function pick(o) {
       const changed = sel.value !== o.value || !o.selected;
       o.selected = true;
       close();
-      sel.focus();
+      sel.focus({ preventScroll: true });
       if (changed) {
         sel.dispatchEvent(new Event('input', { bubbles: true }));
         sel.dispatchEvent(new Event('change', { bubbles: true }));
@@ -142,5 +151,5 @@
     }
   }, true);
 
-  root.CVSelect = { open, close: () => cur && cur.close(), get openSelect() { return cur ? cur.sel : null; } };
+  root.CVSelect = { native: NATIVE, open, close: () => cur && cur.close(), get openSelect() { return cur ? cur.sel : null; } };
 })(this);

@@ -155,7 +155,28 @@
     return R.assemble(pages, { photos, title: 'Training Record', face: 'helvetica' });
   }
 
-  const api = { FIELDS, PLACEHOLDERS, normalize, rows, courseOf, daysLeft, notice, renewals, totalHours, line, paragraph, context, build, longDate };
+  /* v1.164: the order of the certificates, chosen with Arrange (to keep similar ones together). It is
+   * kept in .training.json under ORDER_KEY as a list of file names; a dot-name is never a file. */
+  const ORDER_KEY = '.order';
+  /** files ([{ base }]) in the saved order; files not in it (added since) come after, as they were. */
+  function ordered(files, meta) {
+    const order = meta && Array.isArray(meta[ORDER_KEY]) ? meta[ORDER_KEY] : [];
+    const at = new Map(order.map((n, i) => [n, i]));
+    return (files || []).map((f, i) => ({ f, i })).sort((a, b) => {
+      const x = at.has(a.f.base) ? at.get(a.f.base) : order.length + a.i;
+      const y = at.has(b.f.base) ? at.get(b.f.base) : order.length + b.i;
+      return x - y;
+    }).map((x) => x.f);
+  }
+  /** The new order (file names) after moving `name` to position `to` of the files shown. */
+  function moveTo(files, name, to) {
+    const names = (files || []).map((f) => f.base).filter((n) => n !== name);
+    const k = Math.max(0, Math.min(names.length, to));
+    names.splice(k, 0, name);
+    return names;
+  }
+
+  const api = { ORDER_KEY, ordered, moveTo, FIELDS, PLACEHOLDERS, normalize, rows, courseOf, daysLeft, notice, renewals, totalHours, line, paragraph, context, build, longDate };
   if (isNode) module.exports = api;
   else root.CVTraining = api;
 })(this);

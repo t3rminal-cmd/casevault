@@ -213,6 +213,13 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.164
+
+- **Fix (drop-down lists in Firefox):** Firefox now uses its own drop-down lists. It could open its built-in list on top of CaseVault's, so the two fought over the click (Edit Alias and other forms). Firefox's list is square already; Chrome and Edge keep CaseVault's
+- **Fix (drop-down lists):** moving through a long list (with the arrow keys or by typing a letter) scrolls only the list, never the form behind it, and picking a value no longer scrolls the form either
+- **Training: Arrange.** In Other Files → Training (Cards), **Arrange** lets you put the certificates in the order you want, to keep similar ones together: drag a card onto another to take its place, or use the arrows under each card (it shows its place, *2 of 6*). **Done Arranging** finishes. The order is kept on the SSD (in the Training folder) and used by the Cards and List views; a certificate added later goes last. The Training Record PDF still lists them by date
+- **Updater 1.4: a quieter look.** Neutral greys with a charcoal main button, a plain light header, a thin progress bar and thin borders. The spinning vault door is gone: while it works the header just says *Working…*
+
 ### What's new in v1.163
 
 - **Document Anonymizer: live, colour-coded review.** What's found shows as you type: red critical details (Social Security, card and bank numbers, dates of birth, ID numbers), orange high (phones, emails, addresses, plates, VINs, case numbers, known names), yellow medium (guessed names). Click a highlight to keep that detail (every mention of it), click again to replace it; red ones and known names are always replaced. The result updates as you go
@@ -233,11 +240,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Consistency Checker: Mark as Reviewed and Dismiss** replace Fix / Not an issue / Explained, each with a note. A dismissed flag leaves the list (**Dismissed only** shows it). Older checks open as before
 - **Consistency Checker: AI.** A clearer prompt: spelling, formatting, abbreviations, nicknames and the same time or weight written another way are not contradictions; the AI says how sure it is, and a contradiction the rules also found is High confidence. On a slow computer the AI stops early (2 minutes a statement twice in a row, or 20 minutes in all) and the rule-based results stand
 - **Self-test:** a step for nicknames, address formatting and a wrong total
-
-### What's new in v1.161
-
-- **Fix (case list counts):** a folder holding a single case now shows its count (1) like the others; before, the count only appeared from two cases up, so a Mission or INDEPENDENT with one case looked empty
-- **Case list:** the handcuff icon is gone from CLOSED; it shows just how many cases are closed, in the same grey box as the other folders' counts
 
 ### Earlier versions
 
