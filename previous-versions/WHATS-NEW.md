@@ -4,6 +4,15 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.160
+
+- **Fix (drop-down lists):** the drop-down lists (Gender, Nationality, the ID states and every other list) open in every window, also the ones low in Edit Alias. A list no longer closes the moment the window scrolls; it moves with its box, and closes only when the box leaves the screen
+- **Fix (lists with suggestions):** the suggestion lists of the boxes you can type in (narcotics, platforms, departments and others) show on top of the window instead of being cut off at its edge
+- **Case list:** the counts, the green + buttons and the arrows of every folder sit in one straight column, top folders and the missions inside them alike; a folder name stays on one line
+- **Case list:** CLOSED shows a handcuff icon and how many closed cases it holds, on the right
+- **Secure Locker:** the buttons of each row (notes, Edit, the up and down arrows, delete) line up from row to row, also when some rows have notes and others don't
+- **Timeline:** the Paid box of a Buy fills in as money while you type ($1,234.5) and adds the cents when you leave it ($1,234.50); it is saved as a plain number, so the Buy Summary totals are unchanged
+
 ## What's new in v1.159
 
 - **Fix (case list top icons):** with the case list made narrower, its top icons wrap onto a second line instead of running past its right edge, so the padlock (last, on the right) stays inside the list in every browser and at any width

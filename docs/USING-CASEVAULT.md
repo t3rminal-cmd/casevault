@@ -213,6 +213,15 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.163
+
+- **Document Anonymizer: live, colour-coded review.** What's found shows as you type: red critical details (Social Security, card and bank numbers, dates of birth, ID numbers), orange high (phones, emails, addresses, plates, VINs, case numbers, known names), yellow medium (guessed names). Click a highlight to keep that detail (every mention of it), click again to replace it; red ones and known names are always replaced. The result updates as you go
+- **Document Anonymizer: styles.** Fictitious (John Doe, as before), Placeholder [NAME_1], REDACTED, Black Bar ████, or Initials (J. D., for names only; other details get their placeholder so no digit is given away). The local AI's second look goes with the Fictitious style
+- **Better names** for the Anonymizer, the mail check and the Library: hyphenated (Roe-Poe-Doe), Mc / Mac / O', particles (Maria de la Cruz, Pieter van der Poe), DE LA CRUZ, Maria, and a name in capitals in running text (arrested JOHN DOE); headings in capitals are left alone. A word that isn't a name no longer hides the name next to it ("Later, John Doe"), and a hyphenated or Mc / O' name is found at the start of a sentence too
+- **Better addresses and phones:** compass points (NW, North), floors and buildings, the city, state and ZIP after them, PO Box #; phone extensions ("ext.", "extension", "x"), +1, dots and spaces, and "contact" / "fax" labels
+- **Known names come first:** a name from the case, your profile or the watch list always beats a guessed one
+- **Fix:** a full stop taken with an address ("Oak St.") stays in the replaced text, and putting the values back gives the original exactly
+
 ### What's new in v1.162
 
 - **Consistency Checker: names.** Nicknames count as the same name (*Bill / William*, *Rick / Rich*, *Beto / Roberto*). Names are read in context: *Mary Poez / Mary Poes* is flagged as one person spelled two ways, *Jon Doe / Joan Roe* is two people and is not flagged
@@ -229,15 +238,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 
 - **Fix (case list counts):** a folder holding a single case now shows its count (1) like the others; before, the count only appeared from two cases up, so a Mission or INDEPENDENT with one case looked empty
 - **Case list:** the handcuff icon is gone from CLOSED; it shows just how many cases are closed, in the same grey box as the other folders' counts
-
-### What's new in v1.160
-
-- **Fix (drop-down lists):** the drop-down lists (Gender, Nationality, the ID states and every other list) open in every window, also the ones low in Edit Alias. A list no longer closes the moment the window scrolls; it moves with its box, and closes only when the box leaves the screen
-- **Fix (lists with suggestions):** the suggestion lists of the boxes you can type in (narcotics, platforms, departments and others) show on top of the window instead of being cut off at its edge
-- **Case list:** the counts, the green + buttons and the arrows of every folder sit in one straight column, top folders and the missions inside them alike; a folder name stays on one line
-- **Case list:** CLOSED shows a handcuff icon and how many closed cases it holds, on the right
-- **Secure Locker:** the buttons of each row (notes, Edit, the up and down arrows, delete) line up from row to row, also when some rows have notes and others don't
-- **Timeline:** the Paid box of a Buy fills in as money while you type ($1,234.5) and adds the cents when you leave it ($1,234.50); it is saved as a plain number, so the Buy Summary totals are unchanged
 
 ### Earlier versions
 
@@ -635,9 +635,17 @@ Every hand-off is listed under **Mail prepared from this case** (saved in `mail-
 - **Display:** **Zoom** (70–160 %) makes everything bigger or smaller, and **Brightness** (50–130 %) darkens or lightens CaseVault, for example in a dark room. Use the slider or the − and + buttons; **Reset** goes back to 100 %. They're kept in the browser on this PC, like the theme, so each PC has its own.
 - **Dev Tools → Document Anonymizer:** turns a real template, report or reference into a fictitious one you can keep as a template or give the AI to learn from.
   1. Paste the text into **Original** (the big box), or drop a Word (**.docx**), Markdown (**.md**) or text (**.txt**) file on the box above it (or click it to choose one). Only its text is used; the file isn't changed.
-  2. Optionally, under **Other names to replace**, type names the rules might not recognise, such as nicknames.
-  3. Click **Anonymize**. First the rules swap the details: names become John Doe, Jane Doe, Richard Roe and so on (the same person always gets the same filler, written the same way, for example *DOE, Jane* or *JOHN DOE*); phone numbers become (555) 555-01xx, addresses 100 Main Street, Anytown; dates of birth, case numbers, emails, plates, VINs and ID numbers get fillers too. `{{placeholders}}` and `[CONFIRM: …]` stay as they are. Then, when the local AI is running, it reads the result for anything the rules missed, and the rules run over its version once more. **Stop** keeps the rules' version. The line under the buttons lists what was replaced.
-  4. The result appears in **Fictitious**, under the original. Read it through and edit it if needed, type a **Name**, then **Copy** it, **Save Template** (Vault → Templates) or **Add to Library** (Report Examples). **Clear** empties both boxes.
+  2. Optionally, under **Other names to replace**, type names the rules might not recognise, such as nicknames. These, and your own details from My Profile, are always replaced.
+  3. **Review** (v1.163) shows what was found as you type, colour-coded: **red** critical details (Social Security, card and bank numbers, dates of birth, ID and passport numbers), **orange** high (phone numbers, emails, addresses, plates, VINs, case numbers, known names), **yellow** medium (names the rules guessed, IP addresses). **Click a highlight to keep that detail** (every mention of it; it gets a dashed outline), click again to replace it. Red ones and known names are always replaced. The line under it counts what's replaced and kept.
+     Choose a **Style**:
+     - **Fictitious (John Doe)**, the default: names become John Doe, Jane Doe, Richard Roe and so on (the same person always gets the same filler, written the same way, for example *DOE, Jane* or *JOHN DOE*); phone numbers become (555) 555-01xx, addresses 100 Main Street, Anytown; dates of birth, case numbers, emails, plates, VINs and ID numbers get fillers too.
+     - **Placeholder** `[NAME_1]`, `[PHONE_2]`, the same value always the same placeholder.
+     - **REDACTED**, the word.
+     - **Black Bar** `████`.
+     - **Initials** *J. D.* for names; other details get their placeholder (initials would give a number's first digit away).
+     `{{placeholders}}` and `[CONFIRM: …]` stay as they are. Names are found with hyphens (*Roe-Poe*), *Mc*/*O'*, particles (*Maria de la Cruz*), in capitals in running text (*arrested JOHN DOE*) and as *DE LA CRUZ, Maria*; headings in capitals are left alone.
+  4. **Result** updates as you go. **Anonymize** then, with the Fictitious style and when the local AI is running, lets the AI read the result for anything the rules missed, and the rules run over its version once more (keeping what you chose to keep). **Stop** keeps the rules' version. The line under the buttons lists what was replaced.
+  5. Read the result through and edit it if needed, type a **Name**, then **Copy** it, **Save Template** (Vault → Templates) or **Add to Library** (Report Examples). **Clear** empties everything.
 
   Everything happens on this computer: the rules run in the browser, and the AI is Ollama on `127.0.0.1`. Nothing goes online. Detection is a safety net, not a guarantee, so always read the result before you save it.
 - **Dev Tools → Emergency Purge:** deletes everything CaseVault keeps on the SSD at once: every case and archived case (files, photos, drafts, notes, timelines), the backups of `vault.json`, Ask AI chats, logs, templates, the Library, saved API keys and `vault.json`. CaseVault's preferences in this browser and the remembered vault folder are cleared too. Type **PURGE** to confirm. There is no undo. See *What deleting leaves behind* below.

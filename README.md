@@ -15,11 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.162
+## What's New in v1.163
 
-- **Consistency Checker:** nicknames, Known Aliases and names in context; addresses read alike however they're written
-- **Consistency Checker:** weights, totals and the Timeline buys checked; a confidence on every flag, grouped by kind
-- **Consistency Checker:** Mark as Reviewed / Dismiss; a clearer AI prompt that stops early on a slow computer
+- **Document Anonymizer:** live colour-coded review, click to keep or replace a detail, five styles (Fictitious, Placeholder, REDACTED, Black Bar, Initials)
+- **Personal details:** better names (hyphens, de la, capitals), addresses and phones; known names first
 
 ## What CaseVault Does
 
