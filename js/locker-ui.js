@@ -239,11 +239,11 @@
       h('button', { class: 'btn small', type: 'button', icon: 'key', title: 'Choose a new locker password', onclick: () => changeDialog() }, 'Change Password'),
       h('button', { class: 'btn small', type: 'button', icon: 'arrow-repeat', title: 'Make a new recovery key; the old one stops working', onclick: () => newRecoveryDialog() }, 'New Recovery Key'),
       lockAfterPick(),
-      h('button', { class: 'btn primary small', type: 'button', icon: 'lock-fill', title: `Lock now. It also locks by itself after ${mem.data.autoLock} minutes without use and when you leave this page.`, onclick: () => lock() }, 'Lock'));
+      h('button', { class: 'btn primary small', type: 'button', icon: 'lock-fill', title: `Lock now. It also locks by itself after ${lockMin()} minutes without use and when you leave this page.`, onclick: () => lock() }, 'Lock'));
     const page = h('div', { class: 'locker-open' }, tabs, deptBar(), body);
     page.addEventListener('input', touch);
     page.addEventListener('click', touch);
-    return [pageHead(tools), h('p', { class: 'muted small locker-note' }, ui.icon('unlock'), ` Open. Locks after ${mem.data.autoLock} minutes without use, when you leave this page, or with Lock.`), page];
+    return [pageHead(tools), h('p', { class: 'muted small locker-note' }, ui.icon('unlock'), ` Open. Locks after ${lockMin()} minutes without use, when you leave this page, or with Lock.`), page];
   }
 
   /** v1.156: show only one department's passwords, aliases and accounts (DEA, CPD …), or All. */
@@ -267,14 +267,16 @@
     const q = h('input', { type: 'search', placeholder: `Search ${T.title}`, 'aria-label': `Search ${T.title}`, value: mem.query[t] || '' });
     const tbody = h('tbody', {});
     // v1.156: the columns the table shows (T.cols); the rest is in Edit.
-    const cols = T.cols ? T.cols.map((k) => T.fields.find((f) => f[0] === k)) : T.fields.filter(([, , kind]) => kind !== 'wide');
+    // v1.166: Department only once a row has one, so the rest fits on one line.
+    const cols = (T.cols ? T.cols.map((k) => T.fields.find((f) => f[0] === k)) : T.fields.filter(([, , kind]) => kind !== 'wide'))
+      .filter(([k, , kind]) => kind !== 'dept' || rows.some((r) => String(r[k] || '').trim()));
     const keepsAge = T.fields.some(([k]) => k === 'password');
     // v1.148: how old a password is ("Changed 400 days ago"), red once past the reminder.
     const ageTag = (r) => {
       const n = L().daysBetween(r.changed, todayISO());
       if (n === null) return null;
       const stale = L().isStale(r, mem.data.pwRemind, todayISO());
-      return h('span', { class: `pw-age${stale ? ' stale' : ''}`, title: `Password set ${ui.fmtDate(r.changed)}${stale ? `: older than ${mem.data.pwRemind} days, time to change it` : ''}` }, n === 0 ? 'Changed today' : `Changed ${n} day${n === 1 ? '' : 's'} ago`);
+      return h('span', { class: `pw-age${stale ? ' stale' : ''}`, title: `Changed ${n === 0 ? 'today' : `${n} day${n === 1 ? '' : 's'} ago`} (${ui.fmtDate(r.changed)})${stale ? `: older than ${mem.data.pwRemind} days, time to change it` : ''}` }, I('clock-history'), n === 0 ? 'Today' : `${n} day${n === 1 ? '' : 's'}`); // v1.166: short, to stay on the row's line
     };
     const draw = () => {
       mem.query[t] = q.value;
@@ -295,7 +297,7 @@
             : h('td', { class: kind === 'secret' ? 'secret-cell' : `text-cell col-k-${k}${COPYABLE.includes(k) && r[k] ? ' copy-cell' : ''}`, title: kind === 'secret' ? null : r[k] || null },
             kind === 'secret' ? [secretCell(r[k], `${label} for ${name}`), k === 'password' && r[k] ? h('span', { class: 'pw-tags' }, strengthTag(r[k], () => editRow(t, r)), ageTag(r)) : null]
               // v1.148: the username has its own Copy button.
-              : COPYABLE.includes(k) && r[k] ? [h('div', { class: 'copy-wrap' }, h('span', { class: 'copy-text' }, r[k]), h('button', { type: 'button', class: 'icon-btn copy-user', title: `Copy the ${label.toLowerCase()}`, onclick: () => copySecret(r[k], label) }, I('copy'), h('span', { class: 'sr-only' }, `Copy ${label}`))), k === 'email' && r.google ? googleTag() : null]
+              : COPYABLE.includes(k) && r[k] ? [h('div', { class: 'copy-wrap' }, h('span', { class: 'copy-text' }, ...String(r[k]).split(/(?<=@)/).flatMap((x, j) => (j ? [h('wbr'), x] : [x]))), h('button', { type: 'button', class: 'icon-btn copy-user', title: `Copy the ${label.toLowerCase()}`, onclick: () => copySecret(r[k], label) }, I('copy'), h('span', { class: 'sr-only' }, `Copy ${label}`))), k === 'email' && r.google ? googleTag() : null]
               : k === 'email' && r.google ? googleTag()
               // v1.157: a covert account's social media accounts, listed in the hover box.
               : k === 'platform' && Array.isArray(r.social) && r.social.length ? [r[k] || h('span', { class: 'muted' }, '—'), h('span', { class: 'social-tag', title: r.social.map((x) => [x.platform, x.handle, x.url].filter(Boolean).join(' · ')).join('\n') }, `${r.social.length} social`)]
@@ -308,7 +310,7 @@
               if (mem.openHist.has(r.id)) mem.openHist.delete(r.id); else mem.openHist.add(r.id);
               draw();
             } }, `Old (${old.length})`, I(histOpen ? 'chevron-up' : 'clock-history')) : h('span', { class: 'locker-slot' }),
-            h('button', { type: 'button', class: 'btn small locker-edit', title: `Change this ${T.item.toLowerCase()}: a new password, username, address or notes`, onclick: () => editRow(t, r) }, 'Edit', I('pencil-square')),
+            h('button', { type: 'button', class: 'icon-btn locker-edit', title: `Edit: change this ${T.item.toLowerCase()} (a new password, username, address or notes)`, onclick: () => editRow(t, r) }, I('pencil-square'), h('span', { class: 'sr-only' }, `Edit ${name}`)), // v1.166: an icon, to keep the row on one line
             arranging ? h('span', { class: 'locker-move' },
               h('button', { type: 'button', class: 'icon-btn', title: 'Move up', disabled: i === 0, onclick: () => move(r, -1) }, I('arrow-up'), h('span', { class: 'sr-only' }, `Move ${name} up`)),
               h('button', { type: 'button', class: 'icon-btn', title: 'Move down', disabled: i === list.length - 1, onclick: () => move(r, 1) }, I('arrow-down'), h('span', { class: 'sr-only' }, `Move ${name} down`))) : null,
@@ -324,7 +326,20 @@
       })
         : [h('tr', {}, h('td', { colspan: cols.length + 1, class: 'muted empty-cell' }, rows.length ? (mem.dept && !L().byDept(rows, mem.dept).length ? `No ${T.title.toLowerCase()} for ${mem.dept}.` : 'Nothing matches.') : `No ${T.title.toLowerCase()} yet. Add ${T.item} to start.`))]));
     };
-    q.addEventListener('input', draw);
+    const table = h('table', { class: 'data-table locker-table locker-rows' },
+      h('thead', {}, h('tr', {}, ...cols.map(([k, label, kind]) => h('th', { class: `col-${kind} col-k-${k}`, title: SHORT_HEAD[label] ? label : null }, kind === 'check' && k === 'google' ? 'Google' : SHORT_HEAD[label] || label)), h('th', { class: 'col-actions' }, ''))), tbody);
+    const wrap = h('div', { class: 'table-wrap' }, table);
+    // v1.166: each row on one line. Only when the window is too narrow for that do long names wrap
+    // (between words, never cut); the table never scrolls sideways.
+    const fit = () => {
+      table.classList.remove('tight', 'tighter', 'tightest');
+      if (table.scrollWidth > wrap.clientWidth + 1) table.classList.add('tight'); // names between words, password tags under it
+      if (table.scrollWidth > wrap.clientWidth + 1) table.classList.add('tighter'); // an email after its @
+      if (table.scrollWidth > wrap.clientWidth + 1) table.classList.add('tightest'); // last of all, anywhere
+    };
+    let fitW = -1;
+    if (typeof ResizeObserver === 'function') new ResizeObserver(() => { if (wrap.clientWidth !== fitW) { fitW = wrap.clientWidth; fit(); } }).observe(wrap);
+    q.addEventListener('input', () => { draw(); fit(); });
     draw();
     return h('section', { class: 'locker-section' },
       h('div', { class: 'section-head' }, h('h2', { class: 'section-title caps', icon: T.icon }, T.title), h('div', { class: 'spacer' }), q,
@@ -335,18 +350,21 @@
           mem.data[t] = L().sortRows(t, mem.data[t]); await saveSafe(); render();
         } }, 'Sort A to Z') : null,
         h('button', { class: 'btn primary small', type: 'button', icon: 'plus-lg', onclick: () => editRow(t, null) }, `Add ${T.item}`)),
-      h('div', { class: 'table-wrap' }, h('table', { class: 'data-table locker-table locker-rows' },
-        h('thead', {}, h('tr', {}, ...cols.map(([k, label, kind]) => h('th', { class: `col-${kind} col-k-${k}` }, kind === 'check' && k === 'google' ? 'Google' : label)), h('th', { class: 'col-actions' }, ''))), tbody)));
+      wrap);
   }
 
+  // v1.166: shorter column headings, so a heading never takes more room than its column (the full one in the hover box).
+  const SHORT_HEAD = { 'Alias It Belongs To': 'Alias', 'Date of Birth Used': 'Birth Date', 'Phone Number': 'Phone', 'Platform / App': 'Platform', 'Username / Handle': 'Handle' };
   const COPYABLE = ['username', 'handle', 'email']; // v1.148; v1.156: and the email
   // v1.156: Linked to Google, as a tag under the email (saves a column).
   const googleTag = () => ui.h('span', { class: 'google-tag', title: 'Linked to Google' }, ui.icon('check2'), ' Google');
+  // v1.166: a new locker has no setting saved yet: 5 minutes (it said "undefined minutes").
+  const lockMin = () => (mem.data && mem.data.autoLock) || 5;
   /** v1.149: Lock After 2 / 5 / 15 minutes without use. */
   function lockAfterPick() {
     const { h } = ui;
     const sel = h('select', { class: 'lock-after', 'aria-label': 'Lock after minutes without use', title: 'How long the locker stays open without use' },
-      L().AUTO_LOCK.map((n) => h('option', { value: String(n), selected: n === mem.data.autoLock }, `Lock After ${n} Minutes`)));
+      L().AUTO_LOCK.map((n) => h('option', { value: String(n), selected: n === lockMin() }, `Lock After ${n} Minutes`)));
     sel.addEventListener('change', async () => { mem.data.autoLock = Number(sel.value); await saveSafe(); touch(); render(); });
     return sel;
   }
@@ -371,10 +389,10 @@
   function secretCell(value, what) {
     const { h, icon: I } = ui;
     if (!value) return h('span', { class: 'muted' }, '—');
-    const text = h('span', { class: 'secret-text' }, '••••••••');
+    const text = h('span', { class: 'secret-text' }, '••••••');
     let shown = false;
     const eye = h('button', { type: 'button', class: 'icon-btn', title: 'Show', onclick: () => {
-      shown = !shown; text.textContent = shown ? value : '••••••••';
+      shown = !shown; text.textContent = shown ? value : '••••••';
       eye.title = shown ? 'Hide' : 'Show'; eye.replaceChildren(I(shown ? 'eye-slash' : 'eye'));
       if (shown) setTimeout(() => { if (shown) eye.click(); }, 20000);
     } }, I('eye'));

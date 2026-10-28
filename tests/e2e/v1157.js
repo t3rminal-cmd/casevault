@@ -95,7 +95,8 @@ const SP = process.env.SP + '/v1157';
     const ths = [...row.closest('table').querySelectorAll('thead th')].map((th) => th.textContent);
     return { lines: Math.round(email.getBoundingClientRect().height / parseFloat(getComputedStyle(email).lineHeight || 16)), whole: email.scrollWidth <= email.clientWidth + 1, copies: cells, social: (row.querySelector('.social-tag') || {}).textContent || '', dept: ths.indexOf('Department') };
   });
-  ok(acct && acct.lines <= 1 && acct.whole, `email on one line, whole: ${JSON.stringify(acct)}`);
+  // v1.166: one line when the window has room; here (1366 wide, sidebar open) nothing is cut and nothing scrolls sideways.
+  ok(acct && acct.whole && await p.evaluate(() => [...document.querySelectorAll('.locker-section .table-wrap')].every((w) => w.scrollWidth <= w.clientWidth)), `email whole, no sideways scroll: ${JSON.stringify(acct)}`);
   ok(acct && acct.copies.length >= 2 && acct.copies.every(Boolean), 'every Copy button is fully shown');
   ok(acct && acct.social === '1 social' && acct.dept === 1, 'social media shown; Department is the second column');
   await p.locator('.locker-open').screenshot({ path: `${SP}/accounts.png` }).catch(() => {});
