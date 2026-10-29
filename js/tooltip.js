@@ -78,6 +78,9 @@
     const norm = (x) => String(x || '').replace(/\s+/g, ' ').trim().toLowerCase();
     const cut = el.scrollWidth > el.clientWidth + 1 || [...el.querySelectorAll('*')].some((c) => c.scrollWidth > c.clientWidth + 1 && getComputedStyle(c).overflow !== 'visible');
     if (!cut && norm(text) === norm(el.textContent)) return;
+    // v1.174: the case list on the left shows no hover boxes (its names and counts say it all), only
+    // a name cut off on screen and what a due count waits on.
+    if (!cut && el.closest('#sidebar-body') && !el.classList.contains('alert-count')) return;
     timer = setTimeout(() => {
       if (!el.isConnected) return;
       // Never over an open suggestion list (v1.38): the list is what you're looking at.

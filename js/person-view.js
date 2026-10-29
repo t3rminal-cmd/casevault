@@ -159,16 +159,40 @@
   /** v1.168: the identified suspects on the other cases (names for the Name box's suggestions),
    * those on a Mission's cases first. self: the case being edited. -> [{ name, dob, number }] */
   async function knownSuspects(self = {}) {
+    const entries = new Map((Vault.data.cases || []).map((e) => [e.id, e]));
+    return suspectsOf((await allCases()).map((c) => ({ ...c, status: (entries.get(c.id) || {}).status || c.status, archived: Vault.isArchived(c.id) })), self);
+  }
+  /** v1.174: a case that is closed (or archived): its suspects are not suggested any more. */
+  const isClosedCase = (c) => !!(c && (c.archived || /^(closed|archived)$/i.test(String(c.status || ''))));
+  /** v1.168, v1.174: the identified suspects of the open cases other than self, a Mission's first,
+   * one per name, with what the New Case search shows (date of birth, gender, IR number). */
+  function suspectsOf(cases, self = {}) {
     const seen = new Map();
-    const cases = (await allCases()).filter((c) => c.id !== self.id).sort((a, b) => Number(!!b.operationId) - Number(!!a.operationId));
-    for (const c of cases) for (const sx of c.suspects || []) {
-      const name = clean(sx && !sx.notIdentified && sx.name);
-      if (name && !seen.has(name.toLowerCase())) seen.set(name.toLowerCase(), { name, dob: clean(sx.dob), number: c.number || '' });
+    const list = (cases || []).filter((c) => c && c.id !== self.id && !isClosedCase(c)).sort((a, b) => Number(!!b.operationId) - Number(!!a.operationId));
+    for (const c of list) for (const sx of c.suspects || []) {
+      const name = sx && !sx.notIdentified ? clean(sx.name) : '';
+      if (!name) continue;
+      const k = name.toLowerCase();
+      const cur = seen.get(k);
+      const info = (sx && sx.info) || {};
+      if (!cur) { seen.set(k, { name, dob: clean(sx.dob), gender: clean(info.gender), ir: clean(info.irNumber), number: c.number || '', numbers: [c.number || ''].filter(Boolean), suspect: sx }); continue; }
+      // The same name on another case: fill in what the first record lacks.
+      if (!cur.dob) cur.dob = clean(sx.dob);
+      if (!cur.gender) cur.gender = clean(info.gender);
+      if (!cur.ir) cur.ir = clean(info.irNumber);
+      if (c.number && !cur.numbers.includes(c.number)) cur.numbers.push(c.number);
+      if (filledCount(sx) > filledCount(cur.suspect)) cur.suspect = sx;
     }
     return [...seen.values()];
   }
+  /** v1.174: the known suspects whose name, date of birth or IR number has the words typed. */
+  function searchSuspects(list, q) {
+    const words = clean(q).toLowerCase().split(/[\s,]+/).filter(Boolean);
+    if (!words.length) return [];
+    return (list || []).filter((x) => { const hay = [x.name, x.dob, x.ir, x.gender].join(' ').toLowerCase(); return words.every((w) => hay.includes(w)); });
+  }
 
-  const api = { appearances, duplicates, findDuplicates, fillFrom, filledCount, knownSuspects, personDiff, updateFrom, open };
+  const api = { appearances, duplicates, findDuplicates, fillFrom, filledCount, knownSuspects, suspectsOf, searchSuspects, isClosedCase, personDiff, updateFrom, open };
   if (isNode) module.exports = api;
   else root.CVPersonView = api;
 })(this);
