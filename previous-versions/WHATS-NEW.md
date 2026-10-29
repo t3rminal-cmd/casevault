@@ -4,6 +4,18 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.166
+
+- **Secure Locker: each row on one line.** The Password Manager and Covert tables show each row on one line, with nothing cut off and no sideways scroll bar:
+  - **Strong / Weak** and the password's age now sit beside the password instead of under it. The age is short (*Today*, *45 days*), and the full date is in the hover box
+  - **Edit** is now a pencil icon (point at it to see *Edit*), and the row buttons are smaller and closer together
+  - The tables use the whole width of the window
+  - The **Department** column shows only once a row has a department
+  - Shorter column headings: *Alias*, *Birth Date*, *Phone*, *Platform*, *Handle*. Point at one to see the full name
+  - The buttons are no longer pinned over the other columns
+- **Narrow windows:** when a window is too narrow for one line, the table still doesn't scroll sideways or cut anything. Instead, long names wrap between words and the Strong / Weak tag goes under the password. Then the text gets a little smaller and an email breaks after its @. Phone numbers and dates never break. Hiding the sidebar gives the table more room
+- **Fix:** a new locker said *Locks after undefined minutes*, and its Lock After list showed 2 minutes. Both now show the real setting, 5 minutes
+
 ## What's new in v1.165
 
 - **Fix (folder counts):** every folder now shows how many it holds, including 1 and 0 (an empty folder shows a grey 0). This applies on the home page (Mission, Year and General tiles, shared folders) and in the sidebar, where the OPERATION folder and CLOSED → OPERATION now show their counts too

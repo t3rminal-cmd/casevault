@@ -36,11 +36,9 @@ const SP = process.env.SP + '/v1138';
   ok(small.length === 3 && small.every(Boolean), 'no name is cut off at phone width');
   await p.setViewportSize({ width: 1366, height: 900 }); await p.waitForTimeout(300);
 
-  const logo = await p.evaluate(() => { const s = document.querySelector('.brand .brand-vault'); return s && { w: Math.round(s.getBoundingClientRect().width), img: !!document.querySelector('.brand img'), wheel: !!s.querySelector('.hv-wheel') }; });
-  ok(logo && logo.w === 30 && !logo.img && logo.wheel, `the top-left logo is the vault door: ${JSON.stringify(logo)}`);
-  await p.hover('.brand'); await p.waitForTimeout(800);
-  const turned = await p.$eval('.brand-vault .hv-wheel', (g) => getComputedStyle(g).transform);
-  ok(turned !== 'none', `its handle turns under the pointer: ${turned}`);
+  // v1.169: no logo at the top left; the name still opens the Overview.
+  const logo = await p.evaluate(() => ({ svg: !!document.querySelector('.brand svg, .brand img'), name: (document.querySelector('.brand .brand-name') || {}).textContent }));
+  ok(!logo.svg && logo.name === 'CaseVault', `no logo at the top left, the name stays: ${JSON.stringify(logo)}`);
   await p.locator('.topbar').screenshot({ path: `${SP}/topbar.png` });
   console.log('errors', errs); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

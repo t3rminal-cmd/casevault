@@ -372,7 +372,7 @@
    *  buys:    the case's Timeline buys [{ date, suspect, drug, qty, unit, paid }] (the Buy Summary):
    *           each buy and the totals are checked against what the documents say.
    */
-  function compare(inputDocs, { ignore = [], aliases = [], buys = [], pairs = null } = {}) {
+  function compare(inputDocs, { ignore = [], aliases = [], buys = [], pairs = null, evidence = [] } = {}) {
     const docs = analyze(inputDocs);
     const ignored = new Set(ignore.flatMap((t) => T.sentences(String(t || '')).flatMap((s) => extractFacts(s.text)))
       .map((f) => `${f.type}|${f.value}`));
@@ -530,6 +530,8 @@
     if (buys && buys.length) buysCheck(docs, buys, push);
     // v1.168: each Buy report against its Surveillance report.
     pairsCheck(docs, pairList, push);
+    // v1.169: and every inventory number against the evidence list.
+    if (evidence && evidence.length) evidenceCheck(docs, evidence, push);
 
     const rank = { High: 0, Medium: 1, Low: 2 };
     return flags.sort((x, y) => rank[x.severity] - rank[y.severity]
@@ -726,12 +728,28 @@
    * names ("Buy 2" / "Surv 2"), the same date, the same inventory numbers. With one of each they are
    * a pair. docs: analyzed documents (or raw ones). -> [{ buy, surv, why }] (indexes into docs)
    */
-  function pairReports(inputDocs) {
+  /*
+   * v1.169 opts (chosen on the Checks tab, saved with the case):
+   *  kinds: { fileName: 'buy' | 'surveillance' | 'other' } — what a report is, over its name;
+   *  fixed: { buyFileName: survFileName | '' } — the Surveillance report a Buy report goes with
+   *         ('' = none); the others are paired as before.
+   */
+  function pairReports(inputDocs, { kinds = {}, fixed = {} } = {}) {
     const docs = inputDocs.length && inputDocs[0].sentences ? inputDocs : analyze(inputDocs);
+    const kindOf = (d) => { const k = kinds[d.name]; return k === 'other' ? '' : k === 'buy' || k === 'surveillance' ? k : reportKind(d); };
     const reportsOnly = docs.map((d, i) => ({ d, i })).filter((x) => x.d.role !== 'affidavit');
-    const buys = reportsOnly.filter((x) => reportKind(x.d) === 'buy');
-    const survs = reportsOnly.filter((x) => reportKind(x.d) === 'surveillance');
+    let buys = reportsOnly.filter((x) => kindOf(x.d) === 'buy');
+    let survs = reportsOnly.filter((x) => kindOf(x.d) === 'surveillance');
     if (!buys.length || !survs.length) return [];
+    const out = [];
+    for (const b of buys) {
+      if (!Object.prototype.hasOwnProperty.call(fixed, b.d.name)) continue;
+      const v = survs.find((x) => x.d.name === fixed[b.d.name]);
+      if (v) out.push({ buy: b.i, surv: v.i, why: 'paired by hand' });
+    }
+    // A Buy report set by hand (paired, or "Not paired") and its Surveillance report are taken.
+    buys = buys.filter((b) => !Object.prototype.hasOwnProperty.call(fixed, b.d.name));
+    survs = survs.filter((v) => !out.some((pr) => pr.surv === v.i));
     const scored = [];
     for (const b of buys) {
       for (const v of survs) {
@@ -749,7 +767,6 @@
       }
     }
     const one = buys.length === 1 && survs.length === 1;
-    const out = [];
     const used = new Set();
     for (const x of scored.sort((a, b) => b.score - a.score)) {
       if (used.has(`b${x.buy}`) || used.has(`s${x.surv}`)) continue;
@@ -829,6 +846,59 @@
           }
         }
       }
+    }
+  }
+
+  /**
+   * v1.169: the inventory numbers of the documents against the case's evidence list (the exhibits
+   * on the Draft tab, each with its inventory number and chain of custody):
+   *  - a number in a document that isn't on the list: a near-identical one on the list is a typo
+   *    (High); otherwise it is missing from the list (Medium);
+   *  - a number on the list that no document gives (Low: it may be in a report not checked).
+   * evidence: [{ number, inventory }]; only exhibits with an inventory number count.
+   */
+  function evidenceCheck(docs, evidence, push) {
+    const SRC = 'Evidence list (Draft tab)';
+    const listed = new Map();
+    for (const e of evidence || []) {
+      const v = String((e && e.inventory) || '').replace(/\D/g, '');
+      if (v.length >= 5 && !listed.has(v)) listed.set(v, e);
+    }
+    if (!listed.size) return;
+    const seen = new Map();
+    for (const d of docs) for (const x of d.sentences) for (const f of x.facts) if (f.type === 'inventory' && !seen.has(f.value)) seen.set(f.value, { x, f });
+    const exhibit = (e) => `Exhibit ${e.number || '?'}`;
+    for (const [v, { x, f }] of seen) {
+      if (listed.has(v)) continue;
+      const near = [...listed.keys()].filter((w) => !seen.has(w) && T.levenshtein(v, w) <= 2).sort((a, b) => T.levenshtein(v, a) - T.levenshtein(v, b))[0];
+      if (near) {
+        push(makeFlag(docs, {
+          severity: 'High', confidence: 'High', type: 'inventory',
+          title: `Inventory number "${f.display}" vs ${exhibit(listed.get(near))}'s ${near}`,
+          detail: `${docs[x.doc].name} gives inventory number ${f.display}; the evidence list has ${near} (${exhibit(listed.get(near))}) and not ${f.display}. One of them is likely a typo.`,
+          statement: x, statementFact: f, source: null, sourceLabel: SRC,
+        }), `e|near|${v}|${near}`);
+        continue;
+      }
+      push(makeFlag(docs, {
+        severity: 'Medium', confidence: 'Medium', type: 'inventory',
+        title: `Inventory number ${f.display} is not on the evidence list`,
+        detail: `${docs[x.doc].name} gives inventory number ${f.display}, but no exhibit on the Draft tab has it. Add the exhibit, or check the number.`,
+        statement: x, statementFact: f, source: null, sourceLabel: SRC,
+      }), `e|miss|${v}`);
+    }
+    const first = docs.flatMap((d) => d.sentences)[0];
+    if (!first) return;
+    for (const [v, e] of listed) {
+      if (seen.has(v) || [...seen.keys()].some((w) => T.levenshtein(v, w) <= 2)) continue;
+      const fl = makeFlag(docs, {
+        severity: 'Low', confidence: 'Medium', type: 'inventory',
+        title: `${exhibit(e)} (Inventory ${v}) is not in the documents checked`,
+        detail: `The evidence list has ${exhibit(e)}${e.description ? `, ${e.description}` : ''}, inventory number ${v}; none of the documents checked gives it. It may be in a report that wasn't chosen.`,
+        statement: { ...first, text: `${exhibit(e)}: Inventory ${v}`, start: 0, end: 0 }, source: null, sourceLabel: 'Not in the documents checked',
+      });
+      fl.statement = { ...fl.statement, doc: SRC, page: null, paragraph: 0 }; // it is the list's, not a document's
+      push(fl, `e|unsaid|${v}`);
     }
   }
 

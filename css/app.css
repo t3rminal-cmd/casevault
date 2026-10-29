@@ -4629,20 +4629,14 @@ body:not(.sidebar-collapsed) .sidebar-head { padding-left: .3rem; padding-right:
 .locker-rows td.col-k-phone, .locker-rows td.col-k-dob, .locker-rows td.col-k-age { white-space: nowrap !important; } /* a phone number or a date never breaks */
 
 /* v1.167: a closed case is red, not green: the Closed tag, the folder and the box's border (all
-   round, not only on the left), most of all for a case closed while its Mission goes on. A case
-   closed with an arrest has an X across its box. */
+   round, not only on the left), most of all for a case closed while its Mission goes on.
+   v1.169: no X across a case closed with an arrest; the closed folder icon is teal again. */
 #sidebar .case-item.st-closed { border-left-color: var(--st-closed); box-shadow: inset 0 0 0 1px var(--st-closed); }
 #sidebar .case-item.st-closed.has-arrest { box-shadow: inset -4px 0 0 var(--arrest), inset 0 0 0 1px var(--st-closed); }
 #sidebar .case-item.case-dim { border-left-width: 4px; }
 #sidebar .case-item .case-lock { color: var(--st-closed); }
 #sidebar .case-item .case-lock svg.ci:not(.ci-only) > image { display: none; } /* the lock as a red outline */
 #sidebar .case-item .case-lock svg.ci:not(.ci-only) > :not(image) { display: inline; }
-#sidebar .case-item.closed-arrest.has-arrest, #sidebar .case-item.closed-arrest.has-arrest:not(.has-reminder), .op-case-card.closed-arrest {
-  --x-line: color-mix(in srgb, var(--st-closed) 55%, transparent);
-  background-image:
-    linear-gradient(to top right, transparent calc(50% - 1px), var(--x-line) calc(50% - 1px), var(--x-line) calc(50% + 1px), transparent calc(50% + 1px)),
-    linear-gradient(to bottom right, transparent calc(50% - 1px), var(--x-line) calc(50% - 1px), var(--x-line) calc(50% + 1px), transparent calc(50% + 1px));
-}
 
 /* v1.168: Buy and Surveillance reports in the Checks tab, and the pairs checked together. */
 .chk-doc .chk-kind { display: inline-block; margin-left: .45rem; padding: 0 .35rem; border: 1px solid currentColor; font-size: var(--fs-tiny); font-weight: 700; line-height: 1.4; vertical-align: 1px; white-space: nowrap; }
@@ -4651,3 +4645,15 @@ body:not(.sidebar-collapsed) .sidebar-head { padding-left: .3rem; padding-right:
 .chk-pairs { margin: .4rem 0; font-size: var(--fs-small); }
 .chk-pairs ul { margin: .2rem 0 0; padding-left: 1.2rem; }
 .suspect-dup .suspect-fill { margin-left: auto; } /* v1.168: Fill In From <case number> */
+/* v1.169: choosing what each report is, the Buy / Surveillance pairs, and a check gone out of date. */
+.chk-doc { flex-wrap: wrap; }
+.check-reports .chk-doc select.chk-kind-pick { margin-left: auto; width: auto; min-width: 0; padding: .1rem 1.7rem .1rem .4rem !important; font-size: var(--fs-tiny); } /* over the form-field rule (padding 0) */
+.chk-pair-box { display: grid; gap: .35rem; margin-top: .6rem; padding: .5rem .6rem; border: 1px solid var(--border); background: var(--surface); }
+.chk-pair-title { font-size: var(--fs-small); font-weight: 700; }
+.chk-pair-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: .4rem; font-size: var(--fs-small); }
+.chk-pair-row > span:first-child { overflow-wrap: anywhere; }
+.chk-stale { display: inline-block; margin-top: .2rem; padding: 0 .35rem; border: 1px solid var(--warn); color: var(--warn); font-size: var(--fs-tiny); font-weight: 700; }
+.chk-stale-card { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.chk-stale-card .btn { margin-left: auto; }
+.export-check { max-width: 40rem; }
+.export-check-list { display: grid; gap: .45rem; margin: .4rem 0 .6rem; padding-left: 1.2rem; }

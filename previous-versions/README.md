@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.168)
+
+- **Suspects:** Fill In From a Mission's case when the same name is a suspect there
+- **Checker:** each Buy report is checked with its Surveillance report: matching inventory numbers and dates
+- **AI:** compares the Buy and Surveillance narratives side by side
+
 ## Features (v1.167)
 
 - **Closed is red:** the Closed tag, the closed folder and a red border round a closed case's box
