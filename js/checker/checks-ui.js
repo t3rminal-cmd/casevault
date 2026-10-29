@@ -256,6 +256,27 @@
 
   const KIND_NAME = { buy: 'Buy', surveillance: 'Surveillance', lab: 'Lab' }; // v1.170: and Lab
 
+  /** v1.171: Order of Events: a Buy report and its Surveillance report side by side, their sentences
+   * under the time they happened. A time in one report and not the other stands out on its own row. */
+  async function orderOfEventsDialog(c, buyName, survName) {
+    const { h, openDialog, toast } = ui;
+    let a; let b;
+    try { [a, b] = await Promise.all([documentText(c, buyName, () => {}), documentText(c, survName, () => {})]); } catch (err) {
+      if (FS.isDisconnectError(err)) { ui.onDriveLost(); return; }
+      toast(`Could not read the reports: ${err.message}`, 'error'); return;
+    }
+    const rows = CVRules.orderOfEvents(a, b);
+    const clock = (t) => { if (!t) return 'Before'; const [hh, mm] = t.split(':').map(Number); return `${((hh + 11) % 12) + 1}:${String(mm).padStart(2, '0')} ${hh < 12 ? 'AM' : 'PM'}`; };
+    const cell = (list) => h('td', { class: list.length ? '' : 'order-none' }, ...(list.length ? list.slice(0, 6).map((t) => h('p', {}, t)) : [h('span', { class: 'muted small' }, 'Nothing at this time')]), list.length > 6 ? h('p', { class: 'muted small' }, `and ${list.length - 6} more`) : null);
+    await openDialog((close) => h('div', { class: 'order-events' },
+      h('h2', { icon: 'clock-history' }, 'Order of Events'),
+      h('p', { class: 'muted small' }, 'Each report\'s sentences under the time they happened (a sentence with no time goes with the time before it). A time only one report gives is on a row of its own.'),
+      h('div', { class: 'table-wrap' }, h('table', { class: 'data-table order-table' },
+        h('thead', {}, h('tr', {}, h('th', {}, 'Time'), h('th', {}, buyName.split('/').pop()), h('th', {}, survName.split('/').pop()))),
+        h('tbody', {}, ...rows.map((r) => h('tr', { class: !r.a.length || !r.b.length ? 'order-one' : '' }, h('td', { class: 'nowrap order-time' }, clock(r.time)), cell(r.a), cell(r.b)))))),
+      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
+  }
+
   /** v1.169: the documents of a past check that changed since (a file replaced or edited, or gone).
    * docs: the check's documents [{ name, size, modified, draft }]; files: the case's files now.
    * Drafts are not compared (their text is read again on each check). -> [names] */
@@ -829,6 +850,8 @@
           h('ul', {}, ...data.pairs.map((pr) => {
             const ps = ((data.ai && data.ai.pairs) || []).find((x) => x.buy === pr.buy && x.surv === pr.surv);
             return h('li', {}, `${pr.buy} with ${pr.surv}`, h('span', { class: 'muted small' }, ` (${pr.why})`),
+              // v1.171: the two reports' events side by side, by time.
+              h('button', { class: 'btn small chk-order-btn', type: 'button', icon: 'clock-history', 'data-ro-ok': 'true', onclick: () => orderOfEventsDialog(c, pr.buy, pr.surv) }, 'Order of Events'),
               ps ? h('span', { class: 'small block' }, ps.error ? `AI narrative comparison stopped: ${ps.error}.`
                 : `AI compared the narratives: ${ps.kept} difference${ps.kept === 1 ? '' : 's'} found${ps.discarded ? `, ${ps.discarded} answer${ps.discarded === 1 ? '' : 's'} discarded (quote not found in the reports)` : ''}${ps.cut ? '. The reports were too long to read whole; the end of one was left out' : ''}.`) : null);
           }))) : null,

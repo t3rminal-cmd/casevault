@@ -213,6 +213,22 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.171
+
+- **Backups: tested, and when you choose.**
+  - The Backups panel has *Remind Me Every 3, 7, 14 or 30 Days* for the full-backup banner
+  - Each **Test Restore** is remembered: the panel says when the backup was last tested and whether it read back fine
+  - If a full backup hasn't been tested in 30 days (or a test found problems), the home page asks you to **Test Backup**
+- **A narrative from a Timeline buy.** New Report → Start From → **A Timeline Buy**:
+  - Pick the buy and *Buy Narrative* or *Surveillance Narrative*
+  - The narrative starts with what the Timeline and the evidence list know: date, time, suspect, drug, amount, paid and the inventory numbers of that drug
+  - Everything else is a [CONFIRM: …] to fill in (location, what happened in order, vehicles, the field test…), listed under To Confirm
+  - It is named *Buy 2 Narrative* / *Surveillance 2 Narrative*, so the Checks tab pairs the two. No AI is needed
+- **Order of Events.** On a check's results, each Buy and Surveillance pair has an **Order of Events** button. It opens the two reports side by side: each sentence under the time it happened (a sentence with no time goes with the time before it). A time only one report gives is on its own row, so a gap or a different order stands out
+- **One record per person.** When a suspect on this case has details the same person doesn't have on another case (a new address, a height, a phone…), the note under the suspect offers **Update on N Other Cases**:
+  - It lists each case, a Mission's own cases included, with what would change, each with a tick box
+  - Only the details this case has are copied. Details only the other case has stay there
+
 ### What's new in v1.170
 
 - **Case Facts beside a draft.** In a draft's side panel, under *To Confirm*, Case Facts lists the case's facts to write from:
@@ -253,23 +269,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
   - If something clearly doesn't match (an amount, a date, an inventory number…), a *Before You Export* box lists it, with **Run Full Check**, **Cancel** and **Export Anyway**
   - Once you export a text anyway, you aren't asked about that same text again
 - **Out-of-date checks.** When a document changes after a check, or is removed, the check says **Out of Date** in Past Checks. Its results show which documents changed, with **Run Again**
-
-### What's new in v1.168
-
-- **Suspects: Fill In From a Mission's case.** When you add a suspect to a case (an independent one, for example) and type a name that is a suspect on another case, the note under the suspect now has a **Fill In From EX-200** button:
-  - It copies that person's date of birth, residence, description and record numbers into the boxes you left empty. Anything you already typed stays
-  - A case in a Mission (a group case) is used first, then the one with the most details
-  - While you type a name, the suspects of your other cases are suggested, those on a Mission's cases first
-- **Consistency Checker: Buy and Surveillance reports, checked in pairs.** The checker recognises a Buy report and a Surveillance report from their file names (*Buy 2.pdf*, *SURV-2.docx*, *Controlled Purchase…*) or from their first lines, and marks them in the list. It pairs each Buy report with the Surveillance report of the same buy: the same number in the name, the same date or the same inventory numbers. In each pair:
-  - **Inventory numbers must match:** a number in one report that is missing from the other is flagged High. A near-identical number (*12345678* / *12345687*) is flagged once, as a likely typo
-  - A date, an amount paid or a plate one report gives and the other doesn't is noted (Low: surveillance may not have seen it)
-  - Reports of two different buys are no longer compared with each other, so *$200* on Buy 1 and *$300* on Buy 2 isn't flagged as a mismatch
-  - The results list the pairs checked, under a new **Inventory Numbers** group
-- **AI: the two narratives side by side.** With the AI engine on, the AI reads each Buy report together with its Surveillance report and lists where the narratives contradict each other:
-  - It looks at the time, the order of events, who was there, the vehicle, the place, the amount, the drugs and the inventory numbers. A detail only one report gives doesn't count
-  - Each difference quotes both reports. An answer whose quotes aren't found word for word in the reports is dropped
-  - This works without an affidavit too: choose *None: compare the reports with each other*
-- The checker now reads inventory numbers anywhere (*Inventory #12345678*, *Inv. Nos. 12345678, 12345679 and 12345680*), so an affidavit is checked against the reports' inventory numbers too
 
 ### Earlier versions
 

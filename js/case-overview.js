@@ -85,6 +85,53 @@
           };
           nameIn.addEventListener('change', checkDup);
           dob.addEventListener('change', checkDup);
+          // v1.171: one record per person: the same person on other cases (this Mission's too) with
+          // other details can be brought up to date from this one, case by case.
+          const upd = h('p', { class: 'suspect-update', hidden: true, role: 'status' });
+          const infoLabel = (k) => { const f = CVReportFields.SUSPECT_INFO.find(([key]) => key === k); return f ? f[1] : { phone: 'Phone Number', moniker: 'Moniker / Social Media' }[k] || k; };
+          const fieldName = (d) => (d.key.startsWith('info.') ? infoLabel(d.key.slice(5)) : d.label);
+          let updTimer = null;
+          const checkUpdate = async () => {
+            const PV = root.CVPersonView;
+            if (Vault.isArchived(c.id) || s.notIdentified || !String(s.name || '').trim() || !PV || !PV.personDiff) { upd.hidden = true; return; }
+            const hits = (await PV.findDuplicates({ name: s.name, dob: s.dob }, c, { sameMission: true }).catch(() => []))
+              .filter((x) => x.suspect && !Vault.isArchived(x.c.id) && PV.personDiff(s, x.suspect).length);
+            if (!hits.length) { upd.hidden = true; return; }
+            upd.replaceChildren(I('arrow-repeat'), h('span', {}, `${s.name} is on ${hits.length === 1 ? 'another case' : `${hits.length} other cases`} with other details. `),
+              h('button', { class: 'btn small suspect-update-btn', type: 'button', icon: 'arrow-repeat', onclick: () => updateOthers(hits) }, `Update on ${hits.length} Other Case${hits.length === 1 ? '' : 's'}`));
+            upd.hidden = false;
+          };
+          const updateOthers = async (hits) => {
+            const PV = root.CVPersonView;
+            const ticks = hits.map(() => h('input', { type: 'checkbox', checked: true }));
+            const go = await openDialog((close) => h('form', { class: 'suspect-update-form', onsubmit: (e) => { e.preventDefault(); close(true); } },
+              h('h2', { icon: 'arrow-repeat' }, `Update ${s.name} on Other Cases`),
+              h('p', { class: 'muted small' }, 'This case\'s details of the person go on the ticked cases. Details only the other case has stay there.'),
+              h('div', { class: 'suspect-update-list' }, ...hits.map((x, n) => {
+                const op = x.c.operationId ? opOf(x.c) : null;
+                return h('label', { class: 'check-row suspect-update-row' }, ticks[n],
+                  h('span', {}, h('strong', {}, x.c.number || 'No case number'), op ? h('span', { class: 'muted small' }, ` · ${op.number || op.name}`) : null,
+                    h('ul', { class: 'small' }, ...PV.personDiff(s, x.suspect).map((d) => h('li', {}, `${fieldName(d)}: ${d.from || '(empty)'} → ${d.to}`)))));
+              })),
+              h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, 'Cancel'), h('button', { class: 'btn primary', type: 'submit' }, 'Update'))));
+            if (!go) return;
+            let done = 0;
+            for (let n = 0; n < hits.length; n++) {
+              if (!ticks[n].checked) continue;
+              try {
+                await Save.track(`case:${hits[n].c.id}`, async () => {
+                  const full = await Vault.getCase(hits[n].c.id);
+                  const t = (full.suspects || []).find((x) => x && !x.notIdentified && root.CVOperation.nameMatch(s.name, x.name) === 'same' && !(s.dob && x.dob && x.dob !== s.dob));
+                  if (!t) return;
+                  PV.updateFrom(t, s);
+                  await Vault.saveCase(full);
+                  done++;
+                });
+              } catch { /* reported by Save */ }
+            }
+            if (done) root.CaseVaultUI.toast(`${s.name} updated on ${done} other case${done === 1 ? '' : 's'}.`, 'success');
+            checkUpdate();
+          };
           const card = h('div', { class: 'suspect-card' }, h('div', { class: 'suspect-row' },
             h('div', { class: 'field suspect-name-field' }, h('span', { class: 'suspect-name-label' }, 'Name', h('label', { class: 'suspect-notid', title: 'The suspect has not been identified yet. Templates and the Draft show "Not Identified".' }, notId, h('span', {}, 'Not Identified'))), nameIn),
             field('DOB', dob),
@@ -95,7 +142,10 @@
             h('button', { 'data-ro-ok': 'true', class: 'icon-btn person-btn', type: 'button', title: 'Every case this person is on', onclick: () => { if (!String(s.name || '').trim()) return; root.CVPersonView.open(s.name, root.CaseVaultUI); } }, I('person-lines-fill'), h('span', { class: 'sr-only' }, `Cases with ${who}`)),
             h('button', { class: 'icon-btn danger-icon contact-remove', type: 'button', title: 'Remove this suspect', onclick: () => { c.suspects.splice(i, 1); draw(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Remove ${who}`))),
             dup,
+            upd,
             demo);
+          card.addEventListener('change', () => { clearTimeout(updTimer); updTimer = setTimeout(checkUpdate, 600); });
+          if (String(s.name || '').trim()) setTimeout(checkUpdate, 0);
           // v1.168: the suggestions list now, not later from the page watcher (which moved the box and
           // took the focus away from a new suspect's name).
           if (root.CVCombo && root.CVCombo.upgrade) root.CVCombo.upgrade(nameIn);

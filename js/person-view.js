@@ -83,14 +83,15 @@
    * same date of birth when both have one). person: { name, dob }; cases: full case objects; self:
    * the case being edited (it and the cases of its Mission are left out, they share suspects).
    * -> [{ c, name, dob, sameDob }] */
-  function duplicates(person, cases, self = {}) {
+  function duplicates(person, cases, self = {}, { sameMission = false } = {}) {
     const Op = O();
     const name = clean(person && person.name);
     if (!name || Op.normName(name).length < 3) return [];
     const dob = clean(person.dob);
     const out = [];
     for (const c of cases || []) {
-      if (!c || c.id === self.id || (self.operationId && c.operationId === self.operationId)) continue;
+      // v1.171 sameMission: the cases of this case's Mission too (to update the person there).
+      if (!c || c.id === self.id || (!sameMission && self.operationId && c.operationId === self.operationId)) continue;
       const hit = [...(c.suspects || []).filter((sx) => sx && !sx.notIdentified).map((sx) => ({ name: sx.name, dob: sx.dob, suspect: sx })), { name: c.subject, dob: '' }]
         .find((x) => clean(x.name) && Op.nameMatch(name, x.name) === 'same' && !(dob && clean(x.dob) && clean(x.dob) !== dob));
       // v1.168: the suspect's record too (to fill in the same person on this case), and how much it holds.
@@ -134,7 +135,26 @@
     return out;
   }
   /** Browser: duplicates() over every case on the SSD. */
-  async function findDuplicates(person, self) { return duplicates(person, await allCases(), self); }
+  async function findDuplicates(person, self, opts) { return duplicates(person, await allCases(), self, opts); }
+
+  /* v1.171: one record per person. The details of a suspect that differ from the same person's on
+   * another case: [{ key, label, from (theirs), to (this case's) }], only where this case has one. */
+  const PERSON_FIELDS = [['dob', 'Date of birth'], ['residence', 'Residence']];
+  function personDiff(mine, theirs) {
+    const out = [];
+    for (const [k, label] of PERSON_FIELDS) if (clean(mine[k]) && clean(mine[k]) !== clean(theirs[k])) out.push({ key: k, label, from: clean(theirs[k]), to: clean(mine[k]) });
+    for (const [k, v] of Object.entries(mine.info || {})) {
+      if (clean(v) && clean(v) !== clean((theirs.info || {})[k])) out.push({ key: `info.${k}`, label: k.replace(/([A-Z])/g, ' $1').replace(/^./, (x) => x.toUpperCase()), from: clean((theirs.info || {})[k]), to: clean(v) });
+    }
+    return out;
+  }
+  /** v1.171: puts this case's details of the person on the other case's record (what this case has). -> fields changed */
+  function updateFrom(target, source) {
+    const diff = personDiff(source, target);
+    if (!target.info || typeof target.info !== 'object') target.info = {};
+    for (const d of diff) { if (d.key.startsWith('info.')) target.info[d.key.slice(5)] = d.to; else target[d.key] = d.to; }
+    return diff.length;
+  }
 
   /** v1.168: the identified suspects on the other cases (names for the Name box's suggestions),
    * those on a Mission's cases first. self: the case being edited. -> [{ name, dob, number }] */
@@ -148,7 +168,7 @@
     return [...seen.values()];
   }
 
-  const api = { appearances, duplicates, findDuplicates, fillFrom, filledCount, knownSuspects, open };
+  const api = { appearances, duplicates, findDuplicates, fillFrom, filledCount, knownSuspects, personDiff, updateFrom, open };
   if (isNode) module.exports = api;
   else root.CVPersonView = api;
 })(this);

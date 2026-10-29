@@ -60,6 +60,47 @@
     return text.slice(0, best) + fix.to + text.slice(best + from.length);
   }
 
+  /**
+   * v1.171: the start of a Buy or Surveillance narrative from a Timeline buy: what the Timeline and
+   * the evidence list know is filled in, the rest is a [CONFIRM: …] to fill. No AI.
+   * buy: a Timeline buy event { date, time, suspect, drug, qty, unit, paid, note };
+   * kind: 'buy' | 'surveillance'; evidence: the Draft tab's exhibits [{ number, inventory, drug, type, weight }].
+   */
+  function buySkeleton(buy, { kind = 'buy', evidence = [], title = '' } = {}) {
+    const b = buy || {};
+    const M = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(b.date || ''));
+    const day = m ? `${M[Number(m[2]) - 1]} ${Number(m[3])}, ${m[1]}` : '[CONFIRM: date]';
+    const t = /^(\d{1,2}):(\d{2})$/.exec(String(b.time || ''));
+    const time = t ? `${((Number(t[1]) + 11) % 12) + 1}:${t[2]} ${Number(t[1]) < 12 ? 'AM' : 'PM'}` : '[CONFIRM: time]';
+    const who = clean(b.suspect) || '[CONFIRM: suspect]';
+    const drug = clean(b.drug);
+    const amount = clean(b.qty) ? `${clean(b.qty)} ${b.unit || 'g'}${b.unit === 'g' || !b.unit ? 'rams' : ''}`.replace(/\b(\d+(?:\.\d+)?) grams$/, (x, n) => (Number(n) === 1 ? `${n} gram` : x)) : '';
+    const paid = clean(b.paid) ? `$${Number(String(b.paid).replace(/[$,]/g, '')).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : '';
+    // The exhibits of this drug (or all of them when none names it) with their inventory numbers.
+    const ex = (evidence || []).filter((e) => clean(e.inventory));
+    const same = drug ? ex.filter((e) => new RegExp(drug.split(/\s+/)[0], 'i').test(`${e.drug || ''} ${e.description || ''}`)) : [];
+    const inv = (same.length ? same : ex).map((e) => `Inventory #${clean(e.inventory)}`);
+    const invText = inv.length ? inv.join(' and ') : 'Inventory #[CONFIRM: inventory number]';
+    const what = [amount, drug ? `of suspect ${drug.toLowerCase()}` : 'of suspect narcotics'].filter(Boolean).join(' ');
+    const head = [`# ${title || (kind === 'surveillance' ? 'Surveillance Report' : 'Buy Report')}`, '',
+      `**Date:** ${day} · **Time:** ${time} · **Suspect:** ${who}${drug ? ` · **Narcotic:** ${drug}` : ''}${paid ? ` · **Paid:** ${paid}` : ''}`, ''];
+    const lines = kind === 'surveillance' ? [
+      `1. On ${day}, at approximately ${t ? time : '[CONFIRM: time surveillance was set up]'}, surveillance was set up at [CONFIRM: surveillance position] near [CONFIRM: location of the buy].`,
+      `2. At approximately ${time}, surveillance observed the undercover officer (UC) meet ${who} at [CONFIRM: location].`,
+      '3. [CONFIRM: what surveillance saw, in order: arrivals, vehicles (make, colour, plate), the hand-off, departures and directions of travel.]',
+      `4. After the buy, the UC turned over ${what}, which was inventoried under ${invText}.`,
+      '5. [CONFIRM: when surveillance ended, and the debriefing.]',
+    ] : [
+      `1. On ${day}, at approximately ${time}, the undercover officer (UC) met ${who} at [CONFIRM: location].`,
+      `2. The UC purchased ${what} from ${who}${paid ? ` for ${paid} in pre-recorded funds` : ' for [CONFIRM: amount] in pre-recorded funds'}.`,
+      '3. [CONFIRM: what happened, in order: the conversation, the hand-off, and how the UC and the suspect left.]',
+      `4. The narcotics were inventoried under ${invText}.`,
+      '5. [CONFIRM: field test result, and who took the narcotics to the evidence room.]',
+    ];
+    return [...head, ...lines, ''].join('\n');
+  }
+
   /** Browser: the panel for one draft. -> { el } */
   function attach({ c, slug, meta, ta, rich, ui }) {
     const { h, icon: I } = ui;
@@ -186,7 +227,7 @@
     return { el, run: () => { lastText = null; run(); } };
   }
 
-  const api = { factsOf, applyFix, attach };
+  const api = { factsOf, applyFix, buySkeleton, attach };
   if (isNode) module.exports = api;
   else root.CVDraftFacts = api;
 })(this);

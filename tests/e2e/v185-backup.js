@@ -31,7 +31,8 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   await p.evaluate(async (op) => { await Vault.backupNow(); await Vault.updateOperation(op, { name: 'Renamed Op' }); }, ids.op);
   const name = (await p.evaluate(() => Vault.listBackups()))[0];
   await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(400);
-  await p.click('.hc-backup, .backup-bar .btn'); await p.waitForSelector('.backup-list');
+  // v1.171: after a backup the banner asks to test it; the backup chip opens the Backups panel.
+  await p.click('.hc-backup'); await p.waitForSelector('.backup-list');
   await p.click('.backup-list summary');
   await p.click(`.backup-row:has-text("${name}") button`);
   await p.click('#dialog[open] button:has-text("Restore")'); await p.waitForTimeout(1200);

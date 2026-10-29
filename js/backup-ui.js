@@ -232,6 +232,8 @@
         }
       } finally { progress.remove(); }
       const verdict = CVBackupRestore.testVerdict(t);
+      // v1.171: kept, for the Backups panel and the monthly reminder.
+      await Save.track('settings', () => Vault.updateSettings({ lastBackupTest: { at: new Date().toISOString(), ok: !!verdict.ok, backup: pick.backup || '' } })).catch(() => {});
       await openDialog((close) => h('div', { class: 'test-restore' },
         h('h2', { icon: verdict.ok ? 'check-circle-fill' : 'exclamation-triangle-fill' }, verdict.ok ? 'Backup Reads Back Fine' : 'Backup Has Problems'),
         h('p', { class: 'muted small' }, `${pick.backup} · ${CVBackupRestore.backupWhen(pick.backup)}. Nothing was changed.`),

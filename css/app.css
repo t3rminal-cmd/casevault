@@ -4680,3 +4680,15 @@ body:not(.sidebar-collapsed) .sidebar-head { padding-left: .3rem; padding-right:
 .flag-explain { margin: .4rem 0; padding: .5rem .7rem; border: 1px solid var(--border); border-left: 3px solid var(--accent); background: var(--surface); font-size: var(--fs-small); }
 .flag-explain p { margin: 0 0 .3rem; }
 .flag-suggest { display: flex; flex-wrap: wrap; align-items: baseline; gap: .35rem; }
+/* v1.171: Order of Events, a Buy report and its Surveillance report side by side. */
+.chk-pairs .chk-order-btn { margin-left: .5rem; vertical-align: middle; }
+.order-events { width: min(64rem, 92vw); }
+.order-table td, .order-table th { vertical-align: top; }
+.order-table td p { margin: 0 0 .3rem; }
+.order-table .order-time { font-weight: 700; }
+.order-table tr.order-one > td.order-none { background: var(--warn-soft); }
+/* v1.171: one record per person: update the same suspect on other cases. */
+.suspect-update { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 4px 0 0; padding: 4px 8px; background: var(--accent-soft); border-left: 3px solid var(--accent); font-size: var(--fs-small); }
+.suspect-update .suspect-update-btn { margin-left: auto; }
+.suspect-update-list { display: grid; gap: .4rem; max-height: 50vh; overflow-y: auto; }
+.suspect-update-row ul { margin: .2rem 0 0; padding-left: 1.1rem; }
