@@ -576,11 +576,54 @@
     return { flags, stats, cut: prompt.cut };
   }
 
+  /* ---------------- v1.170: Explain this flag ---------------- */
+
+  const EXPLAIN_SYSTEM = [
+    'You help a police officer understand one finding of a consistency check between documents of the same case.',
+    'You get the finding, the sentence it is about and, when there is one, the sentence it was compared with. Use ONLY these, never outside knowledge.',
+    'In "explanation", say in plain words (at most 60 words) what differs and why it matters in a sworn document or a report. Do not decide which document is right; say what to check.',
+    'In "suggestion", rewrite the first sentence so it agrees with the other one, changing only the differing detail and keeping everything else word for word. If the finding is not about a difference in wording (e.g. something is missing), or you are unsure, return an empty suggestion.',
+    'Reply with JSON only.',
+  ].join('\n');
+  const EXPLAIN_SCHEMA = { type: 'object', properties: { explanation: { type: 'string' }, suggestion: { type: 'string' } }, required: ['explanation', 'suggestion'] };
+  function explainPrompt(flag) {
+    const st = flag.statement || {}; const src = flag.source || null;
+    return [`FINDING: ${flag.title || ''}`, flag.detail ? `DETAIL: ${flag.detail}` : '', `SENTENCE (${st.doc || 'document'}): ${st.text || ''}`,
+      src ? `COMPARED WITH (${src.doc || 'document'}): ${src.text || ''}` : `COMPARED WITH: ${flag.sourceLabel || 'nothing (the fact was not found)'}`].filter(Boolean).join('\n');
+  }
+  /** -> { explanation, suggestion } (suggestion '' when there is none). */
+  async function explainFlag({ flag, engine, fetchImpl, signal, timeoutMs = 120000 } = {}) {
+    fetchImpl = fetchImpl || ((...args) => globalThis.fetch(...args));
+    const own = new AbortController();
+    const onOuter = () => own.abort();
+    if (signal) signal.addEventListener('abort', onOuter);
+    const timer = timeoutMs ? setTimeout(() => own.abort(), timeoutMs) : null;
+    try {
+      const data = await fetchJson(fetchImpl, `${engine.base}/api/chat`, {
+        method: 'POST', signal: own.signal,
+        body: JSON.stringify({ model: engine.model, stream: false, format: EXPLAIN_SCHEMA, keep_alive: keepAlive(), options: { temperature: 0, seed: 7, num_ctx: engine.numCtx || DEFAULT_CTX },
+          messages: [{ role: 'system', content: EXPLAIN_SYSTEM }, { role: 'user', content: explainPrompt(flag) }] }),
+      });
+      let obj = null;
+      const content = data && data.message && data.message.content;
+      try { obj = JSON.parse(content); } catch { const m = /\{[\s\S]*\}/.exec(content || ''); try { obj = m ? JSON.parse(m[0]) : null; } catch { obj = null; } }
+      if (!obj || !String(obj.explanation || '').trim()) throw new Error('the AI gave no explanation');
+      const suggestion = String(obj.suggestion || '').trim();
+      // A suggestion that is the sentence unchanged, or a long way from it, isn't a rewording.
+      const st = String((flag.statement && flag.statement.text) || '');
+      const near = suggestion && suggestion !== st && T.similarity(suggestion, st) >= 0.5;
+      return { explanation: String(obj.explanation).trim(), suggestion: near ? suggestion : '' };
+    } finally {
+      if (timer) clearTimeout(timer);
+      if (signal) signal.removeEventListener('abort', onOuter);
+    }
+  }
+
   /** A model's name as shown on screen: first letter capital, no ":latest" (v1.28). The real name
    * (qwen3:8b) is still what is sent to Ollama. */
   const modelName = (m) => { const s = String(m || '').replace(/:latest$/, ''); return s ? s[0].toUpperCase() + s.slice(1) : s; };
 
-  const api = { SYSTEM, aliasLine, modelName, PROFILES, KEEP_ALIVE, KEEP_CHOICES, keepChoice, setKeepChoice, keepAlive, keepMs, DEFAULT_CTX, numCtxFor, tokensOf, fitPassages, userPrompt, detect, choose, review, comparePair, pairPrompt, parsePair, PAIR_SYSTEM, statementsOf, passagesOf, parseAnswer, sizeB };
+  const api = { SYSTEM, aliasLine, modelName, PROFILES, KEEP_ALIVE, KEEP_CHOICES, keepChoice, setKeepChoice, keepAlive, keepMs, DEFAULT_CTX, numCtxFor, tokensOf, fitPassages, userPrompt, detect, choose, review, explainFlag, explainPrompt, comparePair, pairPrompt, parsePair, PAIR_SYSTEM, statementsOf, passagesOf, parseAnswer, sizeB };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVAI = api;
 })(this);

@@ -254,6 +254,8 @@
     return [loc.doc, at(loc)].filter(Boolean).join(' · ');
   }
 
+  const KIND_NAME = { buy: 'Buy', surveillance: 'Surveillance', lab: 'Lab' }; // v1.170: and Lab
+
   /** v1.169: the documents of a past check that changed since (a file replaced or edited, or gone).
    * docs: the check's documents [{ name, size, modified, draft }]; files: the case's files now.
    * Drafts are not compared (their text is read again on each check). -> [names] */
@@ -372,7 +374,7 @@
         const name = row.querySelector('input').value;
         const auto = CVRules.kindFromName(name);
         const sel = h('select', { class: 'chk-kind-pick', 'aria-label': `What ${name} is`, title: 'What this report is. Auto goes by its name; a Buy report is checked with its Surveillance report.' },
-          ...[['', `Auto${auto ? ` (${auto === 'buy' ? 'Buy' : 'Surveillance'})` : ''}`], ['buy', 'Buy'], ['surveillance', 'Surveillance'], ['other', 'Other']]
+          ...[['', `Auto${auto ? ` (${KIND_NAME[auto]})` : ''}`], ['buy', 'Buy'], ['surveillance', 'Surveillance'], ['lab', 'Lab'], ['other', 'Other']]
             .map(([v, l]) => h('option', { value: v, selected: (pairPick.kinds[name] || '') === v }, l)));
         sel.addEventListener('change', () => { if (sel.value) pairPick.kinds[name] = sel.value; else delete pairPick.kinds[name]; savePairs(); drawKindTag(row, name); drawPairs(); updateAiLine(); });
         row.append(sel);
@@ -385,7 +387,7 @@
       const old = row.querySelector('.chk-kind');
       if (old) old.remove();
       const k = kindOf(name);
-      if (k) row.querySelector('span').append(h('span', { class: `chk-kind chk-kind-${k}` }, k === 'buy' ? 'Buy' : 'Surveillance'));
+      if (k) row.querySelector('span').append(h('span', { class: `chk-kind chk-kind-${k}` }, KIND_NAME[k]));
     }
     reportList.addEventListener('change', (e) => { if (e.target.matches('input[type=checkbox]')) { drawPairs(); updateAiLine(); } });
 
@@ -548,11 +550,11 @@
       const pairs = CVRules.pairReports(ruleDocs, pairOpts);
       for (const d of docInfo) {
         const k = (pairOpts.kinds || {})[d.name];
-        const kind = d.skipped ? '' : k === 'other' ? '' : k || CVRules.reportKind(docs.find((x) => x.name === d.name) || d);
+        const kind = d.skipped ? '' : k === 'other' ? '' : k || CVRules.reportKind(docs.find((x) => x.name === d.name) || d); // buy, surveillance or lab
         if (kind && d.role === 'report') d.reportKind = kind;
       }
       const evidence = await caseEvidence(c);
-      const ruleFlags = CVRules.compare(ruleDocs, { ignore: ownDetails(), aliases, buys, pairs, evidence });
+      const ruleFlags = CVRules.compare(ruleDocs, { ignore: ownDetails(), aliases, buys, pairs, evidence, kinds: pairOpts.kinds || {} });
       done(rulesStep);
       bar.value = useAI ? 35 : 90;
 
@@ -784,7 +786,7 @@
 
     const st = data.ai && data.ai.stats;
     const docsLine = (data.documents || []).map((d) => h('li', {},
-      h('strong', {}, d.name), ` (${d.role === 'affidavit' ? 'checked' : d.reportKind === 'buy' ? 'Buy report' : d.reportKind === 'surveillance' ? 'Surveillance report' : 'report'}${d.xfa ? ', XFA form' : ''}${d.pageCount ? `, ${d.pageCount} page${d.pageCount === 1 ? '' : 's'}` : ''})`,
+      h('strong', {}, d.name), ` (${d.role === 'affidavit' ? 'checked' : d.reportKind ? `${KIND_NAME[d.reportKind] || 'Other'} report` : 'report'}${d.xfa ? ', XFA form' : ''}${d.pageCount ? `, ${d.pageCount} page${d.pageCount === 1 ? '' : 's'}` : ''})`,
       d.skipped ? h('span', { class: 'error-text' }, ` Skipped: ${d.error}`) : null,
       ...(d.warnings || []).map((w) => h('span', { class: 'warn-text block small' }, w))));
 
@@ -892,6 +894,49 @@
       return b;
     });
 
+    // v1.170: Use <value>: a mismatch in a checked draft is corrected in the draft (never in an attached file).
+    const affDoc = (data.documents || []).find((d) => d.role === 'affidavit');
+    const draftSlug = affDoc && affDoc.draft && f.statement && f.statement.doc === data.affidavit ? affDoc.draft : null;
+    const fixBtn = f.fix && draftSlug && !Vault.isArchived(c.id) ? h('button', { type: 'button', class: 'btn small primary flag-fix', title: `Puts ${f.fix.to} in the draft in place of ${f.fix.from}`, onclick: async () => {
+      try {
+        await CVLazy.reports();
+        const d = await Vault.readDraft(c.id, draftSlug);
+        if (!d) { ui.toast('That draft no longer exists.', 'error'); return; }
+        const next = CVDraftFacts.applyFix(d.body, f.statement.text, f.fix);
+        if (next == null) { ui.toast(`"${f.fix.from}" isn't in the draft as written now; change it there by hand.`, 'info'); return; }
+        await ui.Save.track(`draft:${c.id}:${draftSlug}`, () => Vault.saveDraft(c.id, draftSlug, d.meta, next));
+        f.status = 'reviewed'; f.reviewed = new Date().toISOString();
+        f.note = [f.note, `Changed ${f.fix.from} to ${f.fix.to} in the draft.`].filter(Boolean).join(' ');
+        save(); onChange();
+        ui.toast(`Changed ${f.fix.from} to ${f.fix.to} in the draft.`, 'success');
+        fixBtn.disabled = true;
+      } catch (err) { if (FS.isDisconnectError(err)) ui.onDriveLost(); }
+    } }, `Use ${f.fix.to}`) : null;
+
+    // v1.170: Explain: the AI on this PC says what differs and why it matters, with a suggested rewording.
+    const explainBox = h('div', { class: 'flag-explain', hidden: !f.explain });
+    const drawExplain = () => {
+      if (!f.explain) { explainBox.hidden = true; return; }
+      explainBox.hidden = false;
+      explainBox.replaceChildren(h('p', {}, h('strong', {}, 'Explained: '), f.explain.explanation),
+        f.explain.suggestion ? h('p', { class: 'flag-suggest' }, h('strong', {}, 'Suggested wording: '), h('q', {}, f.explain.suggestion),
+          h('button', { type: 'button', class: 'btn small', icon: 'copy', 'data-ro-ok': 'true', onclick: async () => { try { await navigator.clipboard.writeText(f.explain.suggestion); ui.toast('Copied.', 'success'); } catch { ui.toast('Could not copy.', 'error'); } } }, 'Copy')) : null,
+        h('p', { class: 'muted small' }, `AI (${CVAI.modelName(f.explain.model || '')}): a suggestion only. Check it against the documents.`));
+    };
+    drawExplain();
+    const explainBtn = Engine.status() === 'connected' && Engine.choice() && f.layer === 'rules' ? h('button', { type: 'button', class: 'btn small', icon: 'chat-left-text', 'data-ro-ok': 'true', title: 'The AI on this PC explains this flag in plain words and suggests a rewording', onclick: async () => {
+      const choice = Engine.choice(); const det = Engine.detected;
+      explainBtn.disabled = true;
+      explainBox.hidden = false; explainBox.replaceChildren(h('p', { class: 'muted small' }, 'Asking the AI…'));
+      try {
+        const out = await CVActivity.exclusive('check', () => CVAI.explainFlag({ flag: f, fetchImpl: Engine.fetchImpl(), engine: { base: det.base, model: choice.model, numCtx: CVAI.numCtxFor(choice.profile) } }), { label: 'Explaining…', model: CVAI.modelName(choice.model) });
+        f.explain = { ...out, model: choice.model };
+        save(); drawExplain();
+      } catch (err) {
+        explainBox.replaceChildren(h('p', { class: 'error-text small' }, `The AI could not explain it: ${err.message}`));
+      } finally { explainBtn.disabled = false; }
+    } }, f.explain ? 'Explain Again' : 'Explain') : null;
+
     const quote = (loc, label) => h('button', { 'data-ro-ok': 'true', type: 'button', class: 'quote', title: 'Show this in the document', onclick: () => openLocation(c, data, loc) },
       h('span', { class: 'quote-where' }, label, ': ', where(loc)),
       h('span', { class: 'quote-text' }, '“', markText(loc.text, loc.highlight), '”'));
@@ -906,7 +951,8 @@
         quote(f.statement, data.affidavit && f.statement.doc === data.affidavit ? 'Statement' : 'Says'),
         f.source ? quote(f.source, 'Source') : h('div', { class: 'quote none' }, h('span', { class: 'quote-where' }, 'Source'), h('span', { class: 'muted' }, f.sourceLabel || (f.type === 'total' ? 'The same passage' : 'Not found in the reports')))),
       f.detail ? h('p', { class: 'flag-detail muted small' }, f.detail) : null,
-      h('div', { class: 'flag-actions' }, ...buttons, f.status !== 'open' && f.reviewed ? h('span', { class: 'muted small' }, `${f.status === 'dismissed' ? 'Dismissed' : 'Reviewed'} ${ui.fmtDateTime(Date.parse(f.reviewed))}`) : null),
+      explainBox,
+      h('div', { class: 'flag-actions' }, ...(fixBtn ? [fixBtn] : []), ...buttons, ...(explainBtn ? [explainBtn] : []), f.status !== 'open' && f.reviewed ? h('span', { class: 'muted small' }, `${f.status === 'dismissed' ? 'Dismissed' : 'Reviewed'} ${ui.fmtDateTime(Date.parse(f.reviewed))}`) : null),
       note);
     return card;
   }
@@ -1019,25 +1065,45 @@
     const ruleDocs = docs.map((d, i) => ({ id: i, ...d }));
     const flags = CVRules.compare(ruleDocs, {
       ignore: ownDetails(), aliases: CVText.parseAliases(caseNow.checkAliases || ''), buys,
-      pairs: CVRules.pairReports(ruleDocs, caseNow.checkPairs || {}), evidence: await caseEvidence(c),
+      pairs: CVRules.pairReports(ruleDocs, caseNow.checkPairs || {}), evidence: await caseEvidence(c), kinds: (caseNow.checkPairs || {}).kinds || {},
     });
     return flags.filter((f) => f.severity === 'High' && f.confidence !== 'Low' && f.statement && f.statement.docIndex === 0);
   }
+  /** v1.170: details that never belong in a report that goes out: a Social Security, payment card,
+   * bank account or passport number, and the terms on the watch list (Settings), such as a
+   * confidential informant's real name. Names, addresses, phones and plates are a report's business.
+   * -> [{ label, value }] */
+  const PRIVATE = new Set(['ssn', 'card', 'bank', 'passport', 'known']);
+  function privacyFindings(text) {
+    const P = root.CVPii;
+    if (!P || !String(text || '').trim()) return [];
+    const watch = (Vault.data && Vault.data.settings && Vault.data.settings.piiWatchlist) || [];
+    const known = P.knownTerms({ watchlist: watch });
+    const seen = new Set();
+    return P.scan(String(text), { known }).filter((f) => PRIVATE.has(f.type)).filter((f) => { const k = `${f.type}|${f.value.toLowerCase()}`; if (seen.has(k)) return false; seen.add(k); return true; })
+      .map((f) => ({ label: f.type === 'known' ? 'On your watch list' : f.label, value: f.value }));
+  }
+
   /** -> true to go on with the export. draft: { slug, title, text, exclude } */
   async function confirmExport(c, draft) {
     const key = `${c.id}:${draft.slug}`;
     if (exportOk.get(key) === draft.text) return true;
     let flags = [];
-    try { flags = await preflight(c, draft); } catch (err) { if (FS.isDisconnectError(err)) throw err; return true; } // never block an export on the check itself
-    if (!flags.length) return true;
+    try { flags = await preflight(c, draft); } catch (err) { if (FS.isDisconnectError(err)) throw err; } // never block an export on the check itself
+    let priv = [];
+    try { priv = privacyFindings(CVDraft.stripMarkdown(draft.text)); } catch { /* the scan is a safety net */ }
+    if (!flags.length && !priv.length) return true;
     const { h, openDialog } = ui;
     const choice = await openDialog((close) => h('div', { class: 'export-check' },
       h('h2', { icon: 'clipboard2-check' }, 'Before You Export'),
-      h('p', {}, `${flags.length} thing${flags.length === 1 ? '' : 's'} in this draft ${flags.length === 1 ? 'doesn\'t' : 'don\'t'} match the case's documents:`),
-      h('ul', { class: 'export-check-list' }, ...flags.slice(0, 6).map((f) => h('li', {}, h('strong', {}, f.title), h('span', { class: 'muted small block' }, f.detail)))),
+      priv.length ? h('div', { class: 'export-private' },
+        h('p', {}, h('strong', {}, 'Private details: '), 'this draft has details that usually must not go out:'),
+        h('ul', { class: 'export-check-list' }, ...priv.slice(0, 8).map((x) => h('li', {}, h('strong', {}, x.label), `: ${x.value}`)))) : null,
+      flags.length ? h('p', {}, `${flags.length} thing${flags.length === 1 ? '' : 's'} in this draft ${flags.length === 1 ? 'doesn\'t' : 'don\'t'} match the case's documents:`) : null,
+      flags.length ? h('ul', { class: 'export-check-list' }, ...flags.slice(0, 6).map((f) => h('li', {}, h('strong', {}, f.title), h('span', { class: 'muted small block' }, f.detail)))) : null,
       flags.length > 6 ? h('p', { class: 'muted small' }, `And ${flags.length - 6} more. Run Full Check lists them all.`) : null,
       h('div', { class: 'dialog-actions' },
-        h('button', { class: 'btn', type: 'button', onclick: () => close('check') }, 'Run Full Check'),
+        flags.length ? h('button', { class: 'btn', type: 'button', onclick: () => close('check') }, 'Run Full Check') : null,
         h('button', { class: 'btn', type: 'button', onclick: () => close('cancel') }, 'Cancel'),
         h('button', { class: 'btn primary', type: 'button', onclick: () => close('go') }, 'Export Anyway'))));
     if (choice === 'go') { exportOk.set(key, draft.text); return true; }
@@ -1045,5 +1111,5 @@
     return false;
   }
 
-  root.CVChecks = { init, render, onVaultOpen, renderPill, Engine, documentText, checkDraft, profileLabel, preflight, confirmExport, changedSince };
+  root.CVChecks = { init, render, onVaultOpen, renderPill, Engine, documentText, checkDraft, profileLabel, preflight, confirmExport, changedSince, ownDetails, privacyFindings };
 })(this);

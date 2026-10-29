@@ -213,6 +213,25 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.170
+
+- **Case Facts beside a draft.** In a draft's side panel, under *To Confirm*, Case Facts lists the case's facts to write from:
+  - The Timeline's buys, and the evidence list (exhibits and inventory numbers)
+  - For a Buy or Surveillance narrative, the dates, times, amounts, weights, plates and inventory numbers of its paired report
+  - Click a fact to put it in the draft where the cursor is
+- **Checked as you write.** A moment after you stop typing, the draft is compared with the case's documents, the Timeline and the evidence list (the same rules as the Checks tab; nothing leaves this PC):
+  - What doesn't match is listed and underlined in red in the draft
+  - **Use $200** (the right value) corrects it in one click
+  - When everything matches, it says so
+- **Use … on a check's results.** When a check of a draft finds a mismatch, the flag has a **Use …** button. It corrects the draft and marks the flag *Reviewed*, with a note. Attached files are never changed
+- **Explain.** With the AI engine on, each rule-based flag has an **Explain** button. The AI on this PC says in plain words what differs and why it matters, and suggests a rewording you can copy. It's kept with the check
+- **Lab reports.** The checker recognises a Lab report (*Lab*, *Crime Lab*, *Laboratory Report*… or chosen on the Checks tab) and checks it against the report of the buy with the same inventory number:
+  - A different drug is flagged (High). *Crack* and *cocaine* count as one drug
+  - A lab weight more than the field weight is flagged (Medium). The lab weighs the drug without its packaging, so a lower lab weight is normal and is no longer flagged as a mismatch
+  - An inventory number that no other report gives is flagged
+- **Privacy check before export.** *Before You Export* also lists details that must not go out: a Social Security, payment card, bank account or passport number, and the terms on your watch list (Settings), such as a CI's real name
+- **Discovery.** The Discovery Index and the Discovery Receipt list the exhibits with their inventory numbers, from the evidence list
+
 ### What's new in v1.169
 
 - **Fix (case list folders):** clicking a folder opens it every time:
@@ -251,12 +270,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
   - Each difference quotes both reports. An answer whose quotes aren't found word for word in the reports is dropped
   - This works without an affidavit too: choose *None: compare the reports with each other*
 - The checker now reads inventory numbers anywhere (*Inventory #12345678*, *Inv. Nos. 12345678, 12345679 and 12345680*), so an affidavit is checked against the reports' inventory numbers too
-
-### What's new in v1.167
-
-- **Closed is red, not green.** A closed case is now marked in red everywhere: the **Closed** tag, the closed folder icon (CLOSED in the case list, Closed Files on the home page, the Year Summary) and the case colour in the themes. This is most visible for a case closed while its Mission is still open:
-  - In the case list, its box has a red border all the way round (thicker on the left) and a red lock before the case number
-- **An X for a case closed with an arrest.** When a closed case has Arrest details, its box in the case list has a red X across it, and so does its card on the home page's open Mission. The text stays readable through the X, and pointing at the box says *Closed with an arrest*
 
 ### Earlier versions
 

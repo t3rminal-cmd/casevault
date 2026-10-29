@@ -15,11 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.169
+## What's New in v1.170
 
-- **Fix:** case list folders open reliably, and their counts line up at every depth; no X, no top-left logo, teal closed folder
-- **Checks:** choose Buy and Surveillance pairs by hand; inventory numbers checked against the evidence list
-- **Check before export**, and **Out of Date** on checks whose documents changed
+- **Drafts:** Case Facts beside the draft, checked as you write, with **Use …** to correct it
+- **Checks:** Explain (AI), Use … on the results, and Lab reports checked against the buy
+- **Export:** a privacy check; inventory numbers in the discovery index and receipt
 
 ## What CaseVault Does
 

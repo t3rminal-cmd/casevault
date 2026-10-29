@@ -4657,3 +4657,26 @@ body:not(.sidebar-collapsed) .sidebar-head { padding-left: .3rem; padding-right:
 .chk-stale-card .btn { margin-left: auto; }
 .export-check { max-width: 40rem; }
 .export-check-list { display: grid; gap: .45rem; margin: .4rem 0 .6rem; padding-left: 1.2rem; }
+.chk-kind-lab { color: var(--ok); } /* v1.170 */
+
+/* v1.170: Case Facts beside a draft, and what doesn't match underlined in the draft. */
+.facts-panel { margin-top: 1rem; padding-top: .8rem; border-top: 1px solid var(--border); display: grid; gap: .45rem; }
+.facts-head { display: flex; align-items: center; gap: .4rem; }
+.facts-head h3 { margin: 0; }
+.facts-head .icon-btn { margin-left: auto; }
+.facts-status { margin: 0; }
+.facts-status.bad { color: var(--danger); font-weight: 600; }
+.facts-mismatch { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+.facts-mismatch li { padding: .45rem .55rem; border: 1px solid var(--danger); border-left-width: 3px; background: var(--danger-soft); font-size: var(--fs-small); }
+.facts-mismatch .fact-fix { margin-top: .35rem; }
+.facts-group summary { cursor: pointer; font-size: var(--fs-small); font-weight: 700; padding: .2rem 0; }
+.facts-items { display: flex; flex-wrap: wrap; gap: .3rem; padding: .25rem 0 .4rem; }
+.fact-chip { padding: .15rem .45rem; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: var(--fs-small); text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.fact-chip:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+.fact-chip:disabled { cursor: default; opacity: .8; }
+::highlight(cv-mismatch) { text-decoration: underline wavy var(--danger); text-decoration-thickness: 1.5px; background-color: var(--danger-soft); }
+.export-private { padding: .5rem .7rem; border: 1px solid var(--danger); border-left-width: 3px; background: var(--danger-soft); margin-bottom: .6rem; }
+.export-private p { margin: 0 0 .3rem; }
+.flag-explain { margin: .4rem 0; padding: .5rem .7rem; border: 1px solid var(--border); border-left: 3px solid var(--accent); background: var(--surface); font-size: var(--fs-small); }
+.flag-explain p { margin: 0 0 .3rem; }
+.flag-suggest { display: flex; flex-wrap: wrap; align-items: baseline; gap: .35rem; }

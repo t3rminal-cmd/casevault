@@ -164,11 +164,18 @@
 
     // 4. The index: a PDF for the case's records, and its pages in the package.
     const profile = (Vault.data.settings && Vault.data.settings.affiant) || {};
+    // v1.170: the exhibits with their inventory numbers (the Draft tab's evidence list), in the index and on the receipt.
+    let evidence = [];
+    try {
+      const rf = await Vault.readCaseJSON(c.id, 'report-fields.json');
+      evidence = ((rf && rf.evidence) || []).filter((e) => String(e.inventory || '').trim())
+        .map((e) => ({ number: e.number, inventory: String(e.inventory).trim(), description: [e.type === 'Narcotics' && e.drug ? e.drug : e.type, e.weight, e.description].filter(Boolean).join(', ') }));
+    } catch (err) { if (FS.isDisconnectError(err)) throw err; }
     const manifest = {
       title: `Discovery ${D.batesRange(prefix, items[0].batesFirst, last)}`,
       produced: today, producedTo: String(opts.producedTo || '').trim(), producedBy: [profile.name, profile.agency].filter(Boolean).join(', '),
       caseLabel: [c.number ? `Case ${c.number}` : '', c.subject || c.title || ''].filter(Boolean).join(' · '),
-      prefix, batesFirst: items[0].batesFirst, batesLast: last, allowSave: !!opts.allowSave, vlc: false, items: manifestItems,
+      prefix, batesFirst: items[0].batesFirst, batesLast: last, allowSave: !!opts.allowSave, vlc: false, items: manifestItems, evidence,
     };
     step('Making the index…');
     const indexPdf = CVDraftPdf.build(D.indexMarkdown(manifest), { title: 'Discovery Index', caseLabel: manifest.caseLabel });
@@ -200,6 +207,7 @@
     const entry = {
       id: `${today}-${D.bates(prefix, items[0].batesFirst)}`, produced: today, producedAt: new Date().toISOString(), producedTo: manifest.producedTo,
       prefix, batesFirst: items[0].batesFirst, batesLast: last, folder, destination: opts.destLabel || '', vlc: manifest.vlc, allowSave: manifest.allowSave, index: indexName,
+      evidence, // v1.170
       items: manifestItems.map((it, i) => ({ path: items[i].path, ...(items[i].caseId !== c.id ? { caseId: items[i].caseId, caseNumber: items[i].caseNumber } : {}), batesFirst: it.batesFirst, batesLast: it.batesLast, pages: it.pages, size: it.size, sha256: it.sha256 })),
     };
     // 8. v1.55: the receipt to sign at the hand-off, kept with the case too.

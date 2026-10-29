@@ -83,6 +83,28 @@
     });
     y -= 14;
 
+    // v1.170: the exhibits and their inventory numbers (the case's evidence list).
+    const ev = Array.isArray(entry.evidence) ? entry.evidence : [];
+    if (ev.length) {
+      ensure(40);
+      text(M, y - 10, 'EVIDENCE (INVENTORY NUMBERS)', 9, true); y -= 16;
+      const ec = [[0, 52, 'EXHIBIT'], [52, 96, 'INVENTORY NO.'], [148, IN - 148, 'DESCRIPTION']];
+      const ehead = () => { fill(M, y - 12, IN, 12, 0.88); rect(M, y - 12, IN, 12); for (const [x, , l] of ec) text(M + x + 3, y - 9, l, 6.5, true); y -= 12; };
+      ehead();
+      ev.forEach((e, i) => {
+        const d = wrap(String(e.description || ''), 7.5, ec[2][1] - 6).slice(0, 3);
+        const h = Math.max(1, d.length) * 9 + 5;
+        if (y - h < M + 30) { ensure(1000); ehead(); }
+        if (i % 2) fill(M, y - h, IN, h, 0.96);
+        rect(M, y - h, IN, h, 0.3);
+        text(M + 3, y - 9, String(e.number == null ? '' : e.number), 7.5);
+        text(M + ec[1][0] + 3, y - 9, String(e.inventory || ''), 7.5);
+        d.forEach((l, j) => text(M + ec[2][0] + 3, y - 9 - j * 9, l, 7.5));
+        y -= h;
+      });
+      y -= 14;
+    }
+
     // The acknowledgment and the signatures (kept together).
     const ack = wrap(ACK, 9.5, IN - 16);
     ensure(ack.length * 12.5 + 40 + 3 * 62);
