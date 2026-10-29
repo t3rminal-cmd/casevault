@@ -30,7 +30,8 @@ const red = (rgb) => { const m = String(rgb).match(/\d+(\.\d+)?/g); if (!m) retu
   }, ids);
   ok(look.plain && /case-dim/.test(look.plain.cls) && red(look.plain.left) && /rgb\(\s*1[0-9]{2}, 38, 46\)|rgb\(163, 38, 46\)/.test(look.plain.shadow) && red(look.plain.lock), `closed in an open Mission: red border all round and a red lock ${JSON.stringify(look.plain)}`);
   ok(look.plain && look.plain.img === 'none', 'no X without an arrest');
-  ok(look.arrest && /closed-arrest/.test(look.arrest.cls) && (look.arrest.img.match(/linear-gradient/g) || []).length === 2 && /X/.test(look.arrest.title), `closed with an arrest: an X across the box ${JSON.stringify(look.arrest && { cls: look.arrest.cls, title: look.arrest.title })}`);
+  // v1.169: the X is gone again.
+  ok(look.arrest && !/closed-arrest/.test(look.arrest.cls) && look.arrest.img === 'none', `closed with an arrest: no X (v1.169) ${JSON.stringify(look.arrest && { cls: look.arrest.cls })}`);
   ok(look.arrest && red(look.arrest.pill), `the Closed tag is red: ${look.arrest && look.arrest.pill}`);
   ok(/folder-closed-shield/.test(look.closedIcon), `the closed folder icon: ${look.closedIcon}`);
   const px = await p.evaluate(async () => {
@@ -40,7 +41,7 @@ const red = (rgb) => { const m = String(rgb).match(/\d+(\.\d+)?/g); if (!m) retu
     for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200) { r += d[i]; g += d[i + 1]; bl += d[i + 2]; }
     return [r, g, bl];
   });
-  ok(px[0] > px[1] * 1.5 && px[0] > px[2] * 1.5, `the closed folder is red, not green: ${px}`);
+  ok(px[1] > px[0] && px[2] > px[0], `the closed folder icon is teal again (v1.169): ${px}`);
   await p.locator('#sidebar').screenshot({ path: `${SP}/sidebar.png` }).catch(() => {});
   console.log('errors', JSON.stringify(errs));
   await b.close();

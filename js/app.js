@@ -833,13 +833,13 @@
       opened ? `Opened ${opened.long} (${opened.future ? `${opened.ageLong.toLowerCase()}: a date in the future, check it` : opened.days ? `${opened.days} day${opened.days === 1 ? '' : 's'} ago` : 'today'})` : null,
       sol ? `Statute of limitations ${sol === 'expired' ? 'expired' : 'expires'} ${fmtDate(c.sol.expires)}` : null,
       due && !sol ? `${due.cls === 'overdue' || due.cls === 'soon' ? 'Alarm: ' : 'Next deadline: '}${c.nextDeadline.title || 'Deadline'}, ${fmtDate(c.nextDeadline.date)}${c.nextDeadline.time ? ` ${c.nextDeadline.time}` : ''} (${due.text})` : null,
-      c.arrested ? (c.status === 'Closed' ? 'Closed with an arrest (the X)' : 'Arrest made: this case has Arrest details') : null,
+      c.arrested ? 'Arrest made: this case has Arrest details' : null, // v1.169: no X on a closed one
     ].filter(Boolean).join('\n');
     const li = h('li', {},
       h('a', {
         href: `#/case/${CVRoute.enc(c.id)}`,
         // v1.60: a case with a reminder (a deadline overdue or within a week) has a thin red border.
-        class: `case-item st-${String(c.status).toLowerCase()} ${c.id === state.caseId ? 'active' : ''}${due ? ` has-reminder reminder-${due.cls}` : ''}${c.arrested ? ' has-arrest' : ''}${c.arrested && c.status === 'Closed' ? ' closed-arrest' : ''}${dim ? ' case-dim' : ''}`, // v1.167: closed with an arrest: an X across the box
+        class: `case-item st-${String(c.status).toLowerCase()} ${c.id === state.caseId ? 'active' : ''}${due ? ` has-reminder reminder-${due.cls}` : ''}${c.arrested ? ' has-arrest' : ''}${dim ? ' case-dim' : ''}`,
         'aria-current': c.id === state.caseId ? 'page' : null,
         title: tip,
       },
@@ -914,7 +914,9 @@
     const dueCases = cases.filter((c) => caseDue(c)); // v1.148: snoozed deadlines don't ring
     const bell = dueCases.length > 0;
     const meta = op && group.partial ? `${cases.length} closed · ongoing`
-      : op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : `${group.closed ? cases.length : group.total} case${(group.closed ? cases.length : group.total) === 1 ? '' : 's'}${group.closed ? ' closed' : ''}`; // v1.101: the title already says independent
+      : op ? [op.status, `${group.total} case${group.total === 1 ? '' : 's'}`].join(' · ') : group.closed ? `${cases.length} case${cases.length === 1 ? '' : 's'} closed` // v1.101: the title already says independent
+        // v1.169: the open ones, as the count beside it says; the closed ones (under CLOSED) after.
+        : `${cases.length} case${cases.length === 1 ? '' : 's'}${group.total > cases.length ? ` · ${group.total - cases.length} closed` : ''}`;
     const det = h('details', { class: `op-group${op ? '' : ' general-group'}${bell ? ' has-reminder' : ''}`, open },
       h('summary', { class: 'op-head', title: op && group.partial ? `${label}: the closed cases of this Mission, which is still going on. They stay in its folder in OPERATION CASES too.` : op ? `${label}: open the Mission` : 'INDEPENDENT: the cases not in an Operation. Click to open General Files, the list of every case.' },
         // v1.101: INDEPENDENT CASES has no room beside its name: its bell sits on the folder's corner.
@@ -937,10 +939,14 @@
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
       h('ul', { class: 'op-cases' }, cases.length ? (op ? cases.map((c) => caseItem(c, true, { dim: !group.closed && c.status === 'Closed' })) : independentItems(cases)) : [h('li', { class: 'empty muted small' }, op ? 'No cases in this Mission yet.' : 'No independent cases.')]));
     // A click on the folder's name opens the Operation (or General Files); the arrow folds it.
+    // v1.169: the name also unfolds the folder, remembered before the page opens: the page draws
+    // the list again, which used to fold it back or leave it as it was (it seemed not to open).
     det.querySelector('summary').addEventListener('click', (e) => {
-      if (e.target.closest('.op-chev')) return;
       e.preventDefault();
-      location.hash = op ? `#/operation/${encodeURIComponent(op.id)}` : '#/general';
+      if (onArrow(e, e.currentTarget)) { det.open = !det.open; sideFold.set(key, det.open); return; }
+      sideFold.set(key, true); det.open = true;
+      const to = op ? `#/operation/${encodeURIComponent(op.id)}` : '#/general';
+      if (location.hash !== to) location.hash = to;
     });
     det.addEventListener('toggle', () => {
       // A <details> drawn open fires "toggle" too: keep only a real change (v1.29).
@@ -970,8 +976,9 @@
       // v1.146: the name opens the group's page; the arrow folds it.
       det.querySelector('summary').addEventListener('click', (e) => {
         e.preventDefault();
-        if (e.target.closest('.op-chev')) { det.open = !det.open; sideFold.set(key, det.open); return; }
-        location.hash = `#/group/${CVRoute.enc(g)}`;
+        if (onArrow(e, e.currentTarget)) { det.open = !det.open; sideFold.set(key, det.open); return; }
+        sideFold.set(key, true); det.open = true; // v1.169: the name unfolds it too
+        if (location.hash !== `#/group/${CVRoute.enc(g)}`) location.hash = `#/group/${CVRoute.enc(g)}`;
       });
       return h('li', { class: 'sg-item' }, det);
     });
@@ -1141,9 +1148,10 @@
         h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
       h('ul', { class: 'mission-children' }, groups.length ? groups.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted small' }, 'No Missions yet. Click + to make one.')]));
     det.querySelector('summary').addEventListener('click', (e) => {
-      if (e.target.closest('.op-chev')) { e.preventDefault(); sideFoldHash = location.hash; sideFold.set(key, !det.open); det.open = !det.open; return; }
+      if (onArrow(e, e.currentTarget)) { e.preventDefault(); sideFoldHash = location.hash; sideFold.set(key, !det.open); det.open = !det.open; return; }
       e.preventDefault();
-      location.hash = '#/operations';
+      sideFold.set(key, true); det.open = true; // v1.169: the name unfolds it too
+      if (location.hash !== '#/operations') location.hash = '#/operations';
     });
     return h('li', { class: 'op-item mission-item' }, det);
   }
@@ -1268,6 +1276,7 @@
     // archived cases: they are listed under the rest.
     if (closedGroups.length) list.append(closedFolder(closedGroups));
     sizeNameColumns(list);
+    alignFolderHeads(list);
     const q = $('#case-search').value.trim().toLowerCase();
     if (q) {
       const archived = Vault.data.cases.filter(isArchivedEntry).filter((c) => matchesSearch(c, q));
@@ -1275,6 +1284,31 @@
     }
     onCaseListDrawn();
   }
+
+  /* v1.169: the counts and arrows of every folder heading in one column, at the same distance from
+   * the case list's right edge however deep the folder sits (CLOSED › OPERATION › a Mission): a
+   * folder inside another loses its parent's padding and border, which the CSS only made up for
+   * one level down. Each heading's right padding is set so its arrow ends where a top folder's does. */
+  function alignFolderHeads(list) {
+    const heads = [...list.querySelectorAll('details > summary')].filter((sm) => sm.querySelector(':scope > .op-chev') && sm.getClientRects().length);
+    if (!heads.length) return;
+    for (const sm of heads) sm.style.paddingRight = '';
+    const chevRight = (sm) => sm.querySelector(':scope > .op-chev').getBoundingClientRect().right;
+    const top = heads.filter((sm) => sm.closest('li').parentElement === list);
+    const target = top.length ? Math.max(...top.map(chevRight)) : Math.max(...heads.map(chevRight));
+    for (const sm of heads) {
+      const off = Math.round(target - chevRight(sm));
+      if (!off) continue;
+      const pr = parseFloat(getComputedStyle(sm).paddingRight) || 0;
+      sm.style.paddingRight = `${Math.max(0, pr - off)}px`;
+    }
+  }
+  // A folder opened shows headings that weren't measured (hidden); the list's width can change too.
+  $('#case-list').addEventListener('toggle', () => alignFolderHeads($('#case-list')), true);
+  if (typeof ResizeObserver === 'function') new ResizeObserver(debounce(() => alignFolderHeads($('#case-list')), 80)).observe($('#case-list'));
+  /** v1.169: a click on the arrow, or anywhere right of it to the heading's edge, folds the folder
+   * (the arrow alone was a 12-pixel target; a click just beside it opened the page instead). */
+  const onArrow = (e, sm) => { const ch = sm.querySelector(':scope > .op-chev'); return !!(e.target.closest('.op-chev') || (ch && e.clientX >= ch.getBoundingClientRect().left - 4)); };
 
   $('#case-search').addEventListener('input', debounce(renderCaseList, 120));
   /* =====================================================================
@@ -2377,7 +2411,7 @@
   function overviewCard(c, withOp = false) {
     const to = (tab, sub) => `#/case/${CVRoute.enc(c.id)}/${tab}${sub ? `/${sub}` : ''}`;
     const op = withOp ? opOf(c) : null;
-    return h('div', { class: `op-case-card${c.arrested && c.status === 'Closed' ? ' closed-arrest' : ''}`, title: c.arrested && c.status === 'Closed' ? 'Closed with an arrest' : null },
+    return h('div', { class: 'op-case-card' },
       h('a', { class: 'op-case-top', href: to('details') }, h('span', { class: 'op-case-id' }, h('span', { class: 'op-case-num' }, c.number || 'No case number yet'),
         h('span', { class: 'op-case-subject muted' }, [subj(c) || 'No subject yet', op ? opLabel(op) : ''].filter(Boolean).join(' · '))), statusPill(c.status)),
       // v1.135: when a closed or archived case was closed (and archived).

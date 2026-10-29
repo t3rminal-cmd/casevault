@@ -600,6 +600,9 @@
 
     async function exportDocx(where) {
       exportMenu.open = false;
+      await ui.Save.flushAll();
+      // v1.169: check before export: the draft against the case's documents.
+      if (root.CVChecks && CVChecks.confirmExport && !(await CVChecks.confirmExport(c, { slug, title: meta.title, text: ta.value, exclude: meta.exports || [] }))) return;
       const bytes = CVDocx.buildDocx(ta.value, { title: meta.title });
       const type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
       if (where === 'case') {
@@ -743,6 +746,8 @@
     async function pdfView() {
       save(0);
       await ui.Save.flushAll();
+      // v1.169: check before export: the draft against the case's documents.
+      if (root.CVChecks && CVChecks.confirmExport && !(await CVChecks.confirmExport(c, { slug, title: meta.title, text: ta.value, exclude: meta.exports || [] }))) return;
       const p = Vault.data.settings.affiant || {};
       const name = `${(meta.title || 'Report').replace(/[\\/:*?"<>|]/g, '')}.pdf`;
       const opts = { agency: p.agency || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' \u00b7 '), printed: '', title: meta.title || '' };
@@ -775,6 +780,8 @@
     async function wordView() {
       save(0);
       await ui.Save.flushAll();
+      // v1.169: check before export: the draft against the case's documents.
+      if (root.CVChecks && CVChecks.confirmExport && !(await CVChecks.confirmExport(c, { slug, title: meta.title, text: ta.value, exclude: meta.exports || [] }))) return;
       const bytes = CVDocx.buildDocx(ta.value, { title: meta.title });
       const page = h('div', { class: 'docx-page' }, h('p', { class: 'muted' }, 'Making the Word document…'));
       try {

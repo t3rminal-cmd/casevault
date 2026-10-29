@@ -254,6 +254,19 @@
     return [loc.doc, at(loc)].filter(Boolean).join(' · ');
   }
 
+  /** v1.169: the documents of a past check that changed since (a file replaced or edited, or gone).
+   * docs: the check's documents [{ name, size, modified, draft }]; files: the case's files now.
+   * Drafts are not compared (their text is read again on each check). -> [names] */
+  function changedSince(docs, files) {
+    const now = new Map(files.map((f) => [f.name, f]));
+    return (docs || []).filter((d) => !d.draft && !d.skipped).filter((d) => {
+      const f = now.get(d.name);
+      if (!f) return true;
+      if (d.size != null && f.size != null && Number(d.size) !== Number(f.size)) return true;
+      return d.modified != null && f.modified != null && Math.abs(Number(d.modified) - Number(f.modified)) > 2000;
+    }).map((d) => d.name);
+  }
+
   async function checkableFiles(c) {
     return (await Vault.listFiles(c.id)).filter((f) => CVExtract.kindOf(f.name));
   }
@@ -317,27 +330,69 @@
     const head = (ic, title, sub) => h('div', { class: 'chk-head' }, h('span', { class: 'chk-head-icon', 'aria-hidden': 'true' }, ui.icon(ic)),
       h('div', {}, h('h2', {}, title), sub ? h('p', { class: 'muted small' }, sub) : null));
 
+    // v1.169: what each report is (Buy, Surveillance, Other; Auto goes by its name) and which
+    // Surveillance report each Buy report goes with, chosen here and kept with the case.
+    const pairPick = { kinds: { ...((c.checkPairs && c.checkPairs.kinds) || {}) }, fixed: { ...((c.checkPairs && c.checkPairs.fixed) || {}) } };
+    const savePairs = () => {
+      c.checkPairs = { kinds: { ...pairPick.kinds }, fixed: { ...pairPick.fixed } };
+      const value = c.checkPairs;
+      ui.Save.schedule(`check-pairs:${c.id}`, async () => { const full = await Vault.getCase(c.id); full.checkPairs = value; await Vault.saveCase(full); }, 500);
+    };
+    const kindOf = (name) => (pairPick.kinds[name] === 'other' ? '' : pairPick.kinds[name] || CVRules.kindFromName(name));
+    const pairBox = h('div', { class: 'chk-pair-box' });
+    function drawPairs() {
+      const chosen = [...reportList.querySelectorAll('input[type=checkbox]:checked')].map((i) => i.value);
+      const buys = chosen.filter((n) => kindOf(n) === 'buy');
+      const survs = chosen.filter((n) => kindOf(n) === 'surveillance');
+      if (!buys.length || !survs.length) { pairBox.replaceChildren(); pairBox.hidden = true; return; }
+      pairBox.hidden = false;
+      pairBox.replaceChildren(h('span', { class: 'chk-pair-title' }, 'Buy and Surveillance Pairs'),
+        ...buys.map((b) => {
+          const has = Object.prototype.hasOwnProperty.call(pairPick.fixed, b);
+          const sel = h('select', { 'aria-label': `Surveillance report for ${b}`, title: 'Auto pairs by the number in the names, the date and the inventory numbers.' },
+            h('option', { value: '__auto', selected: !has }, 'Auto'),
+            ...survs.map((v) => h('option', { value: v, selected: has && pairPick.fixed[b] === v }, v.split('/').pop())),
+            h('option', { value: '', selected: has && pairPick.fixed[b] === '' }, 'Not Paired'));
+          sel.addEventListener('change', () => { if (sel.value === '__auto') delete pairPick.fixed[b]; else pairPick.fixed[b] = sel.value; savePairs(); });
+          return h('label', { class: 'chk-pair-row' }, h('span', {}, b.split('/').pop()), h('span', { class: 'muted small' }, 'with'), sel);
+        }));
+    }
+
     function drawReports() {
       const aff = affSelect.value;
-      const prev = new Map([...reportList.querySelectorAll('input')].map((i) => [i.value, i.checked]));
+      const prev = new Map([...reportList.querySelectorAll('input[type=checkbox]')].map((i) => [i.value, i.checked]));
       reportList.replaceChildren(...files.filter((f) => f.name !== aff).map((f) =>
         h('label', { class: 'check-row chk-doc', title: f.name },
           h('input', { type: 'checkbox', value: f.name, checked: prev.has(f.name) ? prev.get(f.name) : true }),
           h('span', {}, f.name.split('/').pop(), f.name.includes('/') ? h('span', { class: 'muted small block' }, f.name.split('/').slice(0, -1).join(' › ')) : null))));
       if (!reportList.children.length) reportList.append(h('p', { class: 'muted small' }, 'No other documents are attached.'));
       // v1.168: Buy and Surveillance reports are marked (by their names); each Buy report is checked with its pair.
+      // v1.169: the mark is a choice: Auto (by the name), Buy, Surveillance or Other.
       for (const row of reportList.querySelectorAll('label.chk-doc')) {
-        const k = CVRules.kindFromName(row.querySelector('input').value);
-        if (k) row.querySelector('span').append(h('span', { class: `chk-kind chk-kind-${k}` }, k === 'buy' ? 'Buy' : 'Surveillance'));
+        const name = row.querySelector('input').value;
+        const auto = CVRules.kindFromName(name);
+        const sel = h('select', { class: 'chk-kind-pick', 'aria-label': `What ${name} is`, title: 'What this report is. Auto goes by its name; a Buy report is checked with its Surveillance report.' },
+          ...[['', `Auto${auto ? ` (${auto === 'buy' ? 'Buy' : 'Surveillance'})` : ''}`], ['buy', 'Buy'], ['surveillance', 'Surveillance'], ['other', 'Other']]
+            .map(([v, l]) => h('option', { value: v, selected: (pairPick.kinds[name] || '') === v }, l)));
+        sel.addEventListener('change', () => { if (sel.value) pairPick.kinds[name] = sel.value; else delete pairPick.kinds[name]; savePairs(); drawKindTag(row, name); drawPairs(); updateAiLine(); });
+        row.append(sel);
+        drawKindTag(row, name);
       }
+      drawPairs();
       updateAiLine();
     }
-    reportList.addEventListener('change', () => updateAiLine());
+    function drawKindTag(row, name) {
+      const old = row.querySelector('.chk-kind');
+      if (old) old.remove();
+      const k = kindOf(name);
+      if (k) row.querySelector('span').append(h('span', { class: `chk-kind chk-kind-${k}` }, k === 'buy' ? 'Buy' : 'Surveillance'));
+    }
+    reportList.addEventListener('change', (e) => { if (e.target.matches('input[type=checkbox]')) { drawPairs(); updateAiLine(); } });
 
     // v1.168: a Buy report and a Surveillance report among the chosen ones (by their names): the AI
     // can compare their narratives, with or without a document to check.
     const pairsChosen = () => {
-      const kinds = [...reportList.querySelectorAll('input:checked')].map((i) => CVRules.kindFromName(i.value));
+      const kinds = [...reportList.querySelectorAll('input[type=checkbox]:checked')].map((i) => kindOf(i.value));
       return kinds.includes('buy') && kinds.includes('surveillance');
     };
     function updateAiLine() {
@@ -359,7 +414,7 @@
     drawReports();
 
     runBtn.addEventListener('click', () => {
-      const reports = [...reportList.querySelectorAll('input:checked')].map((i) => i.value);
+      const reports = [...reportList.querySelectorAll('input[type=checkbox]:checked')].map((i) => i.value);
       const affidavit = affSelect.value || null;
       if (!reports.length || (!affidavit && reports.length < 2)) {
         ui.toast(affidavit ? 'Choose at least one report to compare against.' : 'Choose at least two reports to compare with each other.', 'error');
@@ -376,7 +431,7 @@
             h('label', { class: 'field', title: 'An affidavit or a draft.' }, h('span', {}, 'Document to check'), affSelect),
             h('label', { class: 'check-row chk-ai' }, aiToggle, h('span', {}, h('strong', {}, 'Include AI review'), aiLine)),
             h('label', { class: 'field', title: 'Names that belong to one person (nicknames, monikers). The check never flags them as spelled differently, and the AI is told they are the same person.' }, h('span', {}, 'Known Aliases'), aliasBox)),
-          h('div', { class: 'chk-col' }, h('div', { class: 'field' }, h('span', {}, 'Compare against'), reportList))),
+          h('div', { class: 'chk-col' }, h('div', { class: 'field' }, h('span', {}, 'Compare against'), reportList), pairBox)),
         h('div', { class: 'chk-actions' }, h('span', { class: 'muted small' }, 'Nothing leaves this PC.'), h('div', { class: 'spacer' }), runBtn))
       : h('div', { class: 'card chk-card' }, head('clipboard2-check', 'New Check', ''),
         h('p', { class: 'muted' }, 'Attach the affidavit and the reports on the Files tab first. PDF, DOCX, TXT and photos (PNG/JPG) can be checked.'));
@@ -387,7 +442,9 @@
         h('thead', {}, h('tr', {}, h('th', {}, 'Run'), h('th', {}, 'Checked'), h('th', {}, 'Flags'), h('th', {}, 'Open'), h('th', {}, 'Engine'))),
         h('tbody', {}, checks.map((k) => h('tr', { class: 'clickable', onclick: () => ui.go(c.id, 'checks', k.name) },
           h('td', {}, h('a', { href: `#/case/${CVRoute.enc(c.id)}/checks/${CVRoute.enc(k.name)}` }, k.created ? fmtDateTime(Date.parse(k.created)) : k.name)),
-          h('td', {}, k.damaged ? h('span', { class: 'error-text' }, 'Damaged file') : [k.affidavit || 'Reports only', h('span', { class: 'muted small block' }, `against ${k.reports.length} document${k.reports.length === 1 ? '' : 's'}`)]),
+          h('td', {}, k.damaged ? h('span', { class: 'error-text' }, 'Damaged file') : [k.affidavit || 'Reports only', h('span', { class: 'muted small block' }, `against ${k.reports.length} document${k.reports.length === 1 ? '' : 's'}`),
+            // v1.169: a document changed since this check ran: its results may be out of date.
+            ...(() => { const ch = changedSince(k.documents, files); return ch.length ? [h('span', { class: 'chk-stale', title: `Changed since this check: ${ch.join(', ')}` }, 'Out of Date')] : []; })()]),
           h('td', {}, k.counts ? ['High', 'Medium', 'Low'].map((s) => h('span', { class: `sev-count sev-${s.toLowerCase()}`, title: s }, `${k.counts[s] || 0}`)) : ''),
           h('td', {}, k.open != null ? String(k.open) : ''),
           h('td', { class: 'muted small' }, k.engine ? (k.engine.model || 'Rules only') : '', k.complete === false ? ' (stopped early)' : '')))))
@@ -414,6 +471,14 @@
       `Prepared ${now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: '2-digit' })}.`,
       `Dated ${pad(now.getMonth() + 1)}/${pad(now.getDate())}/${now.getFullYear()} and ${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.`,
     ];
+  }
+
+  /** v1.169: the case's evidence list (the exhibits on the Draft tab): [{ number, inventory, description }]. */
+  async function caseEvidence(c) {
+    try {
+      const rf = await Vault.readCaseJSON(c.id, 'report-fields.json');
+      return ((rf && rf.evidence) || []).map((e) => ({ number: e.number, inventory: String(e.inventory || '').trim(), description: e.description || e.drug || '' }));
+    } catch (err) { if (FS.isDisconnectError(err)) throw err; return []; }
   }
 
   // draft: { slug, title } to check a draft (from the Drafts tab) instead of an attached file.
@@ -478,9 +543,16 @@
       } catch (err) { if (FS.isDisconnectError(err)) throw err; }
       // v1.168: each Buy report with its Surveillance report.
       const ruleDocs = docs.map((d) => ({ id: d.docIndex, name: d.name, role: d.role, paragraphs: d.paragraphs }));
-      const pairs = CVRules.pairReports(ruleDocs);
-      for (const d of docInfo) { const k = d.skipped ? '' : CVRules.reportKind(docs.find((x) => x.name === d.name) || d); if (k && d.role === 'report') d.reportKind = k; }
-      const ruleFlags = CVRules.compare(ruleDocs, { ignore: ownDetails(), aliases, buys, pairs });
+      // v1.169: the kinds and pairs chosen on the Checks tab, and the case's evidence list.
+      const pairOpts = caseNow.checkPairs || c.checkPairs || {};
+      const pairs = CVRules.pairReports(ruleDocs, pairOpts);
+      for (const d of docInfo) {
+        const k = (pairOpts.kinds || {})[d.name];
+        const kind = d.skipped ? '' : k === 'other' ? '' : k || CVRules.reportKind(docs.find((x) => x.name === d.name) || d);
+        if (kind && d.role === 'report') d.reportKind = kind;
+      }
+      const evidence = await caseEvidence(c);
+      const ruleFlags = CVRules.compare(ruleDocs, { ignore: ownDetails(), aliases, buys, pairs, evidence });
       done(rulesStep);
       bar.value = useAI ? 35 : 90;
 
@@ -604,6 +676,7 @@
         ai: ai ? { stats: ai.stats, complete: ai.complete, error: ai.error || null, stopped: ai.stopped || null, ...(ai.pairStats ? { pairs: ai.pairStats } : {}) } : null,
         pairs: pairs.map((pr) => ({ buy: docs[pr.buy].name, surv: docs[pr.surv].name, why: pr.why })), // v1.168
         buys: buys.length,
+        evidence: evidence.filter((e) => e.inventory).length, // v1.169
         complete: !ai || ai.complete,
         flags,
       };
@@ -721,10 +794,29 @@
       h('strong', {}, `No usable text in ${empty.map((d) => d.name).join(', ')}.`),
       h('p', { class: 'small' }, `${empty.length === 1 ? 'This document was' : 'These documents were'} not compared, so a clean result doesn't mean ${empty.length === 1 ? 'it agrees' : 'they agree'}. See the notes under Documents below.`)) : null;
 
+    // v1.169: a document changed (or was removed) since this check ran: say so, with Run Again.
+    const nowFiles = await checkableFiles(c).catch(() => []);
+    if (token !== state.renderToken) return;
+    const changed = changedSince(data.documents, nowFiles);
+    const staleCard = changed.length ? h('div', { class: 'card warn-card chk-stale-card', role: 'note' },
+      h('strong', {}, 'Out of date. '),
+      h('span', {}, `Changed since this check: ${changed.join(', ')}. The results may no longer be right.`),
+      Vault.isArchived(c.id) ? null : h('button', { class: 'btn small primary', type: 'button', icon: 'arrow-repeat', onclick: async () => {
+        const names = new Set(nowFiles.map((f) => f.name));
+        const affDoc = (data.documents || []).find((d) => d.role === 'affidavit');
+        const reports = (data.reports || []).filter((n) => names.has(n));
+        const draft = affDoc && affDoc.draft ? { slug: affDoc.draft, title: String(data.affidavit || '').replace(/^Draft: /, '') } : null;
+        const aff = draft ? data.affidavit : data.affidavit && names.has(data.affidavit) ? data.affidavit : null;
+        if (!reports.length || (!aff && reports.length < 2)) { ui.toast('Not enough of those documents are still attached. Start a New Check.', 'error'); return; }
+        await Engine.refresh();
+        runCheck(c, aff, reports, !!(data.engine && data.engine.mode === 'ai') && Engine.status() === 'connected' && !!Engine.choice(), draft);
+      } }, 'Run Again')) : null;
+
     panel.replaceChildren(
       back,
       banner(),
-      ...(emptyCard ? [emptyCard] : []), // replaceChildren would print "null"
+      ...(emptyCard ? [emptyCard] : []),
+      ...(staleCard ? [staleCard] : []), // replaceChildren would print "null"
       h('div', { class: 'card result-head' },
         h('h2', {}, data.affidavit ? `Check of ${data.affidavit}` : 'Reports cross-check'),
         h('p', { class: 'muted' }, `${data.created ? fmtDateTime(Date.parse(data.created)) : ''} · `,
@@ -904,5 +996,54 @@
     return runCheck(c, `Draft: ${draft.title}`, reports, useAI, draft);
   }
 
-  root.CVChecks = { init, render, onVaultOpen, renderPill, Engine, documentText, checkDraft, profileLabel };
+  /* v1.169: check before export. Before a draft leaves the Drafts tab (Export, PDF View, Word
+   * View), the rules compare it with the case's documents (photos aside, at most ~15 seconds of
+   * reading; the text is kept on the SSD after the first time). Sure mismatches (High, not Low
+   * confidence) in the draft are shown, with Run Full Check, Cancel and Export Anyway. Text you
+   * chose to export anyway isn't asked about again. */
+  const exportOk = new Map(); // `${caseId}:${slug}` -> the text exported anyway
+  async function preflight(c, { title, text, exclude = [] }) {
+    if (!String(text || '').trim()) return [];
+    const files = (await checkableFiles(c)).filter((f) => !exclude.includes(f.name) && CVExtract.kindOf(f.name) !== 'image');
+    if (!files.length) return [];
+    const docs = [{ name: `Draft: ${title || 'Draft'}`, role: 'affidavit', paragraphs: CVExtract.paragraphsFromText(CVDraft.stripMarkdown(text), null) }];
+    const until = Date.now() + 15000;
+    for (const f of files) {
+      if (Date.now() > until) break;
+      try { const d = await documentText(c, f.name, () => {}); if (d.paragraphs.length) docs.push({ name: f.name, role: 'report', paragraphs: d.paragraphs }); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+    }
+    if (docs.length < 2) return [];
+    const caseNow = await Vault.getCase(c.id).catch(() => c);
+    let buys = [];
+    try { buys = ((await Vault.getTimeline(c.id)).events || []).filter((e) => e.kind === 'buy').map((e) => ({ date: e.date, suspect: e.suspect || '', drug: e.drug || '', qty: e.qty, unit: e.unit || 'g', paid: e.paid })); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+    const ruleDocs = docs.map((d, i) => ({ id: i, ...d }));
+    const flags = CVRules.compare(ruleDocs, {
+      ignore: ownDetails(), aliases: CVText.parseAliases(caseNow.checkAliases || ''), buys,
+      pairs: CVRules.pairReports(ruleDocs, caseNow.checkPairs || {}), evidence: await caseEvidence(c),
+    });
+    return flags.filter((f) => f.severity === 'High' && f.confidence !== 'Low' && f.statement && f.statement.docIndex === 0);
+  }
+  /** -> true to go on with the export. draft: { slug, title, text, exclude } */
+  async function confirmExport(c, draft) {
+    const key = `${c.id}:${draft.slug}`;
+    if (exportOk.get(key) === draft.text) return true;
+    let flags = [];
+    try { flags = await preflight(c, draft); } catch (err) { if (FS.isDisconnectError(err)) throw err; return true; } // never block an export on the check itself
+    if (!flags.length) return true;
+    const { h, openDialog } = ui;
+    const choice = await openDialog((close) => h('div', { class: 'export-check' },
+      h('h2', { icon: 'clipboard2-check' }, 'Before You Export'),
+      h('p', {}, `${flags.length} thing${flags.length === 1 ? '' : 's'} in this draft ${flags.length === 1 ? 'doesn\'t' : 'don\'t'} match the case's documents:`),
+      h('ul', { class: 'export-check-list' }, ...flags.slice(0, 6).map((f) => h('li', {}, h('strong', {}, f.title), h('span', { class: 'muted small block' }, f.detail)))),
+      flags.length > 6 ? h('p', { class: 'muted small' }, `And ${flags.length - 6} more. Run Full Check lists them all.`) : null,
+      h('div', { class: 'dialog-actions' },
+        h('button', { class: 'btn', type: 'button', onclick: () => close('check') }, 'Run Full Check'),
+        h('button', { class: 'btn', type: 'button', onclick: () => close('cancel') }, 'Cancel'),
+        h('button', { class: 'btn primary', type: 'button', onclick: () => close('go') }, 'Export Anyway'))));
+    if (choice === 'go') { exportOk.set(key, draft.text); return true; }
+    if (choice === 'check') checkDraft(c, { slug: draft.slug, title: draft.title, exclude: draft.exclude || [] });
+    return false;
+  }
+
+  root.CVChecks = { init, render, onVaultOpen, renderPill, Engine, documentText, checkDraft, profileLabel, preflight, confirmExport, changedSince };
 })(this);

@@ -23,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.168.0';
+  const APP_VERSION = '1.169.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -1850,7 +1850,8 @@ const Vault = (() => {
         const counts = { High: 0, Medium: 0, Low: 0 };
         let open = 0;
         for (const f of c.flags || []) { counts[f.severity] = (counts[f.severity] || 0) + 1; if (f.status === 'open') open++; }
-        out.push({ name: e.name, created: c.created, affidavit: c.affidavit, reports: c.reports || [], engine: c.engine, counts, open, complete: c.complete !== false });
+        out.push({ name: e.name, created: c.created, affidavit: c.affidavit, reports: c.reports || [], engine: c.engine, counts, open, complete: c.complete !== false,
+          documents: (c.documents || []).map((d) => ({ name: d.name, size: d.size, modified: d.modified, draft: d.draft || null, skipped: !!d.skipped })) }); // v1.169: to tell when a file changed
       } catch (err) {
         if (FS.isDisconnectError(err)) throw err;
         out.push({ name: e.name, damaged: true });
