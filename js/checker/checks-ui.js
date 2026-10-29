@@ -1060,6 +1060,81 @@
     Engine.refresh();
   }
 
+  /**
+   * v1.173: Check the Mission: the rules check (no AI) on every case number of a Mission, one after
+   * the other, each saved as that case's check (an affidavit is picked by its name, as on the
+   * Checks tab; without one the reports are checked against each other), then a summary with a
+   * link to each, and the inventory numbers two case numbers both list.
+   */
+  async function checkMission(members) {
+    const { h, openDialog, toast } = ui;
+    const steps = h('ol', { class: 'progress-steps' });
+    let close = null;
+    openDialog((done) => { close = done; return h('div', { class: 'progress-panel' }, h('h2', {}, 'Checking the Mission'), steps); });
+    const results = [];
+    const evidenceAll = [];
+    try {
+      for (const e of members.filter((x) => !Vault.isArchived(x.id))) {
+        const li = h('li', { class: 'running' }, `${e.number || 'No case number'}…`); steps.append(li);
+        const c = await Vault.getCase(e.id);
+        evidenceAll.push({ number: c.number, evidence: await caseEvidence(c) });
+        // Photos (exhibits, labels) are left out: only the written reports are compared.
+        const files = (await checkableFiles(c)).filter((f) => !/\.(jpe?g|png|webp|bmp|gif|tiff?|heic)$/i.test(f.name));
+        const aff = (files.find((f) => /affidavit|affid|declaration|probable cause/i.test(f.name)) || {}).name || null;
+        const reports = files.map((f) => f.name).filter((n) => n !== aff);
+        if (!reports.length || (!aff && reports.length < 2)) { li.className = 'done warn'; li.append(h('span', { class: 'small block' }, 'Not enough documents to compare.')); results.push({ c, skipped: true }); continue; }
+        const docs = []; const docInfo = [];
+        for (const name of [aff, ...reports].filter(Boolean)) {
+          const role = name === aff ? 'affidavit' : 'report';
+          try {
+            const d = await documentText(c, name, () => {});
+            docs.push({ name, role, paragraphs: d.paragraphs, docIndex: docs.length });
+            docInfo.push({ name, role, kind: d.kind, pageCount: d.pageCount, paragraphCount: d.paragraphs.length, ocrPages: d.ocrPages || [], warnings: d.warnings || [], size: d.size, modified: d.modified });
+          } catch (err) { if (FS.isDisconnectError(err)) throw err; docInfo.push({ name, role, error: err.message, skipped: true }); }
+        }
+        let buys = [];
+        try { buys = ((await Vault.getTimeline(c.id)).events || []).filter((x) => x.kind === 'buy').map((x) => ({ date: x.date, suspect: x.suspect || '', drug: x.drug || '', qty: x.qty, unit: x.unit || 'g', paid: x.paid })); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+        const ruleDocs = docs.map((d) => ({ id: d.docIndex, name: d.name, role: d.role, paragraphs: d.paragraphs }));
+        const pairOpts = c.checkPairs || {};
+        const pairs = CVRules.pairReports(ruleDocs, pairOpts);
+        for (const d of docInfo) { const k = (pairOpts.kinds || {})[d.name]; const doc = docs.find((x) => x.name === d.name); const kind = d.skipped || !doc ? '' : k === 'other' ? '' : k || CVRules.reportKind(doc); if (kind && d.role === 'report') d.reportKind = kind; }
+        const evidence = evidenceAll[evidenceAll.length - 1].evidence;
+        const flags = CVRules.compare(ruleDocs, { ignore: ownDetails(), aliases: CVText.parseAliases(caseAliasText(c)), buys, pairs, evidence, kinds: pairOpts.kinds || {} });
+        const name = await Vault.newCheckName(c.id);
+        await ui.Save.track(`check-new:${c.id}`, () => Vault.saveCheck(c.id, name, {
+          schema: 1, app: 'CaseVault', appVersion: Vault.APP_VERSION, created: new Date().toISOString(), affidavit: aff, reports: docInfo.filter((d) => d.role === 'report').map((d) => d.name),
+          documents: docInfo, docOrder: docs.map((d) => d.name), engine: { mode: 'rules-only' }, ai: null, buys: buys.length, evidence: evidence.filter((x) => x.inventory).length,
+          pairs: pairs.map((pr) => ({ buy: docs[pr.buy].name, surv: docs[pr.surv].name, why: pr.why })), complete: true, fromMission: true, flags,
+        }));
+        const counts = { High: 0, Medium: 0, Low: 0 };
+        for (const f of flags) counts[f.severity]++;
+        results.push({ c, name, counts, docs: docs.length });
+        li.className = 'done';
+        li.append(h('span', { class: 'small block' }, `${docs.length} documents · ${counts.High} High, ${counts.Medium} Medium, ${counts.Low} Low`));
+      }
+    } catch (err) {
+      if (close) close();
+      if (FS.isDisconnectError(err)) { ui.onDriveLost(); return; }
+      toast(`The Mission check stopped: ${err.message}`, 'error', 9000); return;
+    }
+    if (close) close();
+    const shared = root.CVMissionTools ? CVMissionTools.sharedInventory(evidenceAll) : [];
+    await openDialog((done) => h('div', { class: 'mission-check' },
+      h('h2', { icon: 'clipboard2-check' }, 'Mission Check'),
+      h('p', { class: 'muted small' }, 'The rules check of each case number (no AI), saved on each case\'s Checks tab.'),
+      shared.length ? h('div', { class: 'card warn-card' }, h('strong', {}, 'The same inventory number on two case numbers'),
+        h('ul', { class: 'small' }, ...shared.map((x) => h('li', {}, `Inventory #${x.inventory}: ${x.cases.join(', ')}. One exhibit should be on one case number's evidence list.`)))) : null,
+      h('div', { class: 'table-wrap' }, h('table', { class: 'data-table mission-check-table' },
+        h('thead', {}, h('tr', {}, ...['Case Number', 'Documents', 'High', 'Medium', 'Low', ''].map((t) => h('th', {}, t)))),
+        h('tbody', {}, ...results.map((r) => h('tr', {},
+          h('td', {}, r.c.number || 'No case number'),
+          r.skipped ? h('td', { colspan: 4, class: 'muted small' }, 'Not enough documents to compare') : h('td', {}, String(r.docs)),
+          ...(r.skipped ? [] : ['High', 'Medium', 'Low'].map((k) => h('td', {}, h('span', { class: `sev-count sev-${k.toLowerCase()}` }, String(r.counts[k]))))),
+          h('td', {}, r.skipped ? null : h('a', { class: 'btn small', href: `#/case/${CVRoute.enc(r.c.id)}/checks/${CVRoute.enc(r.name)}`, onclick: () => done() }, 'Open Check'))))))),
+      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => done() }, 'Done'))));
+    return results;
+  }
+
   /** Run a consistency check on a draft against every checkable attached document,
    *  except the draft's own exported copies (draft.exclude). */
   async function checkDraft(c, draft) {
@@ -1143,5 +1218,5 @@
     return false;
   }
 
-  root.CVChecks = { init, render, onVaultOpen, renderPill, Engine, documentText, checkDraft, profileLabel, preflight, confirmExport, changedSince, ownDetails, privacyFindings, caseAliasText };
+  root.CVChecks = { init, render, onVaultOpen, renderPill, Engine, documentText, checkDraft, profileLabel, preflight, confirmExport, changedSince, ownDetails, privacyFindings, caseAliasText, checkMission };
 })(this);

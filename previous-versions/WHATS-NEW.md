@@ -4,6 +4,25 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.170
+
+- **Case Facts beside a draft.** In a draft's side panel, under *To Confirm*, Case Facts lists the case's facts to write from:
+  - The Timeline's buys, and the evidence list (exhibits and inventory numbers)
+  - For a Buy or Surveillance narrative, the dates, times, amounts, weights, plates and inventory numbers of its paired report
+  - Click a fact to put it in the draft where the cursor is
+- **Checked as you write.** A moment after you stop typing, the draft is compared with the case's documents, the Timeline and the evidence list (the same rules as the Checks tab; nothing leaves this PC):
+  - What doesn't match is listed and underlined in red in the draft
+  - **Use $200** (the right value) corrects it in one click
+  - When everything matches, it says so
+- **Use … on a check's results.** When a check of a draft finds a mismatch, the flag has a **Use …** button. It corrects the draft and marks the flag *Reviewed*, with a note. Attached files are never changed
+- **Explain.** With the AI engine on, each rule-based flag has an **Explain** button. The AI on this PC says in plain words what differs and why it matters, and suggests a rewording you can copy. It's kept with the check
+- **Lab reports.** The checker recognises a Lab report (*Lab*, *Crime Lab*, *Laboratory Report*… or chosen on the Checks tab) and checks it against the report of the buy with the same inventory number:
+  - A different drug is flagged (High). *Crack* and *cocaine* count as one drug
+  - A lab weight more than the field weight is flagged (Medium). The lab weighs the drug without its packaging, so a lower lab weight is normal and is no longer flagged as a mismatch
+  - An inventory number that no other report gives is flagged
+- **Privacy check before export.** *Before You Export* also lists details that must not go out: a Social Security, payment card, bank account or passport number, and the terms on your watch list (Settings), such as a CI's real name
+- **Discovery.** The Discovery Index and the Discovery Receipt list the exhibits with their inventory numbers, from the evidence list
+
 ## What's new in v1.169
 
 - **Fix (case list folders):** clicking a folder opens it every time:

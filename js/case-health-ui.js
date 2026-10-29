@@ -43,9 +43,12 @@
     const { h } = ui;
     const count = h('span', { class: 'count-pill health-count' }, '…');
     const body = h('div', { class: 'health-body' }, h('p', { class: 'muted small' }, 'Looking at the case…'));
+    // v1.173: the prosecutor packet of this case.
+    const tools = h('div', { class: 'health-tools' },
+      h('button', { class: 'btn small', type: 'button', icon: 'file-earmark-pdf', 'data-ro-ok': 'true', title: 'A PDF with the buys and totals per suspect, the evidence with inventory numbers and lab status, and the chains of custody', onclick: () => packet(ui, [c]) }, 'Prosecutor Packet'));
     const sec = h('section', { class: 'case-health cv-boxed', 'aria-labelledby': 'case-health-title' },
       h('h3', { id: 'case-health-title', icon: 'clipboard2-pulse', title: 'What is still open on this case, and the gaps a defense attorney would find: deadlines, check flags, unconfirmed facts, evidence and custody, and the arrest details.' }, 'Case Health ', count),
-      body);
+      tools, body);
     (async () => {
       let items = [];
       try { items = H().caseHealth(await gather(c)); } catch (err) { if (FS.isDisconnectError(err)) return; body.replaceChildren(h('p', { class: 'error-text small' }, `Could not look at the case: ${err.message}`)); return; }
@@ -62,11 +65,17 @@
   }
 
   /** The Mission page's box: each case's open items, together. members: index entries. */
-  function missionPanel(members, ui) {
+  function missionPanel(members, ui, op = null) {
     const { h } = ui;
     const body = h('div', { class: 'health-body' }, h('p', { class: 'muted small' }, 'Looking at the cases…'));
+    const live = () => members.filter((x) => !Vault.isArchived(x.id));
+    const full = async () => { const out = []; for (const e of live()) out.push(await Vault.getCase(e.id)); return out; };
+    // v1.173: the whole Mission at once: its check, its prosecutor packet, its calendar file.
     const sec = h('section', { class: 'case-health mission-health' },
-      h('div', { class: 'section-head' }, h('h2', { class: 'section-title caps' }, 'Mission Health')), body);
+      h('div', { class: 'section-head' }, h('h2', { class: 'section-title caps' }, 'Mission Health'), h('div', { class: 'spacer' }),
+        h('button', { class: 'btn small', type: 'button', icon: 'clipboard2-check', title: 'The rules check of every case number of this Mission, saved on each case\'s Checks tab', onclick: () => root.CVChecks.checkMission(live()) }, 'Check the Mission'),
+        h('button', { class: 'btn small', type: 'button', icon: 'file-earmark-pdf', title: 'One PDF for the Mission: every buy, the totals per suspect, the evidence and the chains of custody', onclick: async () => packet(ui, await full(), op) }, 'Prosecutor Packet'),
+        op ? h('button', { class: 'btn small', type: 'button', icon: 'calendar-event', title: 'The Mission\'s open deadlines and court dates as a calendar file (.ics), saved in the Mission Folder to open in Outlook', onclick: async () => calendarFile(ui, await full(), op) }, 'Calendar File') : null), body);
     (async () => {
       const rows = [];
       for (const e of members.filter((x) => !Vault.isArchived(x.id))) {
@@ -82,5 +91,66 @@
     return sec;
   }
 
-  root.CVHealthUI = { gather, panel, missionPanel };
+  /* ---------------- v1.173: the prosecutor packet and the calendar file ---------------- */
+
+  /** What the packet needs of each case: its buys, evidence and Lab reports. */
+  async function packetCase(c) {
+    const [tl, rf, files] = await Promise.all([Vault.getTimeline(c.id).catch(() => ({ events: [] })), Vault.readCaseJSON(c.id, 'report-fields.json').catch(() => null), Vault.listFiles(c.id).catch(() => [])]);
+    const kinds = (c.checkPairs && c.checkPairs.kinds) || {};
+    const labReports = files.filter((f) => (kinds[f.name] || CVRules.kindFromName(f.name)) === 'lab').map((f) => f.name.split('/').pop());
+    return { number: c.number || 'No case number', subject: c.subject || '', events: (tl && tl.events) || [], evidence: (rf && rf.evidence) || [], labReports };
+  }
+  /**
+   * The prosecutor packet of a case (op: null) or a Mission: a PDF with the buys and totals per
+   * suspect, the evidence with inventory numbers and lab status, and each exhibit's chain of
+   * custody. Shown, and saved in the case's Case Closing folder (or the Mission Folder's Other).
+   */
+  async function packet(ui, cases, op = null) {
+    const { h, toast } = ui;
+    try {
+      const data = [];
+      for (const c of cases) data.push(await packetCase(c));
+      const label = op ? `Mission ${[op.number, op.name].filter(Boolean).join(' - ')}` : `Case ${data[0].number}${data[0].subject ? ` · ${data[0].subject}` : ''}`;
+      const md = CVMissionTools.packetMarkdown(data, { label, made: Vault.localDay() });
+      const p = (Vault.data.settings && Vault.data.settings.affiant) || {};
+      const bytes = CVDraftPdf.build(md, { title: 'Prosecutor Packet', caseLabel: label, agency: p.agency || '', printed: '' });
+      const name = `${FS.safeName(op ? (op.number || op.name || 'Mission') : data[0].number)} Prosecutor Packet.pdf`;
+      const viewer = CVPdfViewer.create(bytes, { h, icon: ui.icon, title: 'Prosecutor Packet', fileName: name });
+      const saveBtn = h('button', { class: 'btn', type: 'button', icon: 'folder-plus', onclick: async () => {
+        try {
+          const file = new File([bytes], name, { type: 'application/pdf' });
+          const where = op ? `Mission Folder › Other › ${await Vault.addShared(`op-${op.id}`, 'Other', file)}`
+            : await ui.Save.track(`packet:${cases[0].id}`, () => Vault.addFile(cases[0].id, file, { folder: 'Case Closing', keepName: true, replace: true }));
+          toast(`Saved: ${where}`, 'success', 6000);
+          saveBtn.disabled = true;
+        } catch (err) { if (FS.isDisconnectError(err)) ui.onDriveLost(); else toast(err.message, 'error'); }
+      } }, op ? 'Save to the Mission Folder' : 'Save to the Case Files');
+      await ui.openDialog((close) => h('div', { class: 'pdf-view' }, h('h2', {}, 'Prosecutor Packet'), viewer,
+        h('div', { class: 'dialog-actions' }, Vault.isArchived(cases[0].id) && !op ? null : saveBtn, h('button', { class: 'btn primary', type: 'button', onclick: () => close() }, 'Done'))));
+      viewer.destroy();
+    } catch (err) { if (FS.isDisconnectError(err)) ui.onDriveLost(); else toast(`Could not make the packet: ${err.message}`, 'error'); }
+  }
+  /**
+   * The deadlines and court dates of a case (or a Mission) as a calendar file (.ics), saved on the
+   * SSD (the case's Other folder, or the Mission Folder's Other), never on this PC. Open it from
+   * there to add the dates to Outlook. -> the saved path, or null
+   */
+  async function calendarFile(ui, cases, op = null) {
+    const { toast } = ui;
+    try {
+      const events = [];
+      for (const c of cases) for (const e of ((await Vault.getTimeline(c.id).catch(() => null)) || {}).events || []) events.push({ ...e, caseNumber: cases.length > 1 ? c.number : '' });
+      const n = events.filter((e) => ['deadline', 'court'].includes(e.kind) && !e.done).length;
+      if (!n) { toast('No open deadlines or court dates on the Timeline.', 'info'); return null; }
+      const label = op ? `Mission ${op.number || op.name || ''}`.trim() : `Case ${cases[0].number || ''}`.trim();
+      const ics = CVMissionTools.icsCalendar(events, { name: `CaseVault ${label}` });
+      const file = new File([ics], `${FS.safeName(op ? (op.number || op.name || 'Mission') : (cases[0].number || 'Case'))} Deadlines and Court Dates.ics`, { type: 'text/calendar' });
+      const where = op ? `Mission Folder › Other › ${await Vault.addShared(`op-${op.id}`, 'Other', file)}`
+        : await ui.Save.track(`ics:${cases[0].id}`, () => Vault.addFile(cases[0].id, file, { folder: 'Other', keepName: true, replace: true }));
+      toast(`${n} date${n === 1 ? '' : 's'} saved as a calendar file on the SSD: ${where}. Open it to add them to Outlook.`, 'success', 9000);
+      return where;
+    } catch (err) { if (FS.isDisconnectError(err)) ui.onDriveLost(); else toast(`Could not make the calendar file: ${err.message}`, 'error'); return null; }
+  }
+
+  root.CVHealthUI = { gather, panel, missionPanel, packet, calendarFile };
 })(this);

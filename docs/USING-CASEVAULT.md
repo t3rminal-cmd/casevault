@@ -213,6 +213,26 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.173
+
+- **Check the Mission.** *Mission Health* on the Mission page has a **Check the Mission** button:
+  - It runs the rules check on every case number of the Mission, one after another, and saves each one on that case's Checks tab
+  - A summary shows each case number with its High and Medium flags. It also warns when the same inventory number is on two case numbers
+  - Photos are left out; only the written reports are compared. It uses no AI, so it is quick
+- **Prosecutor Packet.** One PDF with:
+  - Every buy, and the totals per suspect
+  - The evidence, with inventory numbers, lab status and where each exhibit is now
+  - The lab reports attached, and each exhibit's chain of custody with any gaps
+  - Make it from a case's *Case Health* (it is saved in that case's Files, *Case Closing*) or from *Mission Health* for the whole Mission (it is saved in the Mission Folder)
+- **Paste From Text** on the Timeline (next to *Quick Add*):
+  - Paste text from CAD, RMS or a report. The date, time, kind of event (buy, arrest, court), title and a buy's narcotic, amount and money paid are filled in for you to check before adding
+  - The whole text goes in the note
+- **Read Labels** on the Draft tab: an exhibit with photos gets a **Read Labels** button. It reads the photos on this PC for the inventory number on the evidence label and says whether it matches the Inventory Number, or is a digit or two off
+- **Calendar File.** The open deadlines and court dates become a calendar file (.ics) to open in Outlook, with a reminder the day before:
+  - From the Timeline, it is saved in the case's Files (*Other*)
+  - From *Mission Health*, it covers the whole Mission and is saved in the Mission Folder (*Other*)
+  - Nothing is saved on the PC
+
 ### What's new in v1.172
 
 - **Case Health.** A new box at the top of a case's Details tab lists everything still open on the case, most serious first, each with a button to where it is fixed:
@@ -251,25 +271,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **One record per person.** When a suspect on this case has details the same person doesn't have on another case (a new address, a height, a phone…), the note under the suspect offers **Update on N Other Cases**:
   - It lists each case, a Mission's own cases included, with what would change, each with a tick box
   - Only the details this case has are copied. Details only the other case has stay there
-
-### What's new in v1.170
-
-- **Case Facts beside a draft.** In a draft's side panel, under *To Confirm*, Case Facts lists the case's facts to write from:
-  - The Timeline's buys, and the evidence list (exhibits and inventory numbers)
-  - For a Buy or Surveillance narrative, the dates, times, amounts, weights, plates and inventory numbers of its paired report
-  - Click a fact to put it in the draft where the cursor is
-- **Checked as you write.** A moment after you stop typing, the draft is compared with the case's documents, the Timeline and the evidence list (the same rules as the Checks tab; nothing leaves this PC):
-  - What doesn't match is listed and underlined in red in the draft
-  - **Use $200** (the right value) corrects it in one click
-  - When everything matches, it says so
-- **Use … on a check's results.** When a check of a draft finds a mismatch, the flag has a **Use …** button. It corrects the draft and marks the flag *Reviewed*, with a note. Attached files are never changed
-- **Explain.** With the AI engine on, each rule-based flag has an **Explain** button. The AI on this PC says in plain words what differs and why it matters, and suggests a rewording you can copy. It's kept with the check
-- **Lab reports.** The checker recognises a Lab report (*Lab*, *Crime Lab*, *Laboratory Report*… or chosen on the Checks tab) and checks it against the report of the buy with the same inventory number:
-  - A different drug is flagged (High). *Crack* and *cocaine* count as one drug
-  - A lab weight more than the field weight is flagged (Medium). The lab weighs the drug without its packaging, so a lower lab weight is normal and is no longer flagged as a mismatch
-  - An inventory number that no other report gives is flagged
-- **Privacy check before export.** *Before You Export* also lists details that must not go out: a Social Security, payment card, bank account or passport number, and the terms on your watch list (Settings), such as a CI's real name
-- **Discovery.** The Discovery Index and the Discovery Receipt list the exhibits with their inventory numbers, from the evidence list
 
 ### Earlier versions
 

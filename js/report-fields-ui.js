@@ -1039,6 +1039,32 @@
           gapTag.hidden = !n; gapTag.textContent = `${n} gap${n === 1 ? '' : 's'}`; gapTag.title = n ? 'The chain of custody has gaps: open it to see them' : '';
         };
         drawGapTag();
+        // v1.173: Read Labels: the photos of the exhibit read (OCR, on this PC) for the inventory number on its label.
+        const labelOut = h('ul', { class: 'label-reads small', hidden: true });
+        const photosNow = () => (e.photos || []).filter((x) => /\.(jpe?g|png|webp|bmp|gif)$/i.test(x));
+        const labelBtn = h('button', { 'data-ro-ok': 'true', class: 'btn small rf-label-btn', type: 'button', icon: 'search', hidden: !photosNow().length, title: 'Reads the exhibit\'s photos (on this PC) for the inventory number on the label, and compares it with the Inventory Number', onclick: async () => {
+          const list = photosNow();
+          if (!list.length) return;
+          labelBtn.disabled = true; labelOut.hidden = false;
+          labelOut.replaceChildren(h('li', { class: 'muted' }, `Reading ${list.length} photo${list.length === 1 ? '' : 's'}…`));
+          const rows = [];
+          for (const [j, path] of list.entries()) {
+            let v = { state: 'none' };
+            try {
+              const d = await CVChecks.documentText(c, path, () => {});
+              v = CVMissionTools.labelVerdict(e.inventory, CVMissionTools.labelNumbers(d.paragraphs.map((x) => x.text).join('\n')));
+            } catch (err) { if (FS.isDisconnectError(err)) { ui.onDriveLost(); return; } v = { state: 'error', message: err.message }; }
+            const name = `Photo ${j + 1}`;
+            rows.push(h('li', { class: `label-${v.state}` },
+              v.state === 'match' ? `${name}: Inventory #${v.number}, matches.`
+                : v.state === 'differs' ? `${name}: the label reads ${v.number}, not ${String(e.inventory).trim()}${v.near ? ' (one or two digits apart: a typo on the label or here?)' : ''}.`
+                  : v.state === 'unlisted' ? `${name}: the label reads ${v.number}; this exhibit has no Inventory Number yet.`
+                    : v.state === 'error' ? `${name}: could not be read (${v.message}).` : `${name}: no inventory number could be read.`));
+          }
+          labelOut.replaceChildren(...rows);
+          labelBtn.disabled = false;
+        } }, 'Read Labels');
+        new MutationObserver(() => { labelBtn.hidden = !photosNow().length; }).observe(strip, { childList: true }); // shown once there is a photo
         const custodyBtn = h('button', { 'data-ro-ok': 'true', class: 'btn small rf-custody-btn', type: 'button', icon: 'clipboard2-check', title: 'Who had this exhibit and when (received, checked out, sent to the lab, court…)', onclick: () => custodyDialog(e, () => { custodyBtn.firstChild.textContent = `Chain of Custody: ${custodyLine(e)}`; drawGapTag(); }) }, h('span', {}, `Chain of Custody: ${custodyLine(e)}`));
         // A big camera tile, the size of a photo (v1.34), so it's easy to find.
         const addPhoto = archived ? null : h('button', { class: 'rf-photo-add', type: 'button', title: 'Add photos or PDFs of this exhibit (every page of a PDF goes into the report)', onclick: () => picker.click() }, ui.icon('camera-fill'), h('span', {}, 'Add Photos or PDF'));
@@ -1048,7 +1074,7 @@
             h('div', { class: 'rf-exhibit-row' }, ui.field('Inventory Number', inv), ui.field('Type', type), narc),
             ui.field('Description', desc, 'span-all'),
             h('div', { class: 'rf-photo-row' }, strip, addPhoto, picker),
-            h('div', { class: 'rf-custody-row' }, custodyBtn, gapTag)),
+            h('div', { class: 'rf-custody-row' }, custodyBtn, gapTag, labelBtn), labelOut),
           archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Remove exhibit', onclick: () => { data.evidence.splice(i, 1); drawEvidence(); save(); } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, `Remove exhibit ${n}`)));
       }) : [h('p', { class: 'muted small rf-empty empty-note' }, ui.icon('camera-fill'), h('span', {}, 'No evidence yet.'))]));
     };

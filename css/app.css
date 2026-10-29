@@ -4713,3 +4713,18 @@ body:not(.sidebar-collapsed) .sidebar-head { padding-left: .3rem; padding-right:
 @media (max-width: 700px) { .health-item { grid-template-columns: auto minmax(0, 1fr); } .health-item .health-area { display: none; } }
 .arrest-issues ul { margin: .35rem 0 0; padding-left: 0; list-style: none; display: grid; gap: .25rem; }
 .health-item > .pill.sev { min-width: 4.4rem; text-align: center; justify-content: center; }
+
+/* v1.173: Paste From Text, Read Labels, the Mission check, the tools of Case Health. */
+.tl-quick-row { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.tl-quick-row > select { flex: 1 1 14rem; }
+.tl-paste { display: grid; gap: .4rem; padding: .5rem .6rem; border: 1px solid var(--border); background: var(--surface); }
+.tl-paste-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.tl-paste-found { margin: 0; flex: 1 1 16rem; }
+.rf-custody-row .rf-label-btn { margin-left: .5rem; }
+.label-reads { margin: .35rem 0 0; padding-left: 0; list-style: none; display: grid; gap: .2rem; }
+.label-reads .label-match { color: var(--ok); }
+.label-reads .label-differs { color: var(--danger); font-weight: 600; }
+.label-reads .label-none, .label-reads .label-error, .label-reads .label-unlisted { color: var(--muted); }
+.health-tools { display: flex; flex-wrap: wrap; gap: .4rem; margin: .2rem 0 .5rem; }
+.mission-health .section-head .btn { margin-left: .4rem; }
+.mission-check-table td, .mission-check-table th { vertical-align: middle; }
