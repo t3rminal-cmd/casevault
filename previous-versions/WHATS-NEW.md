@@ -4,6 +4,28 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.169
+
+- **Fix (case list folders):** clicking a folder opens it every time:
+  - Clicking its name unfolds it, opens its page, and it stays open (it used to fold back, or not open, now and then)
+  - The arrow folds and unfolds it, and so does the space to the right of the arrow (the arrow alone was a tiny target)
+- **Fix (case list counts):** every folder's count and arrow sit in one column at every depth, inside CLOSED too
+- **Fix:** INDEPENDENT says how many open cases it has, like its count, then how many are closed (*1 case · 1 closed*)
+- **Removed:** the X across a closed case with an arrest
+- **Removed:** the logo at the top left. The name *CaseVault* still takes you to the home page
+- **The closed folder icon** is teal again. The Closed tag and the red border of a closed case stay
+- **Checks: you choose the pairs.** On the Checks tab each report has a choice of what it is: *Auto* (by its name), *Buy*, *Surveillance* or *Other*:
+  - Under the list, each Buy report gets a *with* choice: *Auto*, a Surveillance report, or *Not Paired*
+  - Your choices are kept with the case
+- **Checks: the evidence list.** Every inventory number in the documents is checked against the exhibits on the Draft tab:
+  - A near-identical number is a likely typo (High)
+  - A number not on the list is flagged (Medium)
+  - An exhibit that no document mentions is noted (Low)
+- **Check before you export.** Export, PDF View and Word View of a draft first compare it with the case's documents:
+  - If something clearly doesn't match (an amount, a date, an inventory number…), a *Before You Export* box lists it, with **Run Full Check**, **Cancel** and **Export Anyway**
+  - Once you export a text anyway, you aren't asked about that same text again
+- **Out-of-date checks.** When a document changes after a check, or is removed, the check says **Out of Date** in Past Checks. Its results show which documents changed, with **Run Again**
+
 ## What's new in v1.168
 
 - **Suspects: Fill In From a Mission's case.** When you add a suspect to a case (an independent one, for example) and type a name that is a suspect on another case, the note under the suspect now has a **Fill In From EX-200** button:

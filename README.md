@@ -15,11 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.171
+## What's New in v1.172
 
-- **Backups:** choose how often to be reminded; the last Test Restore is kept and asked for monthly
-- **Reports:** start a Buy or Surveillance narrative from a Timeline buy
-- **Checks:** Order of Events side by side; **Suspects:** update the same person on other cases
+- **Case Health** on each case and Mission: everything still open, most serious first
+- **Chain-of-custody gaps** and **the arrest checked against the case**; Close Case lists them too
+- **Templates:** {{evidence}} and {{buys}} tables; suspects' monikers count as Known Aliases
 
 ## What CaseVault Does
 

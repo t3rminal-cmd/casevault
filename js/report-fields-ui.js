@@ -929,6 +929,10 @@
               all.splice(i, 1);
               e.custody = all; save(0); draw();
             } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, 'Delete entry')))))))) : h('p', { class: 'muted small' }, 'No entries yet. Start with when it was received or seized.'));
+        // v1.172: the gaps in the log (checked out and not returned, sent to the lab with no return…).
+        const gaps = root.CVHealth ? CVHealth.custodyGaps(e).filter((g) => !/no chain of custody entries/.test(g.text)) : [];
+        if (gaps.length) list.append(h('div', { class: 'custody-gaps', role: 'note' }, h('strong', {}, `Gaps in the chain of custody (${gaps.length})`),
+          h('ul', { class: 'small' }, ...gaps.map((g) => h('li', { class: `sev-${g.severity.toLowerCase()}` }, h('span', { class: `pill sev sev-${g.severity.toLowerCase()}` }, g.severity), ' ', g.text.replace(/^Exhibit [^:]+: /, ''))))));
       };
       draw();
       const date = h('input', { type: 'date', value: Vault.localDay(), 'aria-label': 'Custody date' });
@@ -1028,7 +1032,14 @@
           drawPhotos();
           save(0);
         });
-        const custodyBtn = h('button', { 'data-ro-ok': 'true', class: 'btn small rf-custody-btn', type: 'button', icon: 'clipboard2-check', title: 'Who had this exhibit and when (received, checked out, sent to the lab, court…)', onclick: () => custodyDialog(e, () => { custodyBtn.firstChild.textContent = `Chain of Custody: ${custodyLine(e)}`; }) }, h('span', {}, `Chain of Custody: ${custodyLine(e)}`));
+        // v1.172: how many gaps the log has, beside the button.
+        const gapTag = h('span', { class: 'custody-gap-tag', hidden: true });
+        const drawGapTag = () => {
+          const n = root.CVHealth ? CVHealth.custodyGaps(e).filter((g) => g.severity !== 'Low' && !/no chain of custody entries/.test(g.text)).length : 0;
+          gapTag.hidden = !n; gapTag.textContent = `${n} gap${n === 1 ? '' : 's'}`; gapTag.title = n ? 'The chain of custody has gaps: open it to see them' : '';
+        };
+        drawGapTag();
+        const custodyBtn = h('button', { 'data-ro-ok': 'true', class: 'btn small rf-custody-btn', type: 'button', icon: 'clipboard2-check', title: 'Who had this exhibit and when (received, checked out, sent to the lab, court…)', onclick: () => custodyDialog(e, () => { custodyBtn.firstChild.textContent = `Chain of Custody: ${custodyLine(e)}`; drawGapTag(); }) }, h('span', {}, `Chain of Custody: ${custodyLine(e)}`));
         // A big camera tile, the size of a photo (v1.34), so it's easy to find.
         const addPhoto = archived ? null : h('button', { class: 'rf-photo-add', type: 'button', title: 'Add photos or PDFs of this exhibit (every page of a PDF goes into the report)', onclick: () => picker.click() }, ui.icon('camera-fill'), h('span', {}, 'Add Photos or PDF'));
         return h('div', { class: 'rf-exhibit-card' },
@@ -1037,7 +1048,7 @@
             h('div', { class: 'rf-exhibit-row' }, ui.field('Inventory Number', inv), ui.field('Type', type), narc),
             ui.field('Description', desc, 'span-all'),
             h('div', { class: 'rf-photo-row' }, strip, addPhoto, picker),
-            h('div', { class: 'rf-custody-row' }, custodyBtn)),
+            h('div', { class: 'rf-custody-row' }, custodyBtn, gapTag)),
           archived ? null : h('button', { class: 'icon-btn danger-icon', type: 'button', title: 'Remove exhibit', onclick: () => { data.evidence.splice(i, 1); drawEvidence(); save(); } }, ui.icon('trash3'), h('span', { class: 'sr-only' }, `Remove exhibit ${n}`)));
       }) : [h('p', { class: 'muted small rf-empty empty-note' }, ui.icon('camera-fill'), h('span', {}, 'No evidence yet.'))]));
     };

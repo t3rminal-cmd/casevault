@@ -344,6 +344,9 @@
     // v1.162: Known Aliases of this case: names that are one person, never flagged as misspellings.
     const aliasBox = h('textarea', { rows: 3, class: 'chk-aliases', 'aria-label': 'Known Aliases', placeholder: 'One person per line, names separated by commas: Richard Poe, Rick Poe, Ricky' });
     aliasBox.value = c.checkAliases || '';
+    // v1.172: the suspects' monikers count too, without typing them here.
+    const monikers = root.CVHealth ? root.CVHealth.aliasLines(c.suspects || []) : [];
+    const monikerNote = monikers.length ? h('span', { class: 'muted small block chk-monikers' }, `Also from the suspects' monikers: ${monikers.map((l) => l.replace(/, /, ' = ')).join('; ')}.`) : null;
     aliasBox.addEventListener('input', () => {
       const value = aliasBox.value;
       c.checkAliases = value;
@@ -453,7 +456,7 @@
           h('div', { class: 'chk-col' },
             h('label', { class: 'field', title: 'An affidavit or a draft.' }, h('span', {}, 'Document to check'), affSelect),
             h('label', { class: 'check-row chk-ai' }, aiToggle, h('span', {}, h('strong', {}, 'Include AI review'), aiLine)),
-            h('label', { class: 'field', title: 'Names that belong to one person (nicknames, monikers). The check never flags them as spelled differently, and the AI is told they are the same person.' }, h('span', {}, 'Known Aliases'), aliasBox)),
+            h('label', { class: 'field', title: 'Names that belong to one person (nicknames, monikers). The check never flags them as spelled differently, and the AI is told they are the same person.' }, h('span', {}, 'Known Aliases'), aliasBox, monikerNote)),
           h('div', { class: 'chk-col' }, h('div', { class: 'field' }, h('span', {}, 'Compare against'), reportList), pairBox)),
         h('div', { class: 'chk-actions' }, h('span', { class: 'muted small' }, 'Nothing leaves this PC.'), h('div', { class: 'spacer' }), runBtn))
       : h('div', { class: 'card chk-card' }, head('clipboard2-check', 'New Check', ''),
@@ -494,6 +497,12 @@
       `Prepared ${now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: '2-digit' })}.`,
       `Dated ${pad(now.getMonth() + 1)}/${pad(now.getDate())}/${now.getFullYear()} and ${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.`,
     ];
+  }
+
+  /** v1.172: the case's Known Aliases and, after them, its suspects' monikers ("Richard Poe, Rick, Ricky"). */
+  function caseAliasText(c) {
+    const extra = root.CVHealth ? root.CVHealth.aliasLines((c && c.suspects) || []) : [];
+    return [String((c && c.checkAliases) || ''), ...extra].filter(Boolean).join('\n');
   }
 
   /** v1.169: the case's evidence list (the exhibits on the Draft tab): [{ number, inventory, description }]. */
@@ -558,7 +567,7 @@
       await new Promise((r) => setTimeout(r, 20));
       // v1.162: the case's Known Aliases and its Timeline buys (the Buy Summary) go into the checks.
       const caseNow = await Vault.getCase(c.id).catch(() => c);
-      const aliases = CVText.parseAliases(caseNow.checkAliases || c.checkAliases || '');
+      const aliases = CVText.parseAliases(caseAliasText(caseNow));
       let buys = [];
       try {
         const tl = await Vault.getTimeline(c.id);
@@ -1087,7 +1096,7 @@
     try { buys = ((await Vault.getTimeline(c.id)).events || []).filter((e) => e.kind === 'buy').map((e) => ({ date: e.date, suspect: e.suspect || '', drug: e.drug || '', qty: e.qty, unit: e.unit || 'g', paid: e.paid })); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
     const ruleDocs = docs.map((d, i) => ({ id: i, ...d }));
     const flags = CVRules.compare(ruleDocs, {
-      ignore: ownDetails(), aliases: CVText.parseAliases(caseNow.checkAliases || ''), buys,
+      ignore: ownDetails(), aliases: CVText.parseAliases(caseAliasText(caseNow)), buys,
       pairs: CVRules.pairReports(ruleDocs, caseNow.checkPairs || {}), evidence: await caseEvidence(c), kinds: (caseNow.checkPairs || {}).kinds || {},
     });
     return flags.filter((f) => f.severity === 'High' && f.confidence !== 'Low' && f.statement && f.statement.docIndex === 0);
@@ -1134,5 +1143,5 @@
     return false;
   }
 
-  root.CVChecks = { init, render, onVaultOpen, renderPill, Engine, documentText, checkDraft, profileLabel, preflight, confirmExport, changedSince, ownDetails, privacyFindings };
+  root.CVChecks = { init, render, onVaultOpen, renderPill, Engine, documentText, checkDraft, profileLabel, preflight, confirmExport, changedSince, ownDetails, privacyFindings, caseAliasText };
 })(this);

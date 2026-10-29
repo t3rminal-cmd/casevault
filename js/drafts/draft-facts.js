@@ -170,7 +170,7 @@
       const all = [draftDoc, ...ctx.docs].map((d, i) => ({ id: i, ...d }));
       const buys = ctx.buys.map((e) => ({ date: e.date, suspect: e.suspect || '', drug: e.drug || '', qty: e.qty, unit: e.unit || 'g', paid: e.paid }));
       const flags = !text.trim() || (!ctx.docs.length && !buys.length && !ctx.evidence.length) ? [] : R.compare(all, {
-        ignore: CVChecks.ownDetails ? CVChecks.ownDetails() : [], aliases: CVText.parseAliases(ctx.caseNow.checkAliases || ''), buys,
+        ignore: CVChecks.ownDetails ? CVChecks.ownDetails() : [], aliases: CVText.parseAliases(CVChecks.caseAliasText ? CVChecks.caseAliasText(ctx.caseNow) : ctx.caseNow.checkAliases || ''), buys,
         evidence: ctx.evidence.map((e) => ({ number: e.number, inventory: String(e.inventory || '').trim(), description: e.description || '' })),
         kinds: ctx.kinds, pairs: R.pairReports(all, ctx.caseNow.checkPairs || {}),
       });
