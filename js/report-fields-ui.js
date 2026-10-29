@@ -318,6 +318,8 @@
         });
       }
       // v1.69: Court Branch and Court Officer can be Pending, and so can the Court Date.
+      // v1.175: the approving ASA and AUSA from the Rolodex.
+      if ((key === 'asa' || key === 'ausa') && root.CVRolodex) box = CVCombo.attach(el, { label: 'Pick from the Rolodex', items: () => root.CVRolodex.comboItems(root.CVRolodex.list(), [key === 'asa' ? 'ASA' : 'AUSA']), onPick: () => save() });
       if (key === 'courtBranch') box = CVCombo.attach(el, { items: () => [{ value: 'Pending', label: 'Pending', hint: 'Not set yet' }], onPick: () => save() });
       if (key === 'courtDate') {
         const pend = h('input', { type: 'checkbox', checked: data.courtDate === 'Pending', 'aria-label': 'Court Date pending' });
@@ -352,9 +354,11 @@
         // v1.92: a row that holds its own tick box (Court Date's Pending) is not a <label>: a label
         // inside a label made Firefox also untick the row's Include box when Pending was clicked.
         const rowCls = `span-all rf-line rf-optional${on ? '' : ' rf-line-off'}`;
-        const row = box.classList && box.classList.contains('rf-date-pending')
-          ? h('div', { class: `field ${rowCls}` }, h('span', {}, label), box)
-          : ui.field(label, box, rowCls);
+        // v1.175: never a <label> either: clicking the box moves its label (placeholder to label on
+        // focus), and a click that then landed on the row ticked the Include box and took the cursor.
+        // The row's name puts the cursor in its box.
+        const name = h('span', { onclick: () => { const t = box.matches && box.matches('input, textarea, select') ? box : box.querySelector('input:not([type=checkbox]), textarea, select'); if (t && !t.disabled) t.focus(); } }, label);
+        const row = h('div', { class: `field ${rowCls}` }, name, box);
         row.prepend(cb);
         cb.addEventListener('change', () => {
           data.hidden = data.hidden.filter((x) => x !== key);

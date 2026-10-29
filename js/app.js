@@ -180,7 +180,7 @@
     ['panel', '.vault-panel'],
     ['form', '.op-form, .new-case-form, .deep-search, .restore-form, .locker-form'],
     ['full', '.preview, .doc-view, .lib-preview, .pdf-view, .word-view, .disc'],
-    ['wide', '.year-summary, .vault-check, .cal-view, .wk-view, .custody-dialog, .problem-form, .type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
+    ['wide', '.person-view, .suspect-search, .rolodex-form, .year-summary, .vault-check, .cal-view, .wk-view, .custody-dialog, .problem-form, .type-form, .review-form, .key-form, .gen-form, .close-form, .selftest, .engine-panel, .options-form, .contact-form, .rephrase-form, .review-report, .chat-history-form'],
   ];
 
   function openDialog(build) {
@@ -2795,6 +2795,8 @@
       tile('Discovery', 'shield-lock-fill', discovery, 'Make a discovery package for a case'),
       tile('Link Chart', 'diagram-3-fill', toTab('linkchart'), 'Open the Link Chart of a case'),
       tile('Reference', 'book', () => { location.hash = '#/reference'; }, 'Charts, codes and calculators'),
+      tile('Suspect Search', 'person-lines-fill', () => CVPersonView.search(window.CaseVaultUI), 'Find a person on any case: their arrest reports and police interactions'), // v1.175
+      tile('Rolodex', 'person-rolodex', () => CVRolodex.open(window.CaseVaultUI), 'ASAs, AUSAs, other departments and other contacts, to fill in on a case'), // v1.175
       // v1.156: the Deadline Calendar (a month across every open case) and the Weekly Summary.
       tile('Calendar', 'calendar-event', () => openAgenda('calendar'), 'A month of deadlines, court dates and statutes of limitations across every open case'),
       tile('Weekly Summary', 'calendar-check', () => openAgenda('weekly'), 'What changed on each case this week; prints as a PDF'),
@@ -4304,6 +4306,8 @@
       ['Back Up the Vault', 'hdd-fill', () => showVaultPanel('backups')], ['New Case', 'plus-lg', () => newCase()],
       ['New Mission', 'folder-plus', async () => { const op = await operationDialog(); if (op) { renderCaseList(); location.hash = `#/operation/${encodeURIComponent(op.id)}`; } }],
       ['Quick Note', 'pencil-square', () => quickNoteDialog()], // v1.149
+      ['Suspect Search', 'person-lines-fill', () => CVPersonView.search(window.CaseVaultUI)], // v1.175
+      ['Rolodex', 'person-rolodex', () => CVRolodex.open(window.CaseVaultUI)], // v1.175
       ['Keyboard Shortcuts', 'lightning-charge', () => shortcutsDialog()],
       ['Year Summary', 'bar-chart-line-fill', () => yearSummary()],
       ['Check the Vault', 'shield-fill-check', () => vaultCheckDialog()], ['Calendar', 'calendar-event', () => openAgenda('calendar')], ['Weekly Summary', 'calendar-check', () => openAgenda('weekly')], // v1.156
@@ -4719,8 +4723,18 @@
     const MIN = 200; const MAX = 520; const DEF = 300;
     // keep: remember it in this browser and in the vault (vault.json on the SSD), so it stays the
     // same in Edge and Firefox and on another PC until it's dragged again (v1.24).
+    // v1.175: never narrower than the buttons at its top in one row (the padlock stays on that line).
+    const headMin = () => {
+      const hd = side.querySelector('.sidebar-head');
+      if (!hd || document.body.classList.contains('sidebar-collapsed')) return MIN;
+      const kids = [...hd.children].filter((k) => k.offsetParent);
+      const cs = getComputedStyle(hd);
+      const gap = parseFloat(cs.columnGap) || 0;
+      const need = kids.reduce((sum, k) => sum + k.getBoundingClientRect().width, 0) + gap * Math.max(0, kids.length - 1) + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+      return Math.max(MIN, Math.ceil(need / (parseFloat(document.documentElement.style.zoom) || 1)) + 2);
+    };
     const setW = (w, keep = true) => {
-      const px = Math.round(Math.min(MAX, Math.max(MIN, w)));
+      const px = Math.round(Math.min(MAX, Math.max(headMin(), w)));
       document.documentElement.style.setProperty('--sidebar-w', `${px}px`);
       grip.setAttribute('aria-valuenow', String(px));
       if (keep) {
@@ -4734,6 +4748,9 @@
     let saved = DEF;
     try { saved = Number(localStorage.getItem(KEY)) || DEF; } catch { /* default */ }
     setW(saved, false);
+    // The buttons are all in place once the page is drawn: a width kept from before that is now too
+    // narrow for them widens to fit (not saved; dragging saves).
+    setTimeout(() => { document.documentElement.style.setProperty('--sidebar-min', `${headMin()}px`); const cur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w')) || saved; if (cur < headMin()) setW(cur, false); }, 0);
     grip.addEventListener('pointerdown', (e) => {
       if (e.button !== 0 || document.body.classList.contains('sidebar-locked')) return;
       e.preventDefault();

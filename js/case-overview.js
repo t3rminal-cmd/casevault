@@ -371,11 +371,32 @@
         el.addEventListener('input', () => { obj[key] = el.value.trim(); save(); });
         return el;
       };
-      const person = (obj, who) => [
-        field('Name', input(obj, 'name', { maxlength: 120, autocomplete: 'off', 'aria-label': `${who} name` })),
-        field('Email', input(obj, 'email', { type: 'email', maxlength: 200, autocomplete: 'off', 'aria-label': `${who} email` })),
-        field('Phone', input(obj, 'phone', { type: 'tel', maxlength: 40, autocomplete: 'off', 'aria-label': `${who} phone` })),
-      ];
+      // v1.175: the Rolodex: a name box offers its cards (the prosecutor's: ASAs and AUSAs) and
+      // picking one fills in the email and phone (and the title or role); the card button keeps a
+      // contact typed here in the Rolodex.
+      const R = root.CVRolodex;
+      const person = (obj, who, { kinds = null, onCard = null, kindOf = () => 'Other' } = {}) => {
+        const nameIn = input(obj, 'name', { maxlength: 120, autocomplete: 'off', 'aria-label': `${who} name` });
+        const emailIn = input(obj, 'email', { type: 'email', maxlength: 200, autocomplete: 'off', 'aria-label': `${who} email` });
+        const phoneIn = input(obj, 'phone', { type: 'tel', maxlength: 40, autocomplete: 'off', 'aria-label': `${who} phone` });
+        const nameBox = R && root.CVCombo ? root.CVCombo.attach(nameIn, { label: 'Pick from the Rolodex', items: () => R.comboItems(R.list(), typeof kinds === 'function' ? kinds() : kinds), onPick: (it) => {
+          const x = it && it.card;
+          if (!x) return;
+          obj.name = x.name;
+          if (x.email) { obj.email = x.email; emailIn.value = x.email; }
+          if (x.phone) { obj.phone = x.phone; phoneIn.value = x.phone; }
+          if (onCard) onCard(x);
+          save();
+        } }) : nameIn;
+        const keepBtn = R ? h('button', { class: 'icon-btn rolo-keep', type: 'button', title: 'Save this contact in the Rolodex, to fill in on other cases', onclick: async () => {
+          if (!String(obj.name || '').trim()) { root.CaseVaultUI.toast('Type the name first.', 'info'); return; }
+          try {
+            const r = await R.keep({ kind: kindOf(), name: obj.name, email: obj.email, phone: obj.phone, title: obj.role || '' });
+            root.CaseVaultUI.toast(r === 'added' ? `${obj.name} was added to the Rolodex.` : r === 'updated' ? `${obj.name}'s card in the Rolodex was filled in.` : `${obj.name} is already in the Rolodex.`, 'success');
+          } catch (err) { root.CaseVaultUI.toast(`Not saved: ${err.message}`, 'error'); }
+        } }, I('person-rolodex'), h('span', { class: 'sr-only' }, `Save ${who} in the Rolodex`)) : null;
+        return [field('Name', nameBox), field('Email', emailIn), field('Phone', phoneIn), keepBtn];
+      };
       const proTitle = h('select', { 'aria-label': 'Prosecutor title', title: 'ASA: Assistant State\'s Attorney. AUSA: Assistant United States Attorney.' },
         ['ASA', 'AUSA'].map((t) => h('option', { value: t, selected: t === k.prosecutor.title }, t)));
       proTitle.addEventListener('change', () => { k.prosecutor.title = proTitle.value; save(); });
@@ -385,7 +406,7 @@
       const drawOthers = () => {
         others.replaceChildren(...k.others.map((o, i) => h('div', { class: 'contact-row' },
           field('Role', input(o, 'role', { maxlength: 80, list: 'contact-roles', placeholder: 'Finance', 'aria-label': `Contact ${i + 1} role` })),
-          ...person(o, `Contact ${i + 1}`),
+          ...person(o, `Contact ${i + 1}`, { onCard: (x) => { if (!String(o.role || '').trim()) { o.role = x.title || x.kind; drawOthers(); } }, kindOf: () => (/police|officer|detective|agent|tfo|task force/i.test(o.role || '') ? 'Other Police' : 'Other') }),
           h('button', { class: 'icon-btn danger-icon contact-remove', type: 'button', title: 'Remove this contact', onclick: () => { k.others.splice(i, 1); drawOthers(); save(); } }, I('trash3'), h('span', { class: 'sr-only' }, `Remove contact ${i + 1}`)))));
       };
       drawOthers();
@@ -399,10 +420,10 @@
       return h('section', { class: 'contacts cv-boxed', 'aria-labelledby': 'contacts-title' },
         h('h3', { id: 'contacts-title', icon: 'people', title: 'Who to reach on this case. The case officer and prosecutor fill {{case.officer.name}}, {{case.prosecutor.email}} and so on in templates.' }, 'Contacts'),
         roles,
-        h('div', { class: 'contact-row' }, h('div', { class: 'field contact-role' }, h('span', {}, 'Role'), h('strong', { class: 'contact-fixed' }, 'Case Officer')), ...person(k.officer, 'Case officer')),
-        h('div', { class: 'contact-row' }, h('label', { class: 'field contact-role' }, h('span', {}, 'Role'), proTitle), ...person(k.prosecutor, 'Prosecutor')),
+        h('div', { class: 'contact-row' }, h('div', { class: 'field contact-role' }, h('span', {}, 'Role'), h('strong', { class: 'contact-fixed' }, 'Case Officer')), ...person(k.officer, 'Case officer', { kindOf: () => 'Other Police' })),
+        h('div', { class: 'contact-row' }, h('label', { class: 'field contact-role' }, h('span', {}, 'Role'), proTitle), ...person(k.prosecutor, 'Prosecutor', { kinds: ['ASA', 'AUSA'], onCard: (x) => { if (['ASA', 'AUSA'].includes(x.kind)) { k.prosecutor.title = x.kind; proTitle.value = x.kind; } }, kindOf: () => k.prosecutor.title || 'ASA' })),
         others,
-        h('div', { class: 'contact-add' }, add));
+        h('div', { class: 'contact-add' }, add, R ? h('button', { class: 'btn small', type: 'button', icon: 'person-rolodex', title: 'Prosecutors, other departments and anyone else you work with, kept on the SSD', onclick: () => R.open(root.CaseVaultUI) }, 'Rolodex') : null));
     }
 
     /* Deconfliction (v1.21): a table of each deconfliction check before an operation: date, event

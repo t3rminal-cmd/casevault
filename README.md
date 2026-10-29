@@ -15,11 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.174
+## What's New in v1.175
 
-- **New Case** searches your known suspects (Name, DOB, Gender, IR) and fills in the one you pick
-- Closed cases' suspects are no longer suggested
-- No more hover boxes in the case list
+- **Suspect Search**: arrest reports, police interactions and Narcotics / Battery / Firearms icons for anyone on your cases
+- **Rolodex** of ASAs, AUSAs and other contacts that fills in a case's Contacts
+- Fixes: the person window's scroll bars, the case list's padlock line, full codes (259) in lists, the cursor in Officer's Report lines
 
 ## What CaseVault Does
 

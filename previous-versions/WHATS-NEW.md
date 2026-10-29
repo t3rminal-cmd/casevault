@@ -4,6 +4,29 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.172
+
+- **Case Health.** A new box at the top of a case's Details tab lists everything still open on the case, most serious first, each with a button to where it is fixed:
+  - Overdue deadlines, open consistency flags (from the latest check) and a check that is out of date
+  - [CONFIRM: …] left in drafts, exhibits without photos, gaps in the chain of custody, and the arrest details that don't match the case
+  - When nothing is open, it says so. The Mission page has the same list for all its cases (**Mission Health**)
+- **Chain-of-custody gaps.** Each exhibit's custody log is checked:
+  - Checked out and never returned (High), taken to court while still checked out (High), anything after it was destroyed or released (High)
+  - Sent to the lab with no return, a return with no checkout before it, a log that doesn't start with Received / Seized, entries without a date, narcotics never sent to the lab
+  - On the Draft tab, an exhibit with gaps shows *1 gap* beside its Chain of Custody button, and the dialog lists them
+- **The arrest against the case.** The Arrest tab now says when its details don't match the rest of the case:
+  - An arrestee's date of birth differs from the suspect's (High), or the arrestee isn't one of the case's suspects
+  - The arrest date differs from the Timeline's arrest, or is in the future
+  - A charge names a drug that wasn't bought from that person or recovered, or a drug bought isn't charged
+  - A recovered narcotic's inventory number isn't on the evidence list
+  - It updates as you edit
+- **Ready to close?** *Close Case* now also lists custody gaps, arrest mismatches, a check that is out of date, narcotics with no lab result yet, and exhibits with no final disposition. You can still close; it's a reminder
+- **Templates: tables from the case.** New fields under *Evidence and Buys*:
+  - `{{evidence}}`: a table of the exhibits with inventory number, item, weight and where it is now
+  - `{{buys}}`: a table of the Timeline's buys with the total paid
+  - `{{buys.count}}`, `{{buys.total}}` and `{{inventory}}` (every inventory number)
+- **Known Aliases from the suspects.** A suspect's *Moniker / Social Media* (e.g. *Rick, Ricky*) now counts as a Known Alias in every check, without typing it again. The Checks tab shows which ones
+
 ## What's new in v1.171
 
 - **Backups: tested, and when you choose.**

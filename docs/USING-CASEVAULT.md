@@ -213,6 +213,23 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.175
+
+- **Fix: the person window had scroll bars.** *Every case this person is on* now opens wide enough to show everything, with no scroll bars. Long text wraps instead of running off the side
+- **Fix: the case list's padlock went to a second line.** The buttons at the top of the case list now stay on one line, padlock included. That width is also the narrowest the list can be dragged to
+- **Fix: typing a full code hid the choice.** In IUCR, Location Code and other lists, typing the whole code (e.g. *259*) now still shows its match. Pick it, or press Enter, to fill in its description (e.g. *Type of Location*)
+- **Fix: the cursor disappeared in the Officer's Report lines.** Clicking *Operation / Mission Number* (or any line with an Include box) sometimes ticked or unticked that box and took the cursor away. Clicking the box now always puts the cursor in it, and clicking the line's name does too
+- **Suspect Search** (home page and Ctrl+K): find anyone on your cases, closed ones too, by name, date of birth or IR number. Each person is listed with DOB, gender, IR, case numbers, number of arrests and what they were arrested for. Pick one to open their profile:
+  - What is known of them: date of birth and age, gender, race, IR and CB numbers
+  - Icons for **Narcotics**, **Battery** and **Firearms** arrests, worked out from the charges' statutes and wording
+  - Every case they are on, with its arrests
+  - **Arrest Reports**: each arrest with its date, charges (each with its icon) and location. A button opens the Arrest tab, and any *Arrest Report* PDF in the case's Files opens from there too
+  - **Police Interactions**: their arrests, buys and other Timeline events, in date order
+- **Rolodex** (home page, Ctrl+K and a case's Contacts): keep the ASAs, AUSAs, other police and anyone else you work with, with office, title, email, phone and notes. It is saved on the SSD:
+  - In a case's Contacts, the name boxes suggest them. The prosecutor's box suggests ASAs and AUSAs. Picking one fills in the email and phone, and the ASA / AUSA title
+  - The card button beside a contact saves someone typed on a case into the Rolodex
+  - On the Draft tab, *ASA* and *AUSA Approving Search Warrant* suggest them too
+
 ### What's new in v1.174
 
 - **Closed cases' suspects are not suggested.** When you type a suspect's name (New Case, a case's Suspects, a Mission's Subject Data and New Case Group), the suspects and subjects of closed and archived cases are no longer offered
@@ -242,29 +259,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
   - From the Timeline, it is saved in the case's Files (*Other*)
   - From *Mission Health*, it covers the whole Mission and is saved in the Mission Folder (*Other*)
   - Nothing is saved on the PC
-
-### What's new in v1.172
-
-- **Case Health.** A new box at the top of a case's Details tab lists everything still open on the case, most serious first, each with a button to where it is fixed:
-  - Overdue deadlines, open consistency flags (from the latest check) and a check that is out of date
-  - [CONFIRM: …] left in drafts, exhibits without photos, gaps in the chain of custody, and the arrest details that don't match the case
-  - When nothing is open, it says so. The Mission page has the same list for all its cases (**Mission Health**)
-- **Chain-of-custody gaps.** Each exhibit's custody log is checked:
-  - Checked out and never returned (High), taken to court while still checked out (High), anything after it was destroyed or released (High)
-  - Sent to the lab with no return, a return with no checkout before it, a log that doesn't start with Received / Seized, entries without a date, narcotics never sent to the lab
-  - On the Draft tab, an exhibit with gaps shows *1 gap* beside its Chain of Custody button, and the dialog lists them
-- **The arrest against the case.** The Arrest tab now says when its details don't match the rest of the case:
-  - An arrestee's date of birth differs from the suspect's (High), or the arrestee isn't one of the case's suspects
-  - The arrest date differs from the Timeline's arrest, or is in the future
-  - A charge names a drug that wasn't bought from that person or recovered, or a drug bought isn't charged
-  - A recovered narcotic's inventory number isn't on the evidence list
-  - It updates as you edit
-- **Ready to close?** *Close Case* now also lists custody gaps, arrest mismatches, a check that is out of date, narcotics with no lab result yet, and exhibits with no final disposition. You can still close; it's a reminder
-- **Templates: tables from the case.** New fields under *Evidence and Buys*:
-  - `{{evidence}}`: a table of the exhibits with inventory number, item, weight and where it is now
-  - `{{buys}}`: a table of the Timeline's buys with the total paid
-  - `{{buys.count}}`, `{{buys.total}}` and `{{inventory}}` (every inventory number)
-- **Known Aliases from the suspects.** A suspect's *Moniker / Social Media* (e.g. *Rick, Ricky*) now counts as a Known Alias in every check, without typing it again. The Checks tab shows which ones
 
 ### Earlier versions
 
