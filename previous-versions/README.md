@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.174)
+
+- **New Case** searches your known suspects (Name, DOB, Gender, IR) and fills in the one you pick
+- Closed cases' suspects are no longer suggested
+- No more hover boxes in the case list
+
 ## Features (v1.173)
 
 - **Check the Mission:** the rules check on every case number at once, with a summary

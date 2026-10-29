@@ -49,6 +49,7 @@
     let shown = [];
     let active = -1;
     let picking = false;
+    let lastPicked = null; // v1.175: the value picked last (its list then stays closed)
     const open = () => !list.hidden;
     function close() { root.removeEventListener('scroll', onScroll, true); root.removeEventListener('resize', onResize); list.hidden = true; active = -1; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); }
     function mark() {
@@ -71,14 +72,16 @@
         li.addEventListener('click', () => pick(i));
         return li;
       }));
-      // Nothing to choose when the text already is the one match.
-      const exact = !all && shown.length === 1 && shown[0].value.toLowerCase() === input.value.trim().toLowerCase();
+      // Nothing to choose when the one match was just picked. v1.175: a code typed in full (259)
+      // still shows its match, to pick it (picking fills in its description too).
+      const exact = !all && shown.length === 1 && shown[0].value.toLowerCase() === input.value.trim().toLowerCase() && lastPicked === shown[0].value;
       list.hidden = !shown.length || exact;
       if (!list.hidden) { place(); root.addEventListener('scroll', onScroll, true); root.addEventListener('resize', onResize); }
       // A hover box already showing for this box steps aside for the list (v1.38).
       if (!list.hidden) { const t = doc.getElementById('cv-tip'); if (t) t.hidden = true; }
       input.setAttribute('aria-expanded', String(!list.hidden));
       active = -1;
+      if (!list.hidden && !all && shown.length === 1) { active = 0; mark(); } // the only match: Enter picks it
     }
     // v1.160: the list floats over the page under its box (above it when there's no room below), so
     // a box near the bottom of a form that scrolls is never cut off or hidden under the Save bar; it
@@ -104,6 +107,7 @@
       const it = shown[i];
       if (!it) return;
       picking = true;
+      lastPicked = it.value;
       input.value = it.value;
       input.dispatchEvent(new Event('input', { bubbles: true }));
       picking = false;

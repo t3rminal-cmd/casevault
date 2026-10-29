@@ -63,6 +63,8 @@
     'folder-mission': 'folder-mission', 'folder-general': 'folder-general', 'folder-other': 'folder-other', // v1.74
     // v1.127: the last three that were plain shapes
     'list-ol': 'list-numbered', 'hash': 'hash', 'marshal-star': 'marshal-star',
+    // v1.175: the kinds of arrest (narcotics, battery, firearms) and the contacts Rolodex
+    'pistol': 'pistol', 'bandaid-fill': 'bandaid', 'drug-powder': 'drug-powder', 'person-rolodex': 'rolodex',
     'power': 'power', 'chat-square-text': 'sms', 'images': 'photo-stack', 'table': 'bar-chart',
     'drug-powder': 'drug-powder', 'drug-syringe': 'drug-syringe', 'drug-vial': 'drug-vial', 'drug-crystal': 'drug-crystal', 'drug-pills': 'drug-pills', 'drug-mushroom': 'drug-mushroom', 'drug-steroid': 'drug-steroid', 'drug-cannabis': 'cannabis',
   };

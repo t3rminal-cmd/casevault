@@ -39,44 +39,218 @@
     return { rows, variants: [...variants.values()] };
   }
 
-  /** Opens the person view (browser only). */
-  async function open(name, ui) {
+  /* v1.175: the kinds of arrest: narcotics, battery, firearms, from a charge's statute (Illinois
+   * citations: 720 ILCS 570 controlled substances, 550 cannabis, 646 meth, 600 paraphernalia;
+   * 720 ILCS 5/12-3 battery; 720 ILCS 5/24 weapons, 430 ILCS 65 FOID, 66 concealed carry) or its words. */
+  const KINDS = [
+    ['narcotics', 'Narcotics', 'drug-powder', /\b720\s*ILCS\s*(570|550|646|600)\b|\b(narcotic|controlled substance|cocaine|crack|heroin|fentanyl|cannabis|marijuana|meth(amphetamine)?|mdma|ecstasy|pcp|lsd|oxycodone|opiate|opioid|drug|paraphernalia|possession with intent|PWID|PCS|MFG\/DEL)\b/i],
+    ['battery', 'Battery', 'bandaid-fill', /\b720\s*ILCS\s*5\/12-3(\.\d+)?\b|\bbattery\b|\b(dom(estic)?\.? ?batt|agg(ravated)?\.? ?batt)/i],
+    ['firearms', 'Firearms', 'pistol', /\b720\s*ILCS\s*5\/24(-|\b)|\b430\s*ILCS\s*(65|66)\b|\b(firearm|gun|handgun|pistol|revolver|rifle|shotgun|weapon|ammunition|ammo|UUW|AUUW|FOID|armed habitual|discharge)\b/i],
+  ];
+  /** The kinds a charge (or any text) is about. -> ['narcotics', 'battery', 'firearms'] in that order. */
+  function chargeKinds(...texts) {
+    const t = texts.flat().map((x) => (x && typeof x === 'object' ? [x.statute, x.description].join(' ') : clean(x))).join(' \n ');
+    return KINDS.filter(([, , , re]) => re.test(t)).map(([k]) => k);
+  }
+  const kindInfo = (k) => { const x = KINDS.find((y) => y[0] === k); return x ? { key: x[0], label: x[1], icon: x[2] } : null; };
+
+  /** v1.175: the arrests of a person on every case: arrest.json's arrestees with the name.
+   * arrests: { caseId: arrest.json }. -> [{ c, a, name, date, time, location, charges, kinds, match }] by date. */
+  function arrestsOf(name, cases, arrests = {}) {
+    const Op = O();
+    const out = [];
+    for (const c of cases || []) {
+      for (const a of ((arrests[c.id] || {}).arrestees) || []) {
+        const who = [a.firstName, a.middleName, a.lastName].map(clean).filter(Boolean).join(' ');
+        const m = who && Op.nameMatch(name, who);
+        if (!m) continue;
+        const charges = (a.charges || []).filter((x) => clean(x.statute) || clean(x.description));
+        const narcotics = (a.narcotics || []).filter((x) => clean(x.drug));
+        out.push({ c, a, name: who, date: clean(a.date), time: clean(a.time), location: clean(a.location), charges, match: m,
+          kinds: [...new Set([...chargeKinds(charges), ...(narcotics.length ? ['narcotics'] : []), ...(clean(a.armedWith) && /gun|firearm|pistol|revolver|rifle|shotgun|weapon/i.test(a.armedWith) ? ['firearms'] : [])])].sort((x, y) => KINDS.findIndex((k) => k[0] === x) - KINDS.findIndex((k) => k[0] === y)) });
+      }
+    }
+    return out.sort((x, y) => `${x.date}${x.time}`.localeCompare(`${y.date}${y.time}`));
+  }
+
+  /** v1.175: the person's police interactions on one timeline: their arrests (from the Arrest tab)
+   * and every Timeline event that names them, oldest first. An arrest also on the Timeline (same
+   * case and day) is shown once. -> [{ date, time, kind, title, detail, c, kinds }] */
+  function interactions(rows, arrests) {
+    const out = arrests.map((x) => ({ date: x.date, time: x.time, kind: 'arrest', title: 'Arrested', detail: x.charges.map((ch) => clean(ch.description) || clean(ch.statute)).filter(Boolean).join('; ') || x.location, c: x.c, kinds: x.kinds }));
+    for (const r of rows) {
+      for (const ev of r.events) {
+        if (ev.kind === 'arrest' && out.some((o) => o.kind === 'arrest' && o.c.id === r.c.id && o.date === clean(ev.date))) continue;
+        out.push({ date: clean(ev.date), time: clean(ev.time), kind: ev.kind || 'event', title: clean(ev.title) || 'Event', detail: ev.kind === 'buy' ? O().buyLine(ev) : clean(ev.note).slice(0, 160), c: r.c, kinds: chargeKinds(ev.kind === 'buy' ? 'narcotic' : '', ev.title, ev.note) });
+      }
+    }
+    return out.sort((x, y) => `${x.date}${x.time}`.localeCompare(`${y.date}${y.time}`));
+  }
+
+  /** v1.175: what is known of the person: date of birth, gender, IR and CB numbers, from the
+   * suspects and arrestees with the same name (the first one that has each). */
+  function profileOf(name, cases, arrests = {}) {
+    const Op = O();
+    const p = { dob: '', gender: '', ir: '', cb: '', race: '' };
+    const take = (k, v) => { if (!p[k] && clean(v) && clean(v) !== 'DNA') p[k] = clean(v); };
+    for (const c of cases || []) {
+      for (const sx of c.suspects || []) {
+        if (!sx || sx.notIdentified || Op.nameMatch(name, sx.name) !== 'same') continue;
+        const i = sx.info || {};
+        take('dob', sx.dob); take('gender', i.gender); take('ir', i.irNumber); take('race', i.race);
+      }
+      for (const a of ((arrests[c.id] || {}).arrestees) || []) {
+        if (Op.nameMatch(name, [a.firstName, a.middleName, a.lastName].map(clean).filter(Boolean).join(' ')) !== 'same') continue;
+        take('dob', a.dob); take('gender', a.sex); take('ir', a.irNumber); take('cb', a.bookingNumber); take('race', a.race);
+      }
+    }
+    return p;
+  }
+
+  /** v1.175: Suspect Search: every person on the SSD (subjects, suspects, arrestees, closed cases
+   * included), one per name, with their details, case numbers and kinds of arrest. */
+  function everyone(cases, arrests = {}) {
+    const Op = O();
+    const map = new Map();
+    const add = (name, c, d = {}) => {
+      const n = clean(name);
+      if (!n || /^unknown/i.test(n)) return;
+      const k = Op.normName(n);
+      const cur = map.get(k) || { name: n, dob: '', gender: '', ir: '', numbers: [], kinds: [], arrests: 0 };
+      for (const f of ['dob', 'gender', 'ir']) if (!cur[f] && clean(d[f]) && clean(d[f]) !== 'DNA') cur[f] = clean(d[f]);
+      if (c.number && !cur.numbers.includes(c.number)) cur.numbers.push(c.number);
+      for (const x of d.kinds || []) if (!cur.kinds.includes(x)) cur.kinds.push(x);
+      if (d.arrest) cur.arrests++;
+      map.set(k, cur);
+    };
+    for (const c of cases || []) {
+      for (const sx of c.suspects || []) if (sx && !sx.notIdentified) add(sx.name, c, { dob: sx.dob, gender: (sx.info || {}).gender, ir: (sx.info || {}).irNumber });
+      for (const a of ((arrests[c.id] || {}).arrestees) || []) {
+        const charges = (a.charges || []).filter((x) => clean(x.statute) || clean(x.description));
+        add([a.firstName, a.middleName, a.lastName].map(clean).filter(Boolean).join(' '), c, { dob: a.dob, gender: a.sex, ir: a.irNumber, arrest: charges.length || clean(a.date), kinds: [...chargeKinds(charges), ...((a.narcotics || []).some((x) => clean(x.drug)) ? ['narcotics'] : [])] });
+      }
+      add(c.subject, c, {});
+    }
+    const order = (k) => KINDS.findIndex((x) => x[0] === k);
+    return [...map.values()].map((x) => ({ ...x, kinds: x.kinds.sort((a, b) => order(a) - order(b)) })).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /** Every case, its timeline and its arrest details (browser only). */
+  async function loadAll() {
+    const cases = [];
+    for (const e of (Vault.data.cases || []).slice()) { try { cases.push({ ...(await Vault.getCase(e.id)), status: e.status, archivedEntry: Vault.isArchived(e.id) }); } catch { /* moved or unreadable: skipped */ } }
+    const timelines = {}; const arrests = {};
+    await Promise.all(cases.map(async (c) => {
+      try { timelines[c.id] = await Vault.getTimeline(c.id); } catch { /* none */ }
+      try { arrests[c.id] = await Vault.readCaseJSON(c.id, 'arrest.json'); } catch { /* none */ }
+    }));
+    return { cases, timelines, arrests };
+  }
+
+  /** v1.175: the kinds of arrest as colour icons with their names. */
+  function kindBadges(h, icon, kinds, { small = false } = {}) {
+    return h('span', { class: `kind-badges${small ? ' small' : ''}` }, ...kinds.map(kindInfo).filter(Boolean).map((k) => h('span', { class: `kind-badge kind-${k.key}`, title: small ? k.label : null }, icon(k.icon), small ? h('span', { class: 'sr-only' }, k.label) : h('span', {}, k.label))));
+  }
+
+  /** Opens the person view (browser only). v1.175: a suspect profile: what is known of them, the
+   * kinds of arrest, every case, their arrest reports and their police interactions in time order,
+   * in a window wide enough to show it all. */
+  async function open(name, ui, loaded = null) {
     const { h, openDialog, fmtDate, toast } = ui;
+    const I = ui.icon;
     const who = clean(name);
     if (!who) return;
-    const entries = (Vault.data.cases || []).slice();
-    const cases = [];
-    for (const e of entries) { try { cases.push({ ...(await Vault.getCase(e.id)), archivedEntry: Vault.isArchived(e.id) }); } catch { /* moved or unreadable: skipped */ } }
-    // Timelines only where the name could be: every case (events can name a suspect who isn't listed).
-    const timelines = {};
-    for (const c of cases) { try { timelines[c.id] = await Vault.getTimeline(c.id); } catch { /* none */ } }
+    const { cases, timelines, arrests } = loaded || await loadAll();
     const { rows, variants } = appearances(who, cases, timelines);
+    const arr = arrestsOf(who, cases, arrests);
+    for (const x of arr) if (!rows.some((r) => r.c.id === x.c.id)) rows.push({ c: x.c, roles: ['Arrestee'], match: x.match, names: [x.name], events: [] });
     const ops = new Map((Vault.data.operations || []).map((o) => [o.id, o]));
     const missions = [...new Set(rows.map((r) => r.c.operationId).filter(Boolean))].map((id) => ops.get(id)).filter(Boolean);
-    const events = rows.flatMap((r) => r.events.map((ev) => ({ ev, c: r.c }))).sort((a, b) => `${a.ev.date}${a.ev.time || ''}`.localeCompare(`${b.ev.date}${b.ev.time || ''}`));
-    if (!rows.length) { toast(`${who} isn't on any other case.`, 'info'); return; }
+    if (!rows.length) { toast(`${who} isn't on any case.`, 'info'); return; }
+    const prof = profileOf(who, cases, arrests);
+    const kinds = [...new Set(arr.flatMap((x) => x.kinds))].sort((a, b) => KINDS.findIndex((k) => k[0] === a) - KINDS.findIndex((k) => k[0] === b));
+    const life = interactions(rows, arr);
+    // The arrest reports already made (PDFs named "… Arrest Report") in each case's Files.
+    const pdfs = {};
+    await Promise.all([...new Set(arr.map((x) => x.c.id))].map(async (id) => { try { pdfs[id] = (await Vault.listFiles(id)).filter((f) => /arrest report/i.test(f.name) && /\.pdf$/i.test(f.name)); } catch { pdfs[id] = []; } }));
+    const caseLink = (c, done, tab = '') => h('a', { href: `#/case/${CVRoute.enc(c.id)}${tab ? `/${tab}` : ''}`, class: 'nowrap', onclick: () => done() }, c.number || 'No case number');
+    const age = prof.dob && root.CVReportFields && root.CVReportFields.ageOn ? root.CVReportFields.ageOn(prof.dob, Vault.localDay()) : '';
+    const facts = [['DOB', prof.dob ? `${fmtDate(prof.dob)}${age !== '' && age != null ? ` (${age})` : ''}` : ''], ['Gender', prof.gender], ['Race', prof.race], ['IR', prof.ir], ['CB', prof.cb]].filter(([, v]) => v);
+    const KIND_ICON = { buy: 'cash-coin', arrest: 'person-exclamation', court: 'bank2', deadline: 'hourglass-split', surveillance: 'eye', event: 'calendar-event' };
     await openDialog((done) => h('div', { class: 'person-view' },
-      h('h2', { icon: 'person-lines-fill' }, who),
-      h('p', { class: 'muted small' }, `${rows.length} case${rows.length === 1 ? '' : 's'}${missions.length ? ` in ${missions.length} Mission${missions.length === 1 ? '' : 's'}` : ''} · ${events.length} timeline event${events.length === 1 ? '' : 's'}`),
+      h('div', { class: 'pv-head' },
+        h('h2', { icon: 'person-lines-fill' }, who),
+        kinds.length ? kindBadges(h, I, kinds) : null),
+      facts.length ? h('div', { class: 'pv-facts' }, ...facts.map(([k, v]) => h('span', { class: 'pv-fact' }, h('span', { class: 'pv-fact-k' }, k), h('strong', {}, v)))) : null,
+      h('p', { class: 'muted small' }, `${rows.length} case${rows.length === 1 ? '' : 's'}${missions.length ? ` in ${missions.length} Mission${missions.length === 1 ? '' : 's'}` : ''} · ${arr.length} arrest${arr.length === 1 ? '' : 's'} · ${life.length} police interaction${life.length === 1 ? '' : 's'}`),
       variants.length ? h('p', { class: 'person-variants' }, h('strong', {}, 'Possibly the same person: '), variants.join(', '), h('span', { class: 'muted small' }, '. Written another way on some cases; check before you treat them as one.')) : null,
-      h('div', { class: 'table-wrap' }, h('table', { class: 'data-table person-table' },
-        h('thead', {}, h('tr', {}, ...['Case Number', 'Mission', 'Status', 'Role', 'Written As'].map((t) => h('th', {}, t)))),
-        h('tbody', {}, ...rows.map((r) => {
-          const op = ops.get(r.c.operationId);
-          return h('tr', { class: r.match === 'similar' ? 'similar-row' : '' },
-            h('td', {}, h('a', { href: `#/case/${CVRoute.enc(r.c.id)}`, onclick: () => done() }, r.c.number || 'No case number')),
-            h('td', {}, op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, onclick: () => done() }, op.number || op.name) : h('span', { class: 'muted' }, 'General Files')),
-            h('td', { class: 'nowrap' }, r.c.archivedEntry ? 'Archived' : r.c.status || 'Open'),
-            h('td', {}, r.roles.join(', ')),
-            h('td', {}, r.names.join(', ') || '—'));
-        })))),
-      events.length ? h('section', { class: 'person-events' }, h('h3', {}, 'Timeline'),
-        h('ol', { class: 'person-event-list' }, ...events.map(({ ev, c }) => h('li', {},
-          h('span', { class: 'nowrap' }, `${fmtDate(ev.date)}${ev.time ? ` ${ev.time}` : ''}`),
-          h('strong', {}, ev.title || 'Event'),
-          ev.kind === 'buy' && O().buyLine(ev) ? h('span', { class: 'muted small' }, O().buyLine(ev)) : null,
-          h('span', { class: 'muted small' }, c.number || ''))))) : null,
+      h('section', { class: 'pv-section' }, h('h3', {}, 'Cases'),
+        h('table', { class: 'data-table person-table' },
+          h('thead', {}, h('tr', {}, ...['Case Number', 'Mission', 'Status', 'Role', 'Written As', 'Arrests'].map((t) => h('th', {}, t)))),
+          h('tbody', {}, ...rows.map((r) => {
+            const op = ops.get(r.c.operationId);
+            const k = [...new Set(arr.filter((x) => x.c.id === r.c.id).flatMap((x) => x.kinds))];
+            return h('tr', { class: r.match === 'similar' ? 'similar-row' : '' },
+              h('td', {}, caseLink(r.c, done)),
+              h('td', {}, op ? h('a', { href: `#/operation/${encodeURIComponent(op.id)}`, onclick: () => done() }, op.number || op.name) : h('span', { class: 'muted' }, 'General Files')),
+              h('td', { class: 'nowrap' }, r.c.archivedEntry ? 'Archived' : r.c.status || 'Open'),
+              h('td', {}, r.roles.join(', ')),
+              h('td', {}, r.names.join(', ') || '—'),
+              h('td', {}, k.length ? kindBadges(h, I, k, { small: true }) : h('span', { class: 'muted' }, '—')));
+          })))),
+      arr.length ? h('section', { class: 'pv-section pv-arrests' }, h('h3', {}, 'Arrest Reports'),
+        h('table', { class: 'data-table person-table' },
+          h('thead', {}, h('tr', {}, ...['Date', 'Case Number', 'Charges', 'Location', 'Report'].map((t) => h('th', {}, t)))),
+          h('tbody', {}, ...arr.map((x) => h('tr', {},
+            h('td', { class: 'nowrap' }, x.date ? fmtDate(x.date) : '—', x.time ? h('span', { class: 'muted small block' }, x.time) : null),
+            h('td', {}, caseLink(x.c, done)),
+            h('td', {}, x.charges.length ? h('ul', { class: 'pv-charges' }, ...x.charges.map((ch) => h('li', {}, kindBadges(h, I, chargeKinds(ch), { small: true }), h('span', {}, [clean(ch.statute), clean(ch.description)].filter(Boolean).join(' — '))))) : h('span', { class: 'muted' }, 'No charges entered')),
+            h('td', {}, x.location || '—'),
+            h('td', {}, h('div', { class: 'pv-report' },
+              h('a', { class: 'btn small', href: `#/case/${CVRoute.enc(x.c.id)}/arrest`, onclick: () => done() }, 'Arrest Tab'),
+              ...(pdfs[x.c.id] || []).map((f) => h('button', { type: 'button', class: 'btn small', icon: 'file-earmark-pdf', onclick: () => { done(); ui.previewFile(x.c, f.name); } }, f.base || 'Arrest Report'))))))))) : null,
+      life.length ? h('section', { class: 'pv-section person-events' }, h('h3', {}, 'Police Interactions'),
+        h('ol', { class: 'person-event-list' }, ...life.map((ev) => h('li', { class: `pv-ev pv-ev-${ev.kind}` },
+          h('span', { class: 'pv-ev-date' }, h('span', { class: 'nowrap' }, ev.date ? fmtDate(ev.date) : 'No date'), ev.time ? h('span', { class: 'muted small' }, ev.time) : null),
+          h('span', { class: 'pv-ev-kind' }, I(KIND_ICON[ev.kind] || 'calendar-event'), h('span', {}, ev.kind === 'arrest' ? 'Arrest' : ev.kind === 'buy' ? 'Buy' : ev.kind === 'court' ? 'Court' : ev.kind === 'deadline' ? 'Deadline' : 'Event')),
+          h('span', { class: 'pv-ev-text' }, h('strong', {}, ev.title), ev.detail ? h('span', { class: 'muted small' }, ev.detail) : null),
+          ev.kinds.length ? kindBadges(h, I, ev.kinds, { small: true }) : h('span', {}),
+          caseLink(ev.c, done, 'timeline'))))) : null,
       h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => done() }, 'Done'))));
+  }
+
+  /** v1.175: Suspect Search: everyone on the SSD (closed cases too), found by name, date of birth
+   * or IR number, with the kinds of arrest; picking one opens their profile. */
+  async function search(ui, q = '') {
+    const { h, openDialog } = ui;
+    const I = ui.icon;
+    const loaded = await loadAll();
+    const people = everyone(loaded.cases, loaded.arrests);
+    const pick = await openDialog((done) => {
+      const box = h('input', { type: 'search', autofocus: true, value: q, placeholder: 'Name, date of birth or IR number', 'aria-label': 'Search suspects', autocomplete: 'off' });
+      const body = h('tbody', {});
+      const count = h('p', { class: 'muted small', role: 'status' });
+      const draw = () => {
+        const words = clean(box.value).toLowerCase().split(/[\s,]+/).filter(Boolean);
+        const hits = people.filter((x) => { const hay = [x.name, x.dob, x.ir, x.gender, ...x.numbers].join(' ').toLowerCase(); return words.every((w) => hay.includes(w)); }).slice(0, 200);
+        count.textContent = `${hits.length}${hits.length === 200 ? '+' : ''} of ${people.length} people`;
+        body.replaceChildren(...(hits.length ? hits.map((x) => h('tr', { class: 'ss-row', tabindex: 0, onclick: () => done(x.name), onkeydown: (e) => { if (e.key === 'Enter') done(x.name); } },
+          h('td', {}, h('strong', {}, x.name)), h('td', { class: 'nowrap' }, x.dob ? ui.fmtDate(x.dob) : '—'), h('td', {}, x.gender || '—'), h('td', {}, x.ir || '—'),
+          h('td', {}, x.numbers.map((n) => h('span', { class: 'nowrap ss-num' }, n))), h('td', {}, x.arrests ? String(x.arrests) : '—'),
+          h('td', {}, x.kinds.length ? kindBadges(h, I, x.kinds, { small: true }) : '—'))) : [h('tr', {}, h('td', { colspan: 7, class: 'muted empty-cell' }, 'No one matches.'))]));
+      };
+      box.addEventListener('input', draw);
+      box.addEventListener('keydown', (e) => { if (e.key === 'Enter') { const first = body.querySelector('.ss-row'); if (first) { e.preventDefault(); first.click(); } } });
+      draw();
+      return h('div', { class: 'suspect-search' },
+        h('h2', { icon: 'person-lines-fill' }, 'Suspect Search'),
+        h('p', { class: 'muted small' }, 'Everyone on your cases, closed ones too: suspects, arrestees and subjects. Pick one to see their arrest reports and police interactions.'),
+        box, count,
+        h('table', { class: 'data-table ss-table' },
+          h('thead', {}, h('tr', {}, ...['Name', 'DOB', 'Gender', 'IR', 'Cases', 'Arrests', 'Arrested For'].map((t) => h('th', {}, t)))), body),
+        h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => done(null) }, 'Close')));
+    });
+    if (pick) await open(pick, ui, loaded);
   }
 
   /** v1.153: when a suspect is added: the other cases with the same person (the same name, and the
@@ -192,7 +366,7 @@
     return (list || []).filter((x) => { const hay = [x.name, x.dob, x.ir, x.gender].join(' ').toLowerCase(); return words.every((w) => hay.includes(w)); });
   }
 
-  const api = { appearances, duplicates, findDuplicates, fillFrom, filledCount, knownSuspects, suspectsOf, searchSuspects, isClosedCase, personDiff, updateFrom, open };
+  const api = { appearances, chargeKinds, arrestsOf, interactions, profileOf, everyone, search, duplicates, findDuplicates, fillFrom, filledCount, knownSuspects, suspectsOf, searchSuspects, isClosedCase, personDiff, updateFrom, open };
   if (isNode) module.exports = api;
   else root.CVPersonView = api;
 })(this);
