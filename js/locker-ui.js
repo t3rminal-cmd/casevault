@@ -511,7 +511,7 @@
         // v1.148: newest added first, or by Last Contact (the longest ago first, so who needs a call is on top).
         .sort((a, b) => (mem.fileSort === 'contact' ? (a.lastContact || '0000').localeCompare(b.lastContact || '0000') : 0) || String(b.added).localeCompare(String(a.added)));
       tbody.replaceChildren(...(list.length ? list.map((f) => h('tr', {},
-        h('td', {}, h('button', { type: 'button', class: 'linklike', title: 'Open', onclick: () => openFile(f) }, I('shield-lock-fill'), ' ', f.name)),
+        h('td', {}, h('button', { type: 'button', class: 'linklike', onclick: () => openFile(f) }, I('shield-lock-fill'), ' ', f.name)),
         h('td', {}, f.label || h('span', { class: 'muted' }, '—')),
         // v1.146: Active (green) or Inactive (red), e.g. an informant still working or not; click to switch.
         h('td', {}, h('button', { type: 'button', class: `btn small locker-status ${f.status === 'inactive' ? 'inactive' : 'active'}`, title: `${f.status === 'inactive' ? 'Inactive' : 'Active'}: click to mark it ${f.status === 'inactive' ? 'Active' : 'Inactive'}`, onclick: async () => {

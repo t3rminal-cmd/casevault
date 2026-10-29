@@ -213,6 +213,16 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.174
+
+- **Closed cases' suspects are not suggested.** When you type a suspect's name (New Case, a case's Suspects, a Mission's Subject Data and New Case Group), the suspects and subjects of closed and archived cases are no longer offered
+- **Fewer hover boxes.** The case list on the left no longer shows hover boxes such as *Fold or unfold*. Only a name that is cut off, and what a due count is waiting on, still show one. The boxes that just repeated a button (*Close*, *Open*) are gone too
+- **New Case: search the known suspects.** Type in *Subject Name* and the suspects of your open cases that match are listed with their **Name, DOB, Gender and IR Number**:
+  - Search by name, date of birth or IR number
+  - Pick one: the Subject Name is filled in, and the person becomes the new case's main suspect with their details (date of birth, residence, description and record numbers) from the other case
+  - *Undo* takes it back
+- **Fix:** a suspect marked *Not identified* was suggested as "false" in the Suspects name box
+
 ### What's new in v1.173
 
 - **Check the Mission.** *Mission Health* on the Mission page has a **Check the Mission** button:
@@ -255,22 +265,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
   - `{{buys}}`: a table of the Timeline's buys with the total paid
   - `{{buys.count}}`, `{{buys.total}}` and `{{inventory}}` (every inventory number)
 - **Known Aliases from the suspects.** A suspect's *Moniker / Social Media* (e.g. *Rick, Ricky*) now counts as a Known Alias in every check, without typing it again. The Checks tab shows which ones
-
-### What's new in v1.171
-
-- **Backups: tested, and when you choose.**
-  - The Backups panel has *Remind Me Every 3, 7, 14 or 30 Days* for the full-backup banner
-  - Each **Test Restore** is remembered: the panel says when the backup was last tested and whether it read back fine
-  - If a full backup hasn't been tested in 30 days (or a test found problems), the home page asks you to **Test Backup**
-- **A narrative from a Timeline buy.** New Report → Start From → **A Timeline Buy**:
-  - Pick the buy and *Buy Narrative* or *Surveillance Narrative*
-  - The narrative starts with what the Timeline and the evidence list know: date, time, suspect, drug, amount, paid and the inventory numbers of that drug
-  - Everything else is a [CONFIRM: …] to fill in (location, what happened in order, vehicles, the field test…), listed under To Confirm
-  - It is named *Buy 2 Narrative* / *Surveillance 2 Narrative*, so the Checks tab pairs the two. No AI is needed
-- **Order of Events.** On a check's results, each Buy and Surveillance pair has an **Order of Events** button. It opens the two reports side by side: each sentence under the time it happened (a sentence with no time goes with the time before it). A time only one report gives is on its own row, so a gap or a different order stands out
-- **One record per person.** When a suspect on this case has details the same person doesn't have on another case (a new address, a height, a phone…), the note under the suspect offers **Update on N Other Cases**:
-  - It lists each case, a Mission's own cases included, with what would change, each with a tick box
-  - Only the details this case has are copied. Details only the other case has stay there
 
 ### Earlier versions
 

@@ -159,7 +159,7 @@
     if (kind === 'error') noteProblem('message', typeof message === 'string' ? message : (message && message.textContent) || '');
     const el = h('div', { class: `toast ${kind}`, role: kind === 'error' ? 'alert' : 'status' }, message);
     // v1.118: a message that stays a while can be closed right away.
-    if (ms >= 6000) el.append(h('button', { type: 'button', class: 'toast-close', title: 'Close', 'aria-label': 'Close this message', onclick: () => el.remove() }, '×'));
+    if (ms >= 6000) el.append(h('button', { type: 'button', class: 'toast-close', 'aria-label': 'Close this message', onclick: () => el.remove() }, '×'));
     $('#toasts').append(el);
     setTimeout(() => el.remove(), ms);
     return el;
@@ -204,7 +204,7 @@
       // v1.57: no X when the box already has a button that closes it (Done, Close, Cancel, OK…).
       const closer = [...dialogEl.querySelectorAll('button')].some((b) => /^(done|close|cancel|ok|back|not now|save and close|save & close)$/i.test(b.textContent.trim()));
       if (!closer) {
-        const xBtn = h('button', { class: 'icon-btn dialog-x', type: 'button', title: 'Close', 'aria-label': 'Close (Esc)', onclick: () => close(undefined) }, I('x-lg'));
+        const xBtn = h('button', { class: 'icon-btn dialog-x', type: 'button', 'aria-label': 'Close (Esc)', onclick: () => close(undefined) }, I('x-lg'));
         const head = dialogEl.querySelector('.vault-panel-head, .opt-head, .preview-head');
         if (head) { xBtn.classList.add('in-head'); head.append(xBtn); } else dialogEl.append(xBtn);
       }
@@ -946,7 +946,7 @@
         countBadge(cases.length, 'op-count'),
         // v1.83: GENERAL FILES has a + for a new case, like MISSION FILES has one for a new Mission.
         // v1.165: no + here; New Case is on the home page, in the menu and on N.
-        h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
+        h('span', { class: 'op-chev', 'aria-hidden': 'true' }, I('chevron-down'))),
       h('ul', { class: 'op-cases' }, cases.length ? (op ? cases.map((c) => caseItem(c, true, { dim: !group.closed && c.status === 'Closed' })) : independentItems(cases)) : [h('li', { class: 'empty muted small' }, op ? 'No cases in this Mission yet.' : 'No independent cases.')]));
     // A click on the folder's name opens the Operation (or General Files); the arrow folds it.
     // v1.169: the name also unfolds the folder, remembered before the page opens: the page draws
@@ -981,7 +981,7 @@
         h('summary', { class: `sg-head${location.hash === `#/group/${CVRoute.enc(g)}` ? ' active' : ''}`, title: `${g}: a Case Group of ${plural(list.length, 'case')}, kept together (not an Operation). Click to open it; the arrow folds it.` },
           nameGrid(g, g, 'sg-name', { commaOnly: true }), h('span', { class: 'sg-icon' }, I('person-badge')),
           list.some((c) => caseDue(c)) ? h('span', { class: 'alert-count', title: alertList(list.filter((c) => caseDue(c))) }, String(list.filter((c) => caseDue(c)).length)) : null,
-          h('span', { class: 'sg-count' }, String(list.length)), h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
+          h('span', { class: 'sg-count' }, String(list.length)), h('span', { class: 'op-chev', 'aria-hidden': 'true' }, I('chevron-down'))),
         h('ul', { class: 'op-cases sg-cases' }, list.map((c) => caseItem(c, true))));
       // v1.146: the name opens the group's page; the arrow folds it.
       det.querySelector('summary').addEventListener('click', (e) => {
@@ -1003,7 +1003,7 @@
   async function caseGroupDialog({ original = '', preset = [], suggest = '' } = {}) {
     await Save.flushAll();
     const pool = (Vault.data.cases || []).filter((c) => !isArchivedEntry(c) && !opOf(c)).sort(byNumber);
-    const names = [...new Set([...Vault.suspectGroups(), ...pool.map((c) => String(c.subject || '').trim())].filter(Boolean))];
+    const names = [...new Set([...Vault.suspectGroups(), ...pool.filter((c) => !CVPersonView.isClosedCase(c)).map((c) => String(c.subject || '').trim())].filter(Boolean))]; // v1.174: not a closed case's subject
     const before = original ? pool.filter((c) => c.suspectGroup === original).map((c) => c.id) : [];
     const res = await openDialog((close) => {
       const picked = new Set([...before, ...preset]);
@@ -1155,7 +1155,7 @@
         // v1.160: the bell in the alert column on the right, lined up with the red counts below it.
         bell ? h('span', { class: 'case-bell alert-count alert-bell', 'aria-label': 'Deadline' }, I('bell-fill')) : null,
         countBadge(n, 'op-count', 'mission'),
-        h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
+        h('span', { class: 'op-chev', 'aria-hidden': 'true' }, I('chevron-down'))),
       h('ul', { class: 'mission-children' }, groups.length ? groups.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted small' }, 'No Missions yet. Click + to make one.')]));
     det.querySelector('summary').addEventListener('click', (e) => {
       if (onArrow(e, e.currentTarget)) { e.preventDefault(); sideFoldHash = location.hash; sideFold.set(key, !det.open); det.open = !det.open; return; }
@@ -1185,7 +1185,7 @@
         h('span', { class: 'op-text' }, h('span', { class: 'op-name-row' }, h('span', { class: 'op-name' }, 'OPERATION')),
           h('span', { class: 'op-meta muted' }, `${opGroupsClosed.length} mission${opGroupsClosed.length === 1 ? '' : 's'}`)),
         countBadge(opGroupsClosed.length, 'op-count', 'mission'),
-        h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
+        h('span', { class: 'op-chev', 'aria-hidden': 'true' }, I('chevron-down'))),
       h('ul', { class: 'mission-children' }, opGroupsClosed.length ? opGroupsClosed.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted small' }, 'No closed Missions.')]));
     opsDet.addEventListener('toggle', () => { if (!searching) sideFold.set(opKey, opsDet.open); });
     const det = h('details', { class: 'op-group closed-group', open },
@@ -1195,7 +1195,7 @@
           h('span', { class: 'op-meta muted' }, `${n} case${n === 1 ? '' : 's'}`)),
         // v1.161: how many cases are closed, in the same box as the other folders' counts (no icon).
         countBadge(n, 'op-count closed-count', 'closed case'),
-        h('span', { class: 'op-chev', title: 'Fold or unfold' }, I('chevron-down'))),
+        h('span', { class: 'op-chev', 'aria-hidden': 'true' }, I('chevron-down'))),
       h('ul', { class: 'mission-children closed-children' },
         h('li', { class: 'op-item' }, opsDet),
         ...(loose.length ? loose.map((g) => operationGroup(g)) : [h('li', { class: 'empty muted small' }, 'No closed independent cases.')])));
@@ -1433,7 +1433,8 @@
       if (!cur.from.includes(where)) cur.from.push(where);
       out.set(k, cur);
     };
-    for (const e of (Vault.data.cases || []).filter((x) => x.operationId === opId)) {
+    // v1.174: a closed case's people are not suggested.
+    for (const e of (Vault.data.cases || []).filter((x) => x.operationId === opId && !isArchivedEntry(x) && !CVPersonView.isClosedCase(x))) {
       try {
         const c = await Vault.getCase(e.id);
         for (const s of (c && c.suspects) || []) {
@@ -1829,7 +1830,7 @@
         : grid(list)) : list.length ? h('table', { class: 'files shared-table' },
         h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', { class: 'num' }, 'Size'), h('th', { class: 'date-cell' }, 'Updated'), h('th', { class: 'col-actions' }, ''))),
         h('tbody', {}, list.map((f) => h('tr', {},
-          h('td', {}, h('button', { type: 'button', class: 'linklike', title: 'Open', onclick: () => previewFile(reader, f.base) }, I(FILE_ICONS[fileKind(f.base)]), ' ', f.base)),
+          h('td', {}, h('button', { type: 'button', class: 'linklike', onclick: () => previewFile(reader, f.base) }, I(FILE_ICONS[fileKind(f.base)]), ' ', f.base)),
           h('td', { class: 'num muted' }, fmtSize(f.size)),
           h('td', { class: 'muted date-cell', title: `Last updated ${fmtDateTime(f.modified)}` }, f.modified ? fmtDate(Vault.localDay(new Date(f.modified))) : '—'),
           h('td', { class: 'col-actions' }, h('button', { type: 'button', class: 'icon-btn danger-icon', title: 'Delete this file', onclick: () => delFile(f) }, I('trash3'), h('span', { class: 'sr-only' }, `Delete ${f.base}`))))))) : h('p', { class: 'muted small shared-empty' }, folderLabel ? `No files in ${folderLabel} yet.` : empty);
@@ -2962,7 +2963,26 @@
     if (prefill instanceof Event) prefill = {};
     const result = await openDialog((close) => {
       const numberIn = h('input', { name: 'number', required: true, maxlength: 100, autocomplete: 'off', autofocus: true, value: prefill.number || '' });
-      const subjectIn = h('input', { name: 'subject', required: true, maxlength: 200, autocomplete: 'off', value: prefill.subject || '' });
+      const subjectIn = h('input', { name: 'subject', required: true, maxlength: 200, autocomplete: 'off', value: prefill.subject || '', placeholder: 'Type a name to search the known suspects' });
+      // v1.174: typing a name searches the suspects of the open cases (name, date of birth, gender,
+      // IR number); picking one fills the Subject Name and makes them the new case's suspect.
+      let known = [];
+      let picked = null;
+      CVPersonView.knownSuspects({}).then((list) => { known = list; drawKnown(); }).catch(() => {});
+      const knownBox = h('div', { class: 'known-pick span-2', hidden: true, role: 'listbox', 'aria-label': 'Known suspects' });
+      const pickedNote = h('p', { class: 'form-hint span-2 known-picked', hidden: true });
+      const drawKnown = () => {
+        const hits = picked ? [] : CVPersonView.searchSuspects(known, subjectIn.value).slice(0, 8);
+        knownBox.hidden = !hits.length;
+        knownBox.replaceChildren(...(hits.length ? [h('div', { class: 'known-row known-head', 'aria-hidden': 'true' }, h('span', {}, 'Name'), h('span', {}, 'DOB'), h('span', {}, 'Gender'), h('span', {}, 'IR'))] : []),
+          ...hits.map((x) => h('button', { type: 'button', class: 'known-row', role: 'option', onclick: () => {
+            picked = x; subjectIn.value = x.name; drawKnown();
+            pickedNote.hidden = false;
+            pickedNote.replaceChildren(I('person-vcard'), h('span', {}, `${x.name} becomes this case's suspect, with the details from Case `, ...x.numbers.flatMap((n, j) => [j ? ', ' : '', h('span', { class: 'nowrap' }, n)]), '.'),
+              h('button', { type: 'button', class: 'btn small', onclick: () => { picked = null; pickedNote.hidden = true; drawKnown(); subjectIn.focus(); } }, 'Undo'));
+          } }, h('strong', {}, x.name), h('span', {}, x.dob ? fmtDate(x.dob) : '—'), h('span', {}, x.gender || '—'), h('span', {}, x.ir || '—'))));
+      };
+      subjectIn.addEventListener('input', () => { if (picked && subjectIn.value.trim() !== picked.name) { picked = null; pickedNote.hidden = true; } drawKnown(); });
       const opIn = operationSelect(prefill.operationId || '', { name: 'operationId' });
       // One file number can hold several cases: offer the file numbers already in use.
       const fileNumbers = [...new Set((Vault.data.cases || []).map((x) => x.fileNumber).filter(Boolean))].sort();
@@ -3012,7 +3032,7 @@
         close({
           number: fd.get('number').trim(), subject: fd.get('subject').trim(), operationId: fd.get('operationId') || '',
           fileNumber: fd.get('fileNumber').trim(), agencyNumber: fd.get('agencyNumber').trim(), client: fd.get('client'),
-          status: fd.get('status'), opened: fd.get('opened'), tags: [],
+          status: fd.get('status'), opened: fd.get('opened'), tags: [], knownSuspect: picked ? picked.suspect : null,
         });
       } },
       h('h2', { class: 'span-2', icon: 'folder-plus' }, 'New case'),
@@ -3020,6 +3040,7 @@
       field('Case Number', numberIn, '', 'Unique: no two cases, archived ones included, can share a Case Number.'),
       field('Subject Name', subjectIn, '', 'The person the case is about. Several cases can have the same subject.'),
       numberErr,
+      knownBox, pickedNote,
       field('Mission', opIn, 'span-2', 'Optional. The case is always kept in General Files; a Mission only links it.'),
       opNote,
       formSect('File Details', 'folder2-open'),
@@ -3034,9 +3055,16 @@
       return form;
     });
     if (!result) return;
-    if (!(await subjectCheck(result.subject))) return;
+    const knownSx = result.knownSuspect;
+    delete result.knownSuspect;
+    if (!knownSx && !(await subjectCheck(result.subject))) return; // a picked known suspect is the same person on purpose
     try {
       const c = await Save.track('new-case', () => Vault.createCase(result));
+      if (knownSx) { // v1.174: the picked known suspect, as this case's main suspect
+        const full = await Vault.getCase(c.id);
+        full.suspects = [{ ...structuredClone(knownSx), role: 'Primary' }];
+        await Save.track(`case:${c.id}`, () => Vault.saveCase(full));
+      }
       // Inside an Operation: it shares the Operation's Case Overview from the start.
       if (c.operationId) await mergeIntoOperation(c.id).catch(() => {});
       renderCaseList();

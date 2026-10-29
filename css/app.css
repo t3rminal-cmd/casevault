@@ -4728,3 +4728,16 @@ body:not(.sidebar-collapsed) .sidebar-head { padding-left: .3rem; padding-right:
 .health-tools { display: flex; flex-wrap: wrap; gap: .4rem; margin: .2rem 0 .5rem; }
 .mission-health .section-head .btn { margin-left: .4rem; }
 .mission-check-table td, .mission-check-table th { vertical-align: middle; }
+
+/* v1.174: New Case: the known suspects found while typing the Subject Name */
+.known-pick { display: grid; border: 1px solid var(--border); background: var(--surface); max-height: 16rem; overflow-y: auto; }
+.known-row { display: grid; grid-template-columns: minmax(9rem, 2fr) minmax(10rem, 1.2fr) minmax(5rem, .7fr) minmax(6rem, 1fr); gap: .75rem; align-items: center; padding: .45rem .75rem; border: 0; border-bottom: 1px solid var(--border); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; border-radius: 0; }
+.known-row:last-child { border-bottom: 0; }
+button.known-row:hover, button.known-row:focus-visible { background: var(--accent-soft); outline: none; }
+.known-row > span, .known-row > strong { overflow-wrap: anywhere; }
+.known-row > span:nth-child(2) { white-space: nowrap; }
+.known-picked .nowrap { white-space: nowrap; }
+.known-head { cursor: default; font-size: var(--fs-small); color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.known-picked { align-items: center; }
+.known-picked .btn { margin-left: auto; }
+@media (max-width: 640px) { .known-row { grid-template-columns: 1fr 1fr; } }

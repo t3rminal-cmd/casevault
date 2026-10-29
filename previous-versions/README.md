@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.173)
+
+- **Check the Mission:** the rules check on every case number at once, with a summary
+- **Prosecutor Packet** PDF and a **Calendar File** of deadlines and court dates, saved on the SSD
+- **Paste From Text** on the Timeline; **Read Labels** checks inventory numbers on exhibit photos
+
 ## Features (v1.172)
 
 - **Case Health** on each case and Mission: everything still open, most serious first

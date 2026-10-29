@@ -15,11 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.173
+## What's New in v1.174
 
-- **Check the Mission:** the rules check on every case number at once, with a summary
-- **Prosecutor Packet** PDF and a **Calendar File** of deadlines and court dates, saved on the SSD
-- **Paste From Text** on the Timeline; **Read Labels** checks inventory numbers on exhibit photos
+- **New Case** searches your known suspects (Name, DOB, Gender, IR) and fills in the one you pick
+- Closed cases' suspects are no longer suggested
+- No more hover boxes in the case list
 
 ## What CaseVault Does
 

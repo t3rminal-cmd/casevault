@@ -4,6 +4,22 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.171
+
+- **Backups: tested, and when you choose.**
+  - The Backups panel has *Remind Me Every 3, 7, 14 or 30 Days* for the full-backup banner
+  - Each **Test Restore** is remembered: the panel says when the backup was last tested and whether it read back fine
+  - If a full backup hasn't been tested in 30 days (or a test found problems), the home page asks you to **Test Backup**
+- **A narrative from a Timeline buy.** New Report → Start From → **A Timeline Buy**:
+  - Pick the buy and *Buy Narrative* or *Surveillance Narrative*
+  - The narrative starts with what the Timeline and the evidence list know: date, time, suspect, drug, amount, paid and the inventory numbers of that drug
+  - Everything else is a [CONFIRM: …] to fill in (location, what happened in order, vehicles, the field test…), listed under To Confirm
+  - It is named *Buy 2 Narrative* / *Surveillance 2 Narrative*, so the Checks tab pairs the two. No AI is needed
+- **Order of Events.** On a check's results, each Buy and Surveillance pair has an **Order of Events** button. It opens the two reports side by side: each sentence under the time it happened (a sentence with no time goes with the time before it). A time only one report gives is on its own row, so a gap or a different order stands out
+- **One record per person.** When a suspect on this case has details the same person doesn't have on another case (a new address, a height, a phone…), the note under the suspect offers **Update on N Other Cases**:
+  - It lists each case, a Mission's own cases included, with what would change, each with a tick box
+  - Only the details this case has are copied. Details only the other case has stay there
+
 ## What's new in v1.170
 
 - **Case Facts beside a draft.** In a draft's side panel, under *To Confirm*, Case Facts lists the case's facts to write from:

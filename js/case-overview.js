@@ -157,7 +157,7 @@
       // v1.168: the suspects of the other cases (a Mission's first), as suggestions while typing a name.
       const known = h('datalist', { id: 'suspect-known' });
       if (root.CVPersonView && root.CVPersonView.knownSuspects) {
-        root.CVPersonView.knownSuspects(c).then((list) => known.replaceChildren(...list.slice(0, 300).map((x) => h('option', { value: x.name, label: [x.dob, x.number].filter(Boolean).join(' · ') })))).catch(() => {});
+        root.CVPersonView.knownSuspects(c).then((list) => known.replaceChildren(...list.slice(0, 300).map((x) => h('option', { value: x.name, label: [x.dob, x.gender, x.ir ? `IR ${x.ir}` : '', x.number].filter(Boolean).join(' · ') })))).catch(() => {});
       }
       return h('section', { class: 'contacts suspects cv-boxed', 'aria-labelledby': 'suspects-title' },
         h('h3', { id: 'suspects-title', icon: 'person-exclamation', title: 'The people this case is about. The age is worked out from the date of birth. The main suspect fills {{suspect.name}}, {{suspect.dob}}, {{suspect.age}} and so on in templates; {{suspects}} lists them all.' }, 'Suspects'),
