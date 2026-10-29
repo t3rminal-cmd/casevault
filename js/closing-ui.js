@@ -56,7 +56,10 @@
     const fields = root.CVReportFields ? await Vault.readCaseJSON(c.id, 'report-fields.json').catch(() => null) : null;
     // v1.140: {{training}} and the rest from Other Files → Training.
     const training = root.CVTraining ? CVTraining.context(await Vault.trainingRows().catch(() => [])) : {};
-    return { ...K().arrestContext(arrest || { arrestees: [] }), ...K().closureContext(c.closure), ...(fields ? CVReportFields.context(fields) : {}), ...training };
+    // v1.172: {{evidence}}, {{buys}}, {{buys.count}}, {{buys.total}} and {{inventory}} (tables from the evidence list and the Timeline).
+    const tl = await Vault.getTimeline(c.id).catch(() => null);
+    const tables = root.CVHealth ? root.CVHealth.templateValues({ evidence: (fields && fields.evidence) || [], events: (tl && tl.events) || [] }) : {};
+    return { ...K().arrestContext(arrest || { arrestees: [] }), ...K().closureContext(c.closure), ...(fields ? CVReportFields.context(fields) : {}), ...training, ...tables };
   }
 
   /* ---------------- Arrest details tab ---------------- */
@@ -78,6 +81,19 @@
     const images = archived ? [] : (await Vault.listFiles(c.id).catch(() => [])).filter((f) => IMAGE_RE.test(f.name));
     const draftForm = await root.CVLazy.reports().then((r) => r.fields.load(c)).catch(() => null); // v1.153: loads on first use
     const isSee = (x) => root.CVReportFields && RFsee(x);
+    // v1.172: the arrest details against the rest of the case (suspects, Timeline, charges, evidence
+    // list), shown above the arrestees and checked again as they are edited.
+    const issuesBox = h('div', { class: 'card warn-card arrest-issues', role: 'note', hidden: true });
+    const [tlNow, rfNow] = await Promise.all([Vault.getTimeline(c.id).catch(() => ({ events: [] })), Vault.readCaseJSON(c.id, 'report-fields.json').catch(() => null)]);
+    const drawIssues = () => {
+      if (!root.CVHealth) return;
+      const items = root.CVHealth.arrestIssues({ arrest, caseObj: ui.state.caseObj && ui.state.caseObj.id === c.id ? ui.state.caseObj : c, timeline: tlNow || { events: [] }, evidence: (rfNow && rfNow.evidence) || [], today: Vault.localDay() });
+      issuesBox.hidden = !items.length;
+      issuesBox.replaceChildren(h('strong', {}, `Doesn't match the rest of the case (${items.length})`),
+        h('ul', { class: 'small' }, ...items.map((x) => h('li', {}, h('span', { class: `pill sev sev-${x.severity.toLowerCase()}` }, x.severity), ' ', x.text))));
+    };
+    let issuesTimer = null;
+    panel.addEventListener('change', () => { clearTimeout(issuesTimer); issuesTimer = setTimeout(drawIssues, 500); });
     const reportCharges = ((draftForm && draftForm.charges) || []).filter((x) => (x.statute || x.description) && !isSee(x));
     // v1.114: the reports' victims (Draft and sent), offered on each charge by the arrestee's RD number.
     const forms = [];
@@ -418,11 +434,13 @@
         h('strong', {}, `The arrest report for this case is on RD ${c.closure.arrestRef.number}.`),
         h('span', { class: 'muted small' }, ' This case was closed by arrest with it.'), ' ',
         (Vault.data.cases || []).some((x) => x.id === c.closure.arrestRef.id) ? h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button', icon: 'person-vcard', onclick: () => ui.go(c.closure.arrestRef.id, 'arrest') }, `Open RD ${c.closure.arrestRef.number}`) : null) : null,
+      issuesBox,
       list,
       archived ? null : h('div', { class: 'row' },
         h('button', { class: 'btn', type: 'button', onclick: () => { const a = K().emptyArrestee(); if (c.number) a.rdNumber = c.number; arrest.arrestees.push(a); changed(); draw(); } }, '+ Add another arrestee'),
         elsewhere.length ? h('button', { class: 'btn', type: 'button', icon: 'people', title: 'The same person was arrested on another case number of this Mission: copy their details here', onclick: () => copyFromMission() }, 'Copy From Another Case') : null,
         h('div', { class: 'spacer' }), reportBtn)].filter(Boolean));
+    drawIssues();
   }
 
   // A new draft from the arrest report template, filled from these details.
@@ -475,6 +493,13 @@
       }))).catch(() => []),
     ]);
     const loose = K().closeChecklist({ timeline, checks, drafts });
+    // v1.172: ready to close? Custody gaps, the arrest against the case, a check out of date, and
+    // narcotics with no lab result or exhibits with no final disposition (Case Health).
+    try {
+      const g = await root.CVHealthUI.gather(c);
+      const more = [...root.CVHealth.caseHealth(g).filter((x) => ['Custody', 'Arrest', 'Evidence'].includes(x.area) || /out of date/.test(x.text)), ...root.CVHealth.closeReadiness(g.evidence)];
+      loose.push(...more.map((x) => ({ kind: 'health', text: x.text, severity: x.severity })));
+    } catch (err) { if (FS.isDisconnectError(err)) throw err; }
     // v1.84: closing by arrest needs the arrest report: an arrestee's name and at least one charge.
     // v1.115: of every case number closed. One without its own can point to the RD that has it.
     const reports = new Map(); // case id -> { c, names, ready, day }

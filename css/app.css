@@ -4692,3 +4692,24 @@ body:not(.sidebar-collapsed) .sidebar-head { padding-left: .3rem; padding-right:
 .suspect-update .suspect-update-btn { margin-left: auto; }
 .suspect-update-list { display: grid; gap: .4rem; max-height: 50vh; overflow-y: auto; }
 .suspect-update-row ul { margin: .2rem 0 0; padding-left: 1.1rem; }
+
+/* v1.172: Case Health, custody gaps. */
+.case-health .health-count.bad { background: var(--danger-soft); color: var(--danger); }
+.case-health.health-bad { border-left: 3px solid var(--danger); }
+.health-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; }
+.health-item { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: .5rem; padding: .4rem .55rem; border: 1px solid var(--border); background: var(--surface); font-size: var(--fs-small); }
+.health-item.sev-high { border-left: 3px solid var(--danger); }
+.health-item.sev-medium { border-left: 3px solid var(--warn); }
+.health-item .health-area { width: 5.8rem; } /* one width, so the text lines up from row to row */
+.health-item .health-text { overflow-wrap: anywhere; }
+.health-ok { display: flex; align-items: center; gap: .4rem; color: var(--ok); margin: .2rem 0; }
+.mission-health { margin: 1rem 0; }
+.mission-health-case { border: 1px solid var(--border); background: var(--surface); padding: .35rem .6rem; margin-bottom: .4rem; }
+.mission-health-case summary { cursor: pointer; display: flex; align-items: center; gap: .5rem; }
+.mission-health-case .health-list { margin-top: .4rem; }
+.custody-gaps { margin-top: .6rem; padding: .5rem .7rem; border: 1px solid var(--danger); border-left-width: 3px; background: var(--danger-soft); }
+.custody-gaps ul { margin: .3rem 0 0; padding-left: 0; list-style: none; display: grid; gap: .25rem; }
+.custody-gap-tag { margin-left: .5rem; padding: 0 .4rem; border: 1px solid var(--danger); color: var(--danger); font-size: var(--fs-tiny); font-weight: 700; }
+@media (max-width: 700px) { .health-item { grid-template-columns: auto minmax(0, 1fr); } .health-item .health-area { display: none; } }
+.arrest-issues ul { margin: .35rem 0 0; padding-left: 0; list-style: none; display: grid; gap: .25rem; }
+.health-item > .pill.sev { min-width: 4.4rem; text-align: center; justify-content: center; }

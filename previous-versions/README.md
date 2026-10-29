@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.171)
+
+- **Backups:** choose how often to be reminded; the last Test Restore is kept and asked for monthly
+- **Reports:** start a Buy or Surveillance narrative from a Timeline buy
+- **Checks:** Order of Events side by side; **Suspects:** update the same person on other cases
+
 ## Features (v1.170)
 
 - **Drafts:** Case Facts beside the draft, checked as you write, with **Use …** to correct it

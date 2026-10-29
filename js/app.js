@@ -2266,6 +2266,8 @@
             : h('button', { class: 'btn small', type: 'button', icon: 'folder-symlink', title: 'Move this case to General Files or another Mission', onclick: async () => { if (await moveCaseDialog(c)) redraw(); } }, 'Move File')))))))
         : h('div', { class: 'empty-state' }, h('p', {}, 'No cases in this Mission yet.'), h('p', { class: 'muted small' }, 'New Case in this Mission creates one; Add Existing Case links one from General Files.')),
       h('p', { class: 'muted small op-section-note' }, 'The cases linked to this Mission. They live in General Files; nothing is copied.'),
+      // v1.172: what is still open on the Mission's cases.
+      members.length && window.CVHealthUI ? CVHealthUI.missionPanel(members, { h, icon: I }) : null,
       // v1.78: the Mission's timeline (all its case numbers) on its main page.
       h('div', { class: 'section-head op-tl-head', id: 'op-timeline' }, h('h2', { class: 'section-title caps' }, 'Timeline')),
       tlPanel,
@@ -3435,6 +3437,8 @@
         h('p', { class: 'muted span-2 small' },
           `Folder: ${CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}`)}`
           + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),
+      // v1.172: Case Health: what is still open on the case, and the gaps (custody, arrest, checks).
+      window.CVHealthUI ? makeFoldable(CVHealthUI.panel(c, { h, icon: I }), 'case-health', { open: true }) : '',
       makeFoldable(partnersSection(c, save), 'overview-partners', { count: () => (c.partners || []).length }),
       // ---- Case Overview: shared by the operation's case numbers (v1.27)
       h('hr', { class: 'overview-sep' }),
@@ -4771,7 +4775,7 @@
   window.CVLazy = { discovery: lazyPart(['js/discovery-receipt.js', 'js/discovery-ui.js'], 'CVDiscoveryUI'), linkChart: lazyPart(['js/linkchart.js', 'js/linkchart-ui.js'], 'CVLinkChartUI'), caseExport: lazyPart(['js/case-export.js', 'js/case-export-ui.js'], 'CVCaseExportUI'), agenda: lazyPart(['js/agenda.js', 'js/agenda-ui.js'], 'CVAgendaUI') };
   // v1.153: Reports and the Draft tab too (they need each other, so they come together).
   let reportsReady = null;
-  CVLazy.reports = () => (reportsReady = reportsReady || CVKit.loadScripts(['js/drafts/ghost.js', 'js/drafts/review.js', 'js/drafts/draft-facts.js', 'js/drafts/drafts-ui.js', 'js/custody.js', 'js/report-fields-ui.js'])
+  CVLazy.reports = () => (reportsReady = reportsReady || CVKit.loadScripts(['js/drafts/ghost.js', 'js/drafts/review.js', 'js/drafts/draft-facts.js', 'js/drafts/drafts-ui.js', 'js/report-fields-ui.js'])
     .then(() => { CVDraftsUI.init(window.CaseVaultUI); CVReportFieldsUI.init(window.CaseVaultUI); return { drafts: CVDraftsUI, fields: CVReportFieldsUI }; })
     .catch((err) => { reportsReady = null; throw err; }));
   CVSecureSettings.init(window.CaseVaultUI);

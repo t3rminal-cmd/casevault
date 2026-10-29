@@ -213,6 +213,29 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.172
+
+- **Case Health.** A new box at the top of a case's Details tab lists everything still open on the case, most serious first, each with a button to where it is fixed:
+  - Overdue deadlines, open consistency flags (from the latest check) and a check that is out of date
+  - [CONFIRM: …] left in drafts, exhibits without photos, gaps in the chain of custody, and the arrest details that don't match the case
+  - When nothing is open, it says so. The Mission page has the same list for all its cases (**Mission Health**)
+- **Chain-of-custody gaps.** Each exhibit's custody log is checked:
+  - Checked out and never returned (High), taken to court while still checked out (High), anything after it was destroyed or released (High)
+  - Sent to the lab with no return, a return with no checkout before it, a log that doesn't start with Received / Seized, entries without a date, narcotics never sent to the lab
+  - On the Draft tab, an exhibit with gaps shows *1 gap* beside its Chain of Custody button, and the dialog lists them
+- **The arrest against the case.** The Arrest tab now says when its details don't match the rest of the case:
+  - An arrestee's date of birth differs from the suspect's (High), or the arrestee isn't one of the case's suspects
+  - The arrest date differs from the Timeline's arrest, or is in the future
+  - A charge names a drug that wasn't bought from that person or recovered, or a drug bought isn't charged
+  - A recovered narcotic's inventory number isn't on the evidence list
+  - It updates as you edit
+- **Ready to close?** *Close Case* now also lists custody gaps, arrest mismatches, a check that is out of date, narcotics with no lab result yet, and exhibits with no final disposition. You can still close; it's a reminder
+- **Templates: tables from the case.** New fields under *Evidence and Buys*:
+  - `{{evidence}}`: a table of the exhibits with inventory number, item, weight and where it is now
+  - `{{buys}}`: a table of the Timeline's buys with the total paid
+  - `{{buys.count}}`, `{{buys.total}}` and `{{inventory}}` (every inventory number)
+- **Known Aliases from the suspects.** A suspect's *Moniker / Social Media* (e.g. *Rick, Ricky*) now counts as a Known Alias in every check, without typing it again. The Checks tab shows which ones
+
 ### What's new in v1.171
 
 - **Backups: tested, and when you choose.**
@@ -247,28 +270,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
   - An inventory number that no other report gives is flagged
 - **Privacy check before export.** *Before You Export* also lists details that must not go out: a Social Security, payment card, bank account or passport number, and the terms on your watch list (Settings), such as a CI's real name
 - **Discovery.** The Discovery Index and the Discovery Receipt list the exhibits with their inventory numbers, from the evidence list
-
-### What's new in v1.169
-
-- **Fix (case list folders):** clicking a folder opens it every time:
-  - Clicking its name unfolds it, opens its page, and it stays open (it used to fold back, or not open, now and then)
-  - The arrow folds and unfolds it, and so does the space to the right of the arrow (the arrow alone was a tiny target)
-- **Fix (case list counts):** every folder's count and arrow sit in one column at every depth, inside CLOSED too
-- **Fix:** INDEPENDENT says how many open cases it has, like its count, then how many are closed (*1 case · 1 closed*)
-- **Removed:** the X across a closed case with an arrest
-- **Removed:** the logo at the top left. The name *CaseVault* still takes you to the home page
-- **The closed folder icon** is teal again. The Closed tag and the red border of a closed case stay
-- **Checks: you choose the pairs.** On the Checks tab each report has a choice of what it is: *Auto* (by its name), *Buy*, *Surveillance* or *Other*:
-  - Under the list, each Buy report gets a *with* choice: *Auto*, a Surveillance report, or *Not Paired*
-  - Your choices are kept with the case
-- **Checks: the evidence list.** Every inventory number in the documents is checked against the exhibits on the Draft tab:
-  - A near-identical number is a likely typo (High)
-  - A number not on the list is flagged (Medium)
-  - An exhibit that no document mentions is noted (Low)
-- **Check before you export.** Export, PDF View and Word View of a draft first compare it with the case's documents:
-  - If something clearly doesn't match (an amount, a date, an inventory number…), a *Before You Export* box lists it, with **Run Full Check**, **Cancel** and **Export Anyway**
-  - Once you export a text anyway, you aren't asked about that same text again
-- **Out-of-date checks.** When a document changes after a check, or is removed, the check says **Out of Date** in Past Checks. Its results show which documents changed, with **Run Again**
 
 ### Earlier versions
 

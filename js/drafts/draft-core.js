@@ -213,6 +213,8 @@
       g('Arrest details', ['arrest.name', 'arrest.dob', 'arrest.description', 'arrest.charges', 'arrest.names', 'arrest.count',
         ...arrestKeys.filter((k) => !['dob'].includes(k)).map((k) => `arrest.${k}`), 'arrest.property', 'arrest.phoneCalls', 'arrest.notes']
         .filter((k, i, all) => all.indexOf(k) === i)),
+      // v1.172: tables from the Draft tab's evidence list and the Timeline's buys.
+      g('Evidence and buys', ['evidence', 'inventory', 'buys', 'buys.count', 'buys.total']),
       g('Closing', ['closure.disposition', 'closure.reason', 'closure.date', 'closure.note', 'closure.arrestRd']),
       ...(reportKeys.length ? [g('Report fields', reportKeys)] : []),
       g('Ask yourself to check', ['confirm: what to check']),
