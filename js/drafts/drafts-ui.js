@@ -586,7 +586,9 @@
         h('aside', { class: 'confirm-panel' },
           h('h3', {}, 'To confirm ', confirmCount),
           h('p', { class: 'muted small explain' }, 'Every [CONFIRM: ...] in the draft. Click one to jump to it, then replace it with the checked fact.'),
-          confirmList)));
+          confirmList,
+          // v1.170: the case's facts to write from, and the draft checked against them as you write.
+          root.CVDraftFacts ? CVDraftFacts.attach({ c, slug, meta, ta, rich, ui }).el : '')));
     drawSuggestState();
     rich.onMode(drawSuggestMode);
     drawSuggestMode(rich.mode());

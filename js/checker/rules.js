@@ -333,7 +333,8 @@
   let seq = 0;
   // v1.162: every flag has a confidence (how sure the checker is), apart from its severity (how
   // serious it would be): High, Medium or Low.
-  function makeFlag(docs, { severity, confidence = 'Medium', type, title, detail, statement, source, statementFact, sourceFact, sourceLabel }) {
+  // v1.170: fix: { from, to } — the statement's value and the one the source gives, for "Use this value".
+  function makeFlag(docs, { severity, confidence = 'Medium', type, title, detail, statement, source, statementFact, sourceFact, sourceLabel, fix }) {
     const st = location(docs, statement);
     if (statementFact) st.highlight = [statementFact.start, statementFact.end];
     let src = null;
@@ -352,6 +353,7 @@
       statement: st,
       source: src,
       ...(sourceLabel ? { sourceLabel } : {}),
+      ...(fix && fix.from && fix.to && fix.from !== fix.to ? { fix: { from: String(fix.from), to: String(fix.to) } } : {}),
       status: 'open',
       note: '',
     };
@@ -372,7 +374,7 @@
    *  buys:    the case's Timeline buys [{ date, suspect, drug, qty, unit, paid }] (the Buy Summary):
    *           each buy and the totals are checked against what the documents say.
    */
-  function compare(inputDocs, { ignore = [], aliases = [], buys = [], pairs = null, evidence = [] } = {}) {
+  function compare(inputDocs, { ignore = [], aliases = [], buys = [], pairs = null, evidence = [], kinds = {} } = {}) {
     const docs = analyze(inputDocs);
     const ignored = new Set(ignore.flatMap((t) => T.sentences(String(t || '')).flatMap((s) => extractFacts(s.text)))
       .map((f) => `${f.type}|${f.value}`));
@@ -384,10 +386,13 @@
     const reports = docs.map((d, i) => (d.role === 'report' ? i : -1)).filter((i) => i >= 0);
     // v1.168: the Buy and Surveillance pairs. Reports of two different buys tell different events,
     // so one pair's reports are not compared with another pair's ("$200" and "$300" are two buys).
-    const pairList = pairs || pairReports(docs);
+    const pairList = pairs || pairReports(docs, { kinds });
     const pairOf = new Map();
     pairList.forEach((pr, n) => { pairOf.set(pr.buy, n); pairOf.set(pr.surv, n); });
     const sameBuy = (a, b) => !pairOf.has(a) || !pairOf.has(b) || pairOf.get(a) === pairOf.get(b);
+    // v1.170: a Lab report's net weights aren't a report's field weights (labCheck() compares them).
+    const isLab = docs.map((d) => d.role !== 'affidavit' && kindWith(kinds, d) === 'lab');
+    const labApart = (f, a, b) => f.type === 'weight' && isLab[a] !== isLab[b] && docs[a].role !== 'affidavit' && docs[b].role !== 'affidavit';
 
     // Checks: every affidavit against all reports; every report against the reports after it.
     const plans = [
@@ -406,13 +411,14 @@
         for (const f of sent.facts) {
           if (f.type === 'name') continue;
           if (f.type === 'inventory' && !plan.affidavit && pairOf.has(plan.from)) continue; // pairsCheck() does these
-          const supported = supportSents.some((o) => o.facts.some((g) => g.type === f.type && sameValue(f.type, f.value, g.value)
+          const supported = supportSents.some((o) => !labApart(f, sent.doc, o.doc) && o.facts.some((g) => g.type === f.type && sameValue(f.type, f.value, g.value)
             && (f.type !== 'count' || g.key === f.key)));
           if (supported) continue;
 
           // Find the most similar sentence that states the same kind of fact differently.
           let best = null;
           for (const o of otherSents) {
+            if (labApart(f, sent.doc, o.doc)) continue;
             // v1.162: a value that matches another fact of the same sentence is that fact's match, not a
             // conflicting one ("$200, $300 and $500" against a report's "$200": only $200 is matched).
             const cands = o.facts.filter((g) => g.type === f.type && (f.type !== 'count' || g.key === f.key) && !!g.total === !!f.total
@@ -446,7 +452,7 @@
               type: f.type,
               title: `${label} mismatch: "${display(f)}" vs "${display(best.g)}"`,
               detail: `${docs[plan.from].name} says ${display(f)}; ${docs[best.o.doc].name} says ${display(best.g)} in a matching statement.`,
-              statement: sent, statementFact: f, source: best.o, sourceFact: best.g,
+              statement: sent, statementFact: f, source: best.o, sourceFact: best.g, fix: { from: f.display, to: best.g.display },
             }), `m|${f.type}|${[`${sent.doc}:${sent.start}:${sent.paragraph}:${a}`, `${best.o.doc}:${best.o.start}:${best.o.paragraph}:${b}`].sort().join('|')}`);
           } else if (plan.affidavit && !ignored.has(`${f.type}|${f.value}`)) {
             push(makeFlag(docs, {
@@ -521,7 +527,7 @@
           type: 'name',
           title: `Name spelled differently: "${st.fact.display}" vs "${src.fact.display}"`,
           detail: `"${st.fact.display}" (${docs[st.sent.doc].name}) and "${src.fact.display}" (${docs[src.sent.doc].name}) look like the same name spelled two ways.`,
-          statement: st.sent, statementFact: st.fact, source: src.sent, sourceFact: src.fact,
+          statement: st.sent, statementFact: st.fact, source: src.sent, sourceFact: src.fact, fix: { from: st.fact.display, to: src.fact.display },
         }), `n|${[a, b].sort().join('|')}`);
       }
     }
@@ -532,6 +538,7 @@
     pairsCheck(docs, pairList, push);
     // v1.169: and every inventory number against the evidence list.
     if (evidence && evidence.length) evidenceCheck(docs, evidence, push);
+    labCheck(docs, kinds, push); // v1.170
 
     const rank = { High: 0, Medium: 1, Low: 2 };
     return flags.sort((x, y) => rank[x.severity] - rank[y.severity]
@@ -646,7 +653,7 @@
             severity: 'High', confidence: money.length === 1 ? 'High' : 'Medium', type: 'buy',
             title: `Buy on ${when}: "${money[0].display}" but the Timeline says ${dollars(cents)} was paid`,
             detail: `The Timeline's buy${who} on ${when} (${b.drug || 'buy'}) was ${dollars(cents)}; ${docs[sent.doc].name} says ${money.map((f) => f.display).join(', ')}.`,
-            statement: sent, statementFact: money[0], source: null, sourceLabel: SRC,
+            statement: sent, statementFact: money[0], source: null, sourceLabel: SRC, fix: money.length === 1 ? { from: money[0].display, to: dollars(cents) } : null,
           }), `b|m|${sent.doc}:${sent.start}|${when}|${cents}`);
         }
         const weights = sent.facts.filter((f) => f.type === 'weight');
@@ -697,10 +704,12 @@
 
   const BUY_NAME = /\b(?:buy|buys|purchase|controlled[\s_-]*(?:buy|purchase)|uc[\s_-]*buy|undercover)\b|(?:^|[\s_-])buy\d/i;
   const SURV_NAME = /\bsurv(?:eillance|eil|\.)?\b|(?:^|[\s_-])surv\d/i;
+  const LAB_NAME = /\b(?:lab|labs|laboratory|crime[\s_-]*lab|forensic|drug[\s_-]*analysis|chemistry)\b/i;
   const baseName = (name) => String(name || '').split('/').pop().replace(/\.[a-z0-9]+$/i, '');
   /** 'buy' | 'surveillance' | '' from a file name ("Buy 2.pdf", "SURV-2 Report.docx"). */
   function kindFromName(name) {
     const b = baseName(name).replace(/_/g, ' ');
+    if (LAB_NAME.test(b)) return 'lab'; // v1.170: the lab's report on the drugs
     if (SURV_NAME.test(b)) return 'surveillance';
     if (BUY_NAME.test(b)) return 'buy';
     return '';
@@ -710,6 +719,7 @@
     const byName = kindFromName(doc.name);
     if (byName) return byName;
     const head = (doc.paragraphs || []).slice(0, 4).map((p) => p.text).join(' ').slice(0, 600);
+    if (/\b(?:laboratory|lab|forensic|chemistry)\s+(?:report|analysis|results?)\b|\bcontrolled\s+substance\s+analysis\b/i.test(head)) return 'lab';
     if (/\bsurveillance\s+(?:report|log|narrative|summary)\b/i.test(head)) return 'surveillance';
     if (/\b(?:buy|controlled\s+purchase|undercover\s+purchase)\s+(?:report|narrative|summary)\b/i.test(head)) return 'buy';
     return '';
@@ -728,6 +738,77 @@
    * names ("Buy 2" / "Surv 2"), the same date, the same inventory numbers. With one of each they are
    * a pair. docs: analyzed documents (or raw ones). -> [{ buy, surv, why }] (indexes into docs)
    */
+  /** v1.169: a report's kind, the one chosen on the Checks tab first. */
+  const kindWith = (kinds, d) => { const k = (kinds || {})[d.name]; return k === 'other' ? '' : ['buy', 'surveillance', 'lab'].includes(k) ? k : reportKind(d); };
+
+  /* v1.170: drugs by name, the lab's words and the street's words as one ("crack" is cocaine). */
+  const DRUGS = [
+    ['cocaine', /\b(?:cocaine|crack|coke)\b/i], ['heroin', /\bheroin\b/i], ['fentanyl', /\b(?:fentanyl|fentanil|acetyl\s*fentanyl|carfentanil)\b/i],
+    ['methamphetamine', /\b(?:meth(?:amphetamine)?|crystal\s+meth|ice)\b/i], ['cannabis', /\b(?:cannabis|marijuana|marihuana|weed|thc)\b/i],
+    ['mdma', /\b(?:mdma|ecstasy|molly)\b/i], ['oxycodone', /\b(?:oxycodone|oxycontin|percocet)\b/i], ['alprazolam', /\b(?:alprazolam|xanax)\b/i],
+    ['pcp', /\b(?:pcp|phencyclidine)\b/i], ['psilocybin', /\b(?:psilocybin|mushrooms)\b/i],
+  ];
+  const drugsIn = (text) => new Set(DRUGS.filter(([, re]) => re.test(text)).map(([n]) => n));
+  /**
+   * v1.170: a Lab report against the report of the buy its exhibits came from (the one that gives
+   * the same inventory number): the lab's drug must be the one bought, and the lab's weight can't be
+   * more than the weight in the field (the lab weighs the drug alone, without its packaging).
+   */
+  function labCheck(docs, kinds, push) {
+    const labs = docs.map((d, i) => ({ d, i })).filter((x) => x.d.role !== 'affidavit' && kindWith(kinds, x.d) === 'lab');
+    if (!labs.length) return;
+    const others = docs.map((d, i) => ({ d, i })).filter((x) => x.d.role !== 'affidavit' && kindWith(kinds, x.d) !== 'lab');
+    const g = (f) => Number(f.value);
+    for (const lab of labs) {
+      const done = new Set();
+      for (const x of lab.d.sentences) {
+        for (const f of x.facts) {
+          if (f.type !== 'inventory' || done.has(f.value)) continue;
+          done.add(f.value);
+          const where = others.map((o) => ({ o, sents: o.d.sentences.filter((y) => y.facts.some((h) => h.type === 'inventory' && h.value === f.value)) })).filter((w) => w.sents.length);
+          if (!where.length) {
+            push(makeFlag(docs, {
+              severity: 'Medium', confidence: 'Medium', type: 'inventory',
+              title: `Inventory number ${f.display} in the Lab report is in no other report`,
+              detail: `${lab.d.name} gives results for inventory number ${f.display}, but none of the other documents checked gives that number. Check the number, or add the report of that buy.`,
+              statement: x, statementFact: f, source: null, sourceLabel: 'No report checked',
+            }), `l|none|${lab.i}|${f.value}`);
+            continue;
+          }
+          // The lab's sentence about this item (its paragraph when the sentence names no drug or weight).
+          const para = lab.d.sentences.filter((y) => y.paragraph === x.paragraph);
+          const labDrugs = drugsIn(x.text).size ? drugsIn(x.text) : drugsIn(para.map((y) => y.text).join(' '));
+          const labW = (x.facts.some((h) => h.type === 'weight') ? x.facts : para.flatMap((y) => y.facts)).filter((h) => h.type === 'weight' && !h.total);
+          for (const { o, sents } of where) {
+            const s0 = sents[0];
+            const fieldDrugs = drugsIn(sents.map((y) => y.text).join(' ')).size ? drugsIn(sents.map((y) => y.text).join(' ')) : drugsIn(o.d.sentences.map((y) => y.text).join(' '));
+            if (labDrugs.size && fieldDrugs.size && ![...labDrugs].some((dn) => fieldDrugs.has(dn))) {
+              push(makeFlag(docs, {
+                severity: 'High', confidence: 'Medium', type: 'buy',
+                title: `Drug differs for inventory ${f.display}: the lab found ${[...labDrugs].join(', ')}; ${o.d.name} says ${[...fieldDrugs].join(', ')}`,
+                detail: `${lab.d.name} identifies the item under inventory number ${f.display} as ${[...labDrugs].join(', ')}; ${o.d.name} reports ${[...fieldDrugs].join(', ')}. The report may need a correction, or the inventory number may be wrong.`,
+                statement: x, statementFact: f, source: s0, sourceFact: s0.facts.find((h) => h.type === 'inventory' && h.value === f.value),
+              }), `l|drug|${lab.i}|${o.i}|${f.value}`);
+            }
+            const fieldW = (sents.some((y) => y.facts.some((h) => h.type === 'weight')) ? sents.flatMap((y) => y.facts) : []).filter((h) => h.type === 'weight' && !h.total);
+            if (labW.length && fieldW.length) {
+              const lw = Math.max(...labW.map(g)); const fw = Math.max(...fieldW.map(g));
+              if (lw > fw * 1.1 + 0.05) {
+                const lf = labW.find((h) => g(h) === lw); const ff = fieldW.find((h) => g(h) === fw);
+                push(makeFlag(docs, {
+                  severity: 'Medium', confidence: 'Medium', type: 'weight',
+                  title: `Lab weight "${lf.display}" is more than the field weight "${ff.display}" (inventory ${f.display})`,
+                  detail: `The lab weighs the drug without its packaging, so its weight is normally less than the weight in the field. ${lab.d.name} says ${lf.display}; ${o.d.name} says ${ff.display}.`,
+                  statement: x, statementFact: lf.start != null && x.facts.includes(lf) ? lf : f, source: s0, sourceFact: s0.facts.includes(ff) ? ff : null,
+                }), `l|w|${lab.i}|${o.i}|${f.value}`);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   /*
    * v1.169 opts (chosen on the Checks tab, saved with the case):
    *  kinds: { fileName: 'buy' | 'surveillance' | 'other' } — what a report is, over its name;
@@ -736,7 +817,7 @@
    */
   function pairReports(inputDocs, { kinds = {}, fixed = {} } = {}) {
     const docs = inputDocs.length && inputDocs[0].sentences ? inputDocs : analyze(inputDocs);
-    const kindOf = (d) => { const k = kinds[d.name]; return k === 'other' ? '' : k === 'buy' || k === 'surveillance' ? k : reportKind(d); };
+    const kindOf = (d) => kindWith(kinds, d);
     const reportsOnly = docs.map((d, i) => ({ d, i })).filter((x) => x.d.role !== 'affidavit');
     let buys = reportsOnly.filter((x) => kindOf(x.d) === 'buy');
     let survs = reportsOnly.filter((x) => kindOf(x.d) === 'surveillance');
@@ -816,7 +897,7 @@
               severity: 'High', confidence: 'High', type: 'inventory',
               title: `Inventory number mismatch: "${f.display}" vs "${near.f.display}"`,
               detail: `The ${LABEL(from)} (${docs[from].name}) gives inventory number ${f.display}; its ${LABEL(to)} (${docs[to].name}) gives ${near.f.display}. One of them is likely a typo.`,
-              statement: x, statementFact: f, source: near.x, sourceFact: near.f,
+              statement: x, statementFact: f, source: near.x, sourceFact: near.f, fix: { from: f.display, to: near.f.display },
             }), `m|inventory|${a}|${b}`);
             continue;
           }
@@ -876,7 +957,7 @@
           severity: 'High', confidence: 'High', type: 'inventory',
           title: `Inventory number "${f.display}" vs ${exhibit(listed.get(near))}'s ${near}`,
           detail: `${docs[x.doc].name} gives inventory number ${f.display}; the evidence list has ${near} (${exhibit(listed.get(near))}) and not ${f.display}. One of them is likely a typo.`,
-          statement: x, statementFact: f, source: null, sourceLabel: SRC,
+          statement: x, statementFact: f, source: null, sourceLabel: SRC, fix: { from: f.display, to: near },
         }), `e|near|${v}|${near}`);
         continue;
       }

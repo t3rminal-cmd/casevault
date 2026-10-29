@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.169)
+
+- **Fix:** case list folders open reliably, and their counts line up at every depth; no X, no top-left logo, teal closed folder
+- **Checks:** choose Buy and Surveillance pairs by hand; inventory numbers checked against the evidence list
+- **Check before export**, and **Out of Date** on checks whose documents changed
+
 ## Features (v1.168)
 
 - **Suspects:** Fill In From a Mission's case when the same name is a suspect there

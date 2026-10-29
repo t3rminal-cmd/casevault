@@ -4,6 +4,12 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.167
+
+- **Closed is red, not green.** A closed case is now marked in red everywhere: the **Closed** tag, the closed folder icon (CLOSED in the case list, Closed Files on the home page, the Year Summary) and the case colour in the themes. This is most visible for a case closed while its Mission is still open:
+  - In the case list, its box has a red border all the way round (thicker on the left) and a red lock before the case number
+- **An X for a case closed with an arrest.** When a closed case has Arrest details, its box in the case list has a red X across it, and so does its card on the home page's open Mission. The text stays readable through the X, and pointing at the box says *Closed with an arrest*
+
 ## What's new in v1.166
 
 - **Secure Locker: each row on one line.** The Password Manager and Covert tables show each row on one line, with nothing cut off and no sideways scroll bar:

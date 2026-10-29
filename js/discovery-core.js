@@ -274,6 +274,9 @@
       '|---|---|---|---|---|',
       ...rows,
       '',
+      // v1.170: the exhibits and their inventory numbers.
+      ...((m.evidence || []).length ? ['## Evidence (Inventory Numbers)', '', '| Exhibit | Inventory Number | Description |', '|---|---|---|',
+        ...m.evidence.map((e) => `| ${esc(e.number)} | ${esc(e.inventory)} | ${esc(e.description) || '—'} |`), ''] : []),
       '## Fingerprints (SHA-256 of each original file)',
       '',
       ...m.items.map((it) => `- ${bates(m.prefix, it.batesFirst)}: ${it.sha256}`),
