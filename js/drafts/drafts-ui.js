@@ -22,7 +22,9 @@
   async function render(panel, c, token, sub) {
     if (sub) return renderEditor(panel, c, token, decodeURIComponent(sub));
     const { h, state, fmtDateTime, toast, go, Save, confirmDialog } = ui;
-    const [drafts, templates, notesText] = await Promise.all([Vault.listDrafts(c.id), Vault.listTemplates(), Vault.getNotes(c.id).catch(() => '')]);
+    // v1.171: the Timeline too, for New Report's "A Timeline Buy" (read with the rest, before anything is drawn).
+    const [drafts, templates, notesText, timeline] = await Promise.all([Vault.listDrafts(c.id), Vault.listTemplates(), Vault.getNotes(c.id).catch(() => ''),
+      Vault.getTimeline(c.id).catch((err) => { if (FS.isDisconnectError(err)) throw err; return null; })]);
     if (token !== state.renderToken) return;
     Engine().refresh().then(() => { if (token === state.renderToken) drawStart(); });
 
@@ -40,19 +42,28 @@
     tplSelect.addEventListener('change', guessType);
     // How to start: a dropdown (Blank, Template, Draft with AI). The template list shows under it
     // when Template is picked.
+    // v1.171: a Buy or Surveillance narrative started from a Timeline buy (no AI): its date, time,
+    // suspect, drug, amount and paid, and the evidence list's inventory numbers; the rest is [CONFIRM: …].
+    const tlBuys = ((timeline && timeline.events) || []).filter((e) => e.kind === 'buy').sort((a, b) => `${a.date}${a.time || ''}`.localeCompare(`${b.date}${b.time || ''}`));
+    const buyPick = h('select', { 'aria-label': 'Timeline buy' }, tlBuys.map((e, i) => h('option', { value: String(i) }, `Buy ${i + 1}: ${[e.date, e.suspect, root.CVOperation.buyLine(e)].filter(Boolean).join(' · ')}`)));
+    const buyKind = h('select', { 'aria-label': 'Narrative' }, h('option', { value: 'buy' }, 'Buy Narrative'), h('option', { value: 'surveillance' }, 'Surveillance Narrative'));
+    const buyRow = h('div', { class: 'start-buy', hidden: true }, buyPick, buyKind,
+      h('span', { class: 'muted small block' }, 'Fills in what the Timeline and the evidence list know (date, suspect, drug, amount, paid, inventory numbers). The rest is marked [CONFIRM: …] to fill.'));
     const startSel = h('select', { 'aria-label': 'Start from' },
-      h('option', { value: 'blank' }, 'Blank'), h('option', { value: 'template' }, 'Template'), h('option', { value: 'ai' }, 'Draft with AI'));
+      h('option', { value: 'blank' }, 'Blank'), h('option', { value: 'template' }, 'Template'), h('option', { value: 'ai' }, 'Draft with AI'),
+      tlBuys.length ? h('option', { value: 'buy' }, 'A Timeline Buy') : null);
     const aiNote = h('span', { class: 'muted small block' });
     const tplRow = h('div', { class: 'start-template', hidden: true }, templates.length
       ? tplSelect
       : h('span', { class: 'muted small block' }, 'No templates yet. Add or import one under Vault → Templates.'));
-    const startBox = h('div', { class: 'start-box' }, startSel, tplRow, aiNote);
+    const startBox = h('div', { class: 'start-box' }, startSel, tplRow, buyRow, aiNote);
     function drawStart() {
       const ready = aiReady();
       const aiOpt = startSel.querySelector('option[value="ai"]');
       aiOpt.disabled = !ready;
       if (!ready && startSel.value === 'ai') startSel.value = 'blank';
       tplRow.hidden = startSel.value !== 'template';
+      buyRow.hidden = startSel.value !== 'buy';
       aiNote.hidden = startSel.value !== 'ai';
       aiNote.textContent = ready
         ? `Writes a first draft from this case's details, timeline, notes, report fields and attached documents, using ${CVChecks.profileLabel(Engine().choice())}.`
@@ -69,10 +80,17 @@
     create.addEventListener('click', async (e) => {
       e.preventDefault();
       if (closeNew) closeNew();
-      const name = title.value.trim() || CVDraft.DOC_TYPES[type.value].label;
       const start = startSel.value;
+      // v1.171: "Buy 2 Narrative" / "Surveillance 2 Narrative", so the Checks tab pairs them by number.
+      const buyN = Number(buyPick.value) + 1;
+      const name = title.value.trim() || (start === 'buy' ? `${buyKind.value === 'surveillance' ? 'Surveillance' : 'Buy'} ${buyN} Narrative` : CVDraft.DOC_TYPES[type.value].label);
       let body = `# ${name}\n\n`;
       try {
+        if (start === 'buy') {
+          let evidence = [];
+          try { evidence = ((await Vault.readCaseJSON(c.id, 'report-fields.json')) || {}).evidence || []; } catch (err) { if (FS.isDisconnectError(err)) throw err; }
+          body = CVDraftFacts.buySkeleton(tlBuys[buyN - 1], { kind: buyKind.value, evidence, title: name });
+        }
         if (start === 'template') {
           if (!templates.length) return toast('Add a template first.', 'error');
           const tpl = await Vault.readTemplate(tplSelect.value);
@@ -80,7 +98,7 @@
         }
         if (start === 'ai') body = '';
         const slug = await Vault.newDraftSlug(c.id, name);
-        const meta = { title: name, type: type.value, ai: false, created: new Date().toISOString(), ...(start === 'template' ? { template: tplSelect.value } : {}) };
+        const meta = { title: name, type: start === 'buy' ? 'other' : type.value, ai: false, created: new Date().toISOString(), ...(start === 'template' ? { template: tplSelect.value } : {}) };
         await Save.track(`draft:${c.id}:${slug}`, () => Vault.saveDraft(c.id, slug, meta, body));
         if (start === 'ai') pendingGenerate = { caseId: c.id, slug };
         go(c.id, 'reports', slug);

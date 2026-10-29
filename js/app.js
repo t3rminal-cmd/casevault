@@ -609,7 +609,17 @@
 
   /* v1.85: data safety. How long since the last full backup (to another drive), and whether the
    * daily vault.json backup and the SSD's free space are fine. */
-  const FULL_BACKUP_DAYS = 7;
+  // v1.171: how often the banner asks for a full backup is chosen in the Backups panel (7 days by default).
+  const BACKUP_EVERY = [3, 7, 14, 30];
+  const fullBackupDays = () => { const n = Number(Vault.data && Vault.data.settings && Vault.data.settings.backupEveryDays); return BACKUP_EVERY.includes(n) ? n : 7; };
+  // v1.171: a backup is tested (Test Restore) at least once a month; the result is kept in the settings.
+  const BACKUP_TEST_DAYS = 30;
+  function backupTestDue() {
+    const s = (Vault.data && Vault.data.settings) || {};
+    if (!s.lastFullBackup || !s.lastFullBackup.at) return false;
+    const t = s.lastBackupTest;
+    return !t || !t.at || !t.ok || (Date.now() - Date.parse(t.at)) / 86400000 > BACKUP_TEST_DAYS;
+  }
   function fullBackupAge() {
     const last = Vault.data && Vault.data.settings && Vault.data.settings.lastFullBackup;
     if (!last || !last.at) return null;
@@ -621,7 +631,7 @@
   const backupByCount = () => fullBackupAge() != null && changesSinceBackup() >= FULL_BACKUP_CHANGES;
   function fullBackupText() {
     const n = fullBackupAge();
-    if (backupByCount() && n <= FULL_BACKUP_DAYS) return `${changesSinceBackup()} changes since the last full backup`;
+    if (backupByCount() && n <= fullBackupDays()) return `${changesSinceBackup()} changes since the last full backup`;
     if (n == null) return 'No full backup yet';
     return `Last full backup: ${n === 0 ? 'today' : n === 1 ? 'yesterday' : `${n} days ago`}`;
   }
@@ -2685,17 +2695,24 @@
    * page): what is due, Back Up Now, and × to hide it for today. */
   function backupBarDue() {
     const n = fullBackupAge();
-    if (n != null && n <= FULL_BACKUP_DAYS && !backupByCount()) return false;
+    if (n != null && n <= fullBackupDays() && !backupByCount() && !backupTestDue()) return false;
     let hidden = '';
     try { hidden = localStorage.getItem('cv-backup-bar') || ''; } catch { /* not kept: show it */ }
     return hidden !== Vault.localDay();
   }
+  /** v1.171: the backup is recent enough; only its test is due. */
+  function backupOnlyTest() { const n = fullBackupAge(); return n != null && n <= fullBackupDays() && !backupByCount(); }
   function backupBar() {
     if (!backupBarDue()) return null;
+    // v1.171: a recent full backup that hasn't been tested (Test Restore) in a month: test it.
+    const onlyTest = backupOnlyTest();
+    const t = Vault.data.settings.lastBackupTest;
     const bar = h('div', { class: 'backup-bar', role: 'status' },
       I('exclamation-triangle-fill'),
-      h('span', { title: 'A copy on a second drive is what saves your cases if this SSD is lost or fails.' }, `${fullBackupText()}: copy the vault to a second drive.`),
-      h('button', { type: 'button', class: 'btn small', icon: 'hdd-fill', onclick: () => showVaultPanel('backups') }, 'Back Up Now'),
+      onlyTest ? h('span', { title: 'Test Restore reads part of the backup back and compares it with the SSD. Nothing is changed.' }, t && t.at && !t.ok ? 'The last backup test found problems: make a new backup and test it.' : t && t.at ? `Backup last tested ${Math.floor((Date.now() - Date.parse(t.at)) / 86400000)} days ago: test it again.` : 'Your backup hasn\'t been tested yet: make sure it reads back.')
+        : h('span', { title: 'A copy on a second drive is what saves your cases if this SSD is lost or fails.' }, `${fullBackupText()}: copy the vault to a second drive.`),
+      onlyTest ? h('button', { type: 'button', class: 'btn small', icon: 'clipboard2-pulse', onclick: () => testRestoreDialog() }, 'Test Backup')
+        : h('button', { type: 'button', class: 'btn small', icon: 'hdd-fill', onclick: () => showVaultPanel('backups') }, 'Back Up Now'),
       h('button', { type: 'button', class: 'icon-btn backup-bar-close', 'aria-label': 'Hide for today', title: 'Hide for today', onclick: () => {
         try { localStorage.setItem('cv-backup-bar', Vault.localDay()); } catch { /* not kept */ }
         bar.remove();
@@ -2727,8 +2744,9 @@
       onclick: () => showGeneralWith(key) }, I(icon), h('strong', {}, String(n)), h('span', {}, label));
     // v1.99: the backup reminder (and an unencrypted SSD) sit in the same row, after Overdue.
     // v1.151: while the backup bar under the banner says the same thing, the chip is left out.
-    const backupChip = backupBarDue() ? null : (() => {
-      const n = fullBackupAge(); const due = n == null || n > FULL_BACKUP_DAYS || backupByCount();
+    // v1.171: the chip stays when the bar only asks for a backup test (the chip opens the Backups panel).
+    const backupChip = backupBarDue() && !backupOnlyTest() ? null : (() => {
+      const n = fullBackupAge(); const due = n == null || n > fullBackupDays() || backupByCount();
       // v1.107: short words, so the chip never clips (the full sentence is in its tooltip).
       const text = n == null ? 'No Backup' : n === 0 ? 'Backed Up' : `Backup: ${n}d`;
       return h('button', { type: 'button', class: `hero-count hc-backup${due ? ' hc-alert' : ''}`, title: `${fullBackupText()}. Click to back up the whole vault to another drive.`, onclick: () => showVaultPanel('backups') },
@@ -3887,11 +3905,17 @@
         } }, 'Restore'));
       const backupsSec = h('section', { 'data-section': 'backups' },
         h('h3', {}, 'Backups'),
-        h('div', { class: `backup-full${age == null || age > FULL_BACKUP_DAYS ? ' backup-due' : ''}` },
+        h('div', { class: `backup-full${age == null || age > fullBackupDays() ? ' backup-due' : ''}` },
           h('span', { class: 'fact-icon' }, I('hdd-fill')),
           h('div', {}, h('strong', { class: 'block' }, 'Whole vault to another drive'),
             h('span', { class: 'small' }, last && last.at ? `${fullBackupText()} (${fmtDateTime(Date.parse(last.at))})${last.files ? `, ${last.files} files, ${fmtSize(last.bytes)}, checked` : last.manual ? ', copied by hand' : ''}.` : 'No full backup yet. If the SSD is lost or fails, everything on it is gone.'),
-            h('span', { class: 'muted small block' }, `Do this at least every ${FULL_BACKUP_DAYS} days, or after ${FULL_BACKUP_CHANGES} changes (${changesSinceBackup()} so far). The banner reminds you.`)),
+            h('span', { class: 'muted small block' }, `Do this at least every ${fullBackupDays()} days, or after ${FULL_BACKUP_CHANGES} changes (${changesSinceBackup()} so far). The banner reminds you.`),
+            // v1.171: how often the banner reminds you.
+            (() => {
+              const sel = h('select', { class: 'backup-every', 'aria-label': 'Remind me to back up every' }, BACKUP_EVERY.map((d) => h('option', { value: String(d), selected: d === fullBackupDays() }, `Every ${d} Days`)));
+              sel.addEventListener('change', async () => { try { await Save.track('settings', () => Vault.updateSettings({ backupEveryDays: Number(sel.value) })); toast(`The banner now asks for a backup every ${sel.value} days.`, 'success'); } catch { /* reported */ } });
+              return h('label', { class: 'inline backup-every-row small' }, 'Remind me ', sel);
+            })()),
           h('div', { class: 'spacer' }),
           h('button', { class: 'btn primary', type: 'button', icon: 'hdd-fill', onclick: async () => { close(); await fullBackupDialog(); } }, 'Back Up Everything')),
         h('div', { class: `backup-full backup-enc${driveEncryptionWarning() ? ' backup-due' : ''}` },
@@ -3919,10 +3943,12 @@
               h('td', { class: 'nowrap' }, b.bytes ? `${fmtSize(b.bytes)} · ${plural(b.files, 'file')}` : '—'),
               h('td', { class: 'nowrap' }, b.verified ? 'Yes' : 'No')))))) : null,
         // v1.149: read a sample of a backup back, without changing anything.
-        h('div', { class: 'backup-full backup-test' },
+        h('div', { class: `backup-full backup-test${backupTestDue() ? ' backup-due' : ''}` },
           h('span', { class: 'fact-icon' }, I('clipboard2-pulse')),
           h('div', {}, h('strong', { class: 'block' }, 'Test a backup'),
-            h('span', { class: 'muted small block' }, 'Reads 20 random files of a CaseVault-Backup folder and compares them with the SSD. Nothing is changed or copied.')),
+            // v1.171: when it was last tested, and how it went.
+            (() => { const t = v.settings.lastBackupTest; return h('span', { class: 'small block backup-tested' }, t && t.at ? `Last tested ${fmtDateTime(Date.parse(t.at))}${t.backup ? ` (${t.backup})` : ''}: ${t.ok ? 'it read back fine' : 'it had problems'}.` : 'Not tested yet.'); })(),
+            h('span', { class: 'muted small block' }, `Reads 20 random files of a CaseVault-Backup folder and compares them with the SSD. Nothing is changed or copied. Do it at least every ${BACKUP_TEST_DAYS} days.`)),
           h('div', { class: 'spacer' }),
           h('button', { class: 'btn', type: 'button', icon: 'clipboard2-pulse', onclick: async () => { close(); await testRestoreDialog(); } }, 'Test Restore')),
         // v1.153: a case from Export Encrypted (a .cvcase file).
@@ -4545,7 +4571,7 @@
   $('#btn-power').addEventListener('click', async () => {
     // v1.90: no full backup for over a week: offer one before the SSD goes in the drawer.
     const age = fullBackupAge();
-    if (age == null || age > FULL_BACKUP_DAYS || backupByCount()) {
+    if (age == null || age > fullBackupDays() || backupByCount()) {
       const pick = await openDialog((close) => h('form', { class: 'power-backup-form', onsubmit: (e) => { e.preventDefault(); close('backup'); } },
         h('h2', { icon: 'exclamation-triangle-fill' }, 'Back Up Before Powering Off?'),
         h('p', {}, `${fullBackupText()}. A copy on a second drive is what saves your cases if this SSD is lost or fails.`),

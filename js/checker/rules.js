@@ -983,6 +983,31 @@
     }
   }
 
+  /**
+   * v1.171: the order of events of one report: its sentences grouped under the time they happened
+   * (a sentence with no time goes with the last time given before it; those before any time are
+   * "Before"). doc: { paragraphs } -> [{ time: 'HH:MM' | '', sentences: [text] }] in the report's order.
+   */
+  function eventsByTime(doc) {
+    const out = [];
+    let cur = null;
+    for (const p of doc.paragraphs || []) {
+      for (const x of T.sentences(p.text || '')) {
+        const t = extractFacts(x.text).find((f) => f.type === 'time');
+        if (t || !cur) { cur = { time: t ? t.value : '', sentences: [] }; out.push(cur); }
+        cur.sentences.push(x.text.trim());
+      }
+    }
+    return out.filter((g) => g.sentences.length);
+  }
+  /** v1.171: two reports' events side by side, by time: [{ time, a: [text], b: [text] }], earliest first ('' = before any time). */
+  function orderOfEvents(docA, docB) {
+    const rows = new Map();
+    const put = (list, side) => { for (const g of list) { if (!rows.has(g.time)) rows.set(g.time, { time: g.time, a: [], b: [] }); rows.get(g.time)[side].push(...g.sentences); } };
+    put(eventsByTime(docA), 'a'); put(eventsByTime(docB), 'b');
+    return [...rows.values()].sort((x, y) => (x.time === '' ? -1 : y.time === '' ? 1 : x.time.localeCompare(y.time)));
+  }
+
   function pickOccurrence(docs, list) {
     return list.find((o) => docs[o.sent.doc].role === 'affidavit') || list[0];
   }
@@ -1011,7 +1036,7 @@
     return false;
   }
 
-  const api = { extractFacts, analyze, compare, isNameVariant, TYPE_LABEL, buyGrams, kindFromName, reportKind, pairReports };
+  const api = { extractFacts, analyze, compare, isNameVariant, TYPE_LABEL, buyGrams, kindFromName, reportKind, pairReports, eventsByTime, orderOfEvents };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.CVRules = api;
 })(this);

@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.170)
+
+- **Drafts:** Case Facts beside the draft, checked as you write, with **Use …** to correct it
+- **Checks:** Explain (AI), Use … on the results, and Lab reports checked against the buy
+- **Export:** a privacy check; inventory numbers in the discovery index and receipt
+
 ## Features (v1.169)
 
 - **Fix:** case list folders open reliably, and their counts line up at every depth; no X, no top-left logo, teal closed folder
