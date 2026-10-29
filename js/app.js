@@ -2267,7 +2267,7 @@
         : h('div', { class: 'empty-state' }, h('p', {}, 'No cases in this Mission yet.'), h('p', { class: 'muted small' }, 'New Case in this Mission creates one; Add Existing Case links one from General Files.')),
       h('p', { class: 'muted small op-section-note' }, 'The cases linked to this Mission. They live in General Files; nothing is copied.'),
       // v1.172: what is still open on the Mission's cases.
-      members.length && window.CVHealthUI ? CVHealthUI.missionPanel(members, { h, icon: I }) : null,
+      members.length && window.CVHealthUI ? CVHealthUI.missionPanel(members, { h, icon: I, toast, openDialog, Save, onDriveLost }, op) : null,
       // v1.78: the Mission's timeline (all its case numbers) on its main page.
       h('div', { class: 'section-head op-tl-head', id: 'op-timeline' }, h('h2', { class: 'section-title caps' }, 'Timeline')),
       tlPanel,
@@ -3438,7 +3438,7 @@
           `Folder: ${CVFormat.pathText(`${archived ? 'archive' : 'cases'}\\${c.id}`)}`
           + `${archived && c.dates.archived ? ` · Archived ${fmtDate(c.dates.archived)}` : ''}`)),
       // v1.172: Case Health: what is still open on the case, and the gaps (custody, arrest, checks).
-      window.CVHealthUI ? makeFoldable(CVHealthUI.panel(c, { h, icon: I }), 'case-health', { open: true }) : '',
+      window.CVHealthUI ? makeFoldable(CVHealthUI.panel(c, { h, icon: I, toast, openDialog, Save, onDriveLost }), 'case-health', { open: true }) : '',
       makeFoldable(partnersSection(c, save), 'overview-partners', { count: () => (c.partners || []).length }),
       // ---- Case Overview: shared by the operation's case numbers (v1.27)
       h('hr', { class: 'overview-sep' }),

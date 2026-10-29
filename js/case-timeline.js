@@ -136,6 +136,26 @@
         f.title.focus();
       });
       f.kind.addEventListener('change', showBuy);
+      // v1.173: Paste From Text: text from CAD, RMS or a report fills the form (date, time, kind,
+      // title, a buy's drug, amount and paid; the whole text in the note), to check before adding.
+      const pasteText = h('textarea', { rows: 4, 'aria-label': 'Text to read', placeholder: 'Paste the text from CAD, RMS or a report here' });
+      const pasteFound = h('p', { class: 'muted small tl-paste-found', role: 'status' });
+      const pasteBox = h('div', { class: 'tl-paste full', hidden: true }, pasteText,
+        h('div', { class: 'tl-paste-actions' }, pasteFound, h('div', { class: 'spacer' }),
+          h('button', { class: 'btn small', type: 'button', onclick: () => { pasteBox.hidden = true; } }, 'Close'),
+          h('button', { class: 'btn small primary', type: 'button', icon: 'magic', onclick: () => {
+            const x = root.CVMissionTools.smartPaste(pasteText.value);
+            if (!pasteText.value.trim()) return;
+            if (x.date) f.date.value = x.date;
+            if (x.time) f.time.value = x.time;
+            f.kind.value = x.kind; f.kind.dispatchEvent(new Event('change', { bubbles: true }));
+            if (x.title) f.title.value = x.title;
+            f.note.value = x.note;
+            if (x.kind === 'buy') { if (x.drug) f.drug.value = x.drug; if (x.qty) { f.qty.value = x.qty; f.unit.value = x.unit; } if (x.paid) f.paid.value = O.moneyTyped(x.paid, true); }
+            for (const el of [f.date, f.title, f.note]) el.dispatchEvent(new Event('input', { bubbles: true }));
+            pasteFound.textContent = x.found.length ? `Filled in: ${x.found.join(' · ')}. Check them, then add.` : 'Nothing to fill in was found; the text is in the note.';
+          } }, 'Fill In')));
+      const pasteBtn = h('button', { class: 'btn small tl-paste-btn', type: 'button', icon: 'clipboard2-check', title: 'Paste text from CAD, RMS or a report: the date, time, kind, title and a buy\'s details are filled in for you to check', onclick: () => { pasteBox.hidden = !pasteBox.hidden; if (!pasteBox.hidden) pasteText.focus(); } }, 'Paste From Text');
       // v1.117: the event's colour: a swatch to pick, or None. Picking a suspect sets their colour.
       let pickedColor = '';
       let colorTouched = false;
@@ -229,7 +249,8 @@
       } },
       field('Date', f.date), field('Time', f.time), field('Type', f.kind),
       // v1.153: shown first (css order), after Type in the page so Type stays the form's first list.
-      field('Quick Add', tplSel, 'full tl-template-field', 'Fills in a common entry, and can add the deadline that follows it'),
+      field('Quick Add', h('div', { class: 'tl-quick-row' }, tplSel, pasteBtn), 'full tl-template-field', 'Fills in a common entry, and can add the deadline that follows it'),
+      pasteBox,
       many ? field('Case Number', f.caseSel, '', 'Which case number of the mission this belongs to') : null,
       field('Title', f.title, 'grow'),
       field('Suspect', suspectBox, 'tl-suspect-field', 'Who the event is about, such as the target of a buy. Events of the same suspect share a colour.'),
@@ -316,6 +337,8 @@
       }
       const tools = h('div', { class: 'tl-tools' },
         h('button', { class: 'btn small', type: 'button', icon: 'cash-coin', title: 'The buys of each suspect: what was bought and paid, with totals', onclick: buySummaryDialog }, 'Buy Summary'),
+        // v1.173: the open deadlines and court dates as a calendar file, saved on the SSD for Outlook.
+        archivedCase || !root.CVHealthUI ? null : h('button', { class: 'btn small', type: 'button', icon: 'calendar-event', title: 'The open deadlines and court dates as a calendar file (.ics), saved in this case\'s Files (Other). Open it to add them to Outlook. Nothing is put on this PC.', onclick: () => root.CVHealthUI.calendarFile(root.CaseVaultUI, [c]) }, 'Calendar File'),
         h('button', { class: 'btn small', type: 'button', icon: 'printer', title: 'A PDF of the events shown now (the filter and suspect you picked), in their colours', onclick: () => showPdf('Timeline', { group: groupBy, rows: shownRows, subtitle: [suspectNote(), filter !== 'all' ? `${{ upcoming: 'Upcoming', deadline: 'Deadlines', past: 'Past' }[filter]} only` : ''].filter(Boolean).join(' · ') }, 'Timeline') }, 'Print Timeline'));
 
       // v1.141: Group by Suspect: each suspect's events together under their name (kept on this PC).

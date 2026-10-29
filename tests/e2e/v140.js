@@ -12,9 +12,9 @@ const SP = process.env.SP;
   await p.evaluate(async (id) => { await Vault.saveTimeline(id, { events: [{ id: 'e1', date: '2026-09-30', time: '14:30', kind: 'deadline', title: 'Grand jury subpoena return', note: 'Synthetic', done: false }, { id: 'e2', date: '2026-10-12', time: '', kind: 'event', title: 'Controlled buy', note: '', done: false }] }); }, id);
   await p.evaluate((id) => { location.hash = `#/case/${id}/timeline`; }, id); await p.waitForTimeout(900);
   console.log('1 buttons:', await p.$$eval('.timeline-form .form-actions button:not([hidden])', (x) => x.map((e) => e.textContent)));
-  await p.fill('.tl-title-input', 'Something'); await p.selectOption('.timeline-form select >> nth=0', 'deadline'); await p.fill('.timeline-form textarea', 'note');
+  await p.fill('.tl-title-input', 'Something'); await p.selectOption('.timeline-form select >> nth=0', 'deadline'); await p.fill('.timeline-form textarea[aria-label=Note]', 'note');
   await p.click('.timeline-form button:has-text("Clear")');
-  console.log('  after clear:', await p.$eval('.tl-title-input', (e) => e.value), '|', await p.$eval('.timeline-form textarea', (e) => e.value), '|', await p.$eval('.timeline-form select', (e) => e.value));
+  console.log('  after clear:', await p.$eval('.tl-title-input', (e) => e.value), '|', await p.$eval('.timeline-form textarea[aria-label=Note]', (e) => e.value), '|', await p.$eval('.timeline-form select', (e) => e.value));
   console.log('2 date lines:', await p.$$eval('.tl-when > div:first-child', (x) => x.map((e) => [e.textContent, Math.round(e.getBoundingClientRect().height)])));
   await p.locator('.timeline').screenshot({ path: `${SP}/v140-tl.png` });
   // two draft-sent reports + one New Report

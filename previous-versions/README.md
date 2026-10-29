@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.172)
+
+- **Case Health** on each case and Mission: everything still open, most serious first
+- **Chain-of-custody gaps** and **the arrest checked against the case**; Close Case lists them too
+- **Templates:** {{evidence}} and {{buys}} tables; suspects' monikers count as Known Aliases
+
 ## Features (v1.171)
 
 - **Backups:** choose how often to be reminded; the last Test Restore is kept and asked for monthly
