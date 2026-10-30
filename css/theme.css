@@ -12,8 +12,9 @@
 
 /* Light. The selector matches app.css's palette rules, so this one (loaded later) wins. */
 :root, :root:not([data-theme="dark"]) {
-  --font: "JetBrains Mono", Consolas, "Cascadia Mono", "Liberation Mono", "DejaVu Sans Mono", monospace;
-  --mono: var(--font);
+  /* v1.177: text in Windows' own font (nothing to load); JetBrains Mono for case numbers, codes, times and counts. */
+  --font: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", Consolas, "Cascadia Mono", "Liberation Mono", "DejaVu Sans Mono", monospace;
   /* v1.125: the type scale. Six sizes; every text size in app.css is one of these (icons and the
      clock keep their own). Three weights: 400 regular, 600 semibold, 700 bold. */
   /* v1.142: text 11 pt, small text 10 pt (never smaller), headers 12 pt (1 pt = 1.333 px). */
@@ -199,3 +200,52 @@ table.op-cases-table td.op-closing { width: auto; min-width: 0; white-space: now
 
 /* v1.136: Archived → Review after N years. */
 .ov-review-pick { width: auto; }
+
+/* v1.177: numbers keep the monospace font, so they line up and read as codes. */
+.num, .op-num, .rf-num, .case-num-link, .tab-count, .rownum, .pick-num, .count, .case-tile-num, .alert-count, .sg-count,
+.op-case-num, .hero-counts, .hero-clock, .deep-num, .cal-num, .case-item-title, .rf-exhibit, .code-card-code,
+.op-folder-count, .health-count, [class$="-count"], [class*="-count "], .kbd, kbd, code, .mono, .page-title h1, .case-head h1, .ss-num, .pv-fact strong, .tl-when, .tl-date { font-family: var(--mono) !important; }
+
+/* v1.177: one heading style. Section headings in Title Case (the folders in the case list keep their
+ * capitals); small capitals only for tiny labels and table headers. */
+.section-title, .section-title.caps, .cv-boxed h3, .cv-boxed .arrest-section > h3, .rf-section .rf-head h3,
+.arrest-section > h3, .rf-extras-head, .ql-panel-head h2, .arrestee h3, .cert-group-head, .lc-links h3 { text-transform: none; letter-spacing: 0; }
+.section-title, .cv-boxed h3, .rf-section .rf-head h3 { font-weight: 700; }
+
+/* v1.177: the case header on one line: the case number big, then the subject, then where it is
+ * and its status (it wraps on a narrow window). */
+.case-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem 1rem; margin-bottom: .6rem; }
+.case-head h1 { margin: 0; font-size: var(--fs-title); line-height: 1.3; }
+.case-head .case-subject { margin: 0; font-size: var(--fs-sub); }
+.case-head .case-sub { display: inline-flex; align-items: center; flex-wrap: wrap; gap: .3rem; }
+
+/* v1.177: Write Report: shorter part bars when folded, closer together, with how much is filled. */
+.rf-section { margin-top: .7rem; }
+.rf-section.rf-folded { padding-top: .45rem; padding-bottom: .45rem; }
+.rf-section.rf-folded .rf-head { margin-bottom: 0; }
+.rf-progress { font-size: var(--fs-small); color: var(--muted); font-weight: 400; white-space: nowrap; }
+
+/* v1.177: room at the bottom of every page, so the round buttons at the bottom right (top, AI chat,
+ * notes) never sit over the last box or button. */
+#main { padding-bottom: 5.5rem; }
+
+/* v1.177: each status icon at the top says what it is in one word under it. */
+.tb-status .net-status, .tb-status .engine-status, .tb-status .mem-status, .tb-status .save-status, .tb-status #btn-power { flex-direction: column; justify-content: center; width: auto; min-width: 3.3rem; height: 2.75rem; gap: 1px; padding: 0 .3rem; }
+.tb-status .net-status::after, .tb-status .engine-status::after, .tb-status .mem-status::after, .tb-status .save-status::after, .tb-status #btn-power::after {
+  order: 100; font: 600 10px/1 var(--font); color: var(--muted); letter-spacing: 0; text-transform: none; white-space: nowrap; }
+.tb-status .net-status::after { content: "Online"; }
+.tb-status .net-status.off::after { content: "Offline"; }
+.tb-status .engine-status::after { content: "AI"; }
+.tb-status .engine-status.offline::after { content: "AI Off"; }
+.tb-status .mem-status::after { content: "Memory"; }
+.tb-status .save-status::after { content: "SSD"; }
+.tb-status .save-status.saved::after { content: "Saved"; }
+.tb-status .save-status.saving::after { content: "Saving"; }
+.tb-status .save-status.error::after { content: "Not Saved"; color: var(--danger); }
+.tb-status #btn-power::after { content: "Off"; }
+.tb-status #btn-power { display: inline-flex; align-items: center; }
+@media (max-width: 760px) { /* v1.177: a phone-width window keeps the top-bar icons small, without captions */
+  .tb-status .net-status, .tb-status .engine-status, .tb-status .mem-status, .tb-status .save-status, .tb-status #btn-power { min-width: 0; width: 2.3rem; height: 2.3rem; padding: 0; }
+  .tb-status .net-status::after, .tb-status .engine-status::after, .tb-status .mem-status::after, .tb-status .save-status::after, .tb-status #btn-power::after { content: none; }
+}
+.op-open-head { flex-wrap: wrap; row-gap: .4rem; } /* v1.177: its buttons wrap on a narrow window instead of widening the page */

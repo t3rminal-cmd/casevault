@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.176)
+
+- **Mission** and **General Files** everywhere; **Write Report** and **Saved Reports** tabs; **Move Case**
+- A simpler home page (7 tiles), a ⋮ menu in the case list, and no repeated boxes on the Mission page
+- Shorter placeholders and hover boxes
+
 ## Features (v1.175)
 
 - **Suspect Search**: arrest reports, police interactions and Narcotics / Battery / Firearms icons for anyone on your cases

@@ -352,6 +352,13 @@
       } }, 'Group by Suspect');
       tools.prepend(groupBtn);
 
+      // v1.177: the form folds away behind Add Event once the timeline has events (to read it); an
+      // empty timeline opens with the form, and Edit on an event opens it too.
+      const hasEvents = [...tls.values()].some((t) => (t.events || []).length);
+      const addBtn = h('button', { class: 'btn primary small tl-add-btn', type: 'button', 'aria-expanded': 'false', onclick: () => { showForm(form.hidden); if (!form.hidden) f.title.focus(); } }, h('span', { class: 'tl-add-label' }, 'Add Event'));
+      const addBar = h('div', { class: 'tl-add-bar' }, addBtn);
+      function showForm(on) { form.hidden = !on; addBtn.setAttribute('aria-expanded', String(on)); addBtn.querySelector('.tl-add-label').textContent = on ? 'Hide Form' : 'Add Event'; }
+      showForm(!hasEvents);
       function draw() {
         const everything = CVOperation.mergeEvents([...tls.entries()].map(([caseId, t]) => ({ caseId, number: numberOf(caseId), events: [...t.events, ...autoArrests(caseId, t.events)] })));
         const colors = O.suspectColors(everything);
@@ -361,6 +368,7 @@
         const overdue = openDl.filter(({ ev }) => ev.date < now);
         const next = openDl.filter(({ ev }) => ev.date >= now).sort((a, b) => (a.ev.date + (a.ev.time || '')).localeCompare(b.ev.date + (b.ev.time || '')))[0];
         const stat = (n, label, cls, sub2) => h('div', { class: `tl-stat ${cls}` }, h('span', { class: 'tl-stat-n' }, String(n)), h('span', { class: 'tl-stat-l' }, label), sub2 ? h('span', { class: 'tl-stat-s' }, sub2) : '');
+        stats.hidden = !everything.length; // v1.177: no cards of zeros on an empty timeline
         stats.replaceChildren(
           stat(everything.filter(({ ev }) => ev.kind !== 'deadline').length, 'Events', 'ev'),
           stat(openDl.length, 'Open Deadlines', 'dl'),
@@ -423,6 +431,7 @@
             ev.auto ? h('div', { class: 'tl-actions' }, h('a', { class: 'btn small ghost', href: `#/case/${CVRoute.enc(caseId)}/arrest`, title: 'From the Arrest Report: change it there' }, 'Arrest Report')) : h('div', { class: 'tl-actions' },
               h('button', { class: 'btn small ghost', type: 'button', onclick: () => {
                 editing = { id: ev.id, caseId };
+                showForm(true);
                 tplSel.value = ''; followRow.hidden = true;
                 f.date.value = ev.date; f.time.value = ev.time || ''; f.kind.value = ev.kind;
                 f.title.value = ev.title; f.note.value = ev.note || '';
@@ -474,7 +483,7 @@
       });
 
       draw();
-      panel.replaceChildren(many ? h('p', { class: 'muted small tl-op-note' }, `The timeline of the whole mission: all ${tls.size} case numbers.`) : '', form, stats, h('div', { class: 'tl-filter-row' }, filters, tools), legend, list);
+      panel.replaceChildren(many ? h('p', { class: 'muted small tl-op-note' }, `The timeline of the whole mission: all ${tls.size} case numbers.`) : '', addBar, form, stats, h('div', { class: 'tl-filter-row' }, filters, tools), legend, list);
     }
 
     return { renderTimeline };

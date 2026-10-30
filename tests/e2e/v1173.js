@@ -25,7 +25,8 @@ const SP = process.env.SP + '/v1173';
 
   // 1. Paste From Text fills the Timeline form.
   await p.evaluate((i) => { location.hash = `#/case/${CVRoute.enc(i)}/timeline`; }, id);
-  await p.waitForSelector('.tl-paste-btn');
+  await p.waitForSelector('.tl-paste-btn', { state: 'attached' });
+  await p.evaluate(() => { const f = document.querySelector('.timeline-form'); if (f && f.hidden) document.querySelector('.tl-add-btn').click(); }); // v1.177: the form opens from Add Event
   await p.click('.tl-paste-btn');
   await p.fill('.tl-paste textarea', 'CAD 26-123456. On 03/11/2026 at 1415 hours the UC purchased 7 grams of crack cocaine from Rick Poe for $400 at 100 Example Street.');
   await p.click('.tl-paste .btn.primary');

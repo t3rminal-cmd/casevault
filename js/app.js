@@ -41,6 +41,9 @@
       el.append(kid instanceof Node ? kid : String(kid));
     }
     // Icons go on the right of the words (v1.21).
+    // v1.177: a small secondary button with words shows just its words (fewer icons, calmer pages);
+    // main buttons, tabs, tiles and headings keep theirs, and so does a button that is only an icon.
+    if (iconName && tag === 'button' && /\bbtn\b/.test(cls) && /\bsmall\b/.test(cls) && !/\b(primary|danger|keep-icon)\b/.test(cls) && [...el.childNodes].some((n) => (n.nodeType === 3 ? n.textContent.trim() : n.nodeType === 1 && !n.classList.contains('sr-only') && n.textContent.trim()))) iconName = null; // words a person sees, not just a screen reader's
     if (iconName) { if (el.childNodes.length) el.append(' '); el.append(CVIcons.icon(iconName)); }
     return el;
   }
@@ -3224,7 +3227,10 @@
   }
   // The case notes' place in Reports (a draft's name never starts with a dot).
   const NOTES_SUB = '.notes';
-  const tabsFor = (c) => (CVClosingUI.hasArrestTab(c) ? [TABS[0], ['arrest', 'Arrest'], ...TABS.slice(1)] : TABS);
+  // v1.177: the Mail tab shows when Settings → Department Mail says so (Show the Mail Tab); a link
+  // straight to a case's mail still opens it.
+  const mailShown = (tab) => !!(Vault.data && Vault.data.settings && Vault.data.settings.showMailTab) || tab === 'mail';
+  const tabsFor = (c, tab = '') => { const t = TABS.filter(([k]) => k !== 'mail' || mailShown(tab)); return CVClosingUI.hasArrestTab(c) ? [t[0], ['arrest', 'Arrest'], ...t.slice(1)] : t; };
 
   async function showCase(id, tab, sub = null) {
     const token = ++state.renderToken;
@@ -3247,7 +3253,7 @@
     if (tab === 'notes') { tab = 'reports'; sub = NOTES_SUB; } else if (tab === 'drafts') tab = 'reports';
     // v1.31: Report Fields is the Write Report tab.
     if (tab === 'reports' && sub === '.fields') { tab = 'draft'; sub = null; }
-    const tabs = tabsFor(c);
+    const tabs = tabsFor(c, tab);
     if (!tabs.some(([t]) => t === tab)) tab = 'details';
     state.caseId = id;
     state.lastCaseId = id;

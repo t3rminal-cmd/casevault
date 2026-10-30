@@ -23,7 +23,8 @@ DEFAULT_APP_DIR = os.path.dirname(UPDATER_DIR)                             # ...
 
 # Repository paths that are never copied into the app folder: they're for developers, and the
 # updater itself (a running program can't safely replace itself; its files go to updater\_next, below).
-EXCLUDE_PREFIXES = (".github/", "tests/", "scripts/", "updater/", "tools/")
+# v1.177: previous-versions/ (the notes of every earlier version) stays on GitHub; the app never reads it.
+EXCLUDE_PREFIXES = (".github/", "tests/", "scripts/", "updater/", "tools/", "previous-versions/")
 EXCLUDE_FILES = (".gitignore", ".gitattributes")
 
 # The tools on the CV-AI drive (W:) come from the repository's tools/ folder.

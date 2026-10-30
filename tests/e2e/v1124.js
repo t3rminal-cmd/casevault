@@ -16,7 +16,7 @@ const SP = process.env.SP + '/v1124';
       hero: getComputedStyle(document.querySelector('.hero')).backgroundImage.includes('linear-gradient') };
   }, theme);
   const light = await look('light');
-  ok(light.font === 'JetBrains Mono' && light.loaded, `the bundled font is in use: ${light.font}`);
+  ok(light.font === 'Segoe UI' && light.loaded, `v1.177: text in Segoe UI, the bundled JetBrains Mono for numbers: ${light.font}`);
   ok(light.accent === '#1f3a5f' && light.bg === '#f5f4f0' && light.hero, `light: navy accent on warm off-white: ${JSON.stringify(light)}`);
   ok(light.open === '#2f6db5' && light.closed === '#a3262e' && light.archived === '#6b665c', 'light: Open blue, Closed red (v1.167), Archived warm grey');
   await p.screenshot({ path: `${SP}/home-light.png` });
