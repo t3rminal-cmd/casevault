@@ -19,7 +19,8 @@ if (spawnSync(PWSH, ['-NoProfile', '-Command', 'exit 0']).status !== 0) { consol
 const H = { 'X-CaseVault': '1', 'X-CaseVault-Key': KEY };
 function api(method, op, query = '', body = null, headers = {}) {
   return new Promise((resolve, reject) => {
-    const req = http.request({ host: '127.0.0.1', port: PORT, method, path: `/api/${op}${query ? `?${query}` : ''}`, headers: { ...H, ...headers } }, (res) => {
+    const len = body != null ? { 'Content-Length': Buffer.byteLength(body) } : {}; // never chunked (the helper refuses that)
+    const req = http.request({ host: '127.0.0.1', port: PORT, method, path: `/api/${op}${query ? `?${query}` : ''}`, headers: { ...H, ...len, ...headers } }, (res) => {
       const chunks = []; res.on('data', (c) => chunks.push(c));
       res.on('end', () => { const text = Buffer.concat(chunks).toString('utf8'); let json = null; try { json = JSON.parse(text); } catch { /* not JSON */ } resolve({ status: res.statusCode, text, json }); });
     });

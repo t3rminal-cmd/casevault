@@ -57,7 +57,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 
-$HelperVersion = '1.16.1'
+$HelperVersion = '1.17.0'
 $VolumeLabel   = 'CASEVAULT'
 $DataDirName   = 'CaseVault-Data'
 $AppDirName    = 'CaseVault-App'

@@ -15,11 +15,10 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.177
+## What's New in v1.178
 
-- **Easier to read:** Segoe UI text, Title Case headings, the case header on one line
-- **Timeline** form behind Add Event; **Write Report** parts show how much is filled; labelled status icons
-- Fewer icons on small buttons; the Mail tab is a setting; smaller updates
+- **Security fixes (helper 1.17):** the CASEVAULT drive's vault always, and only it; bad uploads refused; an installed Ollama keeps the AI off
+- **Power Off** closes only CaseVault's own window; the helper's key is removed when no longer used
 
 ## What CaseVault Does
 

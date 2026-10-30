@@ -213,6 +213,19 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.178
+
+- **Security fixes (helper 1.17).** Update the CV-AI drive (W:) too: the helper changed
+- **The right vault, always.** The helper opens the vault on the drive labelled CASEVAULT before any other drive with a vault (an old SSD, a copy, a USB stick). If no drive has that label, it uses another drive's vault and its window says so. It then stays with the vault it opened first, recognised by its vault ID and the drive's serial number:
+  - If the SSD drops out, CaseVault shows "Drive not connected" instead of using another drive
+  - The same SSD back under another drive letter is fine
+  - An older vault is given a vault ID the first time this version opens it
+- **No empty files from a bad upload.** The helper refuses a file whose size is missing, negative or not a number, one over 32 GB, and one sent in chunks, before anything on the SSD is touched
+- **An installed Ollama keeps the AI off.** If an Ollama installed on the PC is running instead of the one on W: (it keeps its logs and models on the PC), the header shows **AI: installed Ollama (logs on this PC)**. The AI stays off until you click it and allow it for this session. Rules-only checks still work. Quit it from the tray and start CaseVault again to use the SSD's
+- **Power Off closes only CaseVault's own window**, never another tab or window that mentions CaseVault (a GitHub page, for example). A browser window with other tabs open stays; close it yourself
+- **The helper's key** is removed from the browser when the helper no longer accepts it, and at Power Off
+- Docs: [SECURITY.md](SECURITY.md) explains the GitHub Pages address that CaseVault's online copy shares with the account's other sites, and the options
+
 ### What's new in v1.177
 
 - **Easier to read.** Text is now in Windows' own font (Segoe UI). Case numbers, codes, dates on the Timeline and counts stay in the monospace font, so they line up. Nothing extra is loaded
@@ -245,23 +258,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
   - The Details tab drops the status hint and the folder line (both are now hover boxes)
 - **Tidier case list:** *Order of the cases* and *Select Cases* moved into a **⋮** menu at the top of the case list
 - **Shorter wording:** about 15 long placeholders and 18 long hover boxes were cut to a few words each (e.g. *Write here. [CONFIRM: …] marks facts to check.*)
-
-### What's new in v1.175
-
-- **Fix: the person window had scroll bars.** *Every case this person is on* now opens wide enough to show everything, with no scroll bars. Long text wraps instead of running off the side
-- **Fix: the case list's padlock went to a second line.** The buttons at the top of the case list now stay on one line, padlock included. That width is also the narrowest the list can be dragged to
-- **Fix: typing a full code hid the choice.** In IUCR, Location Code and other lists, typing the whole code (e.g. *259*) now still shows its match. Pick it, or press Enter, to fill in its description (e.g. *Type of Location*)
-- **Fix: the cursor disappeared in the Officer's Report lines.** Clicking *Operation / Mission Number* (or any line with an Include box) sometimes ticked or unticked that box and took the cursor away. Clicking the box now always puts the cursor in it, and clicking the line's name does too
-- **Suspect Search** (home page and Ctrl+K): find anyone on your cases, closed ones too, by name, date of birth or IR number. Each person is listed with DOB, gender, IR, case numbers, number of arrests and what they were arrested for. Pick one to open their profile:
-  - What is known of them: date of birth and age, gender, race, IR and CB numbers
-  - Icons for **Narcotics**, **Battery** and **Firearms** arrests, worked out from the charges' statutes and wording
-  - Every case they are on, with its arrests
-  - **Arrest Reports**: each arrest with its date, charges (each with its icon) and location. A button opens the Arrest tab, and any *Arrest Report* PDF in the case's Files opens from there too
-  - **Police Interactions**: their arrests, buys and other Timeline events, in date order
-- **Rolodex** (home page, Ctrl+K and a case's Contacts): keep the ASAs, AUSAs, other police and anyone else you work with, with office, title, email, phone and notes. It is saved on the SSD:
-  - In a case's Contacts, the name boxes suggest them. The prosecutor's box suggests ASAs and AUSAs. Picking one fills in the email and phone, and the ASA / AUSA title
-  - The card button beside a contact saves someone typed on a case into the Rolodex
-  - On the Write Report tab, *ASA* and *AUSA Approving Search Warrant* suggest them too
 
 ### Earlier versions
 
