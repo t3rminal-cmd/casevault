@@ -461,7 +461,9 @@ function Open-CaseVault([string]$url, $dataRoot) {
     [void][System.IO.Directory]::CreateDirectory($profile)
     if ($kind -eq 'firefox') { $argList = @('-profile', ('"' + $profile + '"'), $url) }
     else { $argList = @(('--user-data-dir="' + $profile + '"'), ('--app=' + $url), '--no-first-run', '--no-default-browser-check') }
-    Start-Process -FilePath $exe -ArgumentList $argList | Out-Null
+    $proc = Start-Process -FilePath $exe -ArgumentList $argList -PassThru
+    # (1.17) Power Off closes exactly this browser window, and nothing else.
+    if ($proc) { $script:BrowserPid = [int]$proc.Id }
     Write-Info "Browser   : $kind, its own profile in $profile"
   } catch {
     Write-Warn "Could not open the CaseVault browser profile ($($_.Exception.Message)); opening the normal browser."
@@ -469,9 +471,11 @@ function Open-CaseVault([string]$url, $dataRoot) {
   }
 }
 
+$script:BrowserPid = 0
+
 # The clean-up run by Power Off (written to %TEMP% and started hidden; see /api/shutdown).
 $ShutdownScript = @'
-param([int]$HelperPid = 0, [int]$ParentPid = 0, [string]$Drives = '', [string]$OllamaDir = '')
+param([int]$HelperPid = 0, [int]$ParentPid = 0, [string]$Drives = '', [string]$OllamaDir = '', [int]$BrowserPid = 0)
 Set-Location -LiteralPath $env:TEMP
 # 1. Wait (at most 15 s) for the helper and its window to close: they hold the drives open.
 foreach ($id in @($HelperPid, $ParentPid)) {
@@ -480,10 +484,18 @@ foreach ($id in @($HelperPid, $ParentPid)) {
 foreach ($id in @($HelperPid, $ParentPid)) {
   if ($id -gt 0) { try { Stop-Process -Id $id -Force -ErrorAction Stop } catch { } }
 }
-# 2. The CaseVault browser window (its title has CaseVault in it): asked to close, like clicking X.
-foreach ($name in @('msedge', 'chrome', 'firefox', 'brave')) {
-  foreach ($p in @(Get-Process -Name $name -ErrorAction SilentlyContinue)) {
-    if ($p.MainWindowTitle -match 'CaseVault') { try { [void]$p.CloseMainWindow() } catch { } }
+# 2. The CaseVault browser window, asked to close like clicking X. (1.17) Only CaseVault's own: the
+# browser the helper started (-OwnProfile), else a window whose title is exactly the app's
+# ("CaseVault" or "CaseVault - Off", then the browser's name), never one that merely mentions it
+# (a GitHub tab about the repository) or holds other tabs too ("CaseVault and 2 more pages").
+$TitlePattern = '^CaseVault(?: - Off)?(?: [-\u2014](?: [^\-\u2014]{1,40} -)? (?:Microsoft\u200B? Edge|Google Chrome|Mozilla Firefox|Brave))?$'
+if ($BrowserPid -gt 0) {
+  try { [void](Get-Process -Id $BrowserPid -ErrorAction Stop).CloseMainWindow() } catch { }
+} else {
+  foreach ($name in @('msedge', 'chrome', 'firefox', 'brave')) {
+    foreach ($p in @(Get-Process -Name $name -ErrorAction SilentlyContinue)) {
+      if ($p.MainWindowTitle -cmatch $TitlePattern) { try { [void]$p.CloseMainWindow() } catch { } }
+    }
   }
 }
 # 3. Ollama, when it runs from the AI drive.
@@ -716,7 +728,7 @@ function Invoke-Api($stream, $req) {
     $cleanup = Join-Path $env:TEMP 'casevault-poweroff.ps1'
     Set-Content -LiteralPath $cleanup -Encoding UTF8 -Value $ShutdownScript
     $argList = @('-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', "`"$cleanup`"",
-              '-HelperPid', $PID, '-ParentPid', $parent, '-Drives', "`"$($drives -join ',')`"", '-OllamaDir', "`"$(Join-Path $AIRoot 'ollama')`"")
+              '-HelperPid', $PID, '-ParentPid', $parent, '-Drives', "`"$($drives -join ',')`"", '-OllamaDir', "`"$(Join-Path $AIRoot 'ollama')`"", '-BrowserPid', $script:BrowserPid)
     Start-Process -FilePath 'powershell.exe' -ArgumentList $argList -WindowStyle Hidden -WorkingDirectory $env:TEMP | Out-Null
     Send-Json $stream 200 ('{"ok":true,"drives":' + (ConvertTo-JsonString ($drives -join ',')) + '}')
     $script:StopRequested = $true

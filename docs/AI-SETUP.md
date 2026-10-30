@@ -68,7 +68,7 @@ Do this on a PC with internet. It's a one-time download.
 
 3. Your default browser opens **http://127.0.0.1:8517/**. In Chrome or Edge you can also keep using the installed app; it will see the AI engine too.
 4. **Keep the window open** while you work. Closing it stops both the helper and the AI engine.
-5. To finish, click **Power Off** (the red button at the top of CaseVault). It saves, closes the browser window, the helper and the AI engine, and locks and ejects **V:** and **W:**. Locking BitLocker may need admin rights; ejecting doesn't. If a drive is still busy, Windows says so: close what's using it and eject it from the taskbar.
+5. To finish, click **Power Off** (the red button at the top of CaseVault). It saves, closes the CaseVault browser window (helper 1.17: only that one; a window with other tabs open stays, so close it yourself), the helper and the AI engine, and locks and ejects **V:** and **W:**. Locking BitLocker may need admin rights; ejecting doesn't. If a drive is still busy, Windows says so: close what's using it and eject it from the taskbar.
 
 What the launcher does:
 
