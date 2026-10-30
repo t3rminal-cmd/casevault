@@ -693,7 +693,7 @@ function Invoke-Api($stream, $req) {
     $vaultId = ''; $serial = ''
     if ($script:VaultPin) { $vaultId = [string]$script:VaultPin.VaultId; $serial = [string]$script:VaultPin.Serial }
     elseif ($root) { $vaultId = Get-VaultId $root }
-    Send-Json $stream 200 ('{"app":"CaseVault helper","version":' + (ConvertTo-JsonString $HelperVersion) + ',"ready":' + $ready + ',"root":' + (ConvertTo-JsonString $rootName) + ',"drive":' + (ConvertTo-JsonString $drive) + ',"bitlocker":' + (ConvertTo-JsonString (Get-BitLockerState $root)) + ',"vaultId":' + (ConvertTo-JsonString $vaultId) + ',"volumeSerial":' + (ConvertTo-JsonString $serial) + '}')
+    Send-Json $stream 200 ('{"app":"CaseVault helper","version":' + (ConvertTo-JsonString $HelperVersion) + ',"ready":' + $ready + ',"root":' + (ConvertTo-JsonString $rootName) + ',"drive":' + (ConvertTo-JsonString $drive) + ',"bitlocker":' + (ConvertTo-JsonString (Get-BitLockerState $root)) + ',"vaultId":' + (ConvertTo-JsonString $vaultId) + ',"volumeSerial":' + (ConvertTo-JsonString $serial) + ',"aiEngine":' + (ConvertTo-JsonString (Get-AIEngineSource)) + '}')
     return
   }
 
@@ -943,13 +943,31 @@ function Invoke-Client($client) {
 # Ollama (optional)
 # ---------------------------------------------------------------------------
 
+# (1.17) Where the running AI engine comes from: 'ssd' (Ollama from this drive's ollama folder),
+# 'external' (any other Ollama, e.g. the one installed on the PC: it logs to %LOCALAPPDATA%\Ollama
+# and keeps its models on C:) or 'none'. Judged by each Ollama server process's file, not its name;
+# one whose file Windows won't show counts as external.
+function Get-AIEngineSource {
+  $procs = @(Get-Process -Name 'ollama' -ErrorAction SilentlyContinue)
+  if (-not $procs.Count) { return 'none' }
+  $dir = [System.IO.Path]::GetFullPath((Join-Path $AIRoot 'ollama')).TrimEnd([char]'\', [char]'/') + $Sep
+  foreach ($p in $procs) {
+    $file = $null
+    try { $file = $p.Path } catch { }
+    if (-not $file -or -not ([System.IO.Path]::GetFullPath($file)).StartsWith($dir, [System.StringComparison]::OrdinalIgnoreCase)) { return 'external' }
+  }
+  return 'ssd'
+}
+
 function Start-Ollama {
   $exe = Join-Path (Join-Path $AIRoot 'ollama') 'ollama.exe'
   if ($NoAI -or -not (Test-Path -LiteralPath $exe)) { Write-Info 'AI engine : not started (Ollama not found next to this helper)'; return $null }
-  if (Get-Process -Name 'ollama' -ErrorAction SilentlyContinue) {
-    Write-Warn 'Ollama is already running (maybe the installed app). Quit it from the tray to use the SSD models.'
+  $running = Get-AIEngineSource
+  if ($running -eq 'external') {
+    Write-Warn 'An Ollama installed on this PC is already running. It keeps its logs and models on this PC, so CaseVault keeps the AI off until you allow it. Quit it from the tray and start CaseVault again to use the SSD models.'
     return $null
   }
+  if ($running -eq 'ssd') { Write-Info 'AI engine : Ollama from this drive is already running'; return $null }
   $models = Join-Path $AIRoot 'models'
   $logs = Join-Path $AIRoot 'logs'
   New-Item -ItemType Directory -Path $models, $logs -Force | Out-Null
