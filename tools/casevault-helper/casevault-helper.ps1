@@ -10,6 +10,9 @@
     * Needs no installation and no admin rights (plain Windows PowerShell 5.1).
     * Uses only paths relative to its own location, and finds the CASEVAULT partition
       by its label, so drive letter changes do not matter.
+    * (1.17) A drive labelled CASEVAULT always wins over any other drive with a vault, and the
+      helper stays with the vault it opened first (its vaultId and volume serial number): if the
+      SSD drops out, no other drive's vault is used in its place.
     * Only same-origin requests from the CaseVault page are accepted. Other websites
       open in the browser cannot read or write anything through it.
     * (1.16) Each start makes a new random key. The browser window the helper opens gets it, and
@@ -33,6 +36,7 @@
     -BackupTargets <a;b> offer these folders as backup drives (for testing; normally every other drive)
     -BitLockerStates <x> pretend drive states, e.g. "V:\=on;E:\=off" (for testing; normally asked of Windows)
     -SimulatedNetworkRoot <p>  treat saved backup folders under this folder as shared folders on another PC (for testing)
+    -SimulatedDrives <x> pretend these folders are the PC's drives, "root|label|serial;..." (for testing; normally every drive)
 #>
 [CmdletBinding()]
 param(
@@ -46,7 +50,8 @@ param(
   [switch]$NoAI,
   [string]$BackupTargets = '',
   [string]$BitLockerStates = '',
-  [string]$SimulatedNetworkRoot = ''
+  [string]$SimulatedNetworkRoot = '',
+  [string]$SimulatedDrives = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -79,6 +84,70 @@ function Write-Warn([string]$msg)  { Write-Host "  ! $msg" -ForegroundColor Yell
 # ---------------------------------------------------------------------------
 
 $script:DataRoot = $null
+# (1.17) The vault this session opened first: its vaultId (from vault.json), the volume's serial
+# number and the folder's place on the drive. Once set, a re-scan accepts only that vault again, so
+# an old SSD, a copied vault or another USB stick is never used in its place.
+$script:VaultPin = $null
+$script:PinLookedAt = [DateTime]::MinValue
+
+# (1.17) The ready drives: { Root; Label; Serial }. -SimulatedDrives replaces the list in tests.
+function Get-DriveCandidates {
+  $out = @()
+  if ($SimulatedDrives) {
+    foreach ($entry in ($SimulatedDrives -split ';' | Where-Object { $_ })) {
+      $parts = $entry -split '\|'
+      $r = $parts[0]
+      if (-not (Test-Path -LiteralPath $r -PathType Container)) { continue }   # "unplugged"
+      $out += [pscustomobject]@{ Root = [System.IO.Path]::GetFullPath($r); Label = $(if ($parts.Length -gt 1) { $parts[1] } else { '' }); Serial = $(if ($parts.Length -gt 2) { $parts[2] } else { '' }) }
+    }
+    return $out
+  }
+  foreach ($d in [System.IO.DriveInfo]::GetDrives()) {
+    try {
+      if (-not $d.IsReady) { continue }   # BitLocker-locked or empty drives are not ready
+      $out += [pscustomobject]@{ Root = $d.RootDirectory.FullName; Label = [string]$d.VolumeLabel; Serial = $null }
+    } catch { }
+  }
+  return $out
+}
+
+# (1.17) The volume serial number of a drive (e.g. "A1B2C3D4"), asked of Windows without admin
+# rights; '' when Windows can't say. Only asked for drives that hold a vault.
+function Get-VolumeSerial($cand) {
+  if ($null -ne $cand.Serial) { return [string]$cand.Serial }
+  try {
+    $id = ([System.IO.Path]::GetPathRoot($cand.Root)).TrimEnd('\')
+    $disk = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID='$id'" -ErrorAction Stop
+    if ($disk -and $disk.VolumeSerialNumber) { return [string]$disk.VolumeSerialNumber }
+  } catch { }
+  return ''
+}
+
+# (1.17) The vaultId saved in vault.json ('' for a vault made before it had one, or no vault yet).
+function Get-VaultId([string]$dir) {
+  $f = Join-Path $dir 'vault.json'
+  if (-not (Test-Path -LiteralPath $f -PathType Leaf)) { return '' }
+  try {
+    # A look for the one field, not a full parse: vault.json holds the whole case index.
+    $m = [regex]::Match([System.IO.File]::ReadAllText($f), '"vaultId"\s*:\s*"([^"\\]{1,100})"')
+    if ($m.Success) { return $m.Groups[1].Value }
+  } catch { }
+  return ''
+}
+
+# (1.17) Is this the vault the session pinned? The same vaultId (when it has one), the same volume
+# serial (when both are known) and the same folder on the drive; the drive letter may differ.
+function Test-PinnedVault([string]$dir, $cand) {
+  $pin = $script:VaultPin
+  if (-not $pin) { return $true }
+  if ((Split-Path -Leaf $dir) -ne $pin.Folder) { return $false }
+  if ($pin.VaultId) { if ((Get-VaultId $dir) -ne $pin.VaultId) { return $false } }
+  $serial = Get-VolumeSerial $cand
+  if ($pin.Serial -and $serial) { if ($serial -ne $pin.Serial) { return $false } }
+  # Neither a vaultId nor a serial to go by: only the very same folder.
+  if (-not $pin.VaultId -and -not ($pin.Serial -and $serial)) { return ($dir -ieq $pin.Path) }
+  return $true
+}
 
 function Find-DataRoot {
   if ($DataPath) {
@@ -89,27 +158,65 @@ function Find-DataRoot {
     if (Test-Path -LiteralPath $p -PathType Container) { return $p }
     return $null
   }
-  $labelled = $null
-  foreach ($d in [System.IO.DriveInfo]::GetDrives()) {
-    try {
-      if (-not $d.IsReady) { continue }   # BitLocker-locked or empty drives are not ready
-      $candidate = Join-Path $d.RootDirectory.FullName $DataDirName
-      if (Test-Path -LiteralPath (Join-Path $candidate 'vault.json')) { return $candidate }
-      if ($d.VolumeLabel -eq $VolumeLabel -and -not $labelled) { $labelled = $candidate }
-    } catch { }
+  $cands = @(Get-DriveCandidates)
+  # (1.17) A drive labelled CASEVAULT always comes first; drive letter order only within each group.
+  $labelled = @($cands | Where-Object { $_.Label -eq $VolumeLabel })
+  $others = @($cands | Where-Object { $_.Label -ne $VolumeLabel })
+  if ($script:VaultPin) {
+    # After the vault went away: only the same vault, wherever its drive letter is now.
+    foreach ($c in ($labelled + $others)) {
+      $dir = Join-Path $c.Root $DataDirName
+      if ((Test-Path -LiteralPath $dir -PathType Container) -and (Test-PinnedVault $dir $c)) { return $dir }
+    }
+    return $null
   }
-  if ($labelled) {
+  foreach ($c in $labelled) {
+    $dir = Join-Path $c.Root $DataDirName
+    if (Test-Path -LiteralPath (Join-Path $dir 'vault.json')) { return $dir }
+  }
+  if ($labelled.Count) {
     # A CASEVAULT partition without a vault yet: create the empty folder; the app offers to set it up.
-    New-Item -ItemType Directory -Path $labelled -Force | Out-Null
-    return $labelled
+    $dir = Join-Path $labelled[0].Root $DataDirName
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    return $dir
+  }
+  foreach ($c in $others) {
+    $dir = Join-Path $c.Root $DataDirName
+    if (Test-Path -LiteralPath (Join-Path $dir 'vault.json')) {
+      Write-Warn "No drive is labelled $VolumeLabel, so the vault on $($c.Root) (labelled '$($c.Label)') is used. Name the SSD's partition $VolumeLabel so CaseVault always opens the right one."
+      return $dir
+    }
   }
   return $null
 }
 
+# (1.17) Remembers the vault first opened (and its vaultId once the app has made it).
+function Set-VaultPin([string]$dir) {
+  if ($DataPath -or -not $dir) { return }
+  $id = Get-VaultId $dir
+  if ($script:VaultPin) {
+    if (-not $script:VaultPin.VaultId -and $id) { $script:VaultPin.VaultId = $id }
+    return
+  }
+  $root = [System.IO.Path]::GetPathRoot($dir)
+  $cand = @(Get-DriveCandidates) | Where-Object { $dir.StartsWith($_.Root.TrimEnd([char]'\', [char]'/'), [System.StringComparison]::OrdinalIgnoreCase) } | Sort-Object { $_.Root.Length } -Descending | Select-Object -First 1
+  $serial = if ($cand) { Get-VolumeSerial $cand } else { '' }
+  $script:VaultPin = @{ VaultId = $id; Serial = $serial; Folder = (Split-Path -Leaf $dir); Path = $dir; Root = $root }
+}
+
 # Returns the vault folder, re-scanning the drives if it disappeared (unplugged or letter changed).
+# (1.17) A re-scan finds only the pinned vault; anything else counts as "not connected".
 function Get-DataRoot {
-  if ($script:DataRoot -and (Test-Path -LiteralPath $script:DataRoot -PathType Container)) { return $script:DataRoot }
+  if ($script:DataRoot -and (Test-Path -LiteralPath $script:DataRoot -PathType Container)) {
+    # A vault made before vaultId existed gets one when the app opens it (app 1.178); looked for every 30 s.
+    if ($script:VaultPin -and -not $script:VaultPin.VaultId -and ([DateTime]::UtcNow - $script:PinLookedAt).TotalSeconds -gt 30) {
+      $script:PinLookedAt = [DateTime]::UtcNow
+      Set-VaultPin $script:DataRoot
+    }
+    return $script:DataRoot
+  }
   $script:DataRoot = Find-DataRoot
+  if ($script:DataRoot) { Set-VaultPin $script:DataRoot; if ($script:VaultPin) { $script:VaultPin.Path = $script:DataRoot } }
   return $script:DataRoot
 }
 
@@ -579,7 +686,11 @@ function Invoke-Api($stream, $req) {
     $ready = if ($root) { 'true' } else { 'false' }
     $rootName = if ($root) { Split-Path -Leaf $root } else { '' }
     $drive = if ($root) { [System.IO.Path]::GetPathRoot($root) } else { '' }
-    Send-Json $stream 200 ('{"app":"CaseVault helper","version":' + (ConvertTo-JsonString $HelperVersion) + ',"ready":' + $ready + ',"root":' + (ConvertTo-JsonString $rootName) + ',"drive":' + (ConvertTo-JsonString $drive) + ',"bitlocker":' + (ConvertTo-JsonString (Get-BitLockerState $root)) + '}')
+    # (1.17) The vault this session is pinned to, so the app can tell if it ever changes.
+    $vaultId = ''; $serial = ''
+    if ($script:VaultPin) { $vaultId = [string]$script:VaultPin.VaultId; $serial = [string]$script:VaultPin.Serial }
+    elseif ($root) { $vaultId = Get-VaultId $root }
+    Send-Json $stream 200 ('{"app":"CaseVault helper","version":' + (ConvertTo-JsonString $HelperVersion) + ',"ready":' + $ready + ',"root":' + (ConvertTo-JsonString $rootName) + ',"drive":' + (ConvertTo-JsonString $drive) + ',"bitlocker":' + (ConvertTo-JsonString (Get-BitLockerState $root)) + ',"vaultId":' + (ConvertTo-JsonString $vaultId) + ',"volumeSerial":' + (ConvertTo-JsonString $serial) + '}')
     return
   }
 
@@ -863,7 +974,9 @@ catch {
 }
 
 $root = Get-DataRoot
-if ($root) { Write-Info "Vault     : $root" } else { Write-Warn 'Vault     : CASEVAULT drive not found yet. Plug in and unlock the SSD; the app will pick it up.' }
+$pinNote = ''
+if ($script:VaultPin -and $script:VaultPin.VaultId) { $pinNote = ' (vault ' + ([string]$script:VaultPin.VaultId).Substring(0, [Math]::Min(8, ([string]$script:VaultPin.VaultId).Length)) + ')' }
+if ($root) { Write-Info "Vault     : $root$pinNote" } else { Write-Warn 'Vault     : CASEVAULT drive not found yet. Plug in and unlock the SSD; the app will pick it up.' }
 $app = Find-AppRoot
 if ($app) { Write-Info "App       : $app" } else { Write-Warn "App       : not found. Copy the app into $AppDirName on the CASEVAULT drive." }
 $ollama = Start-Ollama

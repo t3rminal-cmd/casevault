@@ -36,6 +36,14 @@ the address are refused. A program running as your own Windows user could still 
 it is not a replacement for BitLocker and a locked PC. File names Windows treats as devices (CON,
 NUL, COM1…) are refused.
 
+**Which drive the helper opens (helper 1.17).** It opens `CaseVault-Data` on the drive labelled
+**CASEVAULT**, even when another drive (an old SSD, a copy of the vault, a USB stick) has a vault and
+a lower drive letter. Only when no drive is labelled CASEVAULT does it use another drive's vault, and
+its window then says so. It stays with the vault it opened first, recognised by the `vaultId` in
+`vault.json` and the drive's volume serial number: if the SSD drops out, CaseVault shows "Drive not
+connected" rather than using another drive, and the same SSD back under a different letter is fine.
+`/api/info` reports the vault it is pinned to (`vaultId`, `volumeSerial`).
+
 **Files that leave CaseVault land on the PC.** A PDF saved through the browser's Print → Save as PDF,
 an attachment opened in Outlook, or anything in Downloads is outside the vault. Delete them when
 you are done.
