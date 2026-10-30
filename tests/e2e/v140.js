@@ -23,7 +23,7 @@ const SP = process.env.SP;
     await p.evaluate(() => { location.hash = '#/'; }); await p.waitForTimeout(400);
     await p.evaluate(async ([id, offense, extra]) => { await CVLazy.reports(); const d = await CVReportFieldsUI.load({ id }); await Vault.writeCaseJSON(id, 'report-fields.json', { ...d, offense, narrative: 'Synthetic summary.', ...extra }); }, [id, offense, extra]);
     await p.evaluate((id) => { location.hash = `#/case/${id}/draft`; }, id); await p.waitForSelector('.rf-actions');
-    await p.click('.rf-actions button:has-text("Send Draft to Reports")'); await p.waitForTimeout(2200);
+    await p.click('.rf-actions button:has-text("Save as Report")'); await p.waitForTimeout(2200);
   };
   await send('Delv: Synthetic A', {}); await send('Delv: Synthetic B', { sentSlug: '' });
   await p.evaluate(async (id) => { await Vault.saveDraft(id, 'memo', { title: 'Memo Sample', type: 'other', ai: false, created: new Date().toISOString() }, '# Memo Sample\n\nSynthetic text.'); }, id);
@@ -47,7 +47,7 @@ const SP = process.env.SP;
   await src.dragTo(dst, { targetPosition: { x: 50, y: 3 } }); await p.waitForTimeout(800);
   console.log('  after drag last->top:', await rowsOf(), '| file:', JSON.stringify(await p.evaluate((id) => window.__readCaseJSON(id, 'reports-order.json'), id)));
   // send back from list
-  await p.click('.reports-table tr[data-slug="supplementary-report"] button[title^="Send Back"]'); await p.waitForTimeout(400);
+  await p.click('.reports-table tr[data-slug="supplementary-report"] button[title^="Back to Write Report"]'); await p.waitForTimeout(400);
   const ok = await p.$('.dialog button:has-text("Send Back")'); if (ok) await ok.click();
   await p.waitForTimeout(1200);
   console.log('6 send back ->', await p.evaluate(() => location.hash), '| offense:', (await p.evaluate(async (id) => { await CVLazy.reports(); return CVReportFieldsUI.load({ id }); }, id)).offense);

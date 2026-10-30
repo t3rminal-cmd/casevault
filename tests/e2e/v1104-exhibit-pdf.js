@@ -1,4 +1,4 @@
-// v1.104: a PDF can be attached to an exhibit as well as photos (Draft tab). Its first page shows
+// v1.104: a PDF can be attached to an exhibit as well as photos (Write Report tab). Its first page shows
 // on the tile with a PDF badge, and every page goes into the report's Exhibit Attachments.
 const boot = require('./boot.js');
 const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);

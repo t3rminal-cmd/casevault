@@ -675,7 +675,7 @@
 
   /** A report (Markdown) made from the fields: a table per section, the evidence, the summary. */
   /**
-   * The report as Markdown for the editor (Send Draft to Reports), laid out like the PDF (v1.31): each row
+   * The report as Markdown for the editor (Save as Report), laid out like the PDF (v1.31): each row
    * of boxes on the PDF is a small table, labels on top and the entries under them, in the same
    * order and sections, so the editable report reads like the form.
    */
@@ -774,7 +774,7 @@
 
   const PLACEHOLDERS = [...FIELDS.map(([k]) => `report.${k}`), 'report.totalWeight', 'report.streetValue', 'report.purchasePrice', ...Object.keys(LISTS).map((k) => `report.${k}`), 'report.evidence', 'report.narrative'];
 
-  /* v1.153: the checklist before Send Draft to Reports: the exhibits the narrative mentions against the
+  /* v1.153: the checklist before Save as Report: the exhibits the narrative mentions against the
    * evidence list, and the narrative's dates in order (and none in the future). -> { items: [{ ok,
    * text }], problems } */
   const MONTHS_LC = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];

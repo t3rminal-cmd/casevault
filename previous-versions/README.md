@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.175)
+
+- **Suspect Search**: arrest reports, police interactions and Narcotics / Battery / Firearms icons for anyone on your cases
+- **Rolodex** of ASAs, AUSAs and other contacts that fills in a case's Contacts
+- Fixes: the person window's scroll bars, the case list's padlock line, full codes (259) in lists, the cursor in Officer's Report lines
+
 ## Features (v1.174)
 
 - **New Case** searches your known suspects (Name, DOB, Gender, IR) and fills in the one you pick

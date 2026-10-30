@@ -22,7 +22,7 @@
   function build() {
     const { h, icon: I } = ui;
     const caseSel = h('select', { 'aria-label': 'Case', title: 'Whose Field Notes. Follows the case you have open.' });
-    const ta = h('textarea', { class: 'notes-float-editor', spellcheck: 'true', 'aria-label': 'Field Notes', placeholder: 'Write notes here. They save to the case on the SSD.' });
+    const ta = h('textarea', { class: 'notes-float-editor', spellcheck: 'true', 'aria-label': 'Field Notes', placeholder: 'Write notes here.' });
     const status = h('span', { class: 'note-save-status small muted', role: 'status', 'aria-live': 'polite' });
     const counter = h('span', { class: 'muted small' });
     const iconBtn = (name, label, onclick) => h('button', { class: 'icon-btn', type: 'button', title: label, onclick }, I(name), h('span', { class: 'sr-only' }, label));

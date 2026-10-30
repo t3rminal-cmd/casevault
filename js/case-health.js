@@ -119,7 +119,7 @@
   /**
    * Everything still open on a case, most serious first:
    *  timeline: { events }; checks: [{ open, counts, stale }]; drafts: [{ title, confirm }];
-   *  evidence: the Draft tab's exhibits; arrest; caseObj; today ('YYYY-MM-DD').
+   *  evidence: the Write Report tab's exhibits; arrest; caseObj; today ('YYYY-MM-DD').
    * -> [{ area, severity, text, tab }] (tab: where it is fixed)
    */
   function caseHealth({ caseObj = {}, timeline = { events: [] }, checks = [], drafts = [], evidence = [], arrest = null, today = '' } = {}) {

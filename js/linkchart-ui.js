@@ -154,7 +154,7 @@
       Array.from({ length: LC().PER_ROW.max - LC().PER_ROW.min + 1 }, (_, i) => i + LC().PER_ROW.min).map((n) => h('option', { value: String(n), selected: n === chart.perRow }, String(n))));
     perRow.addEventListener('change', () => { chart.perRow = Number(perRow.value); save(); drawView(); });
     const perRowWrap = h('label', { class: 'lc-perrow' }, h('span', { class: 'small' }, 'Per Row'), perRow);
-    const linkBtn = h('button', { type: 'button', class: 'btn small', icon: 'link-45deg', 'aria-pressed': 'false', disabled: archived, title: 'Click one card, then another: an arrow from the first to the second. Click two linked cards: the line goes. Esc or this button stops.', onclick: () => setLinking(!linking) }, 'Link Cards');
+    const linkBtn = h('button', { type: 'button', class: 'btn small', icon: 'link-45deg', 'aria-pressed': 'false', disabled: archived, title: 'Click one card, then another, to link them. Esc stops.', onclick: () => setLinking(!linking) }, 'Link Cards');
     // v1.58: Snap (cards land on the grid squares when dragged) and what a new link carries.
     const snapBtn = h('button', { type: 'button', class: 'btn small', icon: 'grid-3x3', 'aria-pressed': String(chart.snap !== false), disabled: archived, title: 'Free layout: dragged cards land on the small grid squares, so they line up. Off: they go exactly where you let go.', onclick: () => { chart.snap = !(chart.snap !== false); save(); drawToolbar(); } }, 'Snap');
     const carries = h('select', { 'aria-label': 'New links carry', title: 'What a link made with Link Cards shows: nothing, money ($) or narcotics (a capsule). The arrow shows who sends it.' },
@@ -459,13 +459,13 @@
       const file = new File([bytes], pdfName(), { type: 'application/pdf' });
       try {
         const path = await Save.track(`file:${c.id}`, () => Vault.addFile(c.id, file, { folder: 'Link Charts', description: chart.title || 'Link Chart', replace: true }));
-        // v1.59: and under Reports, with the chart in words; Send Back to Link Chart there (or
+        // v1.59: and under Saved Reports, with the chart in words; Send Back to Link Chart there (or
         // Open in Link Chart in Files) puts it back here to change it, then Save PDF to Case again.
         const slug = `link-chart-${CVDraft.slugify(chart.title || 'link chart')}`;
         const prev = await Vault.readDraft(c.id, slug).catch(() => null);
         const meta = { ...(prev ? prev.meta : { created: new Date().toISOString() }), title: chart.title || 'Link Chart', type: 'linkchart', ai: false, fromLinkChart: true, chartPath: path };
         await Save.track(`draft:${c.id}:${slug}`, () => Vault.saveDraft(c.id, slug, meta, LC().summaryMarkdown(chart)));
-        toast(`Saved to Files → Link Charts and to Reports: ${path.split('/').pop()}. Send it back here from either to change it.`, 'success', 6000);
+        toast(`Saved to Files → Link Charts and to Saved Reports: ${path.split('/').pop()}. Send it back here from either to change it.`, 'success', 6000);
       } catch { /* reported by Save */ }
     };
     const clearChart = async () => {

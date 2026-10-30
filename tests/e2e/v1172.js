@@ -1,4 +1,4 @@
-// v1.172: Case Health on the Details tab and the Mission page, custody gaps on the Draft tab, the
+// v1.172: Case Health on the Details tab and the Mission page, custody gaps on the Write Report tab, the
 // arrest checked against the case, the Close dialog's ready-to-close list, the evidence and buys
 // template fields and the suspects' monikers as Known Aliases. All data is made up.
 const boot = require('./boot.js');
@@ -41,7 +41,7 @@ const SP = process.env.SP + '/v1172';
   const arr = await p.textContent('.arrest-issues');
   ok(/1990-01-03/.test(arr) && /charged with heroin/.test(arr), `the arrest against the case: ${arr.replace(/\s+/g, ' ').slice(0, 160)}`);
 
-  // 3. Custody gaps on the Draft tab.
+  // 3. Custody gaps on the Write Report tab.
   await p.evaluate((i) => { location.hash = `#/case/${CVRoute.enc(i)}/draft`; }, id);
   await p.waitForSelector('.custody-gap-tag:not([hidden])', { state: 'attached', timeout: 20000 });
   ok(/1 gap/.test(await p.textContent('.custody-gap-tag')), 'the exhibit shows its custody gap');

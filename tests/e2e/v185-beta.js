@@ -28,5 +28,5 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   await p.click('#dialog[open] button:has-text("Save PDF to Case")'); await p.waitForTimeout(600);
   console.log('files:', await p.evaluate(async (id) => (await Vault.listFiles(id)).map((f) => f.name), ids.c));
   await p.click('#dialog[open] button:has-text("Done")');
-  console.log('beta tags:', await p.$$eval('.beta-tag', (e) => e.length), await p.$eval('.tab .beta-tag', (e) => e.parentElement.textContent));
+  console.log('beta tags:', await p.$$eval('.beta-tag', (e) => e.length), await p.$$eval('.tab .beta-tag', (e) => e.length)); // v1.176: no tab is marked Beta
   console.log('errors', errs.filter((e) => !/Could not read cases/.test(e))); await b.close(); })();

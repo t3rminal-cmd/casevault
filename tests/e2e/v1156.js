@@ -104,11 +104,11 @@ const SP = process.env.SP + '/v1156';
   ok(await p.$$eval('.rail-recent a.rail-case', (x) => x.length) >= 1, 'recent cases are on the rail');
 
   // ---- Select Cases: pin two cases at once.
-  await p.click('#btn-side-bulk'); await p.waitForSelector('#dialog[open] .bulk-list, #dialog[open] input[type=checkbox]');
+  await p.click('#btn-side-more'); await p.click('#btn-side-bulk'); await p.waitForSelector('#dialog[open] .bulk-list, #dialog[open] input[type=checkbox]');
   await p.screenshot({ path: `${SP}/bulk.png` });
   await p.keyboard.press('Escape'); await p.waitForTimeout(300);
 
-  // ---- Chain of custody on an exhibit (Draft tab), and its PDF.
+  // ---- Chain of custody on an exhibit (Write Report tab), and its PDF.
   await p.evaluate(async (i) => { await CVLazy.reports(); const d = await CVReportFieldsUI.load({ id: i }); await Vault.writeCaseJSON(i, 'report-fields.json', { ...d, evidence: [{ number: 1, inventory: 'INV-1', type: 'Other', description: 'Synthetic phone', photos: [] }] }); }, ids.c);
   await p.evaluate((i) => { location.hash = '#/x'; location.hash = `#/case/${CVRoute.enc(i)}/draft`; }, ids.c); await p.waitForSelector('.rf-custody-btn', { state: 'attached', timeout: 15000 });
   await p.evaluate(() => document.querySelectorAll('.rf-fold[aria-expanded="false"]').forEach((x) => x.click())); await p.waitForTimeout(400);

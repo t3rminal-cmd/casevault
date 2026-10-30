@@ -124,7 +124,7 @@
 
     panel.replaceChildren(
       h('div', { class: 'mail-layout' },
-        h('form', { class: 'mail-form cv-boxed', onsubmit: (e) => e.preventDefault() }, // v1.54: grey boxes like the Draft tab
+        h('form', { class: 'mail-form cv-boxed', onsubmit: (e) => e.preventDefault() }, // v1.54: grey boxes like the Write Report tab
           book,
           ui.field('To', to), ui.field('Cc', cc), recipNote,
           ui.field('Subject', subject),

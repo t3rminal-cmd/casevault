@@ -342,7 +342,7 @@
     const aiLine = h('span', { class: 'muted small' });
     const runBtn = h('button', { class: 'btn primary', type: 'button', icon: 'clipboard2-check' }, 'Run check');
     // v1.162: Known Aliases of this case: names that are one person, never flagged as misspellings.
-    const aliasBox = h('textarea', { rows: 3, class: 'chk-aliases', 'aria-label': 'Known Aliases', placeholder: 'One person per line, names separated by commas: Richard Poe, Rick Poe, Ricky' });
+    const aliasBox = h('textarea', { rows: 3, class: 'chk-aliases', 'aria-label': 'Known Aliases', placeholder: 'One person per line: Richard Poe, Rick, Ricky' });
     aliasBox.value = c.checkAliases || '';
     // v1.172: the suspects' monikers count too, without typing them here.
     const monikers = root.CVHealth ? root.CVHealth.aliasLines(c.suspects || []) : [];
@@ -456,7 +456,7 @@
           h('div', { class: 'chk-col' },
             h('label', { class: 'field', title: 'An affidavit or a draft.' }, h('span', {}, 'Document to check'), affSelect),
             h('label', { class: 'check-row chk-ai' }, aiToggle, h('span', {}, h('strong', {}, 'Include AI review'), aiLine)),
-            h('label', { class: 'field', title: 'Names that belong to one person (nicknames, monikers). The check never flags them as spelled differently, and the AI is told they are the same person.' }, h('span', {}, 'Known Aliases'), aliasBox, monikerNote)),
+            h('label', { class: 'field', title: 'Names of one person (nicknames, monikers): never flagged as spelled differently.' }, h('span', {}, 'Known Aliases'), aliasBox, monikerNote)),
           h('div', { class: 'chk-col' }, h('div', { class: 'field' }, h('span', {}, 'Compare against'), reportList), pairBox)),
         h('div', { class: 'chk-actions' }, h('span', { class: 'muted small' }, 'Nothing leaves this PC.'), h('div', { class: 'spacer' }), runBtn))
       : h('div', { class: 'card chk-card' }, head('clipboard2-check', 'New Check', ''),
@@ -505,7 +505,7 @@
     return [String((c && c.checkAliases) || ''), ...extra].filter(Boolean).join('\n');
   }
 
-  /** v1.169: the case's evidence list (the exhibits on the Draft tab): [{ number, inventory, description }]. */
+  /** v1.169: the case's evidence list (the exhibits on the Write Report tab): [{ number, inventory, description }]. */
   async function caseEvidence(c) {
     try {
       const rf = await Vault.readCaseJSON(c.id, 'report-fields.json');
@@ -902,7 +902,7 @@
   function flagCard(c, data, f, save, onChange) {
     const { h } = ui;
     upgradeFlag(f);
-    const note = h('textarea', { rows: 2, class: 'flag-note', placeholder: 'Why it was dismissed, or how it was dealt with. It is saved with the check.', 'aria-label': 'Note' });
+    const note = h('textarea', { rows: 2, class: 'flag-note', placeholder: 'Why it was dismissed', 'aria-label': 'Note' });
     note.value = f.note || '';
     note.hidden = f.status === 'open' && !f.note;
     note.addEventListener('input', () => { f.note = note.value; save(); });

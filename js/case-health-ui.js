@@ -28,7 +28,7 @@
     return { caseObj: c, timeline: timeline || { events: [] }, checks: latest ? [{ ...latest, stale }] : [], drafts, evidence: (rf && rf.evidence) || [], arrest: hasArrest ? arrest : null, today: Vault.localDay() };
   }
 
-  const TAB_LABEL = { timeline: 'Timeline', checks: 'Checks', reports: 'Reports', draft: 'Draft', arrest: 'Arrest' };
+  const TAB_LABEL = { timeline: 'Timeline', checks: 'Checks', reports: 'Saved Reports', draft: 'Write Report', arrest: 'Arrest' };
   function itemRow(ui, c, it) {
     const { h } = ui;
     return h('li', { class: `health-item sev-${it.severity.toLowerCase()}` },
@@ -45,9 +45,9 @@
     const body = h('div', { class: 'health-body' }, h('p', { class: 'muted small' }, 'Looking at the case…'));
     // v1.173: the prosecutor packet of this case.
     const tools = h('div', { class: 'health-tools' },
-      h('button', { class: 'btn small', type: 'button', icon: 'file-earmark-pdf', 'data-ro-ok': 'true', title: 'A PDF with the buys and totals per suspect, the evidence with inventory numbers and lab status, and the chains of custody', onclick: () => packet(ui, [c]) }, 'Prosecutor Packet'));
+      h('button', { class: 'btn small', type: 'button', icon: 'file-earmark-pdf', 'data-ro-ok': 'true', title: 'One PDF: buys, evidence, lab status and chain of custody', onclick: () => packet(ui, [c]) }, 'Prosecutor Packet'));
     const sec = h('section', { class: 'case-health cv-boxed', 'aria-labelledby': 'case-health-title' },
-      h('h3', { id: 'case-health-title', icon: 'clipboard2-pulse', title: 'What is still open on this case, and the gaps a defense attorney would find: deadlines, check flags, unconfirmed facts, evidence and custody, and the arrest details.' }, 'Case Health ', count),
+      h('h3', { id: 'case-health-title', icon: 'clipboard2-pulse', title: 'What is still open, and the gaps a defense attorney would find.' }, 'Case Health ', count),
       tools, body);
     (async () => {
       let items = [];

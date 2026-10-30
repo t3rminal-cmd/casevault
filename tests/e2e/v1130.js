@@ -22,7 +22,7 @@ const SP = process.env.SP + '/v1130';
   ok(!(await p.$('.row-menu[open]')), 'a click outside closes it');
   await p.click('.op-cases-table tbody tr:first-child .row-menu > summary');
   await p.click('.op-cases-table tbody tr:first-child .row-menu-list a:has-text("Reports")'); await p.waitForTimeout(500);
-  ok(/\/reports$/.test(await p.evaluate(() => location.hash)), 'Reports opens that case on its Reports tab');
+  ok(/\/reports$/.test(await p.evaluate(() => location.hash)), 'Reports opens that case on its Saved Reports tab');
   // The sidebar's INDEPENDENT CASES name never runs under its (two-digit) count.
   const side = await p.evaluate(() => { const g = document.querySelector('.general-group .op-head'); const n = g.querySelector('.ind-name'); const c = g.querySelector('.op-count'); return { fits: n.scrollWidth <= n.clientWidth + 1, gap: Math.round(c.getBoundingClientRect().left - n.getBoundingClientRect().right), count: c.textContent }; });
   ok(side.fits && side.gap >= 2, `INDEPENDENT CASES clears its count of ${side.count}: ${JSON.stringify(side)}`);

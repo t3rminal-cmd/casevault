@@ -2,7 +2,7 @@
  *
  * The department letterhead on top (when there is one), CASE SUMMARY and the case number, the
  * case's facts (subject, Mission, status, dates, disposition), the arrestees with their charges,
- * the exhibits from the Draft tab, the timeline and the case history. Helvetica, letter size,
+ * the exhibits from the Write Report tab, the timeline and the case history. Helvetica, letter size,
  * written with the small PDF writer in js/report-pdf.js; runs under Node for the tests.
  */
 'use strict';
@@ -65,7 +65,7 @@
     const d = c.closure && K().disposition(c.closure.disposition);
     const facts = [
       ['Subject', clean(c.subject) || 'Not named'],
-      ['Mission', op ? [op.number, op.name].filter(Boolean).join(' ') : 'Independent case'],
+      ['Mission', op ? [op.number, op.name].filter(Boolean).join(' ') : 'General Files'],
       ['Status', clean(c.status) || 'Open'],
       ['File Number', clean(c.fileNumber)],
       ['Opened', c.dates && c.dates.opened ? fmt(c.dates.opened) : ''],
@@ -105,10 +105,10 @@
     }
     y -= 4;
 
-    // Exhibits (the Draft tab's evidence).
+    // Exhibits (the Write Report tab's evidence).
     const ex = fields ? (F().normalize(fields).evidence || []) : [];
     band(`EXHIBITS (${ex.length})`);
-    if (!ex.length) para('No exhibits entered on the Draft tab.', { size: 10.5 });
+    if (!ex.length) para('No exhibits entered on the Write Report tab.', { size: 10.5 });
     for (const e of ex) para(F().exhibitLine(e), { size: 10, gap: 0 });
     y -= 6;
 

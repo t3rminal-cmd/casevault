@@ -12,7 +12,7 @@
   function watchSection() {
     const { h } = ui;
     const list = (V().data.settings.piiWatchlist || []).join('\n');
-    const ta = h('textarea', { rows: 4, placeholder: 'One per line: names of subjects, informants, nicknames, street names…', spellcheck: 'false' });
+    const ta = h('textarea', { rows: 4, placeholder: 'One name per line', spellcheck: 'false' });
     ta.value = list;
     ta.addEventListener('change', () => {
       const items = [...new Set(ta.value.split('\n').map((x) => x.trim()).filter((x) => x.length >= 2))];

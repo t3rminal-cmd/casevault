@@ -1,5 +1,5 @@
 // v1.173: Paste From Text on the Timeline, the calendar file and the prosecutor packet saved on the
-// SSD, Check the Mission and Read Labels on the Draft tab. All data is made up (Doe / Roe / Poe).
+// SSD, Check the Mission and Read Labels on the Write Report tab. All data is made up (Doe / Roe / Poe).
 const boot = require('./boot.js');
 const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
 const SP = process.env.SP + '/v1173';
@@ -39,7 +39,7 @@ const SP = process.env.SP + '/v1173';
   const ics = await p.evaluate(async (i) => { const f = (await Vault.listFiles(i)).find((x) => /\.ics$/.test(x.name)); return f ? { path: f.path || f.name, folder: f.folder } : null; }, id);
   ok(ics && /Deadlines and Court Dates\.ics/.test(ics.path) && /Other/.test(ics.folder || ics.path), `the calendar file is in the case's Files: ${JSON.stringify(ics)}`);
 
-  // 3. Read Labels on the Draft tab (the OCR is stubbed: no photo text in the tests).
+  // 3. Read Labels on the Write Report tab (the OCR is stubbed: no photo text in the tests).
   await p.evaluate(() => { CVChecks.documentText = async () => ({ paragraphs: [{ text: 'INV # 12345687' }] }); });
   await p.evaluate((i) => { location.hash = `#/case/${CVRoute.enc(i)}/draft`; }, id);
   await p.waitForSelector('.rf-label-btn', { state: 'attached', timeout: 20000 });

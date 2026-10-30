@@ -17,7 +17,7 @@ const SP = process.env.SP + '/v1147';
 
   // 1. OPERATION and INDEPENDENT.
   const names = await p.evaluate(() => [document.querySelector('#sidebar .mission-group > summary .op-name').textContent, document.querySelector('#sidebar .general-group > summary .ind-name').textContent]);
-  ok(names.join() === 'OPERATION,INDEPENDENT', `the main folders: ${names.join(' | ')}`);
+  ok(names.join() === 'MISSIONS,GENERAL FILES', `the main folders: ${names.join(' | ')}`);
 
   // 2. The Operation with a case due is red; the other is not; no bell on either.
   const ops = await p.$$eval('#sidebar .mission-children .op-group', (x) => x.map((d) => ({ num: d.querySelector('.op-num').textContent, red: d.classList.contains('has-reminder'), bg: getComputedStyle(d.querySelector(':scope > .op-head')).backgroundColor, border: getComputedStyle(d).borderTopColor, bell: !!d.querySelector(':scope > .op-head .case-bell') })));

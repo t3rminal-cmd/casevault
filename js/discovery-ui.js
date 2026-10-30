@@ -164,7 +164,7 @@
 
     // 4. The index: a PDF for the case's records, and its pages in the package.
     const profile = (Vault.data.settings && Vault.data.settings.affiant) || {};
-    // v1.170: the exhibits with their inventory numbers (the Draft tab's evidence list), in the index and on the receipt.
+    // v1.170: the exhibits with their inventory numbers (the Write Report tab's evidence list), in the index and on the receipt.
     let evidence = [];
     try {
       const rf = await Vault.readCaseJSON(c.id, 'report-fields.json');
@@ -585,7 +585,7 @@
             ui.field('Password', pw, '', 'At least 8 characters. CaseVault doesn\'t keep it: write it down for the recipient.'),
             ui.field('Password Again', pw2))),
         h('fieldset', { class: 'disc-card' }, h('legend', {}, icon('list-check'), ' Options'),
-          h('label', { class: 'check-row', title: 'A PDF to print and sign in ink: who turned it over and to whom, every item with its Bates numbers, the date and time of receipt, and signatures of the recipient, the officer and a witness. It goes to this computer\'s Downloads folder; a copy stays with the case.' }, receipt, h('span', {}, 'Make a receipt to sign (PDF to Downloads)')),
+          h('label', { class: 'check-row', title: 'A receipt to print and sign: every item with its Bates numbers, and signature lines. A copy stays with the case.' }, receipt, h('span', {}, 'Make a receipt to sign (PDF to Downloads)')),
           h('label', { class: 'check-row' }, allow, h('span', {}, 'Allow saving video, audio and other files for VLC')),
           h('label', { class: 'check-row', title: kit ? `From CaseVault-Data\\discovery-kit\\VLC: ${kit.files} files, ${D.fmtSize(kit.bytes)}` : 'Put a portable VLC in CaseVault-Data\\discovery-kit\\VLC first' }, vlc, h('span', {}, kit ? 'Copy the VLC player along' : 'Copy VLC along (none on the SSD)')))),
       err, bar,

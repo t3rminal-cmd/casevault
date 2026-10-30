@@ -64,7 +64,7 @@
    * v1.171: the start of a Buy or Surveillance narrative from a Timeline buy: what the Timeline and
    * the evidence list know is filled in, the rest is a [CONFIRM: …] to fill. No AI.
    * buy: a Timeline buy event { date, time, suspect, drug, qty, unit, paid, note };
-   * kind: 'buy' | 'surveillance'; evidence: the Draft tab's exhibits [{ number, inventory, drug, type, weight }].
+   * kind: 'buy' | 'surveillance'; evidence: the Write Report tab's exhibits [{ number, inventory, drug, type, weight }].
    */
   function buySkeleton(buy, { kind = 'buy', evidence = [], title = '' } = {}) {
     const b = buy || {};

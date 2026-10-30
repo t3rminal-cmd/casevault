@@ -113,12 +113,12 @@
     return out;
   }
 
-  /* ---- One report, one PDF (v1.32): the Draft tab keeps a linked "Supplementary Report" under
+  /* ---- One report, one PDF (v1.32): the Write Report tab keeps a linked "Supplementary Report" under
    * Reports, and the PDF saved from either place is the same file, made from the form. ---- */
   const LINKED = 'supplementary-report';
   const PDF_NAME = 'Supplementary Report.pdf';
   const BASE_TITLE = 'Supplementary Report';
-  // v1.33: each draft sent from the Draft tab is its own report: "Supplementary Report", then
+  // v1.33: each draft sent from the Write Report tab is its own report: "Supplementary Report", then
   // (after Clear All) "Supplementary Report 2", and so on.
   const titleOf = (slug) => { const m = /^supplementary-report-(\d+)$/.exec(slug || ''); return m ? `${BASE_TITLE} ${m[1]}` : BASE_TITLE; };
   // (Spacing and table marks don't count: the Formatted view may lay a table out again.)
@@ -139,14 +139,14 @@
     return { path, bytes: b };
   }
 
-  /** The linked report under Reports: { slug, edited } (edited: its text was changed in Reports). */
+  /** The linked report under Saved Reports: { slug, edited } (edited: its text was changed in Reports). */
   async function linkedReport(c, slug = LINKED) {
     const d = await Vault.readDraft(c.id, slug).catch(() => null);
     if (!d || !d.meta.fromFields) return null;
     return { slug, edited: sigOf(d.body) !== d.meta.fieldsSig, meta: d.meta, body: d.body };
   }
 
-  /** The report the form on the Draft tab goes to now ('' before it's first sent). */
+  /** The report the form on the Write Report tab goes to now ('' before it's first sent). */
   async function sentSlugOf(c, data) {
     const d = data || await load(c);
     if (typeof d.sentSlug === 'string') return d.sentSlug; // '' after Clear All: the next send makes a new report
@@ -166,7 +166,7 @@
   }
 
   const formFile = (slug) => `report-fields-${slug}.json`;
-  /** A sent report's title as it shows under Reports (v1.41: named after its heading). */
+  /** A sent report's title as it shows under Saved Reports (v1.41: named after its heading). */
   const reportTitle = async (c, slug) => { const d = await Vault.readDraft(c.id, slug).catch(() => null); return (d && d.meta.title) || titleOf(slug); };
   /** Where savePdfToCase puts a report's PDF. */
   const pdfPathOf = (c, title) => CVCaseFiles.joinPath('Supplementary Report', FS.safeName(CVCaseFiles.fileName(c, 'Supplementary Report', `${title}.pdf`, title)));
@@ -175,31 +175,31 @@
     return F().FIELDS.some(([k, , kind]) => k !== 'rdNumber' && (kind === 'check' ? !!x[k] : String(x[k] || '').trim()))
       || Object.keys(F().LISTS).some((k) => x[k].some(F().filled)) || x.evidence.length > 0 || !!String(x.narrative || '').trim();
   };
-  /** Send Back to Draft (v1.39): the report's form goes back on the Draft tab. Asks first when the
-   * Draft tab holds a different report. -> true when done. */
+  /** Back to Write Report (v1.39): the report's form goes back on the Write Report tab. Asks first when the
+   * Write Report tab holds a different report. -> true when done. */
   async function sendBack(c, slug) {
     const cur = await load(c);
     const name = await reportTitle(c, slug);
     let snap = null;
     try { snap = await Vault.readCaseJSON(c.id, formFile(slug)); } catch (err) { if (FS.isDisconnectError(err)) throw err; }
     if (!snap && cur.sentSlug !== slug) {
-      ui.toast(`${name} was sent before this version kept its form, so it can't go back to the Draft tab. Edit the form there and send it again.`, 'error', 9000);
+      ui.toast(`${name} was sent before this version kept its form, so it can't go back to the Write Report tab. Edit the form there and send it again.`, 'error', 9000);
       return false;
     }
     if (snap && cur.sentSlug !== slug && hasEntries(cur)) {
       const other = cur.sentSlug ? `${await reportTitle(c, cur.sentSlug)} (as last sent, plus any changes since)` : 'a draft that hasn\'t been sent';
-      if (!(await ui.confirmDialog({ title: `Send ${name} back to the Draft tab?`, message: `The Draft tab now holds ${other}. It's replaced by ${name}'s form. What was sent stays under Reports and Files.`, confirmText: 'Send Back' }))) return false;
+      if (!(await ui.confirmDialog({ title: `Send ${name} back to the Write Report tab?`, message: `The Write Report tab now holds ${other}. It's replaced by ${name}'s form. What was sent stays under Saved Reports and Files.`, confirmText: 'Send Back' }))) return false;
     }
     const next = snap ? F().normalize(snap) : cur;
     next.sentSlug = slug;
     await ui.Save.track(`report-fields:${c.id}`, () => Vault.writeCaseJSON(c.id, FILE, next));
-    ui.toast(`${name} is back on the Draft tab. Send Draft to Reports updates the report when you're done.`, 'success', 6000);
+    ui.toast(`${name} is back on the Write Report tab. Save as Report updates the report when you're done.`, 'success', 6000);
     return true;
   }
 
-  /** The PDF of a report sent from the Draft tab (v1.40), laid out like the Draft tab's Print/PDF:
+  /** The PDF of a report sent from the Write Report tab (v1.40), laid out like the Write Report tab's Print/PDF:
    * from the form as it was sent, else the form now when it still goes to this report. null when
-   * neither is there (sent before v1.39) or its text was changed under Reports. */
+   * neither is there (sent before v1.39) or its text was changed under Saved Reports. */
   async function sentPdf(c, slug) {
     const cur = await linkedReport(c, slug);
     if (!cur || cur.edited) return null;
@@ -608,7 +608,7 @@
         if (last) last.focus();
       } }, `Add ${L.item}`);
       // Offenders can be filled from Details → Suspects (name, date of birth, age); the description is entered here.
-      const fromSuspects = key === 'offendersList' && !archived ? h('button', { class: 'btn small', type: 'button', icon: 'person-exclamation', title: 'Pick which suspects from Details to add as offenders (or update the offender with the same name). The description of the day is entered here.', onclick: async () => {
+      const fromSuspects = key === 'offendersList' && !archived ? h('button', { class: 'btn small', type: 'button', icon: 'person-exclamation', title: 'Add suspects from Details as offenders', onclick: async () => {
         const list = (c.suspects || []).map((s) => (s && s.notIdentified ? { ...s, name: 'Not Identified' } : s)).filter((s) => s && String(s.name || '').trim());
         if (!list.length) { toast('No named suspects on the Details tab yet.'); return; }
         // v1.93: pick which suspects go into this report (the Primary ones are ticked to start with).
@@ -815,7 +815,7 @@
       const fundDialog = (g) => ui.openDialog((close) => {
         const den = h('select', { 'aria-label': 'Denomination' }, F().DENOMINATIONS.map((v) => h('option', { value: v, selected: v === (g.denomination || '') }, v || 'Denomination')));
         const qty = h('input', { type: 'number', min: 1, value: g.quantity || '', 'aria-label': 'Quantity', placeholder: 'How many bills' });
-        const ser = h('textarea', { rows: 5, 'aria-label': 'Serial numbers', placeholder: 'One serial number per line (or separated by commas)' });
+        const ser = h('textarea', { rows: 5, 'aria-label': 'Serial numbers', placeholder: 'One serial number per line' });
         ser.value = (g.serials || []).join('\n');
         const count = () => ser.value.split(/[\n,;]+/).map((x) => x.trim()).filter(Boolean);
         ser.addEventListener('input', () => { if (!qty.dataset.typed) qty.value = count().length || ''; });
@@ -995,7 +995,7 @@
         weight.addEventListener('input', () => { e.weight = weight.value; save(); });
         const narc = h('div', { class: 'rf-narc', hidden: e.type !== 'Narcotics' }, ui.field('Narcotic Type', drug), ui.field('Weight', weight));
         type.addEventListener('change', () => { e.type = type.value; narc.hidden = e.type !== 'Narcotics'; save(); });
-        const desc = h('textarea', { rows: 3, 'aria-label': `Exhibit ${n} description`, placeholder: 'What it is, where it was found, when and by whom.' });
+        const desc = h('textarea', { rows: 3, 'aria-label': `Exhibit ${n} description`, placeholder: 'What, where found, when, by whom' });
         desc.value = e.description || '';
         desc.addEventListener('input', () => { e.description = desc.value; save(); });
         // Photos: saved in the case's exhibit folder; click one to view it.
@@ -1325,7 +1325,7 @@
     } }, 'Print / PDF');
     // v1.33: one button sends the draft to Reports (an editable report laid out like the PDF) and to
     // Files (the PDF, in the Supplementary Report folder). Sending again brings both up to date.
-    const sendBtn = h('button', { class: 'btn primary', type: 'button', icon: 'send', title: 'Puts this report under Reports and its PDF under Files (Supplementary Report). Sending again updates both.', onclick: async () => {
+    const sendBtn = h('button', { class: 'btn primary', type: 'button', icon: 'send', title: 'Puts this report under Saved Reports and its PDF under Files (Supplementary Report). Sending again updates both.', onclick: async () => {
       save(0);
       await Save.flushAll();
       // v1.153: a checklist first: the exhibits the narrative mentions against the evidence list, and its dates in order.
@@ -1354,7 +1354,7 @@
             const choice = await ui.openDialog((close) => h('form', { class: 'send-choice', onsubmit: (e) => { e.preventDefault(); close('new'); } },
               h('h2', {}, 'Make a new report?'),
               h('p', {}, prevBase !== want ? `This draft was sent as ${prevTitle}. It's now ${want}.` : `This draft was already sent as ${prevTitle}.`),
-              h('p', { class: 'muted small' }, `New Report keeps ${prevTitle} exactly as it was sent (its sections, evidence and PDF) and adds ${want} under Reports and Files. Update replaces ${prevTitle}.`),
+              h('p', { class: 'muted small' }, `New Report keeps ${prevTitle} exactly as it was sent (its sections, evidence and PDF) and adds ${want} under Saved Reports and Files. Update replaces ${prevTitle}.`),
               h('div', { class: 'dialog-actions' },
                 h('button', { class: 'btn', type: 'button', onclick: () => close(null) }, 'Cancel'),
                 h('button', { class: 'btn', type: 'button', onclick: () => close('update') }, `Update ${prevTitle}`),
@@ -1370,11 +1370,11 @@
         const cur = await linkedReport(c, slug);
         let force = false;
         if (cur && cur.edited) {
-          force = await ui.confirmDialog({ title: 'Replace the edited report?', message: `${prevTitle || title} was changed under Reports. Replace its text with this draft? (Its PDF in Files is replaced too.)`, confirmText: 'Replace' });
+          force = await ui.confirmDialog({ title: 'Replace the edited report?', message: `${prevTitle || title} was changed under Saved Reports. Replace its text with this draft? (Its PDF in Files is replaced too.)`, confirmText: 'Replace' });
           if (!force) return;
         }
         await syncLinked(c, data, { force, slug, title });
-        // The form as sent is kept with the report, so Send Back to Draft can bring it back (v1.39).
+        // The form as sent is kept with the report, so Back to Write Report can bring it back (v1.39).
         await Save.track(`report-form:${c.id}:${slug}`, () => Vault.writeCaseJSON(c.id, formFile(slug), { ...structuredClone(data), sentSlug: slug }));
         if (data.sentSlug !== slug) { data.sentSlug = slug; save(0); await Save.flushAll(); }
         const r = await savePdfToCase(c, data, null, title);
@@ -1384,14 +1384,14 @@
           if (old !== r.path) await Vault.deleteFile(c.id, old).catch(() => {});
         }
         // v1.89: the Draft empties once the report is sent, ready for the next one. Undo puts it back;
-        // so does Send Back to Draft on the report under Reports.
+        // so does Back to Write Report on the report under Saved Reports.
         const before = structuredClone(data);
         await clearForm();
         undoToast(`Sent: Reports → ${title}, and Files → ${r.path.split('/').pop()}. The Draft is empty for the next report.`, before, 'The sent draft is back on the form.');
         ui.refresh();
       } catch { /* reported by Save */ }
-    } }, 'Send Draft to Reports');
-    // An empty form (Clear All, and after Send Draft to Reports).
+    } }, 'Save as Report');
+    // An empty form (Clear All, and after Save as Report).
     async function clearForm() {
       const fresh = F().normalize({});
       for (const k of Object.keys(data)) delete data[k];
@@ -1417,10 +1417,10 @@
       });
       t.append(' ', undo);
     }
-    // Clear All (v1.33): an empty form, to draft another report. What was sent stays in Reports and
+    // Clear All (v1.33): an empty form, to draft another report. What was sent stays in Saved Reports and
     // Files; the next send makes a new report.
     const clearBtn = h('button', { class: 'btn danger-ghost', type: 'button', title: 'Empties the form to draft another report. Reports and Files keep what was already sent.', onclick: async () => {
-      if (!(await ui.confirmDialog({ title: 'Clear the whole draft?', message: 'Every entry on this form is emptied, to draft another report. What you already sent stays under Reports and Files. A draft not sent yet can be brought back with Undo right after.', confirmText: 'Clear All', danger: true }))) return;
+      if (!(await ui.confirmDialog({ title: 'Clear the whole draft?', message: 'Every entry on this form is emptied, to draft another report. What you already sent stays under Saved Reports and Files. A draft not sent yet can be brought back with Undo right after.', confirmText: 'Clear All', danger: true }))) return;
       const before = structuredClone(data);
       await clearForm();
       undoToast('The form is empty: ready for another report.', before, 'The draft is back on the form.');
@@ -1429,13 +1429,13 @@
 
     // v1.108: See DEA 6: a report kept for statistics only. Victims, Offenders, Charges and Evidence
     // read "See DEA 6 for further information" and the summary points to the DEA 6 reports.
-    const dea6Btn = h('button', { class: 'btn', type: 'button', icon: 'file-earmark-text', title: 'For a report kept for statistics only: Victims, Offenders, Charges and Evidence say See DEA 6 for further information, and the Summary of Investigation points to the DEA 6 reports', onclick: async () => {
+    const dea6Btn = h('button', { class: 'btn', type: 'button', icon: 'file-earmark-text', title: 'For a statistics-only report: every part says See DEA 6 for further information.', onclick: async () => {
       const fed = String(c.agencyNumber || '').trim();
       const text = F().dea6Narrative(fed);
       const had = String(data.narrative || '').trim();
       const ok = await ui.confirmDialog({ title: 'See DEA 6 for further information?',
         message: `Victims, Offenders, Charges and Evidence Inventoried show "${F().SEE_DEA6}" (entries already there are kept). The Summary of Investigation becomes: ${text}${had && had !== text ? ' The summary written now is replaced (Undo brings it back).' : ''}${fed ? '' : ' This case has no Federal Jacket Number yet: add it on the Details tab, then click See DEA 6 again.'}`,
-        confirmText: 'See DEA 6' });
+        confirmText: 'Use DEA-6 Narrative' });
       if (!ok) return;
       const before = structuredClone(data);
       F().seeDea6(data, fed);
@@ -1445,7 +1445,7 @@
       await Save.flushAll();
       undoToast('Victims, Offenders, Charges and Evidence now say See DEA 6 for further information, and the summary is filled in.', before, 'The draft is back as it was.');
       ui.refresh();
-    } }, 'See DEA 6');
+    } }, 'Use DEA-6 Narrative');
 
     // v1.39: the heading names the Officer Report Type picked (Supplementary Report – Purchase…);
     // Show All / Hide All sit up here, and Save Changes sits with the other buttons.
@@ -1456,7 +1456,7 @@
         heading, h('div', { class: 'spacer' }),
         h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-down', title: 'Open every part on screen', onclick: () => foldAll(false) }, 'Show All'),
         h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-right', title: 'Fold every part away on screen (they stay in the PDF). Open one with its arrow.', onclick: () => foldAll(true) }, 'Hide All')),
-      h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case: fill it in, then Send Draft to Reports puts it under Reports and its PDF under Files. Clear All starts another one. Saved as report-fields.json.'),
+      h('p', { class: 'muted small explain' }, 'The Supplementary Report for this case: fill it in, then Save as Report puts it under Saved Reports and its PDF under Files. Clear All starts another one. Saved as report-fields.json.'),
       h('div', { class: 'rf-actions' }, archived ? null : sendBtn, printBtn, archived ? null : clearBtn, archived ? null : dea6Btn, h('div', { class: 'spacer' }), archived ? null : nextBtn, archived ? null : saveBtn),
       // v1.85: the department letterhead, as at the top of the PDF.
       archived || !root.CVLetterhead ? null : root.CVLetterhead.summary(), // v1.118: one line; the editor is in Vault → My Profile

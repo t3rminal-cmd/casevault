@@ -1,6 +1,6 @@
 /* CaseVault — chain of custody for each exhibit (v1.156).
  *
- * Every exhibit on the Draft tab keeps a dated log of who had it: received, checked out, returned,
+ * Every exhibit on the Write Report tab keeps a dated log of who had it: received, checked out, returned,
  * sent to the lab, taken to court, destroyed. Each entry: date, time, action, released by, received
  * by, purpose. The log prints as a PDF (one table per exhibit) with the report.
  * Plain logic over js/report-pdf.js's PDF writer, so the tests run it under Node.

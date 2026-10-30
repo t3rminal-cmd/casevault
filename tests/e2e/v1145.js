@@ -12,9 +12,9 @@ const SP = process.env.SP + '/v1145';
 
   // 1. OPERATION CASES in the case list and on the home page.
   const side = (await p.textContent('#sidebar .mission-group > summary .op-name')).trim();
-  ok(side === 'OPERATION', `the case list says OPERATION (v1.147: no "CASES"): ${side}`);
+  ok(side === 'MISSIONS', `the case list says MISSIONS (v1.176): ${side}`);
   const heads = await p.$$eval('.dash-section h2', (x) => x.map((e) => e.textContent.trim().toUpperCase()));
-  ok(heads.includes('OPERATION CASES') && !heads.some((t) => /MISSION FILES/.test(t)), `the home page says Operation Cases: ${heads.join(' | ')}`);
+  ok(heads.includes('MISSIONS') && !heads.some((t) => /MISSION FILES/.test(t)), `the home page says Operation Cases: ${heads.join(' | ')}`);
   const sideClip = await p.$eval('#sidebar .mission-group > summary .op-name', (e) => e.scrollWidth <= e.clientWidth + 1);
   ok(sideClip, 'OPERATION CASES fits in the case list');
 
