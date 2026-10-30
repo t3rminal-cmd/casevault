@@ -693,10 +693,12 @@
       // v1.67: a green check in the header once every field in the part is filled (seen folded too).
       // v1.68: it sits in its own column beside the fold arrow, so the checks line up down the page.
       const done = h('span', { class: 'rf-done', title: 'Every field in this part is filled in (or ticked off)' }, ui.icon('check-circle-fill'), h('span', { class: 'sr-only' }, `${title}: complete`));
+      // v1.177: how much of the part is filled in, beside its name (seen folded too).
+      const prog = h('span', { class: 'rf-progress' });
       const sec = h('section', { class: `rf-section rf-${id}` },
         // v1.76: "Hidden on screen" floats beside the checkbox on hover; "Not in the report" has its
         // own column next to the green check.
-        h('div', { class: 'rf-head' }, h('label', { class: 'rf-include' }, cb, h('span', { class: 'rf-include-tip', 'aria-hidden': 'true' }, h('span', { class: 'tip-on' }, 'In the report. Untick to leave it out of the PDF'), h('span', { class: 'tip-off' }, 'Not in the report. Tick to put it back'), h('span', { class: 'tip-hidden' }, 'Hidden on screen (it stays in the PDF)'))), h('h3', { icon }, title), h('div', { class: 'spacer' }), h('span', { class: 'rf-off-tag', 'aria-hidden': 'true' }, 'Not in the report'), done, fold),
+        h('div', { class: 'rf-head' }, h('label', { class: 'rf-include' }, cb, h('span', { class: 'rf-include-tip', 'aria-hidden': 'true' }, h('span', { class: 'tip-on' }, 'In the report. Untick to leave it out of the PDF'), h('span', { class: 'tip-off' }, 'Not in the report. Tick to put it back'), h('span', { class: 'tip-hidden' }, 'Hidden on screen (it stays in the PDF)'))), h('h3', { icon }, title), prog, h('div', { class: 'spacer' }), h('span', { class: 'rf-off-tag', 'aria-hidden': 'true' }, 'Not in the report'), done, fold),
         inner);
       let pending = 0;
       // v1.68: a line or list that is ticked off counts as filled, and so does a whole part that is
@@ -710,6 +712,8 @@
             && !el.closest('.combo-list, datalist, .rf-multi, .rf-vehicles-list, .rf-line-off, .rf-extras, .rf-photo-label, .rf-start-at, .rf-ev-note-input') && (() => { const hid = el.parentElement && el.parentElement.closest('[hidden]'); return !hid || hid === inner; })());
           const offLines = inner.querySelectorAll('.rf-line-off').length;
           complete = (boxes.length || offLines) ? boxes.every((el) => String(el.value || '').trim()) : false;
+          const nFilled = boxes.filter((el) => String(el.value || '').trim()).length;
+          prog.textContent = boxes.length && !complete ? `${nFilled} of ${boxes.length} filled` : '';
           // v1.93: a list still ticked in with nothing added (no Police Personnel, no charges…) isn't
           // filled in; tick it off when it doesn't apply.
           if (complete && inner.querySelector('.rf-list:not(.rf-line-off) .rf-none')) complete = false;
@@ -725,7 +729,7 @@
             }
           }
         }
-        if (!cb.checked) inner.querySelectorAll('.rf-missing').forEach((el) => el.classList.remove('rf-missing'));
+        if (!cb.checked) { inner.querySelectorAll('.rf-missing').forEach((el) => el.classList.remove('rf-missing')); prog.textContent = ''; }
         refreshNext();
         done.classList.toggle('on', complete);
         done.setAttribute('aria-hidden', String(!complete));

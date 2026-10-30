@@ -17,6 +17,7 @@ const SP = process.env.SP + '/v1138';
   }, ids.c2);
   await p.evaluate((i) => { location.hash = `#/case/${i}/timeline`; }, ids.c2); await p.waitForSelector('.tl-item'); await p.waitForTimeout(400);
 
+  await p.mouse.move(2, 2); await p.waitForTimeout(250); // no hover lift on a row while measuring
   const geo = await p.$$eval('.tl-item', (x) => x.map((e) => {
     const body = e.querySelector('.tl-body').getBoundingClientRect(); const s = e.querySelector('.tl-who .tl-suspect');
     const r = s && s.getBoundingClientRect();

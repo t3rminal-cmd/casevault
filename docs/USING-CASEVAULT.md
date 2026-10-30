@@ -213,6 +213,21 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.177
+
+- **Easier to read.** Text is now in Windows' own font (Segoe UI). Case numbers, codes, dates on the Timeline and counts stay in the monospace font, so they line up. Nothing extra is loaded
+- **One heading style.** Section headings are in normal Title Case instead of spaced capitals. The folders in the case list (MISSIONS, GENERAL FILES, CLOSED) keep their capitals
+- **The case header on one line:** the case number, the subject, where it is and its status
+- **Timeline:**
+  - When a case has events, the form folds away behind **Add Event**, so the events are what you see first. An empty timeline still opens with the form, and Edit on an event opens it
+  - The four count cards hide while the timeline is empty
+- **Write Report:** the part bars are shorter and closer together, and each shows how much is filled in (e.g. *Offense · 5 of 9 filled*). The green check still shows when a part is complete
+- **Nothing hides under the round buttons** at the bottom right: every page has room below its last box
+- **Fewer icons:** small secondary buttons show just their words. Main buttons, tabs, home tiles and headings keep their icons
+- **The status icons at the top say what they are:** Offline, AI / AI Off, Memory, Saved, Off. They hide the words on a phone-width window
+- **The Mail tab is off until you turn it on:** Settings → Department Mail → *Show the Mail tab on cases*
+- **Smaller updates:** the notes of every earlier version (`previous-versions`) stay on GitHub and are no longer copied to the SSD
+
 ### What's new in v1.176
 
 - **One name for each thing.** *Operation* is now **Mission** everywhere, and *Independent* is now **General Files** everywhere (case list, home page, dialogs and help)
@@ -248,19 +263,9 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
   - The card button beside a contact saves someone typed on a case into the Rolodex
   - On the Write Report tab, *ASA* and *AUSA Approving Search Warrant* suggest them too
 
-### What's new in v1.174
-
-- **Closed cases' suspects are not suggested.** When you type a suspect's name (New Case, a case's Suspects, a Mission's Subject Data and New Case Group), the suspects and subjects of closed and archived cases are no longer offered
-- **Fewer hover boxes.** The case list on the left no longer shows hover boxes such as *Fold or unfold*. Only a name that is cut off, and what a due count is waiting on, still show one. The boxes that just repeated a button (*Close*, *Open*) are gone too
-- **New Case: search the known suspects.** Type in *Subject Name* and the suspects of your open cases that match are listed with their **Name, DOB, Gender and IR Number**:
-  - Search by name, date of birth or IR number
-  - Pick one: the Subject Name is filled in, and the person becomes the new case's main suspect with their details (date of birth, residence, description and record numbers) from the other case
-  - *Undo* takes it back
-- **Fix:** a suspect marked *Not identified* was suggested as "false" in the Suspects name box
-
 ### Earlier versions
 
-The notes for v1.118 and earlier are in [previous-versions/WHATS-NEW.md](../previous-versions/WHATS-NEW.md).
+The notes for v1.118 and earlier are in [What's New, version by version](https://github.com/t3rminal-cmd/casevault/blob/main/previous-versions/WHATS-NEW.md) (on GitHub).
 
 ## Reports (field notes and drafts)
 

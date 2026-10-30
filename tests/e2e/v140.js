@@ -11,6 +11,7 @@ const SP = process.env.SP;
   // timeline
   await p.evaluate(async (id) => { await Vault.saveTimeline(id, { events: [{ id: 'e1', date: '2026-09-30', time: '14:30', kind: 'deadline', title: 'Grand jury subpoena return', note: 'Synthetic', done: false }, { id: 'e2', date: '2026-10-12', time: '', kind: 'event', title: 'Controlled buy', note: '', done: false }] }); }, id);
   await p.evaluate((id) => { location.hash = `#/case/${id}/timeline`; }, id); await p.waitForTimeout(900);
+  await p.evaluate(() => { const f = document.querySelector('.timeline-form'); if (f && f.hidden) document.querySelector('.tl-add-btn').click(); }); // v1.177: the form opens from Add Event
   console.log('1 buttons:', await p.$$eval('.timeline-form .form-actions button:not([hidden])', (x) => x.map((e) => e.textContent)));
   await p.fill('.tl-title-input', 'Something'); await p.selectOption('.timeline-form select >> nth=0', 'deadline'); await p.fill('.timeline-form textarea[aria-label=Note]', 'note');
   await p.click('.timeline-form button:has-text("Clear")');

@@ -68,8 +68,12 @@
     for (const el of [domains, book, marking, requireMarking, maxMB, footer, signature]) el.addEventListener('change', commit);
     status.textContent = `Allowed domains: ${cur.domains.join(', ') || 'none yet'}`;
 
+    // v1.177: the Mail tab on cases is off until it's wanted.
+    const showTab = h('input', { type: 'checkbox', checked: !!V().data.settings.showMailTab });
+    showTab.addEventListener('change', () => save({ showMailTab: showTab.checked }, showTab.checked ? 'The Mail tab shows on every case.' : 'The Mail tab is hidden.'));
     return h('section', { 'data-section': 'mail' },
       h('h3', {}, 'Department mail'),
+      h('label', { class: 'check-row' }, showTab, h('span', {}, 'Show the Mail tab on cases')),
       h('p', { class: 'muted small explain' }, 'Mail from a case\'s Mail tab can only go to these domains. chicagopolice.org, dea.gov and uspis.gov are filled in to start with. ', h('code', {}, 'agency.gov'), ' allows exactly @agency.gov; ', h('code', {}, '*.agency.gov'), ' also allows its sub-domains.'),
       ui.field('Allowed mail domains', domains),
       status,

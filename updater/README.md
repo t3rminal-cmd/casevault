@@ -97,7 +97,7 @@ cases) is never read or written by the updater.
 The plan fingerprints every file on the SSD the way Git does (the "blob id") and compares it with the
 fingerprints GitHub lists for the newest commit (one request). Only files that differ are fetched, so an
 update is usually a few hundred KB. `tools/` in the repository goes to the CV-AI drive (found by its
-`Start-CaseVault.bat` and `casevault-helper` folder); `.github/`, `tests/`, `scripts/` and `updater/`
+`Start-CaseVault.bat` and `casevault-helper` folder); `.github/`, `tests/`, `scripts/`, `previous-versions/` and `updater/`
 go nowhere. A file is removed only when the previously recorded version had it and the new one
 doesn't, so a copy without `version.json` never loses a file.
 

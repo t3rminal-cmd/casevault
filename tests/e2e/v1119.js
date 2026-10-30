@@ -48,6 +48,7 @@ const SP = process.env.SP + '/v1119';
     Vault.sortEvents(t.events); await Vault.saveTimeline(id, t);
   }, ids.c2);
   await p.evaluate((i) => { location.hash = '#/x'; location.hash = `#/case/${i}/timeline`; }, ids.c2); await p.waitForSelector('.tl-tools');
+  await p.evaluate(() => { const f = document.querySelector('.timeline-form'); if (f && f.hidden) document.querySelector('.tl-add-btn').click(); }); // v1.177: the form opens from Add Event
   // Add one more through the form.
   await p.selectOption('.timeline-form select:near(:text("Type"))', 'buy').catch(async () => { await p.$eval('.timeline-form select', (s) => { s.value = 'buy'; s.dispatchEvent(new Event('change', { bubbles: true })); }); });
   await p.evaluate(() => { const s = [...document.querySelectorAll('.timeline-form select')].find((x) => [...x.options].some((o) => o.value === 'buy')); s.value = 'buy'; s.dispatchEvent(new Event('change', { bubbles: true })); const el = document.querySelector('.timeline-form .date-field'); el.value = '2026-09-22'; el.dispatchEvent(new Event('input', { bubbles: true })); });

@@ -73,7 +73,7 @@ const SP = process.env.SP + '/v1106';
 
   // (11) headings in capitals, (13) a visible focus outline.
   await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(900);
-  ok(await p.evaluate(() => [...document.querySelectorAll('.section-title')].every((e) => getComputedStyle(e).textTransform === 'uppercase')), 'every section heading in capitals');
+  ok(await p.evaluate(() => [...document.querySelectorAll('.section-title')].every((e) => getComputedStyle(e).textTransform === 'none')), 'every section heading in one style (v1.177: Title Case)');
   await p.keyboard.press('Tab'); await p.keyboard.press('Tab');
   ok(await p.evaluate(() => { const a = document.activeElement; return !!a && getComputedStyle(a).outlineStyle !== 'none'; }), 'the focused control has an outline');
   console.log('errors', errs); await b.close();

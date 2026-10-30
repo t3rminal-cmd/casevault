@@ -15,11 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.176
+## What's New in v1.177
 
-- **Mission** and **General Files** everywhere; **Write Report** and **Saved Reports** tabs; **Move Case**
-- A simpler home page (7 tiles), a ⋮ menu in the case list, and no repeated boxes on the Mission page
-- Shorter placeholders and hover boxes
+- **Easier to read:** Segoe UI text, Title Case headings, the case header on one line
+- **Timeline** form behind Add Event; **Write Report** parts show how much is filled; labelled status icons
+- Fewer icons on small buttons; the Mail tab is a setting; smaller updates
 
 ## What CaseVault Does
 
@@ -78,7 +78,7 @@ Use ⋮ → Report a Problem to save a report (with case details scrubbed) for t
 | `tools/` | The launcher and the Firefox helper for the CV-AI drive |
 | `updater/` | The CaseVault Updater for the SSD (Python, standard library only) and its tests |
 | `docs/` | The guides below |
-| `previous-versions/` | What every earlier version added, and its What's New notes |
+| `previous-versions/` | What every earlier version added, and its What's New notes (kept on GitHub; not copied to the SSD) |
 | `tests/` | Unit tests and the browser tests (made-up Doe/Roe/Poe data only) |
 | `scripts/` | The icon builder and the CI guard against committed case data |
 | `.github/` | The publish workflow (tests, safety checks, GitHub Pages) and Dependabot |

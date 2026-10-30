@@ -19,7 +19,7 @@ const SP = process.env.SP + '/v1118';
   ok(closed[0] && closed[1] < 110, `an empty Closed Files is one line (${closed[1]} px)`);
   // 10. v1.137: the top-bar icons have no captions; each still names itself in its hover box.
   const caps = await p.$$eval('.tb-status > :not([hidden])', (x) => x.map((e) => [e.id, getComputedStyle(e, '::after').content, e.getAttribute('data-tip') || e.getAttribute('title') || e.getAttribute('aria-label') || '']));
-  ok(caps.every(([, after]) => after === 'none' || after === 'normal') && caps.filter(([id]) => ['save-status', 'btn-power'].includes(id)).every(([, , tip]) => tip), `top-bar icons without captions: ${JSON.stringify(caps)}`);
+  ok(caps.filter(([id]) => ['net-status', 'engine-status', 'mem-status', 'save-status', 'btn-power'].includes(id)).every(([, after]) => /^"\w/.test(after)), `v1.177: each top-bar icon has a one-word caption: ${JSON.stringify(caps)}`);
   await p.screenshot({ path: `${SP}/landing.png` });
   // 9. General Files: the Mission's number on one line.
   await p.evaluate(() => { location.hash = '#/general'; }); await p.waitForSelector('.general-table');

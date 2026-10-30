@@ -4,6 +4,16 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.174
+
+- **Closed cases' suspects are not suggested.** When you type a suspect's name (New Case, a case's Suspects, a Mission's Subject Data and New Case Group), the suspects and subjects of closed and archived cases are no longer offered
+- **Fewer hover boxes.** The case list on the left no longer shows hover boxes such as *Fold or unfold*. Only a name that is cut off, and what a due count is waiting on, still show one. The boxes that just repeated a button (*Close*, *Open*) are gone too
+- **New Case: search the known suspects.** Type in *Subject Name* and the suspects of your open cases that match are listed with their **Name, DOB, Gender and IR Number**:
+  - Search by name, date of birth or IR number
+  - Pick one: the Subject Name is filled in, and the person becomes the new case's main suspect with their details (date of birth, residence, description and record numbers) from the other case
+  - *Undo* takes it back
+- **Fix:** a suspect marked *Not identified* was suggested as "false" in the Suspects name box
+
 ## What's new in v1.173
 
 - **Check the Mission.** *Mission Health* on the Mission page has a **Check the Mission** button:
