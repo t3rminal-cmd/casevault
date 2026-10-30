@@ -48,6 +48,8 @@ if (spawnSync(PWSH, ['-NoProfile', '-Command', 'exit 0']).status !== 0) { consol
     await p.reload(); await p.waitForTimeout(2500);
     const waiting = await p.evaluate(() => document.body.innerText);
     ok(/Start CaseVault Again to Reconnect/i.test(waiting) && !/is not running/.test(waiting), 'an old key: "Start CaseVault Again to Reconnect", not "not running"');
+    // v1.178: the refused key isn't kept in the browser.
+    ok(await p.evaluate(() => localStorage.getItem('cv-helper-key')) === null, 'the refused old key is removed from the browser');
     await p2.goto(`http://127.0.0.1:${PORT}/?k=${KEY}`); await p2.waitForTimeout(2500);
     await p.waitForTimeout(2500);
     // (This test vault is empty, so "reconnected" is the helper's next screen: create the vault.)

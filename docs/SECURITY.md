@@ -31,7 +31,8 @@ settings saved on the PC never hold names.
 
 **The helper (1.16)** answers only `127.0.0.1`, only the CaseVault page, and only requests that
 carry the key it made when it started (given to the tab it opens, and shared with the browser's other
-CaseVault tabs). Other programs that just try
+CaseVault tabs: it stays in the browser's local storage, which other tabs can see, and is removed
+when the helper refuses it after a restart and at Power Off). Other programs that just try
 the address are refused. A program running as your own Windows user could still read that key, so
 it is not a replacement for BitLocker and a locked PC. File names Windows treats as devices (CON,
 NUL, COM1…) are refused. A file sent to it must state its size as a plain number and be at most
