@@ -39,7 +39,7 @@
 
   // Charges to pick from (v1.29): the Reference's Illinois and federal statutes; search by
   // statute or wording, picking fills both boxes. They can still be typed over.
-  // v1.32: the charges on the case's Supplementary Report (Draft tab) come first.
+  // v1.32: the charges on the case's Supplementary Report (Write Report tab) come first.
   const chargeItems = (fromReport = []) => [
     ...fromReport.map((x) => ({ label: `${x.statute || ''} ${x.description || ''}`.trim(), hint: 'On the Supplementary Report', statute: x.statute || '', desc: x.description || '' })),
     ...((root.CVRefData && root.CVRefData.CHARGES) || []).flatMap((g) => g.codes.map(([statute, desc]) => ({ label: `${statute} ${desc}`, hint: g.title, statute, desc }))),
@@ -97,7 +97,7 @@
     const reportCharges = ((draftForm && draftForm.charges) || []).filter((x) => (x.statute || x.description) && !isSee(x));
     // v1.114: the reports' victims (Draft and sent), offered on each charge by the arrestee's RD number.
     const forms = [];
-    if (draftForm) forms.push({ rdNumber: draftForm.rdNumber || c.number || '', victimsList: draftForm.victimsList || [], title: 'Draft tab' });
+    if (draftForm) forms.push({ rdNumber: draftForm.rdNumber || c.number || '', victimsList: draftForm.victimsList || [], title: 'Write Report tab' });
     if (!archived) {
       for (const d of (await Vault.listDrafts(c.id).catch(() => [])).filter((x) => x.fromFields)) {
         const f = await Vault.readCaseJSON(c.id, `report-fields-${d.slug}.json`).catch(() => null);
@@ -115,7 +115,7 @@
       }
     }
     if (token !== ui.state.renderToken) return;
-    // v1.113: an arrestee with no charges typed yet gets the Draft tab's charges by itself.
+    // v1.113: an arrestee with no charges typed yet gets the Write Report tab's charges by itself.
     let autoCharged = false;
     // Once only: charges you removed on purpose don't come back.
     if (!archived && reportCharges.length) for (const a of arrest.arrestees) if (!a.chargesAuto && K().chargesBlank(a)) {
@@ -158,7 +158,7 @@
       if (f.victimPick && root.CVCombo) return CVCombo.attach(el, { items: () => [{ value: K().STATE_VICTIM, label: K().STATE_VICTIM, hint: 'Officer name only' }], onPick: () => { if (onChange) onChange(); } });
       // v1.114: a property's description: pick one of the four or write your own.
       if (f.propertyPick && root.CVCombo) return CVCombo.attach(el, { label: 'Show the descriptions', items: () => K().PROPERTY_KINDS.map((k) => ({ value: k, label: k })) });
-      // v1.92: CB # and IR # can be DNA (does not apply), as on the Draft tab.
+      // v1.92: CB # and IR # can be DNA (does not apply), as on the Write Report tab.
       if ((f.key === 'bookingNumber' || f.key === 'irNumber') && root.CVCombo) {
         return CVCombo.attach(el, { items: () => [{ value: 'DNA', label: 'DNA', hint: 'Does Not Apply' }] });
       }
@@ -242,7 +242,7 @@
         changed(); redraw();
         toast(`${p.name}: name and description filled in from the ${p.from}. Check them before printing.`, 'success', 5000);
       });
-      return h('div', { class: 'arrest-pick-row' }, ui.field('Arrestee', sel, '', 'Fills the name, date of birth and description from a suspect on the Details tab or an offender on the Draft tab'));
+      return h('div', { class: 'arrest-pick-row' }, ui.field('Arrestee', sel, '', 'Fills the name, date of birth and description from a suspect on the Details tab or an offender on the Write Report tab'));
     };
     const list = h('div', { class: 'arrestees' });
     const draw = () => {
@@ -297,7 +297,7 @@
             h('table', { class: 'charges-table' }, charges),
             archived ? null : h('div', { class: 'row' },
               h('button', { class: 'btn small', type: 'button', onclick: () => { a.charges.push(K().emptyCharge()); changed(); draw(); } }, '+ Add Charge'),
-              reportCharges.length ? h('button', { class: 'btn small', type: 'button', title: 'Adds the charges from the Supplementary Report (Draft tab) that aren\'t here yet', onclick: () => {
+              reportCharges.length ? h('button', { class: 'btn small', type: 'button', title: 'Adds the charges from the Supplementary Report (Write Report tab) that aren\'t here yet', onclick: () => {
                 const have = new Set(a.charges.map((x) => `${(x.statute || '').trim()}|${(x.description || '').trim()}`));
                 a.charges = a.charges.filter((x) => (x.statute || '').trim() || (x.description || '').trim());
                 for (const x of reportCharges) if (!have.has(`${(x.statute || '').trim()}|${(x.description || '').trim()}`)) a.charges.push(K().withClass(K().emptyCharge(), x.statute || '', x.description || ''));
@@ -416,11 +416,11 @@
         } }, 'Copy')))),
       h('div', { class: 'dialog-actions' }, h('button', { class: 'btn', type: 'button', onclick: () => done() }, 'Cancel'))));
 
-    // v1.113: Show All / Hide All, as on the Draft tab.
+    // v1.113: Show All / Hide All, as on the Write Report tab.
     const foldAll = (want) => panel.querySelectorAll(`.arrest-section.foldable${want ? ':not(.folded)' : '.folded'} > .fold-head .fold-btn`).forEach((b) => b.click());
     const showAll = h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-down', title: 'Open every part on screen', onclick: () => foldAll(false) }, 'Show All');
     const hideAll = h('button', { 'data-ro-ok': 'true', class: 'btn small ghost', type: 'button', icon: 'chevron-right', title: 'Fold every part away on screen (they stay on the report)', onclick: () => foldAll(true) }, 'Hide All');
-    if (autoCharged) { changed(); toast('Charges filled in from the Draft tab. Change or remove them as needed.', 'info', 5000); }
+    if (autoCharged) { changed(); toast('Charges filled in from the Write Report tab. Change or remove them as needed.', 'info', 5000); }
     // v1.143: the parts that aren't there are left out (replaceChildren would show null as "null").
     panel.replaceChildren(...[
       h('div', { class: 'toolbar arrest-toolbar' },
@@ -464,7 +464,7 @@
 
   /* ---------------- Close case ---------------- */
 
-  // v1.39: the Draft tab's Update Information boxes that closing fills in, by disposition.
+  // v1.39: the Write Report tab's Update Information boxes that closing fills in, by disposition.
   const CLOSE_CODES = {
     arrest: { status: '3 - Cleared Closed', cleared: '1 - Arrest' },
     exceptional: { status: '4 - Cleared Open', cleared: '5 - Other' },
@@ -546,7 +546,7 @@
       const refRow = h('div', { class: 'close-arrest-ref', hidden: true }, ui.field('Arrest report on RD', refSel, '', 'The case number whose Arrest Details hold the arrest report. The case numbers closed without arrest details of their own point to it.'));
       const date = h('input', { type: 'date', value: (c.dates && c.dates.closed) || today(), required: true });
       const by = h('input', { type: 'text', maxlength: 120, value: (c.closure && c.closure.closedBy) || ((Vault.data.settings.affiant || {}).name || ''), placeholder: 'Your name and star number', 'aria-label': 'Closed by' });
-      const note = h('textarea', { rows: 3, placeholder: 'Optional: how the case ended, where the final report is, who was notified…' });
+      const note = h('textarea', { rows: 3, placeholder: 'How it ended (optional)' });
       // Which case numbers.
       const picks = members.map((x) => {
         const cb = h('input', { type: 'checkbox', checked: x.id === c.id || !!operation, 'aria-label': `Close ${x.number || 'no number'}` });
@@ -556,7 +556,7 @@
         const cb = h('input', { type: 'checkbox', 'aria-label': `Also close ${x.number || 'no number'}` });
         return { x, names, cb, row: h('label', { class: 'check-row close-pick' }, cb, h('span', {}, h('strong', {}, x.number || 'No case number'), x.subject ? h('span', { class: 'muted small' }, ` ${x.subject}`) : '', h('span', { class: 'muted small block' }, `Same suspect: ${names.join(', ')}`))) };
       });
-      // The Draft tab's boxes.
+      // The Write Report tab's boxes.
       const upd = h('input', { type: 'checkbox', checked: !!RF });
       const status = h('select', { 'aria-label': 'Status' }, optsOf('status').map((o) => h('option', { value: o }, o || '—')));
       const cleared = h('select', { 'aria-label': 'How Cleared' }, optsOf('cleared').map((o) => h('option', { value: o }, o || '—')));
@@ -630,7 +630,7 @@
       h('div', { class: 'radio-list' }, radios.map((x) => x.row)),
       reasonRow, arrestNote, refRow,
       h('div', { class: 'form-grid' }, ui.field('Closed on', date), ui.field('Closed by', by)),
-      RF ? h('div', {}, h('label', { class: 'check-row' }, upd, h('span', {}, h('strong', {}, 'Update the Draft tab'), h('span', { class: 'muted small' }, ': Status, How Cleared and the Update Information boxes of each case number closed'))), draftBox) : '',
+      RF ? h('div', {}, h('label', { class: 'check-row' }, upd, h('span', {}, h('strong', {}, 'Update the Write Report tab'), h('span', { class: 'muted small' }, ': Status, How Cleared and the Update Information boxes of each case number closed'))), draftBox) : '',
       ui.field('Closing note', note),
       CVKit.cancelRow(h, () => close(null), ok));
     });
@@ -672,7 +672,7 @@
         if (closure.disposition === 'arrest' && !refHere) { oc.arrest = true; delete oc.arrestRemoved; }
         Vault.logActivity(oc, `Closed: ${K().disposition(closure.disposition).label}${closure.reason ? ` (${closure.reason})` : ''}${closure.closedBy ? `, by ${closure.closedBy}` : ''}`);
         await Save.track(`case:${oc.id}`, () => Vault.saveCase(structuredClone(oc)));
-        // The Draft tab of each case closed: Status, How Cleared and the boxes ticked (v1.39).
+        // The Write Report tab of each case closed: Status, How Cleared and the boxes ticked (v1.39).
         if (draft && RF) {
           let d = null;
           try { d = await Vault.readCaseJSON(oc.id, 'report-fields.json'); } catch { /* none yet */ }
@@ -751,7 +751,7 @@
         if (op.status !== 'Closed') continue;
         const ok = await ui.confirmDialog({
           title: 'Reopen the Mission?',
-          message: `${label} is closed. Reopen the Mission too, so it is back in OPERATION CASES with this case?`,
+          message: `${label} is closed. Reopen the Mission too, so it is back in MISSIONS with this case?`,
           confirmText: 'Reopen Mission',
           cancelText: 'Keep it closed',
         });

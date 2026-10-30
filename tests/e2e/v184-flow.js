@@ -17,7 +17,7 @@ const ok = (cond, msg) => console.log(cond ? 'PASS' : 'FAIL', msg);
 
   // Status dropdown
   await p.evaluate((id) => { location.hash = `#/case/${id}/details`; }, ids.c); await p.waitForTimeout(800);
-  console.log('status options', await p.$$eval('.details-row-title select option', (o) => o.map((x) => x.textContent + (x.disabled ? '(d)' : ''))), await p.textContent('.status-hint'));
+  console.log('status options', await p.$$eval('.details-row-title select option', (o) => o.map((x) => x.textContent + (x.disabled ? '(d)' : ''))), await p.getAttribute('.details-row-title label.field[title]', 'title'));
 
   // Close by arrest without arrest report
   await p.click('button:has-text("Close Case")'); await p.waitForSelector('.close-form');

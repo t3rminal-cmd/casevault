@@ -932,14 +932,14 @@
 
   /**
    * v1.169: the inventory numbers of the documents against the case's evidence list (the exhibits
-   * on the Draft tab, each with its inventory number and chain of custody):
+   * on the Write Report tab, each with its inventory number and chain of custody):
    *  - a number in a document that isn't on the list: a near-identical one on the list is a typo
    *    (High); otherwise it is missing from the list (Medium);
    *  - a number on the list that no document gives (Low: it may be in a report not checked).
    * evidence: [{ number, inventory }]; only exhibits with an inventory number count.
    */
   function evidenceCheck(docs, evidence, push) {
-    const SRC = 'Evidence list (Draft tab)';
+    const SRC = 'Evidence list (Write Report tab)';
     const listed = new Map();
     for (const e of evidence || []) {
       const v = String((e && e.inventory) || '').replace(/\D/g, '');
@@ -964,7 +964,7 @@
       push(makeFlag(docs, {
         severity: 'Medium', confidence: 'Medium', type: 'inventory',
         title: `Inventory number ${f.display} is not on the evidence list`,
-        detail: `${docs[x.doc].name} gives inventory number ${f.display}, but no exhibit on the Draft tab has it. Add the exhibit, or check the number.`,
+        detail: `${docs[x.doc].name} gives inventory number ${f.display}, but no exhibit on the Write Report tab has it. Add the exhibit, or check the number.`,
         statement: x, statementFact: f, source: null, sourceLabel: SRC,
       }), `e|miss|${v}`);
     }

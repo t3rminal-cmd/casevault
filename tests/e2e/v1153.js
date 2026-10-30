@@ -14,7 +14,7 @@ const SP = process.env.SP + '/v1153';
   const today = await p.evaluate(() => Vault.localDay());
   const plus = (n) => { const d = new Date(`${today}T12:00:00`); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 
-  // 0. Reports and the Draft tab are not loaded at start-up.
+  // 0. Reports and the Write Report tab are not loaded at start-up.
   ok(await p.evaluate(() => !window.CVDraftsUI && !window.CVReportFieldsUI), 'Reports and Draft are not loaded at start-up');
 
   // 1. Timeline: Quick Add "Search Warrant Served" adds the event and its return deadline 10 days later.
@@ -77,7 +77,7 @@ const SP = process.env.SP + '/v1153';
   // 8. Before You Send: the narrative mentions an exhibit that isn't in the evidence list.
   await p.evaluate(async (i) => { await CVLazy.reports(); const d = await CVReportFieldsUI.load({ id: i }); await Vault.writeCaseJSON(i, 'report-fields.json', { ...d, narrative: 'On 01/05/2026 the UC bought (Exhibit 9).', evidence: [] }); }, ids.c);
   await open('draft');
-  await p.click('button:has-text("Send Draft to Reports")'); await p.waitForSelector('.send-check', { timeout: 8000 }).catch(() => {});
+  await p.click('button:has-text("Save as Report")'); await p.waitForSelector('.send-check', { timeout: 8000 }).catch(() => {});
   const check = await p.textContent('.send-check').catch(() => '');
   ok(/Exhibit 9, which is not in the evidence list/.test(check), `checklist before sending: ${check.replace(/\s+/g, ' ').slice(0, 140)}`);
   await p.screenshot({ path: `${SP}/send-check.png` });

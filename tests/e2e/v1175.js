@@ -34,7 +34,7 @@ const SP = process.env.SP + '/v1175';
   ok(side === 1, 'the case list\'s buttons and padlock stay on one line at its narrowest');
   await p.evaluate(() => document.querySelector('.sidebar-resizer').dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
 
-  // 2. Draft tab: Location Code 259 typed in full still shows its match; the Operation line keeps the cursor.
+  // 2. Write Report tab: Location Code 259 typed in full still shows its match; the Operation line keeps the cursor.
   await p.evaluate((i) => { localStorage.removeItem('casevault-folded-sections'); location.hash = `#/case/${CVRoute.enc(i)}/draft`; }, id);
   await p.waitForSelector('.rf-section', { timeout: 20000 });
   await p.evaluate(() => document.querySelectorAll('.rf-section.rf-folded .rf-fold').forEach((x) => x.click()));

@@ -213,7 +213,7 @@
       g('Arrest details', ['arrest.name', 'arrest.dob', 'arrest.description', 'arrest.charges', 'arrest.names', 'arrest.count',
         ...arrestKeys.filter((k) => !['dob'].includes(k)).map((k) => `arrest.${k}`), 'arrest.property', 'arrest.phoneCalls', 'arrest.notes']
         .filter((k, i, all) => all.indexOf(k) === i)),
-      // v1.172: tables from the Draft tab's evidence list and the Timeline's buys.
+      // v1.172: tables from the Write Report tab's evidence list and the Timeline's buys.
       g('Evidence and buys', ['evidence', 'inventory', 'buys', 'buys.count', 'buys.total']),
       g('Closing', ['closure.disposition', 'closure.reason', 'closure.date', 'closure.note', 'closure.arrestRd']),
       ...(reportKeys.length ? [g('Report fields', reportKeys)] : []),
@@ -368,7 +368,7 @@ Prepared {{today}}
       .trim();
   }
 
-  /** Reports in the order arranged under Reports (v1.40): the slugs in `order` first, in that
+  /** Reports in the order arranged under Saved Reports (v1.40): the slugs in `order` first, in that
    * order; reports not in it (new ones) before them, as listed. */
   function orderReports(list, order) {
     const at = new Map((Array.isArray(order) ? order : []).map((s, i) => [String(s), i]));

@@ -1,5 +1,5 @@
 // v1.108: the confidential address, the Federal Government as a victim, and See DEA 6 on the
-// Draft tab. All data is made up.
+// Write Report tab. All data is made up.
 const boot = require('./boot.js');
 const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
 const SP = process.env.SP + '/v1108';
@@ -31,10 +31,10 @@ const SP = process.env.SP + '/v1108';
   await p.waitForSelector('#dialog[open]'); await p.click('#dialog[open] button:has-text("Delete")'); await p.waitForTimeout(400);
 
   // (3) See DEA 6.
-  await p.click('.rf-actions button:has-text("See DEA 6")'); await p.waitForSelector('#dialog[open]');
+  await p.click('.rf-actions button:has-text("Use DEA-6 Narrative")'); await p.waitForSelector('#dialog[open]');
   ok(/statistical purposes only.*Federal Case Number FJ-88/s.test(await p.textContent('#dialog[open]')), 'the dialog shows the summary it writes, with the Federal Case Number');
   await p.locator('#dialog[open]').screenshot({ path: `${SP}/dialog.png` }).catch(() => {});
-  await p.click('#dialog[open] button:has-text("See DEA 6")'); await p.waitForTimeout(1500);
+  await p.click('#dialog[open] button:has-text("Use DEA-6 Narrative")'); await p.waitForTimeout(1500);
   const saved = await p.evaluate(async (i) => window.__readCaseJSON(i, 'report-fields.json'), id);
   const SEE = 'See DEA 6 for further information';
   ok(saved.victimsList[0].name === SEE && saved.offendersList[0].name === SEE && saved.charges[0].description === SEE && saved.evidenceNote === SEE && saved.evidence.length === 0,

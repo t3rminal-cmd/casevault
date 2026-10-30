@@ -10,7 +10,7 @@ const SP = process.env.SP + '/v163';
   const isOpen = () => p.evaluate(() => { const q = document.getElementById('ql-panel'); return !!q && q.classList.contains('open') && q.getBoundingClientRect().left < innerWidth - 10; });
   await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForTimeout(800);
   ok(!(await p.$('#ql-footer')) && !(await isOpen()), 'no Quick Links bar; the panel starts closed');
-  await p.click('.qa-tile.ql-open-btn'); await p.waitForTimeout(400);
+  await p.click('#btn-side-links'); await p.waitForTimeout(400);
   ok(await isOpen(), 'the home page tile opens the panel');
   await p.screenshot({ path: `${SP}/panel.png` });
   for (const t of ['OSINT', 'LEO', 'Reference']) { await p.click(`#ql-panel .ql-tabs button:has-text("${t}")`); await p.waitForTimeout(250); }

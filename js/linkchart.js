@@ -533,7 +533,7 @@
     try { return normalize(JSON.parse(fromB64(s.slice(i + MARK.length, end < 0 ? undefined : end).trim()))); } catch { return null; }
   }
 
-  /** v1.59: the chart in words, kept under Reports with its PDF: who is under whom, and the connections. */
+  /** v1.59: the chart in words, kept under Saved Reports with its PDF: who is under whom, and the connections. */
   function summaryMarkdown(chart) {
     const name = (n) => (n ? n.name || n.handle || subLine(n) || 'Unnamed' : '?');
     const byId = new Map(chart.nodes.map((n) => [n.id, n]));

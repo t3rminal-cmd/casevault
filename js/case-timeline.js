@@ -120,7 +120,7 @@
         field('Paid', f.paid));
       const showBuy = () => { buyRow.hidden = f.kind.value !== 'buy'; };
       // v1.153: Quick Add: a template fills the form and can add the deadline that follows it.
-      const tplSel = h('select', { 'aria-label': 'Quick Add', class: 'tl-template' }, h('option', { value: '' }, 'Pick a Template'), O.TL_TEMPLATES.map((t) => h('option', { value: t.id }, t.label)));
+      const tplSel = h('select', { 'aria-label': 'Quick Add', class: 'tl-template' }, h('option', { value: '' }, 'Common entries…'), O.TL_TEMPLATES.map((t) => h('option', { value: t.id }, t.label)));
       const followOn = h('input', { type: 'checkbox', checked: true, 'aria-label': 'Also add the deadline' });
       const followDays = h('input', { type: 'number', min: 1, max: 365, class: 'tl-follow-days', 'aria-label': 'Days after' });
       const followTitle = h('span', { class: 'tl-follow-title' });
@@ -138,7 +138,7 @@
       f.kind.addEventListener('change', showBuy);
       // v1.173: Paste From Text: text from CAD, RMS or a report fills the form (date, time, kind,
       // title, a buy's drug, amount and paid; the whole text in the note), to check before adding.
-      const pasteText = h('textarea', { rows: 4, 'aria-label': 'Text to read', placeholder: 'Paste the text from CAD, RMS or a report here' });
+      const pasteText = h('textarea', { rows: 4, 'aria-label': 'Text to read', placeholder: 'Paste CAD, RMS or report text' });
       const pasteFound = h('p', { class: 'muted small tl-paste-found', role: 'status' });
       const pasteBox = h('div', { class: 'tl-paste full', hidden: true }, pasteText,
         h('div', { class: 'tl-paste-actions' }, pasteFound, h('div', { class: 'spacer' }),

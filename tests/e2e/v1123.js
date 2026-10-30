@@ -19,8 +19,8 @@ const SP = process.env.SP + '/v1123';
   const same = (a) => a.length > 1 && new Set(a).size === 1;
 
   // Quick Links: one column, every link the same height and width, every name whole.
-  await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForSelector('.qa-tile.ql-open-btn');
-  await p.click('.qa-tile.ql-open-btn'); await p.waitForTimeout(400);
+  await p.evaluate(() => { location.hash = '#/x'; location.hash = '#/'; }); await p.waitForSelector('#btn-side-links');
+  await p.click('#btn-side-links'); await p.waitForTimeout(400);
   for (const tab of ['Reference', 'OSINT', 'LEO']) {
     await p.click(`#ql-panel .ql-tabs button:has-text("${tab}")`); await p.waitForTimeout(250);
     const q = await p.evaluate(() => {

@@ -14,15 +14,15 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   await p.evaluate(() => { const g = document.querySelector('.general-group'); if (g && !g.open) g.open = true; }); await p.waitForTimeout(300);
   const order = () => p.evaluate(() => [...document.querySelectorAll('.general-group .case-item .case-item-title')].map((x) => x.textContent.trim()));
   ok(JSON.stringify(await order()) === JSON.stringify(['EX-100', 'EX-500', 'EX-600', 'EX-700']), `by case number: ${await order()}`);
-  await p.click('#btn-side-sort'); await p.waitForTimeout(400);
+  await p.click('#btn-side-more'); await p.click('#btn-side-sort'); await p.waitForTimeout(400);
   ok(JSON.stringify(await order()) === JSON.stringify(['EX-700', 'EX-600', 'EX-500', 'EX-100']), `oldest first: ${await order()}`);
-  await p.click('#btn-side-sort'); await p.waitForTimeout(400);
+  await p.click('#btn-side-more'); await p.click('#btn-side-sort'); await p.waitForTimeout(400);
   ok((await order())[0] === 'EX-100' && (await order())[3] === 'EX-700', `newest first: ${await order()}`);
   ok(/Newest opened first/.test(await p.evaluate(() => { const b = document.querySelector('#btn-side-sort'); return b.title || b.dataset.tip || ''; })), 'the button says which order is on');
   await p.reload(); await p.waitForTimeout(1500);
   await p.evaluate(() => { const g = document.querySelector('.general-group'); if (g && !g.open) g.open = true; }); await p.waitForTimeout(300);
   ok(/Newest opened first/.test(await p.evaluate(() => { const b = document.querySelector('#btn-side-sort'); return b.title || b.dataset.tip || ''; }) || ''), 'the order is remembered');
-  await p.click('#btn-side-sort'); await p.waitForTimeout(300);
+  await p.click('#btn-side-more'); await p.click('#btn-side-sort'); await p.waitForTimeout(300);
 
   // INDEPENDENT CASES header: nothing overlaps
   const hd = await p.evaluate(() => { const g = document.querySelector('.general-group .op-head'); const r = (s) => g.querySelector(s) && g.querySelector(s).getBoundingClientRect();

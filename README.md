@@ -15,16 +15,16 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.175
+## What's New in v1.176
 
-- **Suspect Search**: arrest reports, police interactions and Narcotics / Battery / Firearms icons for anyone on your cases
-- **Rolodex** of ASAs, AUSAs and other contacts that fills in a case's Contacts
-- Fixes: the person window's scroll bars, the case list's padlock line, full codes (259) in lists, the cursor in Officer's Report lines
+- **Mission** and **General Files** everywhere; **Write Report** and **Saved Reports** tabs; **Move Case**
+- A simpler home page (7 tiles), a ⋮ menu in the case list, and no repeated boxes on the Mission page
+- Shorter placeholders and hover boxes
 
 ## What CaseVault Does
 
 **Cases, Operations and Case Groups**
-- Cases with a Case Number, File Number, Agency Case Number, subject, client and status (Open, Closed, Archived); several case numbers worked together as an **Operation** (a Mission; the OPERATION CASES folder), or kept as **Independent Cases**
+- Cases with a Case Number, File Number, Agency Case Number, subject, client and status (Open, Closed, Archived); several case numbers worked together as an **Operation** (a Mission; the MISSIONS folder), or kept as **Independent Cases**
 - **Case Groups**: related independent cases kept together under a name you give (a suspect, a family, a crew), with their own page, without making an Operation
 - Details tab: suspects, contacts (Case Officer, ASA/AUSA and others), LEO partners, deconfliction, and **Case History** with your own dated notes
 - Closing asks for a disposition and the arrest report; archiving asks for a reason (EXPIRED, NOLLE PROSEQUI, PROSECUTION or your own); a closed case can be reopened and an archived one restored
@@ -101,7 +101,7 @@ CaseVault-Data/
     case.json                details, suspects, contacts, status, dates, Case History
     notes.md                 Field Notes
     timeline.json            dated events and deadlines
-    report-fields.json       the Draft tab (Officer's Report)
+    report-fields.json       the Write Report tab (Officer's Report)
     arrest.json              the Arrest tab
     linkchart.json           the Link Chart
     files/<Document type>/   attached documents, named 2026-<CaseNo> <Type>.ext
@@ -140,7 +140,7 @@ CaseVault-Data/
 | `js/selftest.js` | Self-test with built-in made-up documents |
 | `js/markdown.js` | Minimal, escaping Markdown previewer for notes |
 | `js/report-pdf.js` | The Supplementary Report as a PDF (its own small PDF writer; signature fields for e-sign; the letterhead) |
-| `js/report-fields.js`, `js/report-fields-ui.js` | The Draft tab: the Officer's Report fields, their checks, and the form |
+| `js/report-fields.js`, `js/report-fields-ui.js` | The Write Report tab: the Officer's Report fields, their checks, and the form |
 | `js/arrest-pdf.js`, `js/draft-pdf.js`, `js/case-summary.js`, `js/timeline-pdf.js` | The Arrest Report, a written report, the Case Summary, and the Timeline / Buy Summary as PDFs |
 | `js/letterhead.js` | The department letterhead: logo square and header lines, for every PDF |
 | `js/pdf-viewer.js` | CaseVault's own PDF viewer (zoom, pages, print, download) |

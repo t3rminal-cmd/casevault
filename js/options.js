@@ -316,12 +316,12 @@
     // v1.28: Document Anonymizer. The original on top (bigger), the anonymized text under it; one
     // Anonymize button runs the rules and then, when it's running, the local AI over the result
     // (then the rules once more). Everything runs on this PC: the AI is Ollama on 127.0.0.1.
-    const src = h('textarea', { class: 'dev-src', rows: 12, placeholder: 'Paste a template, report or reference here, or drop a file above.', 'aria-label': 'Original text' });
-    const outBox = h('textarea', { class: 'dev-out', rows: 10, placeholder: 'The anonymized version appears here. You can edit it.', 'aria-label': 'Fictitious text' });
+    const src = h('textarea', { class: 'dev-src', rows: 12, placeholder: 'Paste text here, or drop a file above.', 'aria-label': 'Original text' });
+    const outBox = h('textarea', { class: 'dev-out', rows: 10, placeholder: 'The anonymized version appears here.', 'aria-label': 'Fictitious text' });
     const extra = h('input', { type: 'text', placeholder: 'Other names to replace, separated by commas', 'aria-label': 'Other names to replace', title: 'Names the rules might not recognise, such as nicknames or one-word names.' });
     const report = h('div', { class: 'dev-report muted small', 'aria-live': 'polite' });
     const file = h('input', { type: 'file', hidden: true, accept: '.docx,.md,.txt' });
-    const runBtn = h('button', { class: 'btn primary dev-btn', type: 'button', title: 'Swaps names, phone numbers, addresses, dates of birth and case numbers for made-up ones, then lets the local AI look for anything missed. Nothing leaves this PC.' }, 'Anonymize');
+    const runBtn = h('button', { class: 'btn primary dev-btn', type: 'button', title: 'Swaps names, numbers and addresses for made-up ones. Nothing leaves this PC.' }, 'Anonymize');
     let ctrl = null;
 
     // v1.163: the style, and a live preview: what was found, colour-coded (critical red, high
@@ -554,7 +554,7 @@
     const about = [`CaseVault ${Vault.APP_VERSION || ''}`, navigator.userAgent.replace(/\s+/g, ' ').slice(0, 160), `Screen ${root.innerWidth}×${root.innerHeight}`, `Zoom ${getZoom()}%`].join('\n');
     const kind = h('select', { 'aria-label': 'Kind of message' }, ['Bug', 'Feature request', 'Question'].map((k) => h('option', { value: k }, k)));
     const subject = h('input', { type: 'text', maxlength: 120, placeholder: 'Short title: Files tab preview is blank', 'aria-label': 'Title' });
-    const what = h('textarea', { rows: 6, placeholder: 'What did you do, what happened, and what did you expect? No case details, names or numbers.', 'aria-label': 'Description' });
+    const what = h('textarea', { rows: 6, placeholder: 'What happened? No case details.', 'aria-label': 'Description' });
     const includeAbout = h('input', { type: 'checkbox', checked: true });
     const email = h('input', { type: 'email', value: settings.devEmail || '', placeholder: 'developer@example.com', 'aria-label': 'Developer email' });
     const form = h('input', { type: 'url', value: settings.bugFormUrl || '', placeholder: CVLinks.BUG_REPORT_URL, 'aria-label': 'Bug report form address' });

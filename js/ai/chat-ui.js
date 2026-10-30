@@ -88,7 +88,7 @@
         h('div', { class: 'chat-options' }, ui.field('Model', modelSel), ui.field('Case', caseSel), filesToggle),
         thread,
         h('div', { class: 'chat-composer' }, input, h('div', { class: 'chat-actions' }, sendBtn, stopBtn)),
-        h('p', { class: 'chat-foot', title: 'The AI runs on this computer: questions, case details and answers never leave it. Answers can be wrong; check them against the case.' }, 'Local AI: nothing leaves this PC. Check answers.')));
+        h('p', { class: 'chat-foot', title: 'Runs on this computer; nothing leaves it. Check answers against the case.' }, 'Local AI: nothing leaves this PC. Check answers.')));
     document.body.append(box);
 
     // Drag the box by its title bar. Where it goes is kept for this window only.

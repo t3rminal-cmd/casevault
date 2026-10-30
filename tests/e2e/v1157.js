@@ -51,7 +51,7 @@ const SP = process.env.SP + '/v1157';
     d.open = true; d.querySelectorAll('details').forEach((x) => { x.open = true; });
     return { head: d.querySelector(':scope > summary .op-name').textContent, ops: !!d.querySelector('.closed-ops-group'), ind: [...d.querySelectorAll('.general-group .ind-name')].map((x) => x.textContent), text: d.textContent };
   });
-  ok(closed && closed.head === 'CLOSED' && closed.ops && closed.ind.includes('INDEPENDENT') && /EX-700/.test(closed.text) && /EX-710/.test(closed.text), `CLOSED folder: ${JSON.stringify(closed && { ...closed, text: closed.text.replace(/\s+/g, ' ').slice(0, 160) })}`);
+  ok(closed && closed.head === 'CLOSED' && closed.ops && closed.ind.includes('GENERAL FILES') && /EX-700/.test(closed.text) && /EX-710/.test(closed.text), `CLOSED folder: ${JSON.stringify(closed && { ...closed, text: closed.text.replace(/\s+/g, ' ').slice(0, 160) })}`);
   await p.locator('#sidebar').screenshot({ path: `${SP}/sidebar.png` }).catch(() => {});
 
   // 5. The hidden case list: every button stays inside the rail, at each text size.

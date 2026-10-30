@@ -4,6 +4,26 @@ The day-to-day notes for each earlier version, newest first (moved here from [do
 
 Some notes describe things later versions changed or removed (the Quick Links bar, the sidebar's Closed and Archived area, "Vault" before it became Settings).
 
+## What's new in v1.173
+
+- **Check the Mission.** *Mission Health* on the Mission page has a **Check the Mission** button:
+  - It runs the rules check on every case number of the Mission, one after another, and saves each one on that case's Checks tab
+  - A summary shows each case number with its High and Medium flags. It also warns when the same inventory number is on two case numbers
+  - Photos are left out; only the written reports are compared. It uses no AI, so it is quick
+- **Prosecutor Packet.** One PDF with:
+  - Every buy, and the totals per suspect
+  - The evidence, with inventory numbers, lab status and where each exhibit is now
+  - The lab reports attached, and each exhibit's chain of custody with any gaps
+  - Make it from a case's *Case Health* (it is saved in that case's Files, *Case Closing*) or from *Mission Health* for the whole Mission (it is saved in the Mission Folder)
+- **Paste From Text** on the Timeline (next to *Quick Add*):
+  - Paste text from CAD, RMS or a report. The date, time, kind of event (buy, arrest, court), title and a buy's narcotic, amount and money paid are filled in for you to check before adding
+  - The whole text goes in the note
+- **Read Labels** on the Write Report tab: an exhibit with photos gets a **Read Labels** button. It reads the photos on this PC for the inventory number on the evidence label and says whether it matches the Inventory Number, or is a digit or two off
+- **Calendar File.** The open deadlines and court dates become a calendar file (.ics) to open in Outlook, with a reminder the day before:
+  - From the Timeline, it is saved in the case's Files (*Other*)
+  - From *Mission Health*, it covers the whole Mission and is saved in the Mission Folder (*Other*)
+  - Nothing is saved on the PC
+
 ## What's new in v1.172
 
 - **Case Health.** A new box at the top of a case's Details tab lists everything still open on the case, most serious first, each with a button to where it is fixed:

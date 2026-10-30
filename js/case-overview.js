@@ -40,7 +40,7 @@
             save();
           });
           if (!s.role || s.role === 'Main') s.role = 'Primary'; // "Main" before v1.36
-          // Demographics (v1.34), kept in s.info: Add From Suspects on the Draft tab copies them into Offenders.
+          // Demographics (v1.34), kept in s.info: Add From Suspects on the Write Report tab copies them into Offenders.
           if (!s.info || typeof s.info !== 'object') s.info = {};
           const PERSON = (k) => CVReportFields.SUSPECT_INFO.find(([key]) => key === k);
           const infoInput = (k, attrs = {}) => {
@@ -160,7 +160,7 @@
         root.CVPersonView.knownSuspects(c).then((list) => known.replaceChildren(...list.slice(0, 300).map((x) => h('option', { value: x.name, label: [x.dob, x.gender, x.ir ? `IR ${x.ir}` : '', x.number].filter(Boolean).join(' · ') })))).catch(() => {});
       }
       return h('section', { class: 'contacts suspects cv-boxed', 'aria-labelledby': 'suspects-title' },
-        h('h3', { id: 'suspects-title', icon: 'person-exclamation', title: 'The people this case is about. The age is worked out from the date of birth. The main suspect fills {{suspect.name}}, {{suspect.dob}}, {{suspect.age}} and so on in templates; {{suspects}} lists them all.' }, 'Suspects'),
+        h('h3', { id: 'suspects-title', icon: 'person-exclamation', title: 'The people this case is about. The main suspect fills {{suspect.name}} in templates.' }, 'Suspects'),
         known,
         h('datalist', { id: 'suspect-hair' }, CVReportFields.PICKS.hair.map((x) => h('option', { value: x }))),
         h('datalist', { id: 'suspect-hairstyle' }, CVReportFields.PICKS.hairStyle.map((x) => h('option', { value: x }))),
@@ -262,11 +262,11 @@
       return h('div', { class: 'case-tiles', role: 'list', 'aria-label': 'Case numbers in this Mission' },
         sorted.map((x) => {
           const cur = x.id === c.id;
-          // v1.37: every case number's folder opens that case's Reports tab (this one's too).
+          // v1.37: every case number's folder opens that case's Saved Reports tab (this one's too).
           return h('a', { class: `case-tile${cur ? ' current' : ''} status-${String(x.status).toLowerCase()}`, role: 'listitem', href: `#/case/${CVRoute.enc(x.id)}/reports`, title: `${x.number || 'No case number'} · ${x.status}${cur ? ' (this one)' : ''}: open its Reports` },
             I(cur ? 'folder2-open' : 'folder-fill'), h('span', { class: 'case-tile-num' }, x.number || 'No number'), h('span', { class: 'case-tile-status' }, x.status));
         }),
-        archived ? null : h('button', { class: 'case-tile add', type: 'button', title: 'Add a case number to this Mission: a new case in General Files, linked to it, with the same file number, federal jacket number and client', onclick: () => { Save.flushAll(); newCase({ operationId: c.operationId }); } },
+        archived ? null : h('button', { class: 'case-tile add', type: 'button', title: 'A new case in this Mission, with its file number, jacket number and client', onclick: () => { Save.flushAll(); newCase({ operationId: c.operationId }); } },
           I('plus-lg'), h('span', { class: 'case-tile-num' }, 'Add Case Number')));
     }
 
@@ -418,7 +418,7 @@
       } }, 'Add contact');
 
       return h('section', { class: 'contacts cv-boxed', 'aria-labelledby': 'contacts-title' },
-        h('h3', { id: 'contacts-title', icon: 'people', title: 'Who to reach on this case. The case officer and prosecutor fill {{case.officer.name}}, {{case.prosecutor.email}} and so on in templates.' }, 'Contacts'),
+        h('h3', { id: 'contacts-title', icon: 'people', title: 'Who to reach on this case. Fills {{case.prosecutor.name}} and the like in templates.' }, 'Contacts'),
         roles,
         h('div', { class: 'contact-row' }, h('div', { class: 'field contact-role' }, h('span', {}, 'Role'), h('strong', { class: 'contact-fixed' }, 'Case Officer')), ...person(k.officer, 'Case officer', { kindOf: () => 'Other Police' })),
         h('div', { class: 'contact-row' }, h('label', { class: 'field contact-role' }, h('span', {}, 'Role'), proTitle), ...person(k.prosecutor, 'Prosecutor', { kinds: ['ASA', 'AUSA'], onCard: (x) => { if (['ASA', 'AUSA'].includes(x.kind)) { k.prosecutor.title = x.kind; proTitle.value = x.kind; } }, kindOf: () => k.prosecutor.title || 'ASA' })),

@@ -5,7 +5,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
   // Draft: fill something, send, form clears; Undo brings it back.
   await p.evaluate(async (id) => { await Vault.writeCaseJSON(id, 'report-fields.json', { offense: 'Possession of a controlled substance', narrative: 'Sample summary.' }); }, ids.c);
   await p.evaluate((id) => { location.hash = `#/case/${id}/draft`; }, ids.c); await p.waitForTimeout(1500);
-  await p.click('.rf-actions button:has-text("Send Draft to Reports")'); await p.waitForTimeout(3000);
+  await p.click('.rf-actions button:has-text("Save as Report")'); await p.waitForTimeout(3000);
   const after = await p.evaluate(async (id) => (await window.__readCaseJSON(id, 'report-fields.json')).offense, ids.c);
   ok(!after, `draft cleared after send (offense now "${after}")`);
   console.log('toast:', await p.$$eval('.toast', (t) => t.map((x) => x.textContent).join(' | ')));

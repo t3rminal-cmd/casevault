@@ -49,8 +49,8 @@ const SP = process.env.SP + '/v1148';
   await p.click('#dialog[open] .dialog-actions button:has-text("Close")');
   await p.screenshot({ path: `${SP}/group-page.png` });
   // Make Operation.
-  await p.click('.group-page button:has-text("Make Operation")'); await p.waitForSelector('#dialog[open]');
-  await p.click('#dialog[open] button:has-text("Make Operation")'); await p.waitForSelector('#dialog[open] .op-form');
+  await p.click('.group-page button:has-text("Make Mission")'); await p.waitForSelector('#dialog[open]');
+  await p.click('#dialog[open] button:has-text("Make Mission")'); await p.waitForSelector('#dialog[open] .op-form');
   const opName = await p.inputValue('#dialog[open] .op-form input[name=name]');
   await p.click('#dialog[open] .op-form button[type=submit]'); await p.waitForFunction(() => /#\/operation\//.test(location.hash), null, { timeout: 15000 }); await p.waitForTimeout(600);
   const made = await p.evaluate(([a, d]) => [a, d].map((id) => { const c = Vault.data.cases.find((x) => x.id === id); return [Vault.operationOf(c) && Vault.operationOf(c).name, c.suspectGroup]; }), [ids.c, c4]);

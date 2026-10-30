@@ -120,11 +120,11 @@ With no case open, CaseVault shows the **Overview**: a welcome banner with the d
 
 From v1.46 an **Operation** is its own record, and cases are linked to it.
 
-- **General Files** holds every case, whether it's in an Operation or not. It's the master list: open it from the Overview, from a case's header, or by clicking **General Files** in the case list. Each row shows the **Case Number**, **Subject Name**, **Operation**, status and opened date, with **Move File** (v1.50). Search by case number, subject or Operation, and show all cases, independent ones, ones in an Operation, or archived ones.
+- **General Files** holds every case, whether it's in an Operation or not. It's the master list: open it from the Overview, from a case's header, or by clicking **General Files** in the case list. Each row shows the **Case Number**, **Subject Name**, **Operation**, status and opened date, with **Move Case** (v1.50). Search by case number, subject or Operation, and show all cases, independent ones, ones in an Operation, or archived ones.
 - **An Operation** has an **Operation Number** (required, no two the same), an **Operation Name** (required), a **Status** (Open or Closed), a **Start Date**, an **End Date** and **Notes**. It shows everywhere as **Operation Number - Operation Name**. **Operations** (from the Overview or General Files) lists them all; **New Operation** makes one (the next free number, OP-001, OP-002…, is filled in for you).
-- **An Operation's page** shows its fields (**Edit Operation** changes them; renaming it renames it on every case) and its **Files**: the cases linked to it, each with **Details**, **Reports** and **Files**, and **Move File**. **New Case in this Operation** creates a case in General Files and links it; **Add Existing Case** links cases from General Files (a case already in another Operation is shown greyed out: move it with **Move File** instead).
-- **A case is in no Operation or in one.** Nothing is ever copied: the Operation's Files are only a view of the cases linked to it. On a case's **Details** tab, the bar at the top shows the Operation it's in (or *General Files: not in an Operation*), with **Move File**.
-- **Move File** (v1.50; it replaced *Assign to…* and *Unlink*) opens a box listing **General Files (independent case)** and every Operation. Pick one and press **Move**: a case in General Files goes into an Operation, a case in an Operation goes to another one or back to General Files as an independent case. The case and all its files stay where they are on the SSD; only where it's listed changes.
+- **An Operation's page** shows its fields (**Edit Operation** changes them; renaming it renames it on every case) and its **Files**: the cases linked to it, each with **Details**, **Reports** and **Files**, and **Move Case**. **New Case in this Operation** creates a case in General Files and links it; **Add Existing Case** links cases from General Files (a case already in another Operation is shown greyed out: move it with **Move Case** instead).
+- **A case is in no Operation or in one.** Nothing is ever copied: the Operation's Files are only a view of the cases linked to it. On a case's **Details** tab, the bar at the top shows the Operation it's in (or *General Files: not in an Operation*), with **Move Case**.
+- **Move Case** (v1.50; it replaced *Assign to…* and *Unlink*) opens a box listing **General Files (independent case)** and every Operation. Pick one and press **Move**: a case in General Files goes into an Operation, a case in an Operation goes to another one or back to General Files as an independent case. The case and all its files stay where they are on the SSD; only where it's listed changes.
 - **Delete Operation** (on the Operation's page) asks: *Are you sure you want to delete this Operation? The Operation and its Files folder will be removed. All associated cases and files will be preserved and will remain available in General Files as independent cases.* Only the Operation goes; every case (archived ones too) and every file stays.
 - **Case Number** and **Subject Name**: every case has a Case Number (shown large) with the Subject Name under it. No two cases can have the same Case Number (archived cases count): New Case and the Details tab refuse a number that's taken. Several cases can have the same subject: New Case asks *This subject already has another case. Is this a new case number for the same subject?* (**Continue and create new case** or **Cancel**), and points out a **Possible match** when a subject's name is close to another one (one or two letters apart, or the same words in another order). Nothing is ever merged.
 - **Opening a vault made before v1.46** (once, by itself): vault.json is backed up first (Vault → Backups), then cases that share a Title become an Operation named after it (its number is the cases' File Number, or OP-001 and so on), and a case with a Title of its own stays independent in General Files. Each case's Subject Name is taken from its first suspect (blank shows *No subject yet*). Case Numbers already used twice are flagged in General Files (*Duplicate*) and on the Details tab, never changed.
@@ -142,7 +142,7 @@ From v1.46 an **Operation** is its own record, and cases are linked to it.
 - **Details** tab: edit any field. A short note under **Status** says what the status means and, for a closed case, how it was closed.
 - **Case-number folders and timeline** (top of the Details tab, v1.37): click a case number's folder to open that case's **Reports** tab. Under the folders, a slim timeline shows every event of the operation as a small dot on a line (deadlines are diamonds, red when overdue; a red line marks today). Point at a dot for its date, title, case number and note; click it to open the Timeline tab.
 - **Sidebar folding** (v1.37): click an operation's title to fold it so only the title shows (the arrow on the right turns). **Titles only**, the button next to the search box, folds every operation at once and unfolds them again. Folding is remembered in the vault on the SSD.
-- **Suspects** (on the Details tab): **Add suspect** for each person the case is about (each one is a darker box, so you see at a glance how many there are): name, date of birth (the **age** is worked out for you), residence, and role (**Primary**, **Secondary** or **Other**; *Main* before v1.36), and under them (v1.34) gender, race, complexion, height, weight, hair and eye color, and tattoos / scars. **Add From Suspects** on the Draft tab copies them into the report's Offenders. The first one is Primary, later ones Secondary. They save with the case, go to **Ask AI** and **Draft with AI** with the case, and templates can use `{{suspect.name}}`, `{{suspect.dob}}`, `{{suspect.age}}`, `{{suspect.residence}}` and `{{suspect.role}}` (the primary suspect) and `{{suspects}}` (all of them, one per line).
+- **Suspects** (on the Details tab): **Add suspect** for each person the case is about (each one is a darker box, so you see at a glance how many there are): name, date of birth (the **age** is worked out for you), residence, and role (**Primary**, **Secondary** or **Other**; *Main* before v1.36), and under them (v1.34) gender, race, complexion, height, weight, hair and eye color, and tattoos / scars. **Add From Suspects** on the Write Report tab copies them into the report's Offenders. The first one is Primary, later ones Secondary. They save with the case, go to **Ask AI** and **Draft with AI** with the case, and templates can use `{{suspect.name}}`, `{{suspect.dob}}`, `{{suspect.age}}`, `{{suspect.residence}}` and `{{suspect.role}}` (the primary suspect) and `{{suspects}}` (all of them, one per line).
 - **Save changes** at the bottom of the Details tab saves the case to the SSD now and confirms it. Changes also save by themselves a moment after you type.
 - **Deconfliction** (on the Details tab, under Contacts): a card for each deconfliction check (v1.33; the boxes wrap so nothing is cut off): date, event or location, the system checked, picked from a list (RISSafe, HIDTA Deconfliction, DICE, Case Explorer, SAFETNet, Department Deconfliction, or **Other**, which asks for its name), the deconfliction number, **Conflict** Yes / No (a Yes shows in red) and notes. **Add Deconfliction** adds a card; the bin deletes one.
 - **Contacts** (on the Details tab, under Suspects): the **Case Officer**, the **prosecutor** (choose **ASA** or **AUSA**), each with name, email and phone, and **Add contact** for anyone else on the case: the Team Supervisor, a Team Member, Finance, Asset Forfeiture and so on (pick a role from the list or type your own). The bin button removes one. They save with the case on the SSD, go to **Ask AI** with the case, and templates can use `{{case.officer.name}}`, `{{case.prosecutor.title}}`, `{{case.prosecutor.email}}` and so on.
@@ -213,6 +213,24 @@ It saves on its own as you type (and with the **Save** button) to `arrest.json` 
 
 The **Overview** screen (click **CaseVault** at the top left) shows counts by status, the next deadline for each active case, and recently updated cases.
 
+### What's new in v1.176
+
+- **One name for each thing.** *Operation* is now **Mission** everywhere, and *Independent* is now **General Files** everywhere (case list, home page, dialogs and help)
+- **Clearer names:**
+  - The *Draft* tab is now **Write Report**, the *Reports* tab is **Saved Reports**, and *Send Draft to Reports* is **Save as Report**
+  - *Send Back to Draft* is now **Back to Write Report**
+  - *Move File* is now **Move Case**, since it moves the case
+  - *See DEA 6* is now **Use DEA-6 Narrative**
+  - The *BETA* tag is gone from Checks
+- **Fewer duplicates:**
+  - The home page has 7 tiles: New Case, Reference, Suspect Search, Rolodex, Calendar, Weekly Summary, Year Summary
+  - Draft, Discovery and Link Chart only asked which case to open, so they are gone; open the case instead
+  - Quick Links is in the case list and the menu, and Settings is in the menu
+  - The Mission page no longer repeats its number, name and status in five boxes. Its dates show on one line, and its case table is headed **Case Numbers**
+  - The Details tab drops the status hint and the folder line (both are now hover boxes)
+- **Tidier case list:** *Order of the cases* and *Select Cases* moved into a **⋮** menu at the top of the case list
+- **Shorter wording:** about 15 long placeholders and 18 long hover boxes were cut to a few words each (e.g. *Write here. [CONFIRM: …] marks facts to check.*)
+
 ### What's new in v1.175
 
 - **Fix: the person window had scroll bars.** *Every case this person is on* now opens wide enough to show everything, with no scroll bars. Long text wraps instead of running off the side
@@ -228,7 +246,7 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **Rolodex** (home page, Ctrl+K and a case's Contacts): keep the ASAs, AUSAs, other police and anyone else you work with, with office, title, email, phone and notes. It is saved on the SSD:
   - In a case's Contacts, the name boxes suggest them. The prosecutor's box suggests ASAs and AUSAs. Picking one fills in the email and phone, and the ASA / AUSA title
   - The card button beside a contact saves someone typed on a case into the Rolodex
-  - On the Draft tab, *ASA* and *AUSA Approving Search Warrant* suggest them too
+  - On the Write Report tab, *ASA* and *AUSA Approving Search Warrant* suggest them too
 
 ### What's new in v1.174
 
@@ -240,26 +258,6 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
   - *Undo* takes it back
 - **Fix:** a suspect marked *Not identified* was suggested as "false" in the Suspects name box
 
-### What's new in v1.173
-
-- **Check the Mission.** *Mission Health* on the Mission page has a **Check the Mission** button:
-  - It runs the rules check on every case number of the Mission, one after another, and saves each one on that case's Checks tab
-  - A summary shows each case number with its High and Medium flags. It also warns when the same inventory number is on two case numbers
-  - Photos are left out; only the written reports are compared. It uses no AI, so it is quick
-- **Prosecutor Packet.** One PDF with:
-  - Every buy, and the totals per suspect
-  - The evidence, with inventory numbers, lab status and where each exhibit is now
-  - The lab reports attached, and each exhibit's chain of custody with any gaps
-  - Make it from a case's *Case Health* (it is saved in that case's Files, *Case Closing*) or from *Mission Health* for the whole Mission (it is saved in the Mission Folder)
-- **Paste From Text** on the Timeline (next to *Quick Add*):
-  - Paste text from CAD, RMS or a report. The date, time, kind of event (buy, arrest, court), title and a buy's narcotic, amount and money paid are filled in for you to check before adding
-  - The whole text goes in the note
-- **Read Labels** on the Draft tab: an exhibit with photos gets a **Read Labels** button. It reads the photos on this PC for the inventory number on the evidence label and says whether it matches the Inventory Number, or is a digit or two off
-- **Calendar File.** The open deadlines and court dates become a calendar file (.ics) to open in Outlook, with a reminder the day before:
-  - From the Timeline, it is saved in the case's Files (*Other*)
-  - From *Mission Health*, it covers the whole Mission and is saved in the Mission Folder (*Other*)
-  - Nothing is saved on the PC
-
 ### Earlier versions
 
 The notes for v1.118 and earlier are in [previous-versions/WHATS-NEW.md](../previous-versions/WHATS-NEW.md).
@@ -268,12 +266,12 @@ The notes for v1.118 and earlier are in [previous-versions/WHATS-NEW.md](../prev
 
 How a report comes together (v1.31), in tab order:
 
-1. **Draft** tab: fill in the **Supplementary Report** form (see *The Draft tab* below). **Print / PDF** works straight from the form.
-2. **Send Draft to Reports** (on the Draft tab, v1.33) puts the form under **Reports** as an editable report, laid out in the same rows and sections as the PDF (each row of boxes becomes a small table: labels on top, entries under them), and saves its PDF under **Files** (Supplementary Report folder). Sending again brings both up to date.
+1. **Draft** tab: fill in the **Supplementary Report** form (see *The Write Report tab* below). **Print / PDF** works straight from the form.
+2. **Save as Report** (on the Write Report tab, v1.33) puts the form under **Reports** as an editable report, laid out in the same rows and sections as the PDF (each row of boxes becomes a small table: labels on top, entries under them), and saves its PDF under **Files** (Supplementary Report folder). Sending again brings both up to date.
 3. In the report editor you change the wording, use **Draft with AI**, **Re-phrase** or **Review**, and **PDF View** shows it as a PDF in the same style as the form, where you can print it, download it, or **Save PDF to Case**. **Export** still makes a Word file.
-4. **Clear All** (on the Draft tab) empties the form to draft another report. What you already sent stays under Reports and Files; the next **Send Draft to Reports** makes a new report (**Supplementary Report 2**, and so on) with its own PDF.
+4. **Clear All** (on the Write Report tab) empties the form to draft another report. What you already sent stays under Reports and Files; the next **Save as Report** makes a new report (**Supplementary Report 2**, and so on) with its own PDF.
 
-**One report, one PDF (v1.32):** each draft you send is one report under Reports and one PDF in Files. As long as you haven't changed its wording under Reports, its **PDF View** is the very same PDF as the Draft tab's, and saving writes `<case>-Supplementary Report.pdf` in the Supplementary Report folder in place of the one saved before (no dates in the name, no "(2)" copies). Once you change the report's wording under Reports, its PDF follows your text, and **Send Draft to Reports** asks before replacing it.
+**One report, one PDF (v1.32):** each draft you send is one report under Reports and one PDF in Files. As long as you haven't changed its wording under Reports, its **PDF View** is the very same PDF as the Write Report tab's, and saving writes `<case>-Supplementary Report.pdf` in the Supplementary Report folder in place of the one saved before (no dates in the name, no "(2)" copies). Once you change the report's wording under Reports, its PDF follows your text, and **Save as Report** asks before replacing it.
 
 The **Reports** tab starts with the **Field Notes** in their own section (v1.33): always there, at the top, with a preview of what you saved and **Open and Edit** (the **Notes** button at the bottom right of every screen edits the same notes). Under them, the case's reports (including Draft with AI's), each with its type and, in its own **AI** column (v1.34), a tag when Draft with AI wrote it. **New Report** at the top right asks for a title, a type and how to start (**Blank**, **Template** or **Draft with AI**; see *Drafts* below). Click a name to open it; **← All reports** goes back to the list. Old links to the Notes, Drafts or Report Fields pages open the same place.
 
@@ -310,7 +308,7 @@ The **formatting bar** above the text does this for you: **B** bold, *I* italic,
 
 Notes save on their own as you type. The **Save** button writes them straight away, and the text beside it shows *✓ Saved 14:02* once they're on the SSD. **Delete** on the Field Notes row empties the notes after you confirm.
 
-### The Draft tab (the Supplementary Report)
+### The Write Report tab (the Supplementary Report)
 
 The **Draft** tab (between Timeline and Reports, where Report Fields used to be) is the case's Supplementary Report, laid out like a narcotics supplementary report form:
 
@@ -338,7 +336,7 @@ The **Draft** tab (between Timeline and Reports, where Report Fields used to be)
 The buttons above the form:
 
 - **Print / PDF** shows the report in CaseVault's own viewer: **−** and **+** zoom (the percent shows between them and starts at **100%**; Ctrl + mouse wheel works too), **100%** goes back to actual size and **Fit Width** makes the page as wide as the window. The pages scroll inside the viewer right down to the signatures. **Print** sends the PDF to the printer, **Download** saves it.
-- **Send Draft to Reports** puts the form under **Reports**, laid out like the PDF (with **PDF View** to see it as a PDF again), and its PDF in the case's **Supplementary Report** folder under **Files** (in place of the one sent before). To send the PDF to sign, attach it from the **Mail** tab.
+- **Save as Report** puts the form under **Reports**, laid out like the PDF (with **PDF View** to see it as a PDF again), and its PDF in the case's **Supplementary Report** folder under **Files** (in place of the one sent before). To send the PDF to sign, attach it from the **Mail** tab.
 - **Clear All** empties the whole form, after asking, to draft another report. Reports and Files keep what was sent; the next send makes a new report and PDF.
 
 The header of the printed report shows your agency from **Vault → My Profile**. Fields save as you type (and with **Save Changes**), in the case folder as `report-fields.json`; fields saved by v1.18 and v1.19 open in the new layout. They fill `{{report.…}}` placeholders in templates (for example `{{report.ucr}}`, `{{report.evidence}}`, `{{report.narrative}}`) and go to **Draft with AI**.
@@ -831,7 +829,7 @@ A template is your document format (an affidavit, an arrest report, a subpoena�
 
 **Templates are Markdown (`.md`) files** on the SSD, but you don't need to work in Markdown: import a Word `.docx` to make one, and every draft made from a template exports as **Word (.docx)** (Export → *Save to Case Files* or *Save to PC*), and a template itself downloads as `.docx` from Vault → Templates.
 
-**Using a template:** in **Vault → Templates** each one has **Use** (makes a report from it in the case you have open and opens it), **Download** (a Word .docx of the template), **Edit** and **Delete**. On the Reports tab, pick **Template** under *Start from*.
+**Using a template:** in **Vault → Templates** each one has **Use** (makes a report from it in the case you have open and opens it), **Download** (a Word .docx of the template), **Edit** and **Delete**. On the Saved Reports tab, pick **Template** under *Start from*.
 
 There's no required layout. Plain text works; to format it, `# ` at the start of a line makes a heading (the first heading is the template's name), `**bold**`, `*italic*`, `- ` a bullet, `1. ` a numbered line. **Edit / Delete** change or remove a template. Old `.doc` files: open them in Word and *Save As* `.docx` first.
 

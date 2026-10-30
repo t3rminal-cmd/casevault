@@ -411,7 +411,7 @@
   /** The Victim and Complainant boxes a person uses. */
   const nonOffenderFields = (p) => (isStateVictim(p) ? NON_OFFENDER_FIELDS.filter((f) => ['role', 'name', 'officer'].includes(f.key)) : NON_OFFENDER_FIELDS.filter((f) => f.key !== 'officer'));
 
-  /* v1.113: pick the arrestee from the case's suspects (Details) and the Draft tab's offenders. */
+  /* v1.113: pick the arrestee from the case's suspects (Details) and the Write Report tab's offenders. */
   /** "DOE, John Q" or "John Q Doe" -> { lastName, firstName, middleName }. */
   function splitName(name) {
     const n = clean(name).replace(/\s+/g, ' ');

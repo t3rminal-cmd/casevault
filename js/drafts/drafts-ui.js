@@ -124,9 +124,9 @@
       slugs.splice(Math.max(0, Math.min(slugs.length, to)), 0, d.slug);
       return saveOrder(slugs);
     };
-    const sendBackBtn = (d) => h('button', { class: 'icon-btn', type: 'button', title: 'Send Back to Draft to correct it', onclick: async () => {
+    const sendBackBtn = (d) => h('button', { class: 'icon-btn', type: 'button', title: 'Back to Write Report to correct it', onclick: async () => {
       try { if (await root.CVReportFieldsUI.sendBack(c, d.slug)) go(c.id, 'draft'); } catch { /* reported */ }
-    } }, I('arrow-counterclockwise'), h('span', { class: 'sr-only' }, `Send ${d.title} back to the Draft tab`));
+    } }, I('arrow-counterclockwise'), h('span', { class: 'sr-only' }, `Send ${d.title} back to the Write Report tab`));
     const fromDraft = (d) => d.fromFields && !!root.CVReportFieldsUI;
     // v1.34: the AI tag has its own column; each report has an icon, its type as a tag, and a bin.
     const list = h('table', { class: 'files drafts-table reports-table' },
@@ -187,7 +187,7 @@
           });
         }
         return tr;
-      }) : [h('tr', {}, h('td', { colspan: archived ? 4 : 5, class: 'muted' }, 'No reports yet. Fill in the Draft tab and click Send Draft to Reports, or use New Report.'))]));
+      }) : [h('tr', {}, h('td', { colspan: archived ? 4 : 5, class: 'muted' }, 'No reports yet. Fill in the Write Report tab and click Save as Report, or use New Report.'))]));
 
     const newReport = () => ui.openDialog((close) => {
       closeNew = close;
@@ -229,8 +229,8 @@
   };
 
   /** A report as its PDF, shown the way the Files tab shows a PDF (v1.40). Read only: a report sent
-   * from the Draft tab can be sent back there; one made with New Report can be opened to edit. */
-  /** A report's PDF bytes: from its form when sent from the Draft tab, else from its text. */
+   * from the Write Report tab can be sent back there; one made with New Report can be opened to edit. */
+  /** A report's PDF bytes: from its form when sent from the Write Report tab, else from its text. */
   async function reportPdfBytes(c, d) {
     const RFU = root.CVReportFieldsUI;
     let bytes = d.fromFields && RFU ? await RFU.sentPdf(c, d.slug) : null;
@@ -286,9 +286,9 @@
           if (await (await root.CVLazy.linkChart()).openFromFile(c, d.chartPath)) { close(); go(c.id, 'linkchart'); }
         } }, 'Send Back to Link Chart')
           : d.fromFields && RFU
-          ? h('button', { class: 'btn primary', type: 'button', icon: 'arrow-counterclockwise', title: 'Put this report back on the Draft tab to correct it. Send Draft to Reports then updates it.', onclick: async () => {
+          ? h('button', { class: 'btn primary', type: 'button', icon: 'arrow-counterclockwise', title: 'Put this report back on the Write Report tab to correct it. Save as Report then updates it.', onclick: async () => {
             try { if (await RFU.sendBack(c, d.slug)) { close(); go(c.id, 'draft'); } } catch { /* reported */ }
-          } }, 'Send Back to Draft')
+          } }, 'Back to Write Report')
           : h('button', { class: 'btn', type: 'button', icon: 'pencil-square', title: 'Open this report in the editor', onclick: () => { close(); go(c.id, 'reports', d.slug); } }, 'Edit'),
         archived ? null : h('button', { class: 'btn', type: 'button', icon: 'folder-plus', onclick: async (e) => {
           const btn = e.currentTarget;
@@ -325,7 +325,7 @@
     typeSelect.addEventListener('change', () => { meta.type = typeSelect.value; checkBtn.hidden = meta.type !== 'affidavit'; save(0); });
 
     // ---- editor with the AI suggestion box
-    const ta = h('textarea', { class: 'draft-editor', spellcheck: 'true', 'aria-label': 'Draft text', placeholder: 'Write here. Markdown works: # Heading, **bold**, 1. numbered paragraphs. Use [CONFIRM: ...] for facts to check.' });
+    const ta = h('textarea', { class: 'draft-editor', spellcheck: 'true', 'aria-label': 'Draft text', placeholder: 'Write here. [CONFIRM: …] marks facts to check.' });
     ta.value = draft.body;
     // The suggestion box floats just below the cursor line. It never takes focus: the cursor stays
     // in the text, Tab accepts and Esc dismisses. Screen readers hear the suggestion (aria-live).
@@ -512,8 +512,8 @@
     const genBtn = h('button', { class: 'btn small', type: 'button', icon: 'robot', onclick: () => openGenerate() }, 'Draft with AI');
     // PDF View (v1.31): the report as a PDF, in the Supplementary Report's style; save it from there.
     const pdfViewBtn = h('button', { 'data-ro-ok': 'true', class: 'btn small', type: 'button', icon: 'file-earmark-pdf', title: 'Shows this report as a PDF. Print it, download it, or save it to the case files.', onclick: () => pdfView() }, 'PDF View');
-    const rephraseBtn = h('button', { class: 'btn small', type: 'button', icon: 'magic', title: 'Select a sentence or paragraph, then click: the AI on this computer rewrites it the way DEA reports are written. You see both before anything changes.', onclick: () => rephrase() }, 'Re-phrase');
-    const reviewBtn = h('button', { class: 'btn small', type: 'button', icon: 'clipboard2-check', title: 'Checks that the totals add up (money and weights), then has the AI on this computer look for names, dates, amounts and facts that don\'t agree.', onclick: () => review() }, 'Review');
+    const rephraseBtn = h('button', { class: 'btn small', type: 'button', icon: 'magic', title: 'Select text, then click: the AI rewrites it in report style. You approve the change.', onclick: () => rephrase() }, 'Re-phrase');
+    const reviewBtn = h('button', { class: 'btn small', type: 'button', icon: 'clipboard2-check', title: 'Checks the totals, then the AI looks for names, dates and amounts that don\'t agree.', onclick: () => review() }, 'Review');
     const checkBtn = h('button', { class: 'btn small', type: 'button', hidden: meta.type !== 'affidavit', onclick: async () => {
       await Save.flushAll();
       CVChecks.checkDraft(c, { slug, title: meta.title, exclude: meta.exports || [] });
@@ -526,7 +526,7 @@
         h('button', { 'data-ro-ok': 'true', type: 'button', title: 'Saves it as a Word document where you choose on this computer', onclick: () => exportDocx('download') }, ui.icon('pc-display'), ' Save to PC'),
         h('button', { type: 'button', title: 'Keeps this report\'s text as a template in Vault → Templates', onclick: saveAsTemplate }, ui.icon('bookmark-plus'), ' Save Template'),
         // v1.149: a good report teaches Draft with AI: names and numbers swapped for placeholders first.
-        h('button', { 'data-ro-ok': 'true', type: 'button', class: 'use-example', title: 'Copies this report into Settings → Library as an example for Draft with AI, with names, numbers and addresses swapped for placeholders', onclick: async () => {
+        h('button', { 'data-ro-ok': 'true', type: 'button', class: 'use-example', title: 'Copies this report, anonymized, into the Library as an example for the AI', onclick: async () => {
           await Save.flushAll();
           await root.CVLibraryUI.addFromReport(c, titleInput.value || meta.title, ta.value, typeSelect.value || meta.type);
         } }, ui.icon('journal-bookmark'), ' Use as AI Example')));
@@ -581,18 +581,18 @@
     // AI suggestions follow the cursor in the Markdown text, so they run in that view.
     const drawSuggestMode = (m) => { suggestLabel.hidden = m === 'rich'; if (m === 'rich') ghost.stop(); };
 
-    // v1.39: a report sent from the Draft tab is view-only here; Send Back to Draft puts its form
-    // back on the Draft tab for revisions (and the next Send Draft to Reports updates this report).
+    // v1.39: a report sent from the Write Report tab is view-only here; Back to Write Report puts its form
+    // back on the Write Report tab for revisions (and the next Save as Report updates this report).
     const RFU0 = root.CVReportFieldsUI;
     const fromDraft = !!meta.fromFields && !!RFU0;
     if (fromDraft) { ta.readOnly = true; titleInput.readOnly = true; typeSelect.disabled = true; }
-    const sendBackBtn = fromDraft && !Vault.isArchived(c.id) ? h('button', { class: 'btn small primary', type: 'button', icon: 'arrow-counterclockwise', title: 'Put this report back on the Draft tab to revise it. Send Draft to Reports then updates this report and its PDF.', onclick: async () => {
+    const sendBackBtn = fromDraft && !Vault.isArchived(c.id) ? h('button', { class: 'btn small primary', type: 'button', icon: 'arrow-counterclockwise', title: 'Put this report back on the Write Report tab to revise it. Save as Report then updates this report and its PDF.', onclick: async () => {
       try { if (await RFU0.sendBack(c, slug)) go(c.id, 'draft'); } catch { /* reported */ }
-    } }, 'Send Back to Draft') : null;
+    } }, 'Back to Write Report') : null;
     panel.replaceChildren(
       back,
       banner,
-      fromDraft ? h('p', { class: 'view-only-note' }, ui.icon('lock-fill'), ' View only: this report was sent from the Draft tab. To revise it, click Send Back to Draft.') : '',
+      fromDraft ? h('p', { class: 'view-only-note' }, ui.icon('lock-fill'), ' View only: this report was sent from the Write Report tab. To revise it, click Back to Write Report.') : '',
       h('div', { class: 'draft-head' }, titleInput, typeSelect),
       h('div', { class: 'draft-actions-bar' }, wordViewBtn, pdfViewBtn, ...(fromDraft ? [] : [genBtn, rephraseBtn, reviewBtn]), checkBtn, exportMenu, h('div', { class: 'spacer' }), fromDraft ? sendBackBtn || '' : saveBtn, versionsBtn, delBtn),
       h('div', { class: 'toolbar draft-toolbar', hidden: fromDraft },
@@ -771,10 +771,10 @@
       const p = Vault.data.settings.affiant || {};
       const name = `${(meta.title || 'Report').replace(/[\\/:*?"<>|]/g, '')}.pdf`;
       const opts = { agency: p.agency || '', caseLabel: [c.title, c.number ? `Case ${c.number}` : ''].filter(Boolean).join(' \u00b7 '), printed: '', title: meta.title || '' };
-      // The report made from the Draft tab, unchanged here: the same PDF as the Draft tab's (v1.32).
+      // The report made from the Write Report tab, unchanged here: the same PDF as the Write Report tab's (v1.32).
       const RFU = root.CVReportFieldsUI;
       // (Only the report the form now goes to: one sent before a Clear All prints from its text.)
-      // v1.40: every report sent from the Draft tab (not just the latest) prints from its form.
+      // v1.40: every report sent from the Write Report tab (not just the latest) prints from its form.
       const sent = RFU && meta.fromFields ? await RFU.sentPdf(c, slug).catch(() => null) : null;
       const linked = !!sent;
       const bytes = sent || CVDraftPdf.build(ta.value, opts);
@@ -832,7 +832,7 @@
         const useTimeline = h('input', { type: 'checkbox', checked: true });
         const useNotes = h('input', { type: 'checkbox', checked: true });
         const docBoxes = docs.map((f) => h('input', { type: 'checkbox', value: f.name, checked: true }));
-        const instr = h('textarea', { rows: 3, placeholder: 'Optional: "Focus on the events of March 14" or "Formal tone, third person".' });
+        const instr = h('textarea', { rows: 3, placeholder: 'Optional: "Formal tone", "Focus on March 14"' });
         const behavior = h('select', {}, behaviors.map((b) => h('option', { value: b.id, selected: b.id === (meta.behavior || CVLibrary.defaultBehaviorId(settings)) }, b.name)));
         // Library: examples of the chosen document type are ticked, and the "always use" directives.
         const libBox = h('div', { class: 'check-reports lib-pick' });

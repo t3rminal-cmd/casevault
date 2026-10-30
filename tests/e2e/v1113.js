@@ -23,7 +23,7 @@ const SP = process.env.SP + '/v1113';
   f = await folded();
   ok(f[1] === f[0], `Hide All folds every part (${f})`);
   await p.click('.arrest-toolbar button:has-text("Show All")'); await p.waitForTimeout(200);
-  // Charges from the Draft tab.
+  // Charges from the Write Report tab.
   const ch = await p.$$eval('.charges-table tbody tr', (rs) => rs.map((r) => [...r.querySelectorAll('input')].slice(0, 2).map((i) => i.value)));
   ok(ch.length === 1 && ch[0][0] === '720 ILCS 570/402(c)' && /Cocaine/.test(ch[0][1]), `charges filled in from the Draft: ${JSON.stringify(ch)}`);
   // Pick the arrestee.

@@ -26,7 +26,8 @@ const SP = process.env.SP + '/v1119';
   const det = await p.evaluate(() => {
     const row = document.querySelector('.details-row-title'); const boxes = [...row.querySelectorAll(':scope > .field')].filter((x) => x.getClientRects().length);
     const hs = boxes.map((x) => Math.round(x.getBoundingClientRect().height));
-    return { closedShown: !!document.querySelector('input[aria-label="Closed"]').getClientRects().length, hs, hintOneLine: document.querySelector('.status-hint').getBoundingClientRect().height < 26, opLinks: document.querySelectorAll('#main a[href^="#/operation/"]').length };
+    return { closedShown: !!document.querySelector('input[aria-label="Closed"]').getClientRects().length, hs, hintOneLine: !document.querySelector('.status-hint'), // v1.176: the hint is the Status box's hover box
+      opLinks: document.querySelectorAll('#main a[href^="#/operation/"]').length };
   });
   ok(!det.closedShown && Math.max(...det.hs) - Math.min(...det.hs) < 4 && det.hintOneLine && det.opLinks === 1, `Details' first row even, no Closed box, one Mission link: ${JSON.stringify(det)}`);
   await p.screenshot({ path: `${SP}/details.png` });

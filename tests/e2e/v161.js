@@ -30,19 +30,7 @@ const W = +(process.env.W || 1366);
     clipped: [...document.querySelectorAll('.dashboard *')].filter((e) => e.children.length === 0 && e.innerText && e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflow !== 'visible').map((e) => e.className).slice(0, 5),
   }));
   console.log(JSON.stringify(info, null, 1));
-  await p.click('.qa-tile:has-text("Link Chart")'); await p.waitForSelector('.pick-case');
-  await p.screenshot({ path: `${SP}/${W}-pick.png` });
-  await p.fill('.pick-case input', 'roe'); await p.waitForTimeout(100);
-  console.log('filtered', await p.$$eval('.pick-case-row', (r) => r.map((x) => x.innerText.replace(/\s+/g, ' '))));
-  await p.keyboard.press('Enter'); await p.waitForTimeout(900);
-  console.log('hash', await p.evaluate(() => location.hash));
-  await p.evaluate(() => { location.hash = '#/'; }); await p.waitForTimeout(600);
-  await p.click('.qa-tile:has-text("Draft")'); await p.click('.pick-case-row:has-text("EX-300")'); await p.waitForTimeout(800);
-  console.log('hash', await p.evaluate(() => location.hash));
-  await p.evaluate(() => { location.hash = '#/'; }); await p.waitForTimeout(600);
-  await p.click('.qa-tile:has-text("Discovery")'); await p.click('.pick-case-row:has-text("EX-100")'); await p.waitForTimeout(1500);
-  console.log('hash', await p.evaluate(() => location.hash), 'discovery open', await p.evaluate(() => !!document.querySelector('dialog[open]') && document.querySelector('dialog[open]').innerText.slice(0, 60)));
-  await p.screenshot({ path: `${SP}/${W}-disc.png` });
+  // v1.176: Draft, Discovery and Link Chart are no longer home tiles (they only asked which case).
   await p.keyboard.press('Escape'); await p.evaluate(() => { location.hash = '#/'; }); await p.waitForTimeout(600);
   await p.click('.attention-row >> nth=0'); await p.waitForTimeout(800);
   console.log('row click hash', await p.evaluate(() => location.hash));

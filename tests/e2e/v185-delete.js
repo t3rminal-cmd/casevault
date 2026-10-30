@@ -3,7 +3,7 @@ const ok = (c, m) => console.log(c ? 'PASS' : 'FAIL', m);
 (async () => { const { b, p, ids, errs } = await boot(1366, 900);
   await p.evaluate(() => document.querySelectorAll('.toast').forEach((t) => t.remove()));
   await p.evaluate((id) => { location.hash = `#/case/${id}/details`; }, ids.c); await p.waitForTimeout(800);
-  console.log('closed box:', await p.inputValue('input[aria-label="Closed"]'), '| hint:', await p.textContent('.status-hint'));
+  console.log('closed box:', await p.inputValue('input[aria-label="Closed"]'), '| hint:', await p.getAttribute('.details-row-title label.field[title]', 'title'));
   console.log('actions:', await p.$$eval('.case-actions button', (b) => b.map((x) => x.textContent.trim())));
   await p.click('button:has-text("Delete case")'); await p.waitForSelector('.delete-form');
   await p.fill('.delete-form input', 'EX-100'); await p.click('.delete-form button.danger');

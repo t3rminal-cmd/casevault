@@ -3052,12 +3052,6 @@ section.foldable.folded > .fold-head { margin-bottom: 0; }
 .att-due { justify-self: end; font-size: var(--fs-small); font-weight: 700; padding: .25rem .5rem; border: 1px solid currentColor; color: var(--warn); white-space: nowrap; }
 .att-now .att-due, .att-overdue .att-due { color: var(--danger); }
 @media (max-width: 1000px) { .attention-row { grid-template-columns: 1fr auto; } .att-what, .att-when { grid-column: 1 / -1; } }
-.pick-case { display: grid; gap: .7rem; width: min(560px, 86vw); }
-.pick-case h2 { margin: 0; }
-.pick-case-list { display: grid; gap: .3rem; max-height: 52vh; overflow-y: auto; scrollbar-width: thin; }
-.pick-case-row { display: grid; grid-template-columns: minmax(7rem, auto) minmax(0, 1fr) auto auto; align-items: center; gap: .6rem; padding: .5rem .5rem; background: var(--surface); color: var(--text); border: 1px solid var(--box-edge, var(--border)); font: inherit; text-align: left; cursor: pointer; }
-.pick-case-row:hover, .pick-case-row:focus-visible { background: var(--surface-2); border-color: var(--accent); }
-.pick-case-sub { min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 700px) { .attention-section .section-head > .muted { display: none; } }
 .lc-link-acts { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
 /* v1.62: street value chart: the form (Powder, Crack…) in its own column. */
@@ -4795,3 +4789,14 @@ body:not(.sidebar-collapsed) .sidebar-head > * { flex-shrink: 0; }
 .rolo-kind { grid-area: kind; } .rolo-name { grid-area: name; } .rolo-agency { grid-area: agency; } .rolo-title { grid-area: title; }
 .rolo-email { grid-area: email; } .rolo-phone { grid-area: phone; } .rolo-notes { grid-area: notes; } .rolo-card > .icon-btn { grid-area: del; margin-bottom: .15rem; }
 @media (max-width: 1000px) { .rolo-card { grid-template-columns: 1fr 1fr; grid-template-areas: "kind name" "agency title" "email phone" "notes notes" "del del"; } .rolo-card > .icon-btn { justify-self: end; } }
+.op-dates { margin: -.2rem 0 .6rem; } /* v1.176: the Mission's dates, one line under its title */
+/* v1.176: the case list's ⋯ menu (order of the cases, Select Cases). */
+.side-more { position: relative; display: inline-flex; }
+.side-more > .icon-btn { width: 2.1rem; height: 2.1rem; padding: 0; align-items: center; justify-content: center; }
+.side-more-menu { position: absolute; top: calc(100% + 4px); left: 0; z-index: 40; min-width: 15rem; display: grid; padding: .3rem; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.side-more-item { display: flex; align-items: center; gap: .5rem; padding: .45rem .6rem; border: 0; background: none; color: var(--text); font: inherit; font-size: var(--fs-small); text-align: left; cursor: pointer; white-space: nowrap; }
+.side-more-item:hover, .side-more-item:focus-visible { background: var(--accent-soft); outline: none; }
+.side-more-item.on { color: var(--accent); }
+.side-more-item svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+.side-more > .icon-btn > svg { width: 1.2rem; height: 1.2rem; }
+.case-health { margin-top: 1.2rem; } /* v1.176: room above it (the folder line under the numbers is now a hover box) */

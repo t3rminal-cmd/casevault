@@ -1,6 +1,6 @@
 /* CaseVault — the Rolodex (v1.175): the people you call on case after case (ASAs, AUSAs, officers
  * of other departments, anyone else) with their office, email and phone, kept once in vault.json
- * on the SSD. Their names are suggested in a case's Contacts and in the Draft tab's ASA and AUSA
+ * on the SSD. Their names are suggested in a case's Contacts and in the Write Report tab's ASA and AUSA
  * lines; picking one fills in the rest.
  */
 'use strict';
@@ -97,7 +97,7 @@
       draw();
       return h('div', { class: 'rolodex-form' },
         h('h2', { icon: 'person-rolodex' }, 'Rolodex'),
-        h('p', { class: 'muted small' }, 'Prosecutors, other departments and anyone else you work with, kept on the SSD. Their names are offered in a case\'s Contacts and on the Draft tab, and fill in the email and phone.'),
+        h('p', { class: 'muted small' }, 'Prosecutors, other departments and anyone else you work with, kept on the SSD. Their names are offered in a case\'s Contacts and on the Write Report tab, and fill in the email and phone.'),
         h('div', { class: 'rolo-tools' }, q, kindSel, add),
         body,
         h('div', { class: 'dialog-actions' }, h('button', { class: 'btn primary', type: 'button', onclick: () => done() }, 'Done')));

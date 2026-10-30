@@ -23,7 +23,7 @@ const SP = process.env.SP + '/v1165';
   ok(Object.entries(tiles).some(([k, v]) => /OP-8/.test(k) && v === '0'), 'an empty Mission shows 0');
   await p.evaluate(() => document.querySelectorAll('#case-list details.mission-group').forEach((d) => { d.open = true; }));
   const side = await p.evaluate(() => [...document.querySelectorAll('#case-list .op-head')].map((hd) => [hd.textContent.replace(/\s+/g, ' ').trim().slice(0, 20), (hd.querySelector(':scope > .op-count') || {}).textContent]));
-  ok(side.some(([t, n]) => /OP-7/.test(t) && n === '1') && side.some(([t, n]) => /OP-8/.test(t) && n === '0') && side.some(([t, n]) => /OPERATION/.test(t) && /^\d+$/.test(n || '')), `case list counts from 0, missions counted: ${JSON.stringify(side)}`);
+  ok(side.some(([t, n]) => /OP-7/.test(t) && n === '1') && side.some(([t, n]) => /OP-8/.test(t) && n === '0') && side.some(([t, n]) => /MISSIONS/.test(t) && /^\d+$/.test(n || '')), `case list counts from 0, missions counted: ${JSON.stringify(side)}`);
   ok(await p.evaluate(() => !document.querySelector('#case-list .mission-add, #case-list .general-add')), 'no + buttons in the case list');
 
   // 2. Plain icons at the top of the case list; the padlock keeps its colour.
