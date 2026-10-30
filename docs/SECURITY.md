@@ -34,7 +34,8 @@ carry the key it made when it started (given to the tab it opens, and shared wit
 CaseVault tabs). Other programs that just try
 the address are refused. A program running as your own Windows user could still read that key, so
 it is not a replacement for BitLocker and a locked PC. File names Windows treats as devices (CON,
-NUL, COM1…) are refused.
+NUL, COM1…) are refused. A file sent to it must state its size as a plain number and be at most
+32 GB, in one piece (helper 1.17): anything else is refused before the file on the SSD is touched.
 
 **Which drive the helper opens (helper 1.17).** It opens `CaseVault-Data` on the drive labelled
 **CASEVAULT**, even when another drive (an old SSD, a copy of the vault, a USB stick) has a vault and

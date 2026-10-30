@@ -63,6 +63,9 @@ $DataDirName   = 'CaseVault-Data'
 $AppDirName    = 'CaseVault-App'
 $PagesOrigin   = 'https://t3rminal-cmd.github.io'
 $MaxHeaderBytes = 65536
+# (1.17) The largest file one write may bring: a whole case exported (the app warns past 1 GB) or a
+# long video attached as evidence fit easily; anything bigger is refused before a byte is written.
+$MaxUploadBytes = 32GB
 
 $Sep      = [System.IO.Path]::DirectorySeparatorChar
 $AIRoot   = Split-Path -Parent $PSScriptRoot      # e.g. W:\  (the folder holding Start-CaseVault.bat)
@@ -832,8 +835,14 @@ function Invoke-Api($stream, $req) {
       if ($isDir) { Send-Error $stream 409 'TypeMismatchError' 'That is a folder, not a file.'; return }
       $parent = Split-Path -Parent $full
       if (-not (Test-Path -LiteralPath $parent -PathType Container)) { Send-Error $stream 404 'NotFoundError' 'Folder not found.'; return }
+      # (1.17) The body's length must be stated as a plain number: a negative or missing one used to
+      # write an empty file over the real one. Chunked bodies aren't supported.
+      if ($req.Headers.ContainsKey('transfer-encoding')) { Send-Error $stream 411 'NotSupportedError' 'The file has to be sent in one piece with its size (Content-Length), not in chunks.'; return }
       if (-not $req.Headers.ContainsKey('content-length')) { Send-Error $stream 411 'NotAllowedError' 'Content-Length required.'; return }
-      $len = [long]$req.Headers['content-length']
+      $cl = ([string]$req.Headers['content-length']).Trim()
+      if ($cl -notmatch '^\d+$') { Send-Error $stream 400 'SyntaxError' 'The file size sent with the file is not a number, so nothing was saved.'; return }
+      $len = [long]0
+      if (-not [long]::TryParse($cl, [ref]$len) -or $len -gt $MaxUploadBytes) { Send-Error $stream 413 'QuotaExceededError' ('The file is too large to save (the limit is ' + [math]::Round($MaxUploadBytes / 1GB) + ' GB). Nothing was saved.'); return }
       # Write to a temp file next to the target, then swap it in, so a pulled cable never leaves half a file.
       $tmp = $full + '.cvtmp-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)
       try {
