@@ -46,27 +46,19 @@ its window then says so. It stays with the vault it opened first, recognised by 
 connected" rather than using another drive, and the same SSD back under a different letter is fine.
 `/api/info` reports the vault it is pinned to (`vaultId`, `volumeSerial`).
 
-**The saved folder in Chrome and Edge (v1.178).** Without the helper, the browser remembers which
-folder the vault is in (the only thing CaseVault keeps in the browser: a folder handle in IndexedDB,
-no case data). CaseVault uses it only after the browser says the page may already read and write it,
-and asks for permission only when you click **Reconnect**. That permission belongs to the web
-address the page came from, and the online copy comes from **https://t3rminal-cmd.github.io**, the
-address every GitHub Pages site of the `t3rminal-cmd` account shares. So a page from any other
-repository published there (one made later, or a compromised one) runs at the same address, can
-read that saved handle and, once you have chosen "Allow on every visit", read and write the vault
-while V: is unlocked. Check which repositories of the account publish a site (each repository's
-Settings → Pages). The ways to close this:
+**Use the SSD copy every day (v1.178).** Start CaseVault with **Start-CaseVault.bat**: the helper
+serves it at http://127.0.0.1:8517, an address that exists only on this PC, and refuses anything
+without its key. In Chrome or Edge it remembers the vault folder for that address alone.
 
-1. **A custom domain** for CaseVault's GitHub Pages site (for example `casevault.example.org`): its
-   own address, shared with nothing. Costs a domain name; GitHub keeps hosting it.
-2. **A GitHub account or organisation used only for CaseVault** (`casevault-…`.github.io): its own
-   address for free, as long as nothing else is ever published from it.
-3. **The SSD copy through the helper as the everyday way** (Start-CaseVault.bat, any browser): the
-   address is 127.0.0.1 on this PC only, the helper's key keeps other programs out, and no folder
-   handle is stored at all. The online copy stays for occasional use.
-
-Until one is chosen: don't publish other GitHub Pages sites from the `t3rminal-cmd` account, and
-prefer "Allow this time" over "Allow on every visit" when Chrome or Edge asks.
+The online copy at **https://t3rminal-cmd.github.io** is for now and then. That address is shared by
+every GitHub Pages site of the `t3rminal-cmd` account, so a page from another repository published
+there (one made later, or a compromised one) would run at the same address. A folder remembered
+there, with "Allow on every visit", could be read and written by such a page while V: is unlocked.
+So the online copy **never remembers the folder** (v1.178): you choose it each visit, it is kept only
+while the page is open, and a folder an earlier version remembered there is forgotten. When Chrome
+or Edge asks, pick **Allow this time**. Its welcome screen says so and points to the SSD copy.
+(Other ways to close this, not chosen: a custom domain, or a GitHub account used only for
+CaseVault.)
 
 **Files that leave CaseVault land on the PC.** A PDF saved through the browser's Print → Save as PDF,
 an attachment opened in Outlook, or anything in Downloads is outside the vault. Delete them when

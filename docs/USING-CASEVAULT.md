@@ -12,18 +12,22 @@ CaseVault picks the right way to reach your SSD for the browser you use. The dat
 
 | Browser | Mode | How to open CaseVault |
 |---|---|---|
-| **Google Chrome**, **Microsoft Edge** | **Direct**: the browser opens the SSD folder itself | The installed app (below), the SSD copy, or the launcher |
+| **Google Chrome**, **Microsoft Edge** | **Direct**: the browser opens the SSD folder itself | The launcher (every day), or the online copy now and then |
 | **Firefox** | **Helper**: a small helper program on the SSD reads and writes for the browser | Double-click **`W:\Start-CaseVault.bat`** (see [AI-SETUP.md](AI-SETUP.md)). It opens CaseVault at `http://127.0.0.1:8517/`. |
 
 If you open the hosted page or the SSD copy in Firefox, CaseVault explains that you need to start the launcher.
 
 In Chrome and Edge you have these ways to open it:
 
-### Installed app (recommended)
+### The launcher (every day)
 
-1. Visit **https://t3rminal-cmd.github.io/casevault/** once while online.
-2. Click the **Install** icon at the right end of the address bar (or ⋮ menu → *Cast, save and share* → *Install page as app*).
-3. From then on, open **CaseVault** from the Start menu. It works with no internet, because the whole app is stored by the browser. Your case data is not; that stays on the SSD.
+Double-click **`W:\Start-CaseVault.bat`**, as in Firefox. CaseVault opens at `http://127.0.0.1:8517/`, an address that exists only on this PC, with the AI engine running. Chrome and Edge remember the vault folder for that address, so you pick it once (v1.178: the everyday way, see [SECURITY.md](SECURITY.md)).
+
+### Online copy and installed app (now and then)
+
+1. Visit **https://t3rminal-cmd.github.io/casevault/** while online.
+2. To install it, click the **Install** icon at the right end of the address bar (or ⋮ menu → *Cast, save and share* → *Install page as app*). It then works with no internet, because the whole app is stored by the browser. Your case data is not; that stays on the SSD.
+3. Its web address is shared with the account's other GitHub Pages sites, so it **doesn't remember the vault folder** (v1.178): choose it each visit, and pick **Allow this time** when the browser asks.
 
 ### Offline copy on the SSD (fallback)
 
@@ -33,7 +37,7 @@ For a PC that has never visited the site, or if GitHub is unreachable:
 2. Copy the extracted files into **`V:\CaseVault-App\`**, so that `V:\CaseVault-App\index.html` exists.
 3. Double-click `V:\CaseVault-App\index.html` and choose Chrome or Edge to open it. It works the same way.
 
-The installed app and the SSD copy each ask you to pick the vault folder once. The browser keeps their permissions separate.
+The launcher and the SSD copy each ask you to pick the vault folder once; the online copy asks each visit. The browser keeps their permissions separate.
 
 > **PDF reading and OCR** in the Consistency Checker need the installed app or the launcher (`http://127.0.0.1:8517/`). A copy opened straight from the SSD by double-clicking `index.html` can't load them, because browsers restrict `file://` pages. Everything else works there.
 
@@ -224,7 +228,7 @@ The **Overview** screen (click **CaseVault** at the top left) shows counts by st
 - **An installed Ollama keeps the AI off.** If an Ollama installed on the PC is running instead of the one on W: (it keeps its logs and models on the PC), the header shows **AI: installed Ollama (logs on this PC)**. The AI stays off until you click it and allow it for this session. Rules-only checks still work. Quit it from the tray and start CaseVault again to use the SSD's
 - **Power Off closes only CaseVault's own window**, never another tab or window that mentions CaseVault (a GitHub page, for example). A browser window with other tabs open stays; close it yourself
 - **The helper's key** is removed from the browser when the helper no longer accepts it, and at Power Off
-- Docs: [SECURITY.md](SECURITY.md) explains the GitHub Pages address that CaseVault's online copy shares with the account's other sites, and the options
+- **The SSD copy every day.** Start CaseVault with Start-CaseVault.bat in any browser. The online copy on GitHub Pages shares its web address with the account's other Pages sites, so it no longer remembers the vault folder: choose it each visit and pick *Allow this time*. Its welcome screen says so. See [SECURITY.md](SECURITY.md)
 
 ### What's new in v1.177
 
