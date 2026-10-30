@@ -10,6 +10,9 @@
     * Needs no installation and no admin rights (plain Windows PowerShell 5.1).
     * Uses only paths relative to its own location, and finds the CASEVAULT partition
       by its label, so drive letter changes do not matter.
+    * (1.17) A drive labelled CASEVAULT always wins over any other drive with a vault, and the
+      helper stays with the vault it opened first (its vaultId and volume serial number): if the
+      SSD drops out, no other drive's vault is used in its place.
     * Only same-origin requests from the CaseVault page are accepted. Other websites
       open in the browser cannot read or write anything through it.
     * (1.16) Each start makes a new random key. The browser window the helper opens gets it, and
@@ -33,6 +36,7 @@
     -BackupTargets <a;b> offer these folders as backup drives (for testing; normally every other drive)
     -BitLockerStates <x> pretend drive states, e.g. "V:\=on;E:\=off" (for testing; normally asked of Windows)
     -SimulatedNetworkRoot <p>  treat saved backup folders under this folder as shared folders on another PC (for testing)
+    -SimulatedDrives <x> pretend these folders are the PC's drives, "root|label|serial;..." (for testing; normally every drive)
 #>
 [CmdletBinding()]
 param(
@@ -46,18 +50,22 @@ param(
   [switch]$NoAI,
   [string]$BackupTargets = '',
   [string]$BitLockerStates = '',
-  [string]$SimulatedNetworkRoot = ''
+  [string]$SimulatedNetworkRoot = '',
+  [string]$SimulatedDrives = ''
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
 
-$HelperVersion = '1.16.1'
+$HelperVersion = '1.17.0'
 $VolumeLabel   = 'CASEVAULT'
 $DataDirName   = 'CaseVault-Data'
 $AppDirName    = 'CaseVault-App'
 $PagesOrigin   = 'https://t3rminal-cmd.github.io'
 $MaxHeaderBytes = 65536
+# (1.17) The largest file one write may bring: a whole case exported (the app warns past 1 GB) or a
+# long video attached as evidence fit easily; anything bigger is refused before a byte is written.
+$MaxUploadBytes = 32GB
 
 $Sep      = [System.IO.Path]::DirectorySeparatorChar
 $AIRoot   = Split-Path -Parent $PSScriptRoot      # e.g. W:\  (the folder holding Start-CaseVault.bat)
@@ -79,6 +87,70 @@ function Write-Warn([string]$msg)  { Write-Host "  ! $msg" -ForegroundColor Yell
 # ---------------------------------------------------------------------------
 
 $script:DataRoot = $null
+# (1.17) The vault this session opened first: its vaultId (from vault.json), the volume's serial
+# number and the folder's place on the drive. Once set, a re-scan accepts only that vault again, so
+# an old SSD, a copied vault or another USB stick is never used in its place.
+$script:VaultPin = $null
+$script:PinLookedAt = [DateTime]::MinValue
+
+# (1.17) The ready drives: { Root; Label; Serial }. -SimulatedDrives replaces the list in tests.
+function Get-DriveCandidates {
+  $out = @()
+  if ($SimulatedDrives) {
+    foreach ($entry in ($SimulatedDrives -split ';' | Where-Object { $_ })) {
+      $parts = $entry -split '\|'
+      $r = $parts[0]
+      if (-not (Test-Path -LiteralPath $r -PathType Container)) { continue }   # "unplugged"
+      $out += [pscustomobject]@{ Root = [System.IO.Path]::GetFullPath($r); Label = $(if ($parts.Length -gt 1) { $parts[1] } else { '' }); Serial = $(if ($parts.Length -gt 2) { $parts[2] } else { '' }) }
+    }
+    return $out
+  }
+  foreach ($d in [System.IO.DriveInfo]::GetDrives()) {
+    try {
+      if (-not $d.IsReady) { continue }   # BitLocker-locked or empty drives are not ready
+      $out += [pscustomobject]@{ Root = $d.RootDirectory.FullName; Label = [string]$d.VolumeLabel; Serial = $null }
+    } catch { }
+  }
+  return $out
+}
+
+# (1.17) The volume serial number of a drive (e.g. "A1B2C3D4"), asked of Windows without admin
+# rights; '' when Windows can't say. Only asked for drives that hold a vault.
+function Get-VolumeSerial($cand) {
+  if ($null -ne $cand.Serial) { return [string]$cand.Serial }
+  try {
+    $id = ([System.IO.Path]::GetPathRoot($cand.Root)).TrimEnd('\')
+    $disk = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID='$id'" -ErrorAction Stop
+    if ($disk -and $disk.VolumeSerialNumber) { return [string]$disk.VolumeSerialNumber }
+  } catch { }
+  return ''
+}
+
+# (1.17) The vaultId saved in vault.json ('' for a vault made before it had one, or no vault yet).
+function Get-VaultId([string]$dir) {
+  $f = Join-Path $dir 'vault.json'
+  if (-not (Test-Path -LiteralPath $f -PathType Leaf)) { return '' }
+  try {
+    # A look for the one field, not a full parse: vault.json holds the whole case index.
+    $m = [regex]::Match([System.IO.File]::ReadAllText($f), '"vaultId"\s*:\s*"([^"\\]{1,100})"')
+    if ($m.Success) { return $m.Groups[1].Value }
+  } catch { }
+  return ''
+}
+
+# (1.17) Is this the vault the session pinned? The same vaultId (when it has one), the same volume
+# serial (when both are known) and the same folder on the drive; the drive letter may differ.
+function Test-PinnedVault([string]$dir, $cand) {
+  $pin = $script:VaultPin
+  if (-not $pin) { return $true }
+  if ((Split-Path -Leaf $dir) -ne $pin.Folder) { return $false }
+  if ($pin.VaultId) { if ((Get-VaultId $dir) -ne $pin.VaultId) { return $false } }
+  $serial = Get-VolumeSerial $cand
+  if ($pin.Serial -and $serial) { if ($serial -ne $pin.Serial) { return $false } }
+  # Neither a vaultId nor a serial to go by: only the very same folder.
+  if (-not $pin.VaultId -and -not ($pin.Serial -and $serial)) { return ($dir -ieq $pin.Path) }
+  return $true
+}
 
 function Find-DataRoot {
   if ($DataPath) {
@@ -89,27 +161,65 @@ function Find-DataRoot {
     if (Test-Path -LiteralPath $p -PathType Container) { return $p }
     return $null
   }
-  $labelled = $null
-  foreach ($d in [System.IO.DriveInfo]::GetDrives()) {
-    try {
-      if (-not $d.IsReady) { continue }   # BitLocker-locked or empty drives are not ready
-      $candidate = Join-Path $d.RootDirectory.FullName $DataDirName
-      if (Test-Path -LiteralPath (Join-Path $candidate 'vault.json')) { return $candidate }
-      if ($d.VolumeLabel -eq $VolumeLabel -and -not $labelled) { $labelled = $candidate }
-    } catch { }
+  $cands = @(Get-DriveCandidates)
+  # (1.17) A drive labelled CASEVAULT always comes first; drive letter order only within each group.
+  $labelled = @($cands | Where-Object { $_.Label -eq $VolumeLabel })
+  $others = @($cands | Where-Object { $_.Label -ne $VolumeLabel })
+  if ($script:VaultPin) {
+    # After the vault went away: only the same vault, wherever its drive letter is now.
+    foreach ($c in ($labelled + $others)) {
+      $dir = Join-Path $c.Root $DataDirName
+      if ((Test-Path -LiteralPath $dir -PathType Container) -and (Test-PinnedVault $dir $c)) { return $dir }
+    }
+    return $null
   }
-  if ($labelled) {
+  foreach ($c in $labelled) {
+    $dir = Join-Path $c.Root $DataDirName
+    if (Test-Path -LiteralPath (Join-Path $dir 'vault.json')) { return $dir }
+  }
+  if ($labelled.Count) {
     # A CASEVAULT partition without a vault yet: create the empty folder; the app offers to set it up.
-    New-Item -ItemType Directory -Path $labelled -Force | Out-Null
-    return $labelled
+    $dir = Join-Path $labelled[0].Root $DataDirName
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    return $dir
+  }
+  foreach ($c in $others) {
+    $dir = Join-Path $c.Root $DataDirName
+    if (Test-Path -LiteralPath (Join-Path $dir 'vault.json')) {
+      Write-Warn "No drive is labelled $VolumeLabel, so the vault on $($c.Root) (labelled '$($c.Label)') is used. Name the SSD's partition $VolumeLabel so CaseVault always opens the right one."
+      return $dir
+    }
   }
   return $null
 }
 
+# (1.17) Remembers the vault first opened (and its vaultId once the app has made it).
+function Set-VaultPin([string]$dir) {
+  if ($DataPath -or -not $dir) { return }
+  $id = Get-VaultId $dir
+  if ($script:VaultPin) {
+    if (-not $script:VaultPin.VaultId -and $id) { $script:VaultPin.VaultId = $id }
+    return
+  }
+  $root = [System.IO.Path]::GetPathRoot($dir)
+  $cand = @(Get-DriveCandidates) | Where-Object { $dir.StartsWith($_.Root.TrimEnd([char]'\', [char]'/'), [System.StringComparison]::OrdinalIgnoreCase) } | Sort-Object { $_.Root.Length } -Descending | Select-Object -First 1
+  $serial = if ($cand) { Get-VolumeSerial $cand } else { '' }
+  $script:VaultPin = @{ VaultId = $id; Serial = $serial; Folder = (Split-Path -Leaf $dir); Path = $dir; Root = $root }
+}
+
 # Returns the vault folder, re-scanning the drives if it disappeared (unplugged or letter changed).
+# (1.17) A re-scan finds only the pinned vault; anything else counts as "not connected".
 function Get-DataRoot {
-  if ($script:DataRoot -and (Test-Path -LiteralPath $script:DataRoot -PathType Container)) { return $script:DataRoot }
+  if ($script:DataRoot -and (Test-Path -LiteralPath $script:DataRoot -PathType Container)) {
+    # A vault made before vaultId existed gets one when the app opens it (app 1.178); looked for every 30 s.
+    if ($script:VaultPin -and -not $script:VaultPin.VaultId -and ([DateTime]::UtcNow - $script:PinLookedAt).TotalSeconds -gt 30) {
+      $script:PinLookedAt = [DateTime]::UtcNow
+      Set-VaultPin $script:DataRoot
+    }
+    return $script:DataRoot
+  }
   $script:DataRoot = Find-DataRoot
+  if ($script:DataRoot) { Set-VaultPin $script:DataRoot; if ($script:VaultPin) { $script:VaultPin.Path = $script:DataRoot } }
   return $script:DataRoot
 }
 
@@ -351,7 +461,9 @@ function Open-CaseVault([string]$url, $dataRoot) {
     [void][System.IO.Directory]::CreateDirectory($profile)
     if ($kind -eq 'firefox') { $argList = @('-profile', ('"' + $profile + '"'), $url) }
     else { $argList = @(('--user-data-dir="' + $profile + '"'), ('--app=' + $url), '--no-first-run', '--no-default-browser-check') }
-    Start-Process -FilePath $exe -ArgumentList $argList | Out-Null
+    $proc = Start-Process -FilePath $exe -ArgumentList $argList -PassThru
+    # (1.17) Power Off closes exactly this browser window, and nothing else.
+    if ($proc) { $script:BrowserPid = [int]$proc.Id }
     Write-Info "Browser   : $kind, its own profile in $profile"
   } catch {
     Write-Warn "Could not open the CaseVault browser profile ($($_.Exception.Message)); opening the normal browser."
@@ -359,9 +471,11 @@ function Open-CaseVault([string]$url, $dataRoot) {
   }
 }
 
+$script:BrowserPid = 0
+
 # The clean-up run by Power Off (written to %TEMP% and started hidden; see /api/shutdown).
 $ShutdownScript = @'
-param([int]$HelperPid = 0, [int]$ParentPid = 0, [string]$Drives = '', [string]$OllamaDir = '')
+param([int]$HelperPid = 0, [int]$ParentPid = 0, [string]$Drives = '', [string]$OllamaDir = '', [int]$BrowserPid = 0)
 Set-Location -LiteralPath $env:TEMP
 # 1. Wait (at most 15 s) for the helper and its window to close: they hold the drives open.
 foreach ($id in @($HelperPid, $ParentPid)) {
@@ -370,10 +484,18 @@ foreach ($id in @($HelperPid, $ParentPid)) {
 foreach ($id in @($HelperPid, $ParentPid)) {
   if ($id -gt 0) { try { Stop-Process -Id $id -Force -ErrorAction Stop } catch { } }
 }
-# 2. The CaseVault browser window (its title has CaseVault in it): asked to close, like clicking X.
-foreach ($name in @('msedge', 'chrome', 'firefox', 'brave')) {
-  foreach ($p in @(Get-Process -Name $name -ErrorAction SilentlyContinue)) {
-    if ($p.MainWindowTitle -match 'CaseVault') { try { [void]$p.CloseMainWindow() } catch { } }
+# 2. The CaseVault browser window, asked to close like clicking X. (1.17) Only CaseVault's own: the
+# browser the helper started (-OwnProfile), else a window whose title is exactly the app's
+# ("CaseVault" or "CaseVault - Off", then the browser's name), never one that merely mentions it
+# (a GitHub tab about the repository) or holds other tabs too ("CaseVault and 2 more pages").
+$TitlePattern = '^CaseVault(?: - Off)?(?: [-\u2014](?: [^\-\u2014]{1,40} -)? (?:Microsoft\u200B? Edge|Google Chrome|Mozilla Firefox|Brave))?$'
+if ($BrowserPid -gt 0) {
+  try { [void](Get-Process -Id $BrowserPid -ErrorAction Stop).CloseMainWindow() } catch { }
+} else {
+  foreach ($name in @('msedge', 'chrome', 'firefox', 'brave')) {
+    foreach ($p in @(Get-Process -Name $name -ErrorAction SilentlyContinue)) {
+      if ($p.MainWindowTitle -cmatch $TitlePattern) { try { [void]$p.CloseMainWindow() } catch { } }
+    }
   }
 }
 # 3. Ollama, when it runs from the AI drive.
@@ -579,7 +701,11 @@ function Invoke-Api($stream, $req) {
     $ready = if ($root) { 'true' } else { 'false' }
     $rootName = if ($root) { Split-Path -Leaf $root } else { '' }
     $drive = if ($root) { [System.IO.Path]::GetPathRoot($root) } else { '' }
-    Send-Json $stream 200 ('{"app":"CaseVault helper","version":' + (ConvertTo-JsonString $HelperVersion) + ',"ready":' + $ready + ',"root":' + (ConvertTo-JsonString $rootName) + ',"drive":' + (ConvertTo-JsonString $drive) + ',"bitlocker":' + (ConvertTo-JsonString (Get-BitLockerState $root)) + '}')
+    # (1.17) The vault this session is pinned to, so the app can tell if it ever changes.
+    $vaultId = ''; $serial = ''
+    if ($script:VaultPin) { $vaultId = [string]$script:VaultPin.VaultId; $serial = [string]$script:VaultPin.Serial }
+    elseif ($root) { $vaultId = Get-VaultId $root }
+    Send-Json $stream 200 ('{"app":"CaseVault helper","version":' + (ConvertTo-JsonString $HelperVersion) + ',"ready":' + $ready + ',"root":' + (ConvertTo-JsonString $rootName) + ',"drive":' + (ConvertTo-JsonString $drive) + ',"bitlocker":' + (ConvertTo-JsonString (Get-BitLockerState $root)) + ',"vaultId":' + (ConvertTo-JsonString $vaultId) + ',"volumeSerial":' + (ConvertTo-JsonString $serial) + ',"aiEngine":' + (ConvertTo-JsonString (Get-AIEngineSource)) + '}')
     return
   }
 
@@ -602,7 +728,7 @@ function Invoke-Api($stream, $req) {
     $cleanup = Join-Path $env:TEMP 'casevault-poweroff.ps1'
     Set-Content -LiteralPath $cleanup -Encoding UTF8 -Value $ShutdownScript
     $argList = @('-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', "`"$cleanup`"",
-              '-HelperPid', $PID, '-ParentPid', $parent, '-Drives', "`"$($drives -join ',')`"", '-OllamaDir', "`"$(Join-Path $AIRoot 'ollama')`"")
+              '-HelperPid', $PID, '-ParentPid', $parent, '-Drives', "`"$($drives -join ',')`"", '-OllamaDir', "`"$(Join-Path $AIRoot 'ollama')`"", '-BrowserPid', $script:BrowserPid)
     Start-Process -FilePath 'powershell.exe' -ArgumentList $argList -WindowStyle Hidden -WorkingDirectory $env:TEMP | Out-Null
     Send-Json $stream 200 ('{"ok":true,"drives":' + (ConvertTo-JsonString ($drives -join ',')) + '}')
     $script:StopRequested = $true
@@ -721,8 +847,14 @@ function Invoke-Api($stream, $req) {
       if ($isDir) { Send-Error $stream 409 'TypeMismatchError' 'That is a folder, not a file.'; return }
       $parent = Split-Path -Parent $full
       if (-not (Test-Path -LiteralPath $parent -PathType Container)) { Send-Error $stream 404 'NotFoundError' 'Folder not found.'; return }
+      # (1.17) The body's length must be stated as a plain number: a negative or missing one used to
+      # write an empty file over the real one. Chunked bodies aren't supported.
+      if ($req.Headers.ContainsKey('transfer-encoding')) { Send-Error $stream 411 'NotSupportedError' 'The file has to be sent in one piece with its size (Content-Length), not in chunks.'; return }
       if (-not $req.Headers.ContainsKey('content-length')) { Send-Error $stream 411 'NotAllowedError' 'Content-Length required.'; return }
-      $len = [long]$req.Headers['content-length']
+      $cl = ([string]$req.Headers['content-length']).Trim()
+      if ($cl -notmatch '^\d+$') { Send-Error $stream 400 'SyntaxError' 'The file size sent with the file is not a number, so nothing was saved.'; return }
+      $len = [long]0
+      if (-not [long]::TryParse($cl, [ref]$len) -or $len -gt $MaxUploadBytes) { Send-Error $stream 413 'QuotaExceededError' ('The file is too large to save (the limit is ' + [math]::Round($MaxUploadBytes / 1GB) + ' GB). Nothing was saved.'); return }
       # Write to a temp file next to the target, then swap it in, so a pulled cable never leaves half a file.
       $tmp = $full + '.cvtmp-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)
       try {
@@ -823,13 +955,31 @@ function Invoke-Client($client) {
 # Ollama (optional)
 # ---------------------------------------------------------------------------
 
+# (1.17) Where the running AI engine comes from: 'ssd' (Ollama from this drive's ollama folder),
+# 'external' (any other Ollama, e.g. the one installed on the PC: it logs to %LOCALAPPDATA%\Ollama
+# and keeps its models on C:) or 'none'. Judged by each Ollama server process's file, not its name;
+# one whose file Windows won't show counts as external.
+function Get-AIEngineSource {
+  $procs = @(Get-Process -Name 'ollama' -ErrorAction SilentlyContinue)
+  if (-not $procs.Count) { return 'none' }
+  $dir = [System.IO.Path]::GetFullPath((Join-Path $AIRoot 'ollama')).TrimEnd([char]'\', [char]'/') + $Sep
+  foreach ($p in $procs) {
+    $file = $null
+    try { $file = $p.Path } catch { }
+    if (-not $file -or -not ([System.IO.Path]::GetFullPath($file)).StartsWith($dir, [System.StringComparison]::OrdinalIgnoreCase)) { return 'external' }
+  }
+  return 'ssd'
+}
+
 function Start-Ollama {
   $exe = Join-Path (Join-Path $AIRoot 'ollama') 'ollama.exe'
   if ($NoAI -or -not (Test-Path -LiteralPath $exe)) { Write-Info 'AI engine : not started (Ollama not found next to this helper)'; return $null }
-  if (Get-Process -Name 'ollama' -ErrorAction SilentlyContinue) {
-    Write-Warn 'Ollama is already running (maybe the installed app). Quit it from the tray to use the SSD models.'
+  $running = Get-AIEngineSource
+  if ($running -eq 'external') {
+    Write-Warn 'An Ollama installed on this PC is already running. It keeps its logs and models on this PC, so CaseVault keeps the AI off until you allow it. Quit it from the tray and start CaseVault again to use the SSD models.'
     return $null
   }
+  if ($running -eq 'ssd') { Write-Info 'AI engine : Ollama from this drive is already running'; return $null }
   $models = Join-Path $AIRoot 'models'
   $logs = Join-Path $AIRoot 'logs'
   New-Item -ItemType Directory -Path $models, $logs -Force | Out-Null
@@ -863,7 +1013,9 @@ catch {
 }
 
 $root = Get-DataRoot
-if ($root) { Write-Info "Vault     : $root" } else { Write-Warn 'Vault     : CASEVAULT drive not found yet. Plug in and unlock the SSD; the app will pick it up.' }
+$pinNote = ''
+if ($script:VaultPin -and $script:VaultPin.VaultId) { $pinNote = ' (vault ' + ([string]$script:VaultPin.VaultId).Substring(0, [Math]::Min(8, ([string]$script:VaultPin.VaultId).Length)) + ')' }
+if ($root) { Write-Info "Vault     : $root$pinNote" } else { Write-Warn 'Vault     : CASEVAULT drive not found yet. Plug in and unlock the SSD; the app will pick it up.' }
 $app = Find-AppRoot
 if ($app) { Write-Info "App       : $app" } else { Write-Warn "App       : not found. Copy the app into $AppDirName on the CASEVAULT drive." }
 $ollama = Start-Ollama

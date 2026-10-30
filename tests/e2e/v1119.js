@@ -47,7 +47,9 @@ const SP = process.env.SP + '/v1119';
       { id: Vault.newId('e'), date: '2026-09-20', kind: 'event', title: 'Surveillance', suspect: 'John Doe' });
     Vault.sortEvents(t.events); await Vault.saveTimeline(id, t);
   }, ids.c2);
-  await p.evaluate((i) => { location.hash = '#/x'; location.hash = `#/case/${i}/timeline`; }, ids.c2); await p.waitForSelector('.tl-tools');
+  await p.evaluate((i) => { location.hash = '#/x'; location.hash = `#/case/${i}/timeline`; }, ids.c2);
+  // The case's own Timeline, not the Mission page's that was on screen a moment before (it has one too).
+  await p.waitForFunction(() => document.querySelector('#case-title') && document.querySelector('.tl-tools'));
   await p.evaluate(() => { const f = document.querySelector('.timeline-form'); if (f && f.hidden) document.querySelector('.tl-add-btn').click(); }); // v1.177: the form opens from Add Event
   // Add one more through the form.
   await p.selectOption('.timeline-form select:near(:text("Type"))', 'buy').catch(async () => { await p.$eval('.timeline-form select', (s) => { s.value = 'buy'; s.dispatchEvent(new Event('change', { bubbles: true })); }); });

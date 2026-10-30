@@ -424,6 +424,12 @@
   const PARTS = {}; // v1.98: Case Overview, Timeline and Files tab, from their own files (see the end)
   const MODE = ('showDirectoryPicker' in window && window.isSecureContext) ? 'direct' : 'helper';
   document.body.dataset.mode = MODE;
+  // v1.178: the online copy (GitHub Pages) shares its web address with every Pages site of the
+  // account (docs/SECURITY.md), so it never remembers the vault folder there: the folder is chosen
+  // each visit and kept only while the page is open. Everyday use is the SSD copy through the helper
+  // (Start-CaseVault.bat), whose address is this PC alone. (__cvOnlineCopy: for tests.)
+  const ONLINE_COPY = MODE === 'direct' && ((location.protocol === 'https:' && /\.github\.io$/i.test(location.hostname)) || window.__cvOnlineCopy === true);
+  let onlineHandle = null;
 
   const actPick = MODE === 'direct' ? { label: 'Choose folder…', onClick: () => pickFolder() } : null;
   const actReconnect = { label: 'Reconnect', primary: true, onClick: () => reconnect() };
@@ -432,7 +438,9 @@
   function gateWelcome() {
     showGate(
       'Choose your CaseVault folder on the SSD.',
-      'Pick the CaseVault partition (for example V:\\) or its CaseVault-Data folder. If there is no vault yet, CaseVault will offer to create one.',
+      ONLINE_COPY
+        ? 'This is CaseVault\'s online copy, for now and then. For everyday use, open CaseVault from the SSD with Start-CaseVault.bat: it runs on this PC only. Here the folder is not remembered, so you choose it each visit; when the browser asks, pick "Allow this time".'
+        : 'Pick the CaseVault partition (for example V:\\) or its CaseVault-Data folder. If there is no vault yet, CaseVault will offer to create one.',
       [{ label: 'Choose folder…', primary: true, onClick: () => pickFolder() }]);
   }
 
@@ -533,7 +541,7 @@
 
   async function reconnect() {
     if (MODE === 'helper') return connectHelper();
-    const handle = await HandleStore.load();
+    const handle = ONLINE_COPY ? onlineHandle : await HandleStore.load();
     if (!handle) return gateWelcome();
     try {
       const perm = await handle.requestPermission({ mode: 'readwrite' });
@@ -580,7 +588,8 @@
       if (!drop) { Vault.close(); return gateMissing(); }
       Save.discardAll();
     }
-    if (MODE === 'direct') await HandleStore.save(dir);
+    if (ONLINE_COPY) onlineHandle = dir; // v1.178: while this page is open only
+    else if (MODE === 'direct') await HandleStore.save(dir);
     const sameVault = previousId === data.vaultId;
     // v1.151: the key that scrambles case IDs and names in the address (js/route-key.js).
     if (!/^[0-9a-f]{32,128}$/.test(String((Vault.data.settings || {}).routeKey || ''))) await Vault.updateSettings({ routeKey: CVRoute.newSecret() }).catch(() => {});
@@ -731,6 +740,8 @@
 
   async function launch() {
     if (MODE === 'helper') return HelperFS.servedByHelper ? connectHelper() : gateUnsupported();
+    // v1.178: a folder the online copy remembered before is forgotten (see ONLINE_COPY).
+    if (ONLINE_COPY) { await HandleStore.clear().catch(() => {}); return gateWelcome(); }
     const handle = await HandleStore.load();
     if (!handle) return gateWelcome();
     let perm = 'prompt';

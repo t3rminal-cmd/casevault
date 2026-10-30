@@ -44,9 +44,31 @@
    * AI engine: detection, header status, settings
    * ===================================================================== */
 
+  // v1.178 (helper 1.17): an Ollama installed on the PC (not the one on the SSD) keeps its logs in
+  // %LOCALAPPDATA%\Ollama and its models on C:. The AI stays off with it until it is allowed, for this
+  // browser session only; rules-only checks always work.
+  const ALLOW_INSTALLED = 'cv-ai-installed-ok';
+  let allowedInMemory = false;
+
   const Engine = {
     detected: null,
     busy: null,
+    external: false, // the helper says the running engine is not the SSD's
+
+    // Where the running engine comes from, as the helper sees it: 'ssd', 'external' or 'none'; ''
+    // when nothing can tell (Chrome or Edge without the helper: see docs/AI-SETUP.md).
+    async source() {
+      const helperMode = typeof HelperFS !== 'undefined' && HelperFS.servedByHelper && !('showDirectoryPicker' in window && window.isSecureContext);
+      if (!helperMode) return '';
+      try { const i = await HelperFS.info(); return (i && i.aiEngine) || ''; } catch { return ''; }
+    },
+    installedAllowed() {
+      try { return sessionStorage.getItem(ALLOW_INSTALLED) === '1' || allowedInMemory; } catch { return allowedInMemory; }
+    },
+    allowInstalled() {
+      allowedInMemory = true;
+      try { sessionStorage.setItem(ALLOW_INSTALLED, '1'); } catch { /* this page only */ }
+    },
 
     // The profile is remembered per PC (js/ai/hardware.js), because the SSD moves between a PC
     // with a graphics card and one without. vault.json's old setting only still counts for
@@ -66,10 +88,11 @@
       return CVAI.choose(this.detected, this.setting(), this.autoOrder());
     },
 
-    // 'connected' | 'offline' | 'rules-only' | 'checking'
+    // 'connected' | 'offline' | 'rules-only' | 'checking' | 'blocked' (an installed Ollama, not allowed)
     status() {
       if (this.setting() === 'rules-only') return 'rules-only';
       if (!this.detected) return 'checking';
+      if (this.detected.status === 'blocked') return 'blocked';
       if (this.detected.status !== 'connected') return 'offline';
       return this.choice() ? 'connected' : 'offline';
     },
@@ -78,8 +101,11 @@
     refresh() {
       if (!this.busy) {
         this.busy = (async () => {
-          const d = await CVAI.detect().catch(() => null);
-          this.detected = d || { status: 'offline', models: [], chat: [], profiles: {} };
+          const [d, src] = await Promise.all([CVAI.detect().catch(() => null), this.source()]);
+          this.external = src === 'external';
+          // Not allowed: no address, no models, so no AI feature can reach it (they all go through here).
+          if (this.external && d && d.status === 'connected' && !this.installedAllowed()) this.detected = { status: 'blocked', base: null, models: [], chat: [], embed: null, profiles: {} };
+          else this.detected = d || { status: 'offline', models: [], chat: [], profiles: {} };
         })().finally(() => { this.busy = null; renderPill(); });
       }
       return this.busy;
@@ -114,6 +140,7 @@
       offline: 'AI: Offline',
       'rules-only': 'AI: Rules-only',
       checking: 'AI: checking…',
+      blocked: 'AI: installed Ollama (logs on this PC)',
     }[st];
     // Every AI icon in CaseVault is the same robot: blue when the AI is running, red when it isn't.
     el.replaceChildren(CVIcons.icon('robot'), text);
@@ -122,6 +149,7 @@
       offline: 'The local AI engine (Ollama) is not running. Checks will use rules only. Click for help.',
       'rules-only': 'AI review is switched off. Checks use rules only. Click to change.',
       checking: 'Looking for the local AI engine…',
+      blocked: 'An Ollama installed on this PC is running instead of the SSD\'s, and it keeps its logs and models on this PC. AI is off until you allow it for this session; rules-only checks still work. Click to choose.',
     }[st];
     // The header shows just the icon; the model's name is in the hover box.
     el.title = `${text}. ${el.title}`;
@@ -150,9 +178,20 @@
         return h('label', { class: 'radio-row' }, input, h('span', {}, h('strong', {}, label), h('span', { class: 'muted small block' }, hint)));
       });
       const choice = Engine.choice();
+      // v1.178: an installed Ollama (helper 1.17 tells): off until allowed for this session.
+      const installedNote = d.status === 'blocked'
+        ? h('div', { class: 'warn-card engine-installed' },
+          h('p', {}, h('strong', {}, 'An Ollama installed on this PC is running, not the one on the SSD.'), ' It keeps its logs in %LOCALAPPDATA%\\Ollama and its models on C:, so what you ask the AI could stay on this PC. The AI is off; rules-only checks still work.'),
+          h('p', { class: 'muted small' }, 'To use the SSD\'s AI: quit Ollama from the taskbar tray (right-click it → Quit), close the CaseVault helper window and start Start-CaseVault.bat again.'),
+          h('div', { class: 'dialog-actions' },
+            h('button', { class: 'btn danger', type: 'button', onclick: async () => { Engine.allowInstalled(); close(); await Engine.refresh(); toast('The installed Ollama is used for this session. Its logs stay on this PC.', 'info', 7000); showEngineDialog(); } }, 'Allow It for This Session')))
+        : Engine.external && d.status === 'connected'
+          ? h('p', { class: 'warn-text small engine-installed' }, 'Using the Ollama installed on this PC for this session: its logs stay on this PC.')
+          : null;
       return h('div', { class: 'engine-panel' },
         h('h2', {}, 'AI engine'),
-        d.status === 'connected'
+        installedNote,
+        d.status === 'blocked' ? null : d.status === 'connected'
           ? h('p', {}, h('span', { class: 'pill status-closed' }, 'Connected'), ' Ollama is running on this computer',
             choice ? ['. Checks will use ', h('strong', {}, profileLabel(choice)), choice.fallback ? ' (the chosen profile has no model installed)' : '', '.'] : ', but no chat model is installed.')
           : h('div', {},

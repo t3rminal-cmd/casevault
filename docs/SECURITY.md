@@ -31,10 +31,34 @@ settings saved on the PC never hold names.
 
 **The helper (1.16)** answers only `127.0.0.1`, only the CaseVault page, and only requests that
 carry the key it made when it started (given to the tab it opens, and shared with the browser's other
-CaseVault tabs). Other programs that just try
+CaseVault tabs: it stays in the browser's local storage, which other tabs can see, and is removed
+when the helper refuses it after a restart and at Power Off). Other programs that just try
 the address are refused. A program running as your own Windows user could still read that key, so
 it is not a replacement for BitLocker and a locked PC. File names Windows treats as devices (CON,
-NUL, COM1…) are refused.
+NUL, COM1…) are refused. A file sent to it must state its size as a plain number and be at most
+32 GB, in one piece (helper 1.17): anything else is refused before the file on the SSD is touched.
+
+**Which drive the helper opens (helper 1.17).** It opens `CaseVault-Data` on the drive labelled
+**CASEVAULT**, even when another drive (an old SSD, a copy of the vault, a USB stick) has a vault and
+a lower drive letter. Only when no drive is labelled CASEVAULT does it use another drive's vault, and
+its window then says so. It stays with the vault it opened first, recognised by the `vaultId` in
+`vault.json` and the drive's volume serial number: if the SSD drops out, CaseVault shows "Drive not
+connected" rather than using another drive, and the same SSD back under a different letter is fine.
+`/api/info` reports the vault it is pinned to (`vaultId`, `volumeSerial`).
+
+**Use the SSD copy every day (v1.178).** Start CaseVault with **Start-CaseVault.bat**: the helper
+serves it at http://127.0.0.1:8517, an address that exists only on this PC, and refuses anything
+without its key. In Chrome or Edge it remembers the vault folder for that address alone.
+
+The online copy at **https://t3rminal-cmd.github.io** is for now and then. That address is shared by
+every GitHub Pages site of the `t3rminal-cmd` account, so a page from another repository published
+there (one made later, or a compromised one) would run at the same address. A folder remembered
+there, with "Allow on every visit", could be read and written by such a page while V: is unlocked.
+So the online copy **never remembers the folder** (v1.178): you choose it each visit, it is kept only
+while the page is open, and a folder an earlier version remembered there is forgotten. When Chrome
+or Edge asks, pick **Allow this time**. Its welcome screen says so and points to the SSD copy.
+(Other ways to close this, not chosen: a custom domain, or a GitHub account used only for
+CaseVault.)
 
 **Files that leave CaseVault land on the PC.** A PDF saved through the browser's Print → Save as PDF,
 an attachment opened in Outlook, or anything in Downloads is outside the vault. Delete them when

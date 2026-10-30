@@ -17,6 +17,12 @@ const HelperFS = (() => {
   // v1.151 (helper 1.16): the helper opens CaseVault with a new key in the address (?k=…) each time
   // it starts, and refuses API requests without it. The key is kept for this browser profile (the
   // CaseVault one on the SSD) and taken out of the address at once. It is not case data.
+  // v1.178: it stays in localStorage rather than sessionStorage. Other tabs must see it: a tab
+  // waiting with the old key reconnects when a new tab brings the new one (the storage event,
+  // v1.152), and a CaseVault tab reopened while the helper runs (or opened by a second start of
+  // Start-CaseVault.bat, which has no key to give) gets in with the stored one. sessionStorage is per
+  // tab and would break both. Instead a key that is no longer any use is removed: when the helper
+  // refuses it (it was restarted) and at Power Off.
   const KEY_STORE = 'cv-helper-key';
   (() => {
     try {
@@ -32,11 +38,21 @@ const HelperFS = (() => {
     return k ? { 'X-CaseVault': '1', 'X-CaseVault-Key': k } : { 'X-CaseVault': '1' };
   };
   // A helper that refused the key says why; the message is shown where "not running" would be.
-  async function keyRefusal(res) {
+  // v1.178: the refused key is dropped, unless another tab has meanwhile stored the new one.
+  async function keyRefusal(res, sent) {
     if (res.status !== 403) return null;
-    try { const j = await res.clone().json(); if (j.error === 'KeyError') return Object.assign(domError('NotReadableError', j.message), { keyRefused: true }); } catch { /* not JSON */ }
+    try {
+      const j = await res.clone().json();
+      if (j.error === 'KeyError') {
+        const used = sent && sent['X-CaseVault-Key'];
+        try { if (used && localStorage.getItem(KEY_STORE) === used) localStorage.removeItem(KEY_STORE); } catch { /* private window */ }
+        return Object.assign(domError('NotReadableError', j.message), { keyRefused: true });
+      }
+    } catch { /* not JSON */ }
     return null;
   }
+  // v1.178: Power Off ends this helper session, and its key with it.
+  function forgetKey() { try { localStorage.removeItem(KEY_STORE); } catch { /* private window */ } }
   const join = (a, b) => (a ? `${a}/${b}` : b);
 
   function checkName(name) {
@@ -45,11 +61,12 @@ const HelperFS = (() => {
 
   async function call(method, op, path, { body, query = '' } = {}) {
     let res;
+    const headers = helperHeaders();
     try {
       res = await fetch(new URL(`/api/${op}?p=${encodeURIComponent(path)}${query}`, location.href), {
         method,
         body,
-        headers: helperHeaders(),
+        headers,
         cache: 'no-store',
         credentials: 'same-origin',
       });
@@ -57,7 +74,7 @@ const HelperFS = (() => {
       throw domError('NotReadableError', 'The CaseVault helper is not running. Start it with Start-CaseVault.bat.');
     }
     if (!res.ok) {
-      const refused = await keyRefusal(res);
+      const refused = await keyRefusal(res, headers);
       if (refused) throw refused;
       let name = res.status === 404 ? 'NotFoundError' : 'UnknownError';
       let message = res.statusText;
@@ -163,12 +180,13 @@ const HelperFS = (() => {
   // { ready, root, drive, version } or throws NotReadableError when the helper isn't reachable.
   async function info() {
     let res;
+    let sentInfo = null;
     try {
-      res = await fetch(new URL('/api/info', location.href), { headers: helperHeaders(), cache: 'no-store' });
+      res = await fetch(new URL('/api/info', location.href), { headers: (sentInfo = helperHeaders()), cache: 'no-store' });
     } catch {
       throw domError('NotReadableError', 'The CaseVault helper is not running.');
     }
-    if (!res.ok) throw (await keyRefusal(res)) || domError('NotReadableError', 'The CaseVault helper did not answer.');
+    if (!res.ok) throw (await keyRefusal(res, sentInfo)) || domError('NotReadableError', 'The CaseVault helper did not answer.');
     const data = await res.json();
     if (data.app !== 'CaseVault helper') throw domError('NotReadableError', 'Something else is running at this address.');
     return data;
@@ -194,6 +212,7 @@ const HelperFS = (() => {
   async function shutdown() {
     const res = await fetch(new URL('/api/shutdown', location.href), { method: 'POST', headers: helperHeaders(), cache: 'no-store' });
     if (!res.ok) throw domError('NotReadableError', 'The CaseVault helper did not answer.');
+    forgetKey();
     return res.json();
   }
 

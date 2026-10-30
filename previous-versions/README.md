@@ -4,6 +4,12 @@ What each earlier version of CaseVault added or changed, newest first. The main 
 
 The day-to-day "What's new" notes are in [WHATS-NEW.md](WHATS-NEW.md) (the latest few also in [docs/USING-CASEVAULT.md](../docs/USING-CASEVAULT.md)).
 
+## Features (v1.177)
+
+- **Easier to read:** Segoe UI text, Title Case headings, the case header on one line
+- **Timeline** form behind Add Event; **Write Report** parts show how much is filled; labelled status icons
+- Fewer icons on small buttons; the Mail tab is a setting; smaller updates
+
 ## Features (v1.176)
 
 - **Mission** and **General Files** everywhere; **Write Report** and **Saved Reports** tabs; **Move Case**

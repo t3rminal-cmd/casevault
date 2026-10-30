@@ -3,10 +3,10 @@
 An offline, browser-based case file manager that stores everything on your own external drive, with an offline consistency checker for affidavits. No cloud, no servers, no tracking.
 
 - **Your data stays on your SSD.** CaseVault reads and writes the vault folder directly through the browser's File System Access API. The browser remembers only *which folder* to reconnect to, never its contents.
-- **Works offline.** Install it as an app from GitHub Pages, or run the copy on the SSD. There's no build step and nothing to download at runtime; every library is bundled in `vendor/`.
+- **Works offline.** Run the copy on the SSD through the launcher, or install it as an app from GitHub Pages. There's no build step and nothing to download at runtime; every library is bundled in `vendor/`.
 - **Private by design.** No CDNs, downloaded fonts, analytics, or network calls. A Content-Security-Policy restricts the page to its own files and the local AI engine on `127.0.0.1:11434`. CaseVault never connects to the internet.
 
-**Open it:** https://t3rminal-cmd.github.io/casevault/ (Chrome or Edge on desktop), or `W:\Start-CaseVault.bat` (Firefox, or any browser).
+**Open it:** `W:\Start-CaseVault.bat` in any browser, every day. The online copy at https://t3rminal-cmd.github.io/casevault/ (Chrome or Edge) is for now and then: it doesn't remember the vault folder (see [docs/SECURITY.md](docs/SECURITY.md)).
 
 | Browser | Mode |
 |---|---|
@@ -15,11 +15,11 @@ An offline, browser-based case file manager that stores everything on your own e
 
 The app detects the browser and picks the mode by itself. The data format on the SSD is identical in both.
 
-## What's New in v1.177
+## What's New in v1.178
 
-- **Easier to read:** Segoe UI text, Title Case headings, the case header on one line
-- **Timeline** form behind Add Event; **Write Report** parts show how much is filled; labelled status icons
-- Fewer icons on small buttons; the Mail tab is a setting; smaller updates
+- **Security fixes (helper 1.17):** the CASEVAULT drive's vault always, and only it; bad uploads refused; an installed Ollama keeps the AI off
+- **Power Off** closes only CaseVault's own window; the helper's key is removed when no longer used
+- **The SSD copy every day:** start CaseVault with Start-CaseVault.bat; the online copy no longer remembers the vault folder
 
 ## What CaseVault Does
 

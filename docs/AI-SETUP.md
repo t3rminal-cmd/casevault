@@ -49,6 +49,10 @@ Do this on a PC with internet. It's a one-time download.
 
 > If the regular Ollama app is installed on a PC, quit it from the system tray (llama icon → *Quit*) before using the launcher. Better still, uninstall it so it can't start with Windows and keep models on the internal drive.
 
+> **An installed Ollama keeps the AI off (helper 1.17).** An installed Ollama writes its logs to `%LOCALAPPDATA%\Ollama` and keeps its models on C:, so what you ask the AI could stay on the PC. When the helper sees an Ollama running that isn't the one in `W:\ollama`, it doesn't start its own, and CaseVault shows **AI: installed Ollama (logs on this PC)** in the header with the AI switched off. Rules-only checks still work. Click it to allow that Ollama **for this browser session only**, or quit it from the tray and start the launcher again to use the SSD's.
+>
+> **Chrome or Edge without the helper can't tell.** Opened from GitHub Pages or the SSD without the launcher, CaseVault talks to whatever Ollama answers on 127.0.0.1:11434 and has no way to see which one it is. On a PC where Ollama is installed, start CaseVault with the launcher (or quit the installed Ollama first).
+
 ## 3. Start CaseVault with the launcher
 
 1. Plug in the SSD and unlock **V:** (BitLocker).
@@ -62,9 +66,9 @@ Do this on a PC with internet. It's a one-time download.
    Address   : http://127.0.0.1:8517/  (this computer only)
    ```
 
-3. Your default browser opens **http://127.0.0.1:8517/**. In Chrome or Edge you can also keep using the installed app; it will see the AI engine too.
+3. Your default browser opens **http://127.0.0.1:8517/**. Use this every day, in any browser (v1.178): it runs on this PC only. The online copy on GitHub Pages (or an app installed from it) is for now and then, and doesn't remember the vault folder; see [SECURITY.md](SECURITY.md).
 4. **Keep the window open** while you work. Closing it stops both the helper and the AI engine.
-5. To finish, click **Power Off** (the red button at the top of CaseVault). It saves, closes the browser window, the helper and the AI engine, and locks and ejects **V:** and **W:**. Locking BitLocker may need admin rights; ejecting doesn't. If a drive is still busy, Windows says so: close what's using it and eject it from the taskbar.
+5. To finish, click **Power Off** (the red button at the top of CaseVault). It saves, closes the CaseVault browser window (helper 1.17: only that one; a window with other tabs open stays, so close it yourself), the helper and the AI engine, and locks and ejects **V:** and **W:**. Locking BitLocker may need admin rights; ejecting doesn't. If a drive is still busy, Windows says so: close what's using it and eject it from the taskbar.
 
 What the launcher does:
 
@@ -254,6 +258,7 @@ Temporarily disable that rule (Windows Security → Firewall → Advanced settin
 | *App: not found* | Copy the app into `V:\CaseVault-App` (see USING-CASEVAULT.md). |
 | *AI engine: not started* | `W:\ollama\ollama.exe` is missing. Extract the Ollama zip there. CaseVault still works, with rule-based checks only. |
 | *Ollama is already running* | Quit the tray Ollama app (or end `ollama.exe` in Task Manager) and start the launcher again. |
+| *AI: installed Ollama (logs on this PC)* | An Ollama installed on the PC answers instead of the SSD's (helper 1.17). Quit it from the tray and start the launcher again, or click the header to allow it for this session. |
 | `pull` saves models to `C:\Users\…\.ollama` | The engine was started some other way. Close it and use the launcher. |
 | Header says *AI: Offline* | Start the launcher, then click the pill → **Check again**. Until Ollama runs, checks use rules only. |
 | Very slow on the Beelink | Run `W:\ollama\ollama.exe ps`. The *Processor* column should show GPU. Update the NVIDIA driver. Thorough is *meant* to be partly on the CPU. |

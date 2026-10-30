@@ -23,7 +23,7 @@
 'use strict';
 
 const Vault = (() => {
-  const APP_VERSION = '1.177.0';
+  const APP_VERSION = '1.178.0';
   const SCHEMA = 1;
   const OPERATIONS_VERSION = 1; // v1.46: Operations are records; cases link to one by operationId
   const DATA_DIR = 'CaseVault-Data';
@@ -108,6 +108,10 @@ const Vault = (() => {
     if (!vault.settings.aiProfileChosen) vault.settings.aiProfile = 'auto';
     vault.cases = Array.isArray(vault.cases) ? vault.cases : [];
     vault.operations = Array.isArray(vault.operations) ? vault.operations.filter((o) => o && o.id) : [];
+    // v1.178: a vault made before vaultId existed gets one, so the helper (1.17) can recognise this
+    // vault and never open another drive's in its place.
+    const newId = !vault.vaultId;
+    if (newId) vault.vaultId = crypto.randomUUID();
     lastBackupDay = null;
     await FS.getDir(root, 'cases', true);
     await FS.getDir(root, 'backups', true);
@@ -118,6 +122,7 @@ const Vault = (() => {
     await retirePending();
     if ((vault.operationsVersion || 0) < OPERATIONS_VERSION) await migrateOperations();
     else await reconcileOperations();
+    if (newId) await saveVault();
     return vault;
   }
 

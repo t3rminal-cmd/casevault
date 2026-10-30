@@ -249,3 +249,9 @@ table.op-cases-table td.op-closing { width: auto; min-width: 0; white-space: now
   .tb-status .net-status::after, .tb-status .engine-status::after, .tb-status .mem-status::after, .tb-status .save-status::after, .tb-status #btn-power::after { content: none; }
 }
 .op-open-head { flex-wrap: wrap; row-gap: .4rem; } /* v1.177: its buttons wrap on a narrow window instead of widening the page */
+
+/* v1.178 (helper 1.17): an installed Ollama is running, not the SSD's: AI stays off until allowed. */
+.engine-status.blocked { background: var(--danger-soft); color: var(--danger); }
+.tb-status .engine-status.blocked { --state: var(--danger); }
+.tb-status .engine-status.blocked::after { content: "AI on PC"; color: var(--danger); }
+.engine-installed .dialog-actions { justify-content: flex-start; margin-top: .4rem; }
